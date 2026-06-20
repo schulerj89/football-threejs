@@ -2,7 +2,7 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a graybox field scene with one controllable primitive placeholder player, a pre-snap/live/dead play state model, and player possession at snap.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a graybox field scene with one controllable primitive placeholder player, a pre-snap/live/dead play state model, player possession at snap, and touchdown scoring.
 
 ## Current Non-Goals
 
@@ -16,7 +16,10 @@ This repository is a low-poly 3D American football game prototype built with Thr
 - No sprinting
 - No animation
 - No AI
-- No scoring
+- No game clock
+- No downs
+- No celebration animation
+- No stadium presentation
 - No center or snap animation
 - No game rules
 - No menus
@@ -43,6 +46,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Keep input, simulation, and visual synchronization in separate modules.
 - The gameplay model owns player position, velocity, and facing; Three.js meshes only display that state.
 - The gameplay model owns play state and ball possession; the ball mesh is never authoritative.
+- Goal-line detection and scoring must use gameplay coordinates, not mesh positions.
 - Preserve the fixed three-quarter gameplay camera unless the user asks for a camera system.
 - Handle browser resizing whenever camera or renderer code changes.
 - Keep renderer choices isolated enough that WebGPU can be added without rewriting gameplay scene construction.
@@ -51,11 +55,12 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- The player begins at the line of scrimmage in `preSnap`.
-- `Space` starts the play and gives the player possession.
-- The ball visual follows the defined carry attachment point while possessed.
-- The player cannot move during `preSnap`.
-- `R` resets the play to `preSnap`.
-- Valid and invalid play-state transitions have focused automated tests.
+- Crossing the opposing goal line during `live` scores one touchdown.
+- The play changes from `live` to `dead` after scoring.
+- Movement is disabled while the play is `dead`.
+- A simple `TOUCHDOWN` message is displayed.
+- The play resets to `preSnap` after the configured delay.
+- The visible score counter increments once per scoring play.
+- Crossing and not-crossing goal-line cases have deterministic tests.
 - Existing tests pass.
-- The browser smoke test proves the pre-snap/live/reset loop works.
+- The browser smoke test proves the start, run, score, reset loop works.

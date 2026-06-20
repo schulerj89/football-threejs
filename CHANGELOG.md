@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-06-20
+
+### Added
+
+- Added live-play touchdown detection using gameplay coordinates at the opposing goal line.
+- Added dead-ball transition, score counter, `TOUCHDOWN` message, and configurable auto-reset delay after scoring.
+- Prevented movement while the play is dead.
+- Added deterministic scoring tests for crossing, not crossing, delayed reset, and one touchdown per play.
+- Expanded browser smoke coverage for the complete start, run, score, reset loop.
+
 ## [0.3.0] - 2026-06-20
 
 ### Added

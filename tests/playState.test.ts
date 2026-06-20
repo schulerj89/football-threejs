@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { BALL_CARRY_ATTACHMENT, updateCarriedBallPosition } from '../src/ballModel';
 import { LINE_OF_SCRIMMAGE_Z } from '../src/field';
+import { PLAYER_MOVEMENT_CONFIG } from '../src/playerModel';
 import {
+  GAMEPLAY_CONFIG,
   createGameplayModel,
+  hasCrossedOpposingGoalLine,
   markPlayDead,
   resetPlay,
   snapshotGameplayModel,
   startPlay,
+  updateGameplayModel,
 } from '../src/playState';
 
 describe('play state transitions', () => {
@@ -87,5 +91,66 @@ describe('play state transitions', () => {
 
     expect(gameplay.ball.position.x).toBeCloseTo(3 + BALL_CARRY_ATTACHMENT.z);
     expect(gameplay.ball.position.z).toBeCloseTo(-10 - BALL_CARRY_ATTACHMENT.x);
+  });
+
+  it('scores when the possessed player crosses the opposing goal line during live play', () => {
+    const gameplay = createGameplayModel();
+    startPlay(gameplay);
+    gameplay.player.position.z =
+      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+
+    expect(hasCrossedOpposingGoalLine(gameplay.player)).toBe(true);
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toBe('touchdown');
+    expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
+    expect(gameplay.touchdownResetTimerSeconds).toBe(GAMEPLAY_CONFIG.touchdownResetDelaySeconds);
+  });
+
+  it('does not score before crossing the opposing goal line', () => {
+    const gameplay = createGameplayModel();
+    startPlay(gameplay);
+    gameplay.player.position.z =
+      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth - 0.01;
+
+    expect(hasCrossedOpposingGoalLine(gameplay.player)).toBe(false);
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('live');
+    expect(gameplay.lastPlayResult).toBe('none');
+    expect(gameplay.score).toBe(0);
+  });
+
+  it('does not record multiple touchdowns during one play', () => {
+    const gameplay = createGameplayModel();
+    startPlay(gameplay);
+    gameplay.player.position.z =
+      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+
+    updateGameplayModel(gameplay, 0);
+    updateGameplayModel(gameplay, 0.1);
+    updateGameplayModel(gameplay, 0.1);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
+  });
+
+  it('auto-resets after the configured touchdown delay without clearing score', () => {
+    const gameplay = createGameplayModel();
+    startPlay(gameplay);
+    gameplay.player.position.z =
+      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+
+    updateGameplayModel(gameplay, 0);
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.touchdownResetDelaySeconds);
+
+    expect(snapshotGameplayModel(gameplay)).toMatchObject({
+      ball: { possession: { kind: 'none' } },
+      lastPlayResult: 'none',
+      player: { position: { x: 0, z: LINE_OF_SCRIMMAGE_Z }, velocity: { x: 0, z: 0 } },
+      playState: 'preSnap',
+      score: GAMEPLAY_CONFIG.touchdownPoints,
+    });
   });
 });

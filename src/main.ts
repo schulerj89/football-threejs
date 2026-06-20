@@ -3,6 +3,7 @@ import './style.css';
 import { createBallVisual, syncBallVisual } from './ballVisual';
 import { DebugOverlay } from './debugOverlay';
 import { PLAYABLE_FIELD_BOUNDS, WORLD_SCALE, createFootballField } from './field';
+import { createGameplayHud, syncGameplayHud } from './gameplayHud';
 import { KeyboardMovementInput, KeyboardPlayControls } from './input';
 import {
   createGameplayModel,
@@ -70,6 +71,7 @@ scene.add(directionalLight);
 const keyboardInput = new KeyboardMovementInput(window);
 const playControls = new KeyboardPlayControls(window);
 const debugOverlay = new DebugOverlay({ renderer, player: playerModel });
+const gameplayHud = createGameplayHud();
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 
@@ -103,9 +105,10 @@ function renderFrame(delta: number): void {
     playerModel.velocity.z = 0;
   }
 
-  updateGameplayModel(gameplayModel);
+  updateGameplayModel(gameplayModel, delta);
   syncPlayerVisual(playerVisual, playerModel);
   syncBallVisual(ballVisual, gameplayModel.ball);
+  syncGameplayHud(gameplayHud, snapshotGameplayModel(gameplayModel));
   renderer.render(scene, camera);
   debugOverlay.update(delta, renderer, playerModel);
 

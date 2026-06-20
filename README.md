@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a graybox field scene with a basic pre-snap and live-play loop: a complete rectangular American-football field, two end zones, regular yard-line markings, a blue line of scrimmage, one controllable placeholder player, player possession at snap, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a graybox field scene with a basic rushing-and-scoring loop: a complete rectangular American-football field, two end zones, regular yard-line markings, a blue line of scrimmage, one controllable placeholder player, player possession at snap, touchdown scoring, and a fixed orthographic three-quarter gameplay camera.
 
 ## World Scale
 
@@ -30,6 +30,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Move with `WASD` or the arrow keys.
 - Press `Space` from pre-snap to start the play and give the player possession.
 - Press `R` to reset the play to pre-snap.
+- Cross the opposing goal line during a live play to score a touchdown.
 - Diagonal movement is normalized to the same max speed as cardinal movement.
 - The player is clamped inside the playable field.
 
@@ -49,7 +50,10 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No sprinting
 - No animation
 - No AI
-- No scoring
+- No game clock
+- No downs
+- No celebration animation
+- No stadium presentation
 - No center or snap animation
 - No game rules
 - No menus

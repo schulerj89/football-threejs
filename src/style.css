@@ -25,6 +25,49 @@ canvas {
   height: 100%;
 }
 
+.gameplay-hud {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.score-counter {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  min-width: 108px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(8, 12, 14, 0.72);
+  color: #f3f5f6;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.touchdown-message {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  border: 1px solid rgba(242, 184, 75, 0.5);
+  border-radius: 6px;
+  background: rgba(8, 12, 14, 0.78);
+  color: #f2b84b;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.touchdown-message[hidden] {
+  display: none;
+}
+
 .debug-overlay {
   position: fixed;
   left: 12px;

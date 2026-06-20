@@ -11,8 +11,10 @@ interface GameplaySnapshot {
     possession: { kind: 'none' } | { kind: 'player'; playerId: string };
     position: { x: number; y: number; z: number };
   };
+  lastPlayResult: 'none' | 'touchdown';
   player: PlayerSnapshot;
   playState: 'preSnap' | 'live' | 'dead';
+  score: number;
 }
 
 test('starts the Three.js graybox field scene', async ({ page }) => {
@@ -32,6 +34,7 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?debug=1&readback=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.score-counter')).toHaveText('Score 0');
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   await expect(page.locator('.debug-overlay')).toContainText('FPS');
@@ -145,9 +148,47 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
   await page.keyboard.press('r');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: { possession: { kind: 'none' } },
+    lastPlayResult: 'none',
     player: { position: { x: 0, z: -15 }, velocity: { x: 0, z: 0 } },
     playState: 'preSnap',
   });
+});
+
+test('scores touchdown, disables dead-ball movement, and auto-resets', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.score-counter')).toHaveText('Score 0');
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await page.keyboard.down('w');
+  await expect.poll(async () => (await getGameplaySnapshot(page)).playState, {
+    timeout: 7000,
+  }).toBe('dead');
+  await page.keyboard.up('w');
+
+  const touchdown = await getGameplaySnapshot(page);
+  expect(touchdown.lastPlayResult).toBe('touchdown');
+  expect(touchdown.score).toBe(6);
+  await expect(page.locator('.score-counter')).toHaveText('Score 6');
+  await expect(page.locator('.touchdown-message')).toBeVisible();
+
+  await page.keyboard.down('w');
+  await page.waitForTimeout(250);
+  await page.keyboard.up('w');
+  const whileDead = await getGameplaySnapshot(page);
+  expect(whileDead.player.position.z).toBeCloseTo(touchdown.player.position.z);
+  expect(whileDead.score).toBe(6);
+
+  await expect.poll(() => getGameplaySnapshot(page), { timeout: 3000 }).toMatchObject({
+    ball: { possession: { kind: 'none' } },
+    lastPlayResult: 'none',
+    player: { position: { x: 0, z: -15 }, velocity: { x: 0, z: 0 } },
+    playState: 'preSnap',
+    score: 6,
+  });
+  await expect(page.locator('.score-counter')).toHaveText('Score 6');
+  await expect(page.locator('.touchdown-message')).toBeHidden();
 });
 
 async function expectNonBlankCanvas(page: Page): Promise<void> {

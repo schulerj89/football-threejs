@@ -10,6 +10,7 @@ export const WORLD_SCALE = {
 } as const;
 
 export const LINE_OF_SCRIMMAGE_Z = -15;
+export const OPPOSING_GOAL_LINE_Z = WORLD_SCALE.playableLength / 2;
 
 export interface PlayableFieldBounds {
   minX: number;
