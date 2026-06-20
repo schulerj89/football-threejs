@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-06-20
+
+### Added
+
+- Added one gameplay-owned defender with simple pursuit steering toward the ball carrier.
+- Added configurable defender pursuit speed, steering rate, and tackle radius.
+- Added tackle detection using gameplay positions and explicit collision radius, ending live play as `tackle`.
+- Added a primitive defender visual and `TACKLED` HUD message with delayed reset.
+- Added deterministic tests for pursuit direction, tackle contact, and tackle play-state changes.
+- Expanded browser smoke coverage for both scoring by avoiding the defender and being tackled through contact.
+
 ## [0.4.0] - 2026-06-20
 
 ### Added

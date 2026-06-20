@@ -11,7 +11,12 @@ interface GameplaySnapshot {
     possession: { kind: 'none' } | { kind: 'player'; playerId: string };
     position: { x: number; y: number; z: number };
   };
-  lastPlayResult: 'none' | 'touchdown';
+  defender: {
+    position: { x: number; z: number };
+    velocity: { x: number; z: number };
+    facingRadians: number;
+  };
+  lastPlayResult: 'none' | 'tackle' | 'touchdown';
   player: PlayerSnapshot;
   playState: 'preSnap' | 'live' | 'dead';
   score: number;
@@ -154,18 +159,20 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
   });
 });
 
-test('scores touchdown, disables dead-ball movement, and auto-resets', async ({ page }) => {
+test('scores touchdown by avoiding the defender and auto-resets', async ({ page }) => {
   await page.goto('/?debug=1&readback=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
 
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await page.keyboard.down('d');
   await page.keyboard.down('w');
   await expect.poll(async () => (await getGameplaySnapshot(page)).playState, {
-    timeout: 7000,
+    timeout: 9000,
   }).toBe('dead');
   await page.keyboard.up('w');
+  await page.keyboard.up('d');
 
   const touchdown = await getGameplaySnapshot(page);
   expect(touchdown.lastPlayResult).toBe('touchdown');
@@ -189,6 +196,42 @@ test('scores touchdown, disables dead-ball movement, and auto-resets', async ({ 
   });
   await expect(page.locator('.score-counter')).toHaveText('Score 6');
   await expect(page.locator('.touchdown-message')).toBeHidden();
+});
+
+test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.score-counter')).toHaveText('Score 0');
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await page.keyboard.down('w');
+  await expect.poll(async () => (await getGameplaySnapshot(page)).playState, {
+    timeout: 5000,
+  }).toBe('dead');
+  await page.keyboard.up('w');
+
+  const tackle = await getGameplaySnapshot(page);
+  expect(tackle.lastPlayResult).toBe('tackle');
+  expect(tackle.score).toBe(0);
+  await expect(page.locator('.score-counter')).toHaveText('Score 0');
+  await expect(page.locator('.tackle-message')).toBeVisible();
+
+  await page.keyboard.down('w');
+  await page.waitForTimeout(250);
+  await page.keyboard.up('w');
+  const whileDead = await getGameplaySnapshot(page);
+  expect(whileDead.player.position.z).toBeCloseTo(tackle.player.position.z);
+  expect(whileDead.defender.position.z).toBeCloseTo(tackle.defender.position.z);
+
+  await expect.poll(() => getGameplaySnapshot(page), { timeout: 3000 }).toMatchObject({
+    ball: { possession: { kind: 'none' } },
+    lastPlayResult: 'none',
+    player: { position: { x: 0, z: -15 }, velocity: { x: 0, z: 0 } },
+    playState: 'preSnap',
+    score: 0,
+  });
+  await expect(page.locator('.tackle-message')).toBeHidden();
 });
 
 async function expectNonBlankCanvas(page: Page): Promise<void> {

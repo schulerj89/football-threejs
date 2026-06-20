@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import './style.css';
 import { createBallVisual, syncBallVisual } from './ballVisual';
+import { createDefenderVisual, syncDefenderVisual } from './defenderVisual';
 import { DebugOverlay } from './debugOverlay';
 import { PLAYABLE_FIELD_BOUNDS, WORLD_SCALE, createFootballField } from './field';
 import { createGameplayHud, syncGameplayHud } from './gameplayHud';
@@ -47,6 +48,10 @@ scene.add(playerVisual);
 const ballVisual = createBallVisual();
 syncBallVisual(ballVisual, gameplayModel.ball);
 scene.add(ballVisual);
+
+const defenderVisual = createDefenderVisual();
+syncDefenderVisual(defenderVisual, gameplayModel.defender);
+scene.add(defenderVisual);
 
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
 positionGameplayCamera(camera);
@@ -106,6 +111,7 @@ function renderFrame(delta: number): void {
   }
 
   updateGameplayModel(gameplayModel, delta);
+  syncDefenderVisual(defenderVisual, gameplayModel.defender);
   syncPlayerVisual(playerVisual, playerModel);
   syncBallVisual(ballVisual, gameplayModel.ball);
   syncGameplayHud(gameplayHud, snapshotGameplayModel(gameplayModel));

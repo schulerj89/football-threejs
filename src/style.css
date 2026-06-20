@@ -47,6 +47,7 @@ canvas {
   text-align: center;
 }
 
+.tackle-message,
 .touchdown-message {
   position: absolute;
   left: 50%;
@@ -64,6 +65,12 @@ canvas {
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 
+.tackle-message {
+  color: #f3f5f6;
+  border-color: rgba(243, 245, 246, 0.4);
+}
+
+.tackle-message[hidden],
 .touchdown-message[hidden] {
   display: none;
 }

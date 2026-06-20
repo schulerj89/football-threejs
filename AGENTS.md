@@ -2,7 +2,7 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a graybox field scene with one controllable primitive placeholder player, a pre-snap/live/dead play state model, player possession at snap, and touchdown scoring.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a one-defender rushing drill with a controllable primitive ball carrier, one simple pursuing defender, touchdown scoring, tackle outcomes, and delayed reset.
 
 ## Current Non-Goals
 
@@ -11,11 +11,15 @@ This repository is a low-poly 3D American football game prototype built with Thr
 - No imported assets
 - No throwing
 - No loose-ball physics
-- No defender
-- No tackling
+- No blockers
+- No formations
+- No multiple defenders
+- No diving tackles
+- No tackling animations
+- No passing
+- No pathfinding library
 - No sprinting
 - No animation
-- No AI
 - No game clock
 - No downs
 - No celebration animation
@@ -47,6 +51,8 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - The gameplay model owns player position, velocity, and facing; Three.js meshes only display that state.
 - The gameplay model owns play state and ball possession; the ball mesh is never authoritative.
 - Goal-line detection and scoring must use gameplay coordinates, not mesh positions.
+- Defender AI must use gameplay positions and stay deliberately simple.
+- Tackling must use explicit configurable collision radii.
 - Preserve the fixed three-quarter gameplay camera unless the user asks for a camera system.
 - Handle browser resizing whenever camera or renderer code changes.
 - Keep renderer choices isolated enough that WebGPU can be added without rewriting gameplay scene construction.
@@ -55,12 +61,10 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- Crossing the opposing goal line during `live` scores one touchdown.
-- The play changes from `live` to `dead` after scoring.
-- Movement is disabled while the play is `dead`.
-- A simple `TOUCHDOWN` message is displayed.
-- The play resets to `preSnap` after the configured delay.
-- The visible score counter increments once per scoring play.
-- Crossing and not-crossing goal-line cases have deterministic tests.
+- The player can score by avoiding the defender.
+- The defender can pursue the ball carrier and end the play through contact.
+- Both touchdown and tackle outcomes show simple HUD messages.
+- Both outcomes reset reliably after a configured delay.
+- Pursuit direction, tackle detection, and play-state changes have deterministic tests.
 - Existing tests pass.
-- The browser smoke test proves the start, run, score, reset loop works.
+- The browser smoke test proves both score and tackle outcomes work.

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { BALL_CARRY_ATTACHMENT, updateCarriedBallPosition } from '../src/ballModel';
+import {
+  DEFENDER_COLLISION_RADII,
+  DEFENDER_CONFIG,
+  isTackleContact,
+  updateDefenderPursuit,
+} from '../src/defenderModel';
 import { LINE_OF_SCRIMMAGE_Z } from '../src/field';
 import { PLAYER_MOVEMENT_CONFIG } from '../src/playerModel';
 import {
@@ -20,6 +26,8 @@ describe('play state transitions', () => {
     expect(gameplay.playState).toBe('preSnap');
     expect(gameplay.player.position).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z });
     expect(gameplay.player.velocity).toEqual({ x: 0, z: 0 });
+    expect(gameplay.defender.position).toEqual(DEFENDER_CONFIG.initialPosition);
+    expect(gameplay.defender.velocity).toEqual({ x: 0, z: 0 });
     expect(gameplay.ball.possession).toEqual({ kind: 'none' });
   });
 
@@ -105,7 +113,7 @@ describe('play state transitions', () => {
     expect(gameplay.playState).toBe('dead');
     expect(gameplay.lastPlayResult).toBe('touchdown');
     expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
-    expect(gameplay.touchdownResetTimerSeconds).toBe(GAMEPLAY_CONFIG.touchdownResetDelaySeconds);
+    expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.touchdownResetDelaySeconds);
   });
 
   it('does not score before crossing the opposing goal line', () => {
@@ -147,10 +155,78 @@ describe('play state transitions', () => {
 
     expect(snapshotGameplayModel(gameplay)).toMatchObject({
       ball: { possession: { kind: 'none' } },
+      defender: { position: DEFENDER_CONFIG.initialPosition, velocity: { x: 0, z: 0 } },
       lastPlayResult: 'none',
       player: { position: { x: 0, z: LINE_OF_SCRIMMAGE_Z }, velocity: { x: 0, z: 0 } },
       playState: 'preSnap',
       score: GAMEPLAY_CONFIG.touchdownPoints,
+    });
+  });
+
+  it('keeps the defender stationary during preSnap', () => {
+    const gameplay = createGameplayModel();
+
+    updateGameplayModel(gameplay, 1);
+
+    expect(gameplay.defender.position).toEqual(DEFENDER_CONFIG.initialPosition);
+    expect(gameplay.defender.velocity).toEqual({ x: 0, z: 0 });
+    expect(gameplay.playState).toBe('preSnap');
+  });
+
+  it('steers the defender toward the carrier without instantly matching direction changes', () => {
+    const gameplay = createGameplayModel();
+    gameplay.defender.position.x = 0;
+    gameplay.defender.position.z = 0;
+    gameplay.defender.facingRadians = 0;
+    gameplay.player.position.x = 10;
+    gameplay.player.position.z = 0;
+
+    updateDefenderPursuit(gameplay.defender, gameplay.player, 0.1);
+
+    expect(gameplay.defender.facingRadians).toBeGreaterThan(0);
+    expect(gameplay.defender.facingRadians).toBeLessThan(Math.PI / 2);
+    expect(gameplay.defender.facingRadians).toBeCloseTo(
+      DEFENDER_CONFIG.steeringRateRadiansPerSecond * 0.1,
+    );
+    expect(gameplay.defender.velocity.x).toBeGreaterThan(0);
+  });
+
+  it('detects tackles using the configured tackle radius', () => {
+    const gameplay = createGameplayModel();
+    gameplay.defender.position.x = 0;
+    gameplay.defender.position.z = 0;
+    gameplay.player.position.x = DEFENDER_CONFIG.tackleRadius - 0.01;
+    gameplay.player.position.z = 0;
+
+    expect(DEFENDER_CONFIG.tackleRadius).toBe(
+      DEFENDER_COLLISION_RADII.ballCarrier + DEFENDER_COLLISION_RADII.defender,
+    );
+    expect(isTackleContact(gameplay.defender, gameplay.player)).toBe(true);
+
+    gameplay.player.position.x = DEFENDER_CONFIG.tackleRadius + 0.01;
+    expect(isTackleContact(gameplay.defender, gameplay.player)).toBe(false);
+  });
+
+  it('changes live play to dead on tackle and resets after the configured delay', () => {
+    const gameplay = createGameplayModel();
+    startPlay(gameplay);
+    gameplay.defender.position.x = gameplay.player.position.x + DEFENDER_CONFIG.tackleRadius;
+    gameplay.defender.position.z = gameplay.player.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toBe('tackle');
+    expect(gameplay.score).toBe(0);
+    expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.tackleResetDelaySeconds);
+
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.tackleResetDelaySeconds);
+
+    expect(snapshotGameplayModel(gameplay)).toMatchObject({
+      defender: { position: DEFENDER_CONFIG.initialPosition, velocity: { x: 0, z: 0 } },
+      lastPlayResult: 'none',
+      playState: 'preSnap',
+      score: 0,
     });
   });
 });

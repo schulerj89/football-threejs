@@ -3,6 +3,7 @@ import type { GameplaySnapshot } from './playState';
 export interface GameplayHud {
   root: HTMLDivElement;
   score: HTMLDivElement;
+  tackleMessage: HTMLDivElement;
   touchdownMessage: HTMLDivElement;
 }
 
@@ -19,12 +20,18 @@ export function createGameplayHud(): GameplayHud {
   touchdownMessage.textContent = 'TOUCHDOWN';
   root.appendChild(touchdownMessage);
 
+  const tackleMessage = document.createElement('div');
+  tackleMessage.className = 'tackle-message';
+  tackleMessage.textContent = 'TACKLED';
+  root.appendChild(tackleMessage);
+
   document.body.appendChild(root);
 
-  return { root, score, touchdownMessage };
+  return { root, score, tackleMessage, touchdownMessage };
 }
 
 export function syncGameplayHud(hud: GameplayHud, gameplay: GameplaySnapshot): void {
   hud.score.textContent = `Score ${gameplay.score}`;
+  hud.tackleMessage.hidden = gameplay.lastPlayResult !== 'tackle';
   hud.touchdownMessage.hidden = gameplay.lastPlayResult !== 'touchdown';
 }
