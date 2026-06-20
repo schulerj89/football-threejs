@@ -68,6 +68,53 @@ export class KeyboardMovementInput {
   };
 }
 
+export interface PlayControlRequests {
+  resetPlay: boolean;
+  startPlay: boolean;
+}
+
+export class KeyboardPlayControls {
+  private readonly target: Window;
+  private resetRequested = false;
+  private startRequested = false;
+
+  constructor(target: Window) {
+    this.target = target;
+    this.target.addEventListener('keydown', this.handleKeyDown);
+  }
+
+  consumeRequests(): PlayControlRequests {
+    const requests = {
+      resetPlay: this.resetRequested,
+      startPlay: this.startRequested,
+    };
+
+    this.resetRequested = false;
+    this.startRequested = false;
+
+    return requests;
+  }
+
+  dispose(): void {
+    this.target.removeEventListener('keydown', this.handleKeyDown);
+    this.resetRequested = false;
+    this.startRequested = false;
+  }
+
+  private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (isSpaceKey(event)) {
+      this.startRequested = true;
+      event.preventDefault();
+      return;
+    }
+
+    if (normalizeKey(event.key) === 'r') {
+      this.resetRequested = true;
+      event.preventDefault();
+    }
+  };
+}
+
 export function normalizeMovementInput(input: Vector2): Vector2 {
   const length = Math.hypot(input.x, input.z);
 
@@ -83,4 +130,8 @@ export function normalizeMovementInput(input: Vector2): Vector2 {
 
 function normalizeKey(key: string): string {
   return key.toLowerCase();
+}
+
+function isSpaceKey(event: KeyboardEvent): boolean {
+  return event.code === 'Space' || event.key === ' ' || normalizeKey(event.key) === 'spacebar';
 }

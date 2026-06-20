@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-06-20
+
+### Added
+
+- Added `preSnap`, `live`, and `dead` play states with focused transition tests.
+- Added Space-to-start and R-to-reset controls for the basic play loop.
+- Added plain gameplay-state ball possession and a primitive ball visual that follows a defined player carry attachment point.
+- Prevented player movement during pre-snap.
+- Expanded browser smoke coverage for pre-snap lock, live play start, possession, ball carry, and reset.
+
 ## [0.2.1] - 2026-06-20
 
 ### Fixed

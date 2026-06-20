@@ -5,7 +5,10 @@ export interface Vector2 {
   z: number;
 }
 
+export const PLACEHOLDER_PLAYER_ID = 'placeholder-player';
+
 export interface PlayerModel {
+  id: string;
   position: Vector2;
   velocity: Vector2;
   facingRadians: number;
@@ -27,11 +30,22 @@ export const PLAYER_MOVEMENT_CONFIG = {
 } as const;
 
 export function createPlayerModel(): PlayerModel {
-  return {
+  const player = {
+    id: PLACEHOLDER_PLAYER_ID,
     position: { x: 0, z: LINE_OF_SCRIMMAGE_Z },
     velocity: { x: 0, z: 0 },
     facingRadians: PLAYER_MOVEMENT_CONFIG.initialFacingRadians,
   };
+
+  return player;
+}
+
+export function resetPlayerModel(player: PlayerModel): void {
+  player.position.x = 0;
+  player.position.z = LINE_OF_SCRIMMAGE_Z;
+  player.velocity.x = 0;
+  player.velocity.z = 0;
+  player.facingRadians = PLAYER_MOVEMENT_CONFIG.initialFacingRadians;
 }
 
 export function snapshotPlayerModel(player: PlayerModel): PlayerSnapshot {
@@ -41,4 +55,3 @@ export function snapshotPlayerModel(player: PlayerModel): PlayerSnapshot {
     facingRadians: player.facingRadians,
   };
 }
-

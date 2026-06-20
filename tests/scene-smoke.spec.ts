@@ -6,6 +6,15 @@ interface PlayerSnapshot {
   facingRadians: number;
 }
 
+interface GameplaySnapshot {
+  ball: {
+    possession: { kind: 'none' } | { kind: 'player'; playerId: string };
+    position: { x: number; y: number; z: number };
+  };
+  player: PlayerSnapshot;
+  playState: 'preSnap' | 'live' | 'dead';
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -66,6 +75,8 @@ test('moves the placeholder player with WASD and arrow keys', async ({ page }) =
   for (const movementCase of movementCases) {
     await page.goto('/?debug=1&readback=1');
     await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+    await page.keyboard.press('Space');
+    await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
     const before = await getPlayerSnapshot(page);
 
     await page.keyboard.down(movementCase.key);
@@ -85,6 +96,8 @@ test('keeps D reserved for movement instead of debug toggling', async ({ page })
   await page.goto('/?debug=1&readback=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toBeVisible();
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   const before = await getPlayerSnapshot(page);
 
   await page.keyboard.down('d');
@@ -94,6 +107,47 @@ test('keeps D reserved for movement instead of debug toggling', async ({ page })
   const after = await getPlayerSnapshot(page);
   expect(after.position.x).toBeLessThan(before.position.x);
   await expect(page.locator('.debug-overlay')).toBeVisible();
+});
+
+test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  const initial = await getGameplaySnapshot(page);
+
+  expect(initial.playState).toBe('preSnap');
+  expect(initial.ball.possession).toEqual({ kind: 'none' });
+  expect(initial.player.position).toEqual({ x: 0, z: -15 });
+
+  await page.keyboard.down('w');
+  await page.waitForTimeout(350);
+  await page.keyboard.up('w');
+  const afterPreSnapMove = await getGameplaySnapshot(page);
+
+  expect(afterPreSnapMove.playState).toBe('preSnap');
+  expect(afterPreSnapMove.player.position.x).toBeCloseTo(initial.player.position.x);
+  expect(afterPreSnapMove.player.position.z).toBeCloseTo(initial.player.position.z);
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    ball: { possession: { kind: 'player' } },
+    playState: 'live',
+  });
+
+  await page.keyboard.down('w');
+  await page.waitForTimeout(350);
+  await page.keyboard.up('w');
+  const afterLiveMove = await getGameplaySnapshot(page);
+
+  expect(afterLiveMove.player.position.z).toBeGreaterThan(initial.player.position.z);
+  expect(afterLiveMove.ball.possession).toMatchObject({ kind: 'player' });
+  expect(afterLiveMove.ball.position.z).toBeGreaterThan(initial.player.position.z);
+
+  await page.keyboard.press('r');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    ball: { possession: { kind: 'none' } },
+    player: { position: { x: 0, z: -15 }, velocity: { x: 0, z: 0 } },
+    playState: 'preSnap',
+  });
 });
 
 async function expectNonBlankCanvas(page: Page): Promise<void> {
@@ -175,5 +229,23 @@ async function getPlayerSnapshot(page: Page): Promise<PlayerSnapshot> {
     }
 
     return debugApi.getPlayerSnapshot();
+  });
+}
+
+async function getGameplaySnapshot(page: Page): Promise<GameplaySnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getGameplaySnapshot: () => GameplaySnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getGameplaySnapshot();
   });
 }

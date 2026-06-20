@@ -1,15 +1,25 @@
 import * as THREE from 'three';
 import './style.css';
+import { createBallVisual, syncBallVisual } from './ballVisual';
 import { DebugOverlay } from './debugOverlay';
 import { PLAYABLE_FIELD_BOUNDS, WORLD_SCALE, createFootballField } from './field';
-import { KeyboardMovementInput } from './input';
-import { createPlayerModel, snapshotPlayerModel, type PlayerSnapshot } from './playerModel';
+import { KeyboardMovementInput, KeyboardPlayControls } from './input';
+import {
+  createGameplayModel,
+  resetPlay,
+  snapshotGameplayModel,
+  startPlay,
+  updateGameplayModel,
+  type GameplaySnapshot,
+} from './playState';
+import { snapshotPlayerModel, type PlayerSnapshot } from './playerModel';
 import { updatePlayerSimulation } from './playerSimulation';
 import { createPlaceholderPlayerVisual, syncPlayerVisual } from './playerVisual';
 
 declare global {
   interface Window {
     __footballDebug?: {
+      getGameplaySnapshot: () => GameplaySnapshot;
       getPlayerSnapshot: () => PlayerSnapshot;
     };
   }
@@ -27,10 +37,15 @@ scene.background = new THREE.Color(0x101920);
 const field = createFootballField();
 scene.add(field.group);
 
-const playerModel = createPlayerModel();
+const gameplayModel = createGameplayModel();
+const playerModel = gameplayModel.player;
 const playerVisual = createPlaceholderPlayerVisual();
 syncPlayerVisual(playerVisual, playerModel);
 scene.add(playerVisual);
+
+const ballVisual = createBallVisual();
+syncBallVisual(ballVisual, gameplayModel.ball);
+scene.add(ballVisual);
 
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
 positionGameplayCamera(camera);
@@ -53,12 +68,14 @@ directionalLight.position.set(-20, 45, -25);
 scene.add(directionalLight);
 
 const keyboardInput = new KeyboardMovementInput(window);
+const playControls = new KeyboardPlayControls(window);
 const debugOverlay = new DebugOverlay({ renderer, player: playerModel });
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 
 if (import.meta.env.DEV || searchParams.has('debug')) {
   window.__footballDebug = {
+    getGameplaySnapshot: () => snapshotGameplayModel(gameplayModel),
     getPlayerSnapshot: () => snapshotPlayerModel(playerModel),
   };
 }
@@ -77,14 +94,37 @@ renderer.setAnimationLoop(() => {
 });
 
 function renderFrame(delta: number): void {
-  updatePlayerSimulation(playerModel, keyboardInput.getMovement(), delta, PLAYABLE_FIELD_BOUNDS);
+  updatePlayControls();
+
+  if (gameplayModel.playState === 'live') {
+    updatePlayerSimulation(playerModel, keyboardInput.getMovement(), delta, PLAYABLE_FIELD_BOUNDS);
+  } else {
+    playerModel.velocity.x = 0;
+    playerModel.velocity.z = 0;
+  }
+
+  updateGameplayModel(gameplayModel);
   syncPlayerVisual(playerVisual, playerModel);
+  syncBallVisual(ballVisual, gameplayModel.ball);
   renderer.render(scene, camera);
   debugOverlay.update(delta, renderer, playerModel);
 
   if (!hasRenderedFirstFrame) {
     hasRenderedFirstFrame = true;
     document.body.dataset.sceneReady = 'true';
+  }
+}
+
+function updatePlayControls(): void {
+  const requests = playControls.consumeRequests();
+
+  if (requests.resetPlay) {
+    resetPlay(gameplayModel);
+    return;
+  }
+
+  if (requests.startPlay) {
+    startPlay(gameplayModel);
   }
 }
 

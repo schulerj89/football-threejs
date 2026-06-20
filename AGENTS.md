@@ -2,19 +2,22 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a graybox field scene with one controllable primitive placeholder player.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a graybox field scene with one controllable primitive placeholder player, a pre-snap/live/dead play state model, and player possession at snap.
 
 ## Current Non-Goals
 
 - No stadium
 - No crowd
 - No imported assets
-- No ball behaviour
+- No throwing
+- No loose-ball physics
 - No defender
+- No tackling
 - No sprinting
 - No animation
 - No AI
 - No scoring
+- No center or snap animation
 - No game rules
 - No menus
 - No physics engine
@@ -39,17 +42,20 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Use primitive Three.js geometry and simple materials during graybox work.
 - Keep input, simulation, and visual synchronization in separate modules.
 - The gameplay model owns player position, velocity, and facing; Three.js meshes only display that state.
+- The gameplay model owns play state and ball possession; the ball mesh is never authoritative.
 - Preserve the fixed three-quarter gameplay camera unless the user asks for a camera system.
 - Handle browser resizing whenever camera or renderer code changes.
 - Keep renderer choices isolated enough that WebGPU can be added without rewriting gameplay scene construction.
-- Add or update browser smoke coverage when scene startup, camera framing, renderer boot, or resize behavior changes.
+- Add or update browser smoke coverage when scene startup, camera framing, renderer boot, resize behavior, controls, or play state changes.
 
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- The player moves in every direction through WASD and arrow keys.
-- Diagonal speed equals horizontal and vertical speed.
-- The player cannot leave the playable field.
-- Movement behavior has focused automated tests.
+- The player begins at the line of scrimmage in `preSnap`.
+- `Space` starts the play and gives the player possession.
+- The ball visual follows the defined carry attachment point while possessed.
+- The player cannot move during `preSnap`.
+- `R` resets the play to `preSnap`.
+- Valid and invalid play-state transitions have focused automated tests.
 - Existing tests pass.
-- The browser smoke test proves the scene starts and keyboard movement works.
+- The browser smoke test proves the pre-snap/live/reset loop works.
