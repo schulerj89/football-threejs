@@ -47,10 +47,10 @@ test('moves the placeholder player with WASD and arrow keys', async ({ page }) =
     { key: 'ArrowUp', axis: 'z', sign: 1 },
     { key: 's', axis: 'z', sign: -1 },
     { key: 'ArrowDown', axis: 'z', sign: -1 },
-    { key: 'a', axis: 'x', sign: -1 },
-    { key: 'ArrowLeft', axis: 'x', sign: -1 },
-    { key: 'd', axis: 'x', sign: 1 },
-    { key: 'ArrowRight', axis: 'x', sign: 1 },
+    { key: 'a', axis: 'x', sign: 1 },
+    { key: 'ArrowLeft', axis: 'x', sign: 1 },
+    { key: 'd', axis: 'x', sign: -1 },
+    { key: 'ArrowRight', axis: 'x', sign: -1 },
   ] as const;
 
   page.on('console', (message) => {
@@ -79,6 +79,21 @@ test('moves the placeholder player with WASD and arrow keys', async ({ page }) =
 
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test('keeps D reserved for movement instead of debug toggling', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.debug-overlay')).toBeVisible();
+  const before = await getPlayerSnapshot(page);
+
+  await page.keyboard.down('d');
+  await page.waitForTimeout(350);
+  await page.keyboard.up('d');
+
+  const after = await getPlayerSnapshot(page);
+  expect(after.position.x).toBeLessThan(before.position.x);
+  await expect(page.locator('.debug-overlay')).toBeVisible();
 });
 
 async function expectNonBlankCanvas(page: Page): Promise<void> {

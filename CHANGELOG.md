@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-06-20
+
+### Fixed
+
+- Removed the `D` debug-overlay hotkey so it no longer conflicts with WASD movement.
+- Corrected horizontal keyboard movement so left and right match the fixed gameplay camera view.
+
 ## [0.2.0] - 2026-06-20
 
 ### Added

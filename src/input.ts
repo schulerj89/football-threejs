@@ -1,10 +1,10 @@
 import type { Vector2 } from './playerModel';
 
 const MOVEMENT_KEYS: Record<string, Vector2> = {
-  a: { x: -1, z: 0 },
-  arrowleft: { x: -1, z: 0 },
-  d: { x: 1, z: 0 },
-  arrowright: { x: 1, z: 0 },
+  a: { x: 1, z: 0 },
+  arrowleft: { x: 1, z: 0 },
+  d: { x: -1, z: 0 },
+  arrowright: { x: -1, z: 0 },
   s: { x: 0, z: -1 },
   arrowdown: { x: 0, z: -1 },
   w: { x: 0, z: 1 },
@@ -84,4 +84,3 @@ export function normalizeMovementInput(input: Vector2): Vector2 {
 function normalizeKey(key: string): string {
   return key.toLowerCase();
 }
-

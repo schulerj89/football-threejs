@@ -18,12 +18,6 @@ export class DebugOverlay {
     this.element.hidden = !new URLSearchParams(window.location.search).has('debug');
     document.body.appendChild(this.element);
 
-    window.addEventListener('keydown', (event) => {
-      if (event.key.toLowerCase() === 'd') {
-        this.element.hidden = !this.element.hidden;
-      }
-    });
-
     this.update(0, renderer, player);
   }
 

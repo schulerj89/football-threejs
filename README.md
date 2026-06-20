@@ -33,7 +33,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 
 ## Debug Overlay
 
-Add `?debug=1` to the URL or press `D` to toggle the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, and triangle count.
+Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, and triangle count.
 
 ## Current Non-Goals
 
