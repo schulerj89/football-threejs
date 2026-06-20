@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-06-20
+
+### Added
+
+- Added keyboard movement for the placeholder player with WASD and arrow-key support.
+- Added normalized diagonal movement, acceleration, deceleration, facing rotation, and playable-field clamping.
+- Split player input, simulation, gameplay model state, and Three.js visual synchronization into dedicated modules.
+- Added focused Vitest coverage for player movement behavior.
+- Expanded the Playwright smoke test to prove keyboard movement in the browser.
+
 ## [0.1.0] - 2026-06-20
 
 ### Added
@@ -12,4 +22,3 @@ All notable changes to this project will be documented in this file.
 - Added a fixed three-quarter gameplay camera, resize handling, and an optional FPS/world-coordinate debug overlay.
 - Added a Playwright browser smoke test for scene startup.
 - Documented world scale, non-goals, scripts, and project workflow guidance.
-

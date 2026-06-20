@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a graybox field scene: a complete rectangular American-football field, two end zones, regular yard-line markings, a blue line of scrimmage, one stationary placeholder player at the line of scrimmage, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a graybox field scene: a complete rectangular American-football field, two end zones, regular yard-line markings, a blue line of scrimmage, one controllable placeholder player, and a fixed orthographic three-quarter gameplay camera.
 
 ## World Scale
 
@@ -18,10 +18,18 @@ The current milestone is a graybox field scene: a complete rectangular American-
 npm install
 npm run dev
 npm run build
+npm run test:unit
 npm run test:smoke
+npm test
 ```
 
 Open the dev server at `http://127.0.0.1:5173`.
+
+## Controls
+
+- Move with `WASD` or the arrow keys.
+- Diagonal movement is normalized to the same max speed as cardinal movement.
+- The player is clamped inside the playable field.
 
 ## Debug Overlay
 
@@ -33,10 +41,13 @@ Add `?debug=1` to the URL or press `D` to toggle the optional debug overlay. It 
 - No crowd
 - No imported assets
 - No ball behaviour
-- No player controls
+- No defender
+- No sprinting
+- No animation
 - No AI
 - No scoring
 - No game rules
 - No menus
 - No physics engine
+- No collision with other players
 - No unrelated refactoring

@@ -1,8 +1,9 @@
 import * as THREE from 'three';
+import type { PlayerModel } from './playerModel';
 
 interface DebugOverlayOptions {
   renderer: THREE.WebGLRenderer;
-  player: THREE.Object3D;
+  player: PlayerModel;
 }
 
 export class DebugOverlay {
@@ -26,7 +27,7 @@ export class DebugOverlay {
     this.update(0, renderer, player);
   }
 
-  update(deltaSeconds: number, renderer: THREE.WebGLRenderer, player: THREE.Object3D): void {
+  update(deltaSeconds: number, renderer: THREE.WebGLRenderer, player: PlayerModel): void {
     this.frameCount += 1;
     this.elapsed += deltaSeconds;
 
@@ -36,13 +37,12 @@ export class DebugOverlay {
       this.elapsed = 0;
     }
 
-    const { x, y, z } = player.position;
+    const { x, z } = player.position;
     this.element.textContent = [
       `FPS ${this.fps.toFixed(0)}`,
-      `POS ${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}`,
+      `POS ${x.toFixed(1)}, ${z.toFixed(1)}`,
       `CALLS ${renderer.info.render.calls}`,
       `TRIS ${renderer.info.render.triangles}`,
     ].join('\n');
   }
 }
-

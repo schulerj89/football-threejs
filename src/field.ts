@@ -11,6 +11,20 @@ export const WORLD_SCALE = {
 
 export const LINE_OF_SCRIMMAGE_Z = -15;
 
+export interface PlayableFieldBounds {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+export const PLAYABLE_FIELD_BOUNDS: PlayableFieldBounds = {
+  minX: -WORLD_SCALE.fieldWidth / 2,
+  maxX: WORLD_SCALE.fieldWidth / 2,
+  minZ: -WORLD_SCALE.playableLength / 2,
+  maxZ: WORLD_SCALE.playableLength / 2,
+};
+
 const FIELD_Y = 0;
 const LINE_Y = 0.08;
 const SIDELINE_WIDTH = 0.32;
@@ -163,4 +177,3 @@ function addLine(
   line.name = name;
   group.add(line);
 }
-

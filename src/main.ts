@@ -1,7 +1,19 @@
 import * as THREE from 'three';
 import './style.css';
 import { DebugOverlay } from './debugOverlay';
-import { LINE_OF_SCRIMMAGE_Z, WORLD_SCALE, createFootballField } from './field';
+import { PLAYABLE_FIELD_BOUNDS, WORLD_SCALE, createFootballField } from './field';
+import { KeyboardMovementInput } from './input';
+import { createPlayerModel, snapshotPlayerModel, type PlayerSnapshot } from './playerModel';
+import { updatePlayerSimulation } from './playerSimulation';
+import { createPlaceholderPlayerVisual, syncPlayerVisual } from './playerVisual';
+
+declare global {
+  interface Window {
+    __footballDebug?: {
+      getPlayerSnapshot: () => PlayerSnapshot;
+    };
+  }
+}
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
@@ -15,9 +27,10 @@ scene.background = new THREE.Color(0x101920);
 const field = createFootballField();
 scene.add(field.group);
 
-const player = createPlaceholderPlayer();
-player.position.set(0, 1.1, LINE_OF_SCRIMMAGE_Z);
-scene.add(player);
+const playerModel = createPlayerModel();
+const playerVisual = createPlaceholderPlayerVisual();
+syncPlayerVisual(playerVisual, playerModel);
+scene.add(playerVisual);
 
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
 positionGameplayCamera(camera);
@@ -39,9 +52,16 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 2.2);
 directionalLight.position.set(-20, 45, -25);
 scene.add(directionalLight);
 
-const debugOverlay = new DebugOverlay({ renderer, player });
+const keyboardInput = new KeyboardMovementInput(window);
+const debugOverlay = new DebugOverlay({ renderer, player: playerModel });
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
+
+if (import.meta.env.DEV || searchParams.has('debug')) {
+  window.__footballDebug = {
+    getPlayerSnapshot: () => snapshotPlayerModel(playerModel),
+  };
+}
 
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', resize);
@@ -57,8 +77,10 @@ renderer.setAnimationLoop(() => {
 });
 
 function renderFrame(delta: number): void {
+  updatePlayerSimulation(playerModel, keyboardInput.getMovement(), delta, PLAYABLE_FIELD_BOUNDS);
+  syncPlayerVisual(playerVisual, playerModel);
   renderer.render(scene, camera);
-  debugOverlay.update(delta, renderer, player);
+  debugOverlay.update(delta, renderer, playerModel);
 
   if (!hasRenderedFirstFrame) {
     hasRenderedFirstFrame = true;
@@ -88,31 +110,6 @@ function positionGameplayCamera(activeCamera: THREE.OrthographicCamera): void {
   activeCamera.position.set(18, 74, -110);
   activeCamera.lookAt(target);
   activeCamera.updateProjectionMatrix();
-}
-
-function createPlaceholderPlayer(): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'placeholder-player';
-  group.userData.testId = 'placeholder-player';
-
-  const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x2f66d8 });
-  const facingMaterial = new THREE.MeshBasicMaterial({ color: 0xf3f5f8 });
-
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.2, 1.4), bodyMaterial);
-  body.name = 'placeholder-player-body';
-  group.add(body);
-
-  const facingStripe = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.12, 0.08), facingMaterial);
-  facingStripe.position.set(0, 0.35, 0.74);
-  facingStripe.name = 'placeholder-player-facing-stripe';
-  group.add(facingStripe);
-
-  const scaleReference = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.08, 1.9), facingMaterial);
-  scaleReference.position.set(0, -1.14, 0);
-  scaleReference.name = 'placeholder-player-scale-reference';
-  group.add(scaleReference);
-
-  return group;
 }
 
 console.info(

@@ -1,6 +1,6 @@
 {
   "name": "football-threejs",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Low-poly 3D American football prototype built with Three.js.",
@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "npm run test:smoke",
+    "test": "npm run test:unit && npm run test:smoke",
+    "test:unit": "vitest run tests/playerSimulation.test.ts",
     "test:smoke": "playwright test"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "@types/node": "^26.0.0",
     "@types/three": "^0.184.1",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
   }
 }

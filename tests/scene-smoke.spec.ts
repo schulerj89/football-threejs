@@ -1,5 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
+interface PlayerSnapshot {
+  position: { x: number; z: number };
+  velocity: { x: number; z: number };
+  facingRadians: number;
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -28,6 +34,48 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
     return canvasElement?.clientWidth === window.innerWidth && canvasElement.clientHeight === window.innerHeight;
   });
   await expectNonBlankCanvas(page);
+
+  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('moves the placeholder player with WASD and arrow keys', async ({ page }) => {
+  const consoleErrors: string[] = [];
+  const pageErrors: string[] = [];
+  const movementCases = [
+    { key: 'w', axis: 'z', sign: 1 },
+    { key: 'ArrowUp', axis: 'z', sign: 1 },
+    { key: 's', axis: 'z', sign: -1 },
+    { key: 'ArrowDown', axis: 'z', sign: -1 },
+    { key: 'a', axis: 'x', sign: -1 },
+    { key: 'ArrowLeft', axis: 'x', sign: -1 },
+    { key: 'd', axis: 'x', sign: 1 },
+    { key: 'ArrowRight', axis: 'x', sign: 1 },
+  ] as const;
+
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text());
+    }
+  });
+
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message);
+  });
+
+  for (const movementCase of movementCases) {
+    await page.goto('/?debug=1&readback=1');
+    await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+    const before = await getPlayerSnapshot(page);
+
+    await page.keyboard.down(movementCase.key);
+    await page.waitForTimeout(350);
+    await page.keyboard.up(movementCase.key);
+
+    const after = await getPlayerSnapshot(page);
+    const delta = after.position[movementCase.axis] - before.position[movementCase.axis];
+    expect(Math.sign(delta), movementCase.key).toBe(movementCase.sign);
+  }
 
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
@@ -94,5 +142,23 @@ async function readCanvasState(page: Page): Promise<{
     }
 
     return { hasCanvas: true, nonBlankPixels, uniqueColors: uniqueColors.size, width, height };
+  });
+}
+
+async function getPlayerSnapshot(page: Page): Promise<PlayerSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getPlayerSnapshot: () => PlayerSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getPlayerSnapshot();
   });
 }
