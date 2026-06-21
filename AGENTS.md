@@ -33,12 +33,15 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 
 ## Implementation Rules
 
-- Keep field construction in `src/field.ts` or a similarly dedicated field module.
+- Keep `src/main.ts` as a thin bootstrap. Application lifecycle ownership belongs under `src/app`, with `FootballApplication` coordinating construction/start/stop only.
+- Use the existing app lifecycle owners for scene/rendering, bounded game loop timing, gameplay orchestration, stable-ID player visual reconciliation, presentation coordination, and development diagnostics rather than adding new top-level orchestration to `main.ts`.
+- Keep field construction exposed through `src/field.ts`, with rendering/layout/resource details in focused `src/field/*` modules.
 - Keep authoritative field dimensions, paint widths, playable bounds, field bounds, and plain field layout data in `src/fieldSpec.ts`.
 - `src/fieldSpec.ts` must stay free of Three.js imports.
 - Generate rendered field-marking dimensions and positions from the field spec rather than repeating raw field dimensions in renderer code.
 - Keep painted field markings fully inside the field surface; boundary paint outer edges should align with field outer edges, and transverse internal markings should stop at the inner sideline paint edges.
 - Batch static field markings by shared material where practical; keep line of scrimmage, first-down line, and play-direction marker separate because they are dynamic.
+- Keep field material ownership, geometry construction, marking layout, dynamic markers, and disposal responsibilities separated in the existing `src/field/*` modules.
 - Field presentation meshes such as turf bands, yard numbers, goalposts, sideline apron, team boxes, and surrounding ground must remain presentation-only and must not influence collision, spotting, scoring, or boundaries.
 - Keep yard numbers sideline-oriented and goalposts on the end lines at the back of the end zones.
 - Painted hash marks and ball-spotting snap lanes must use the same authoritative hash X value from `src/fieldSpec.ts`.
@@ -144,7 +147,8 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Eleven-on-eleven gameplay hardening audits live in `src/elevenOnElevenAudit.ts` and are enabled with `?elevenAudit=1`. They may report roster counts, line/backfield legality, eligibility, assignments, route errors, overlaps, out-of-bounds players, stale references, current presentation events, camera containment, renderer counters, player/helmet visual counts, active audio nodes, presentation holds, camera shots, and crowd reaction state, but must not mutate gameplay or presentation state.
 - Eleven-on-eleven matrix tests should cover the active 11v11 playbook across both plays, snap lanes, normal/mirrored preferred formation side, tactical/offense/cinematic camera configuration values, off/brief cinematics, disabled/low crowd modes, enabled/disabled audio, and 30/60/120 Hz update rates where simulation tests support them.
 - Before adding new 11v11 plays or rules, keep the 11v11 audit, repeated reset/resource-stability coverage, 7v7 regression baseline, build, unit tests, and browser smoke tests clean.
-- Development crowd rendering lives in `src/crowdPreview.ts` and must remain disabled unless `?crowdPreview=1` is present.
+- Development crowd rendering is exposed through `src/crowdPreview.ts` and must remain disabled unless `?crowdPreview=1` is present.
+- Crowd layout, mesh construction, reaction state, metrics, configuration, and resource ownership belong in focused `src/crowd/*` modules. Preserve deterministic layout and InstancedMesh batching when modifying crowd code.
 - Crowd preview must use `InstancedMesh` with shared geometry/material sets and must not create one `Object3D`, geometry, or material per spectator.
 - Crowd preview may report frame time and FPS as machine-specific measurements, but hard acceptance should focus on bounded draw calls, bounded geometry/material counts, explicit instance-buffer estimates, and clean startup/disposal.
 - Crowd preview must not run gameplay AI, start live plays, mutate gameplay state, or activate normal-game crowd presentation.
@@ -161,6 +165,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Tackling must use explicit configurable collision radii.
 - Preserve the tactical orthographic gameplay camera for comparison and debugging.
 - Keep camera behavior in a dedicated camera controller that reads gameplay snapshots and never mutates gameplay state.
+- Keep camera configuration, focus resolution, math helpers, rig mutation, presentation shot definitions, and shot sequencing separated in the existing `src/camera/*` modules.
 - Cinematic presentation shots belong in `src/camera/PresentationCameraDirector.ts`; the director may read gameplay snapshots and move only camera presentation state.
 - Presentation cameras must never move gameplay players, change play state, delay scoring, change possession, change collision, or determine gameplay outcomes.
 - Cinematic orbit shots must extend the existing `PresentationCameraDirector`; do not add a competing camera director.

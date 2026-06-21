@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.45.2] - 2026-06-21
+
+### Changed
+
+- Refactored field rendering into focused `src/field/*` modules for layout, material ownership, geometry construction, dynamic drive markers, and resource disposal while preserving the public `src/field.ts` API and existing field presentation.
+- Refactored camera runtime code into focused `src/camera/*` modules for shared types, configuration, focus resolution, rig mutation, shot definitions, and shot sequencing while preserving all camera modes and cinematic shots.
+- Refactored crowd preview and normal-game crowd presentation into focused `src/crowd/*` modules for deterministic layout, mesh construction, metrics, reaction state, and resource ownership while preserving InstancedMesh batching and behavior.
+- Refactored application startup from `src/main.ts` into lifecycle owners under `src/app/*`, including scene, game loop, gameplay orchestration, player visuals, presentation coordination, and development diagnostics.
+
+### Fixed
+
+- Added explicit typing around announcer voice-design preview data so the restored TypeScript build remains clean with the current ElevenLabs SDK types.
+
 ## [0.45.1] - 2026-06-21
 
 ### Added

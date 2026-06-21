@@ -19,6 +19,14 @@ The active default prototype is now a twenty-two-player 11v11 offensive score-at
 - Painted hash marks and snap-placement hash lanes share the same widened arcade hash X value derived from the professional hash position.
 - World-unit to football-yard conversion is centralized in `src/fieldScale.ts`.
 
+## Runtime Architecture
+
+- `src/main.ts` is a thin bootstrap that constructs and starts `FootballApplication`.
+- Application lifecycle owners live under `src/app`: scene/rendering, the game loop, gameplay orchestration, player visual reconciliation, presentation coordination, and development diagnostics are separated.
+- Field presentation is split under `src/field` while `src/field.ts` remains the compatibility facade for existing field APIs.
+- Camera behavior is split under `src/camera` into configuration, focus resolution, rig mutation, and presentation-shot sequencing modules.
+- Crowd preview and normal-game crowd presentation share focused modules under `src/crowd` for layout, mesh construction, reaction state, metrics, and resource ownership.
+
 ## Scripts
 
 ```bash

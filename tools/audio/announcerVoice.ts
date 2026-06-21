@@ -33,6 +33,14 @@ export interface AnnouncerVoicePreviewMetadata {
   previewText: string;
 }
 
+interface DesignedVoicePreview {
+  audioBase64: string;
+  durationSecs: number;
+  generatedVoiceId: string;
+  language?: string;
+  mediaType: string;
+}
+
 export interface EnsureAnnouncerVoiceOptions {
   execute: boolean;
 }
@@ -149,7 +157,8 @@ async function resolveOrCreateVoicePreviews(
     text: ANNOUNCER_VOICE_PREVIEW_TEXT,
     voiceDescription: ANNOUNCER_VOICE_DESCRIPTION,
   });
-  const previews = response.previews.slice(0, 3).map((preview, index) => {
+  const designedPreviews = response.previews as DesignedVoicePreview[];
+  const previews = designedPreviews.slice(0, 3).map((preview, index) => {
     const outputPath = `${ANNOUNCER_VOICE_PREVIEW_DIR}/announcer_voice_preview_${String(index + 1).padStart(2, '0')}.mp3`;
     const metadata: AnnouncerVoicePreviewMetadata = {
       createdAt: new Date().toISOString(),
