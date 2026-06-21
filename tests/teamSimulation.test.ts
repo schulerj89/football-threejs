@@ -12,13 +12,13 @@ import {
   updateRushingDrillAi,
 } from '../src/teamSimulation';
 
-describe('three-on-three rushing drill simulation', () => {
-  it('creates three offensive and three defensive players without overlap', () => {
+describe('five-on-five rushing drill simulation', () => {
+  it('creates five offensive and five defensive players without overlap', () => {
     const players = createFormationPlayers(INITIAL_BALL_SPOT);
 
-    expect(players).toHaveLength(6);
-    expect(players.filter((player) => player.team === 'offense')).toHaveLength(3);
-    expect(players.filter((player) => player.team === 'defense')).toHaveLength(3);
+    expect(players).toHaveLength(10);
+    expect(players.filter((player) => player.team === 'offense')).toHaveLength(5);
+    expect(players.filter((player) => player.team === 'defense')).toHaveLength(5);
     expect(players.every((player) => player.currentState === 'idle')).toBe(true);
 
     for (let outer = 0; outer < players.length; outer += 1) {
@@ -32,11 +32,11 @@ describe('three-on-three rushing drill simulation', () => {
 
   it('assigns blockers to eligible defenders one-to-one', () => {
     const players = [
-      makePlayer('runner', 'offense', 'runner', 0, 0),
-      makePlayer('blocker-left', 'offense', 'blocker', -1, 0),
-      makePlayer('blocker-right', 'offense', 'blocker', 1, 0),
-      makePlayer('defender-left', 'defense', 'defender', -1, 1),
-      makePlayer('defender-right', 'defense', 'defender', 1, 1),
+      makePlayer('offense-rb', 'offense', 'runner', 0, 0),
+      makePlayer('offense-blocker-left', 'offense', 'blocker', -1, 0),
+      makePlayer('offense-blocker-right', 'offense', 'blocker', 1, 0),
+      makePlayer('defense-rusher-left', 'defense', 'defender', -1, 1),
+      makePlayer('defense-rusher-right', 'defense', 'defender', 1, 1),
     ];
     const blocking = createBlockingState();
 
@@ -50,11 +50,11 @@ describe('three-on-three rushing drill simulation', () => {
   it('impedes engaged defenders while unblocked defenders pursue at full speed', () => {
     const players = createFormationPlayers(INITIAL_BALL_SPOT);
     const play = getRushingPlay('inside-run');
-    const runner = getPlayer(players, 'runner');
+    const runner = getPlayer(players, 'offense-rb');
     const blocking = createBlockingState();
 
-    getPlayer(players, 'blocker-left').position = { x: 7, z: -3.2 };
-    getPlayer(players, 'defender-left').position = { x: 7, z: -3 };
+    getPlayer(players, 'offense-blocker-left').position = { x: 7, z: -3.2 };
+    getPlayer(players, 'defense-rusher-left').position = { x: 7, z: -3 };
 
     updateRushingDrillAi(players, blocking, runner, {
       bounds: PLAYABLE_FIELD_BOUNDS,
@@ -63,11 +63,14 @@ describe('three-on-three rushing drill simulation', () => {
       play,
     });
 
-    const engagedDefender = getPlayer(players, 'defender-left');
-    const unblockedDefender = getPlayer(players, 'defender-middle');
+    const engagedDefender = getPlayer(players, 'defense-rusher-left');
+    const unblockedDefender = getPlayer(players, 'defense-rusher-right');
 
     expect(blocking.engagements).toEqual([
-      expect.objectContaining({ blockerId: 'blocker-left', defenderId: 'defender-left' }),
+      expect.objectContaining({
+        blockerId: 'offense-blocker-left',
+        defenderId: 'defense-rusher-left',
+      }),
     ]);
     expect(vectorLength(engagedDefender.velocity)).toBeCloseTo(
       DEFENDER_CONFIG.pursuitSpeed * BLOCKING_CONFIG.engagedDefenderSpeedMultiplier,
@@ -78,10 +81,10 @@ describe('three-on-three rushing drill simulation', () => {
   it('runs the Quick Pass receiver route and has the coverage defender track the receiver', () => {
     const play = getPlay('quick-pass');
     const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
-    const quarterback = getPlayer(players, 'runner');
-    const receiver = getPlayer(players, 'blocker-left');
-    const coverageDefender = getPlayer(players, 'defender-left');
-    const passRusher = getPlayer(players, 'defender-middle');
+    const quarterback = getPlayer(players, 'offense-qb');
+    const receiver = getPlayer(players, 'offense-wr');
+    const coverageDefender = getPlayer(players, 'defense-cover-wr');
+    const passRusher = getPlayer(players, 'defense-rusher-left');
     const receiverStart = { ...receiver.position };
 
     updateRushingDrillAi(players, createBlockingState(), quarterback, {
@@ -102,14 +105,14 @@ describe('three-on-three rushing drill simulation', () => {
   it('runs both Slant Flat receiver routes and assigns coverage defenders deterministically', () => {
     const play = getPlay('slant-flat');
     const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
-    const quarterback = getPlayer(players, 'runner');
-    const leftReceiver = getPlayer(players, 'blocker-left');
-    const rightReceiver = getPlayer(players, 'blocker-right');
-    const leftCoverage = getPlayer(players, 'defender-left');
-    const rightCoverage = getPlayer(players, 'defender-right');
-    const passRusher = getPlayer(players, 'defender-middle');
-    const leftReceiverStart = { ...leftReceiver.position };
-    const rightReceiverStart = { ...rightReceiver.position };
+    const quarterback = getPlayer(players, 'offense-qb');
+    const wideReceiver = getPlayer(players, 'offense-wr');
+    const runningBack = getPlayer(players, 'offense-rb');
+    const wideCoverage = getPlayer(players, 'defense-cover-wr');
+    const runningBackCoverage = getPlayer(players, 'defense-cover-rb');
+    const passRusher = getPlayer(players, 'defense-rusher-left');
+    const wideReceiverStart = { ...wideReceiver.position };
+    const runningBackStart = { ...runningBack.position };
 
     updateRushingDrillAi(players, createBlockingState(), quarterback, {
       bounds: PLAYABLE_FIELD_BOUNDS,
@@ -118,13 +121,13 @@ describe('three-on-three rushing drill simulation', () => {
       play,
     });
 
-    expect(leftReceiver.position.z).toBeGreaterThan(leftReceiverStart.z);
-    expect(rightReceiver.position.x).toBeGreaterThan(rightReceiverStart.x);
-    expect(leftCoverage.currentState).toBe('pursuing');
-    expect(rightCoverage.currentState).toBe('pursuing');
-    expect(leftCoverage.velocity.z).toBeLessThan(0);
-    expect(rightCoverage.velocity.z).toBeLessThan(0);
-    expect(rightCoverage.velocity.x).toBeGreaterThan(0);
+    expect(wideReceiver.position.z).toBeGreaterThan(wideReceiverStart.z);
+    expect(runningBack.position.x).toBeLessThan(runningBackStart.x);
+    expect(wideCoverage.currentState).toBe('pursuing');
+    expect(runningBackCoverage.currentState).toBe('pursuing');
+    expect(wideCoverage.velocity.z).toBeLessThan(0);
+    expect(runningBackCoverage.velocity.z).toBeLessThan(0);
+    expect(runningBackCoverage.velocity.x).toBeLessThan(0);
     expect(passRusher.currentState).toBe('pursuing');
     expect(passRusher.velocity.z).toBeLessThan(0);
   });
@@ -136,8 +139,8 @@ describe('three-on-three rushing drill simulation', () => {
       z: INITIAL_BALL_SPOT.z,
     };
     const players = createFormationPlayers(sidelineSpot, play);
-    const quarterback = getPlayer(players, 'runner');
-    const rightReceiver = getPlayer(players, 'blocker-right');
+    const quarterback = getPlayer(players, 'offense-qb');
+    const runningBack = getPlayer(players, 'offense-rb');
 
     for (let frame = 0; frame < 20; frame += 1) {
       updateRushingDrillAi(players, createBlockingState(), quarterback, {
@@ -148,18 +151,18 @@ describe('three-on-three rushing drill simulation', () => {
       });
     }
 
-    expect(rightReceiver.position.x).toBeLessThanOrEqual(
-      PLAYABLE_FIELD_BOUNDS.maxX - rightReceiver.collisionRadius,
+    expect(runningBack.position.x).toBeLessThanOrEqual(
+      PLAYABLE_FIELD_BOUNDS.maxX - runningBack.collisionRadius,
     );
-    expect(rightReceiver.position.x).toBeGreaterThanOrEqual(
-      PLAYABLE_FIELD_BOUNDS.minX + rightReceiver.collisionRadius,
+    expect(runningBack.position.x).toBeGreaterThanOrEqual(
+      PLAYABLE_FIELD_BOUNDS.minX + runningBack.collisionRadius,
     );
   });
 
   it('disengages blockers and defenders after they separate', () => {
     const players = createFormationPlayers(INITIAL_BALL_SPOT);
-    const blocker = getPlayer(players, 'blocker-left');
-    const defender = getPlayer(players, 'defender-left');
+    const blocker = getPlayer(players, 'offense-blocker-left');
+    const defender = getPlayer(players, 'defense-rusher-left');
     const blocking = createBlockingState();
 
     blocking.engagements.push({ blockerId: blocker.id, defenderId: defender.id });

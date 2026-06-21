@@ -24,7 +24,7 @@ const TACKLE_CONTACT_EPSILON = 0.0001;
 export function createDefenderModel(ballSpot?: FootballSpot): DefenderModel {
   return createPlayerModel(getDefenderResetPosition(ballSpot), {
     facingRadians: DEFENDER_CONFIG.initialFacingRadians,
-    id: 'defender-middle',
+    id: 'defense-rusher-left',
     role: 'defender',
     state: 'idle',
     team: 'defense',

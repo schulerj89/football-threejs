@@ -13,6 +13,10 @@ import {
   createFootballField,
   syncFootballFieldDriveLines,
 } from './field';
+import {
+  createFormationAuditOverlay,
+  syncFormationAuditOverlay,
+} from './formationAuditOverlay';
 import { createGameplayHud, syncGameplayHud } from './gameplayHud';
 import {
   attachHelmetsToPlayerVisuals,
@@ -102,6 +106,9 @@ const keyboardInput = new KeyboardMovementInput(window);
 const playControls = new KeyboardPlayControls(window);
 const debugOverlay = new DebugOverlay({ renderer, player: gameplayModel.player });
 const gameplayHud = createGameplayHud();
+const formationAuditOverlay = searchParams.has('formationAudit')
+  ? createFormationAuditOverlay()
+  : null;
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 
@@ -160,6 +167,9 @@ function renderFrame(delta: number): void {
   const gameplaySnapshot = snapshotGameplayModel(gameplayModel);
   cameraController.update(gameplaySnapshot, delta);
   syncGameplayHud(gameplayHud, gameplaySnapshot);
+  if (formationAuditOverlay) {
+    syncFormationAuditOverlay(formationAuditOverlay, gameplayModel);
+  }
   renderer.render(scene, cameraController.camera);
   debugOverlay.update(
     delta,

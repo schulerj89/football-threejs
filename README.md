@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, two passing plays, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
+The current milestone is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for two rushing plays and two passing plays, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
 
 ## World Scale
 
@@ -73,10 +73,12 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 
 Add `?fieldAudit=1` to show field geometry validation helpers: authoritative field bounds, inner marking bounds, corner markers, and red highlighting for any painted marking that escapes the field surface.
 
+Add `?formationAudit=1` to show the resolved semantic formation: snap lane, field/boundary side, player positions, lateral/depth offsets, and any validation issues highlighted in red.
+
 ## Current Non-Goals
 
 - Presentation: no stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, or stadium presentation.
-- Roster scope: no 4v4, 5v5, full special teams, additional offensive or defensive players, player switching, or formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data.
+- Roster scope: no 7v7, 11v11, full special teams, additional offensive or defensive players beyond the current five-on-five drill, player switching, or formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data.
 - Assets and animation: no imported assets beyond the current reusable low-poly helmet, no full player models replacing primitive bodies, no imported animations, no quarterback animation, no scramble animation, no tackling animation, no celebration animation, and no center or snap animation.
 - Play calling: no large play-calling menu, audibles, defensive play selection, route editor, procedural play generation, hot routes, or menus beyond the current minimal HUD/debug displays.
 - Passing and ball outcomes: no interceptions, fumbles, loose-ball physics, manual aiming, pass-type selection, pump fake, illegal-forward-pass penalty, referee logic, user-controlled catch mechanic, contested-catch ratings, or quarterback ratings.

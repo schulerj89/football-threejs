@@ -43,6 +43,7 @@ import {
   getNextEligibleReceiverId,
   getReceiverRouteTarget,
   getReceiverDisplayName,
+  hasReceiverRoute,
   isEligibleReceiverId,
   resetFormationPlayers,
   type PlayId,
@@ -243,10 +244,12 @@ export function startPlay(gameplay: GameplayModel): boolean {
       player.currentState = 'userControlled';
     } else if (player.role === 'blocker') {
       player.currentState = 'movingToLane';
-    } else if (player.role === 'receiver') {
+    } else if (player.role === 'receiver' && hasReceiverRoute(player.id, gameplay.selectedPlay)) {
       player.currentState = 'runningRoute';
-    } else {
+    } else if (player.team === 'defense') {
       player.currentState = 'pursuing';
+    } else {
+      player.currentState = 'idle';
     }
   }
   giveBallToPlayer(gameplay.ball, gameplay.player);

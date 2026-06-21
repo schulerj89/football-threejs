@@ -2,12 +2,12 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, Quick Pass, Slant Flat, primitive player bodies with cloned low-poly helmet visuals, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable primitive ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, primitive player bodies with cloned low-poly helmet visuals, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable primitive ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera.
 
 ## Current Non-Goals
 
 - Presentation: no stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, or stadium presentation.
-- Roster scope: no 4v4, 5v5, full special teams, additional offensive or defensive players, player switching, or formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data.
+- Roster scope: no 7v7, 11v11, full special teams, additional offensive or defensive players beyond the current five-on-five drill, player switching, or formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data.
 - Assets and animation: no imported assets beyond the current reusable low-poly helmet, no full player models replacing primitive bodies, no imported animations, no quarterback animation, no scramble animation, no tackling animation, no celebration animation, and no center or snap animation.
 - Play calling: no large play-calling menu, audibles, defensive play selection, route editor, procedural play generation, hot routes, or menus beyond the current minimal HUD/debug displays.
 - Passing and ball outcomes: no interceptions, fumbles, loose-ball physics, manual aiming, pass-type selection, pump fake, illegal-forward-pass penalty, referee logic, user-controlled catch mechanic, contested-catch ratings, or quarterback ratings.
@@ -42,7 +42,9 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Use primitive Three.js geometry and simple materials during graybox work.
 - Keep input, simulation, and visual synchronization in separate modules.
 - All gameplay players use the common player model with stable ID, team, role, position, velocity, facing, collision radius, and current state.
-- Initial formations belong in data, not hard-coded mesh positions.
+- Current formations use the stable 10-player roster: `offense-qb`, `offense-rb`, `offense-blocker-left`, `offense-blocker-right`, `offense-wr`, `defense-rusher-left`, `defense-rusher-right`, `defense-cover-wr`, `defense-cover-rb`, and `defense-safety`.
+- Initial formations belong in semantic data resolved through `src/formationLayout.ts`, not hard-coded mesh positions or independent per-play clamps.
+- Formation data should separate formation position, pre-snap facing, post-snap movement direction, blocking targets, route targets, and coverage assignments.
 - Play definitions belong in data and must stay independent from Three.js scene objects.
 - Play selection is allowed during pre-snap only; resetting preserves the selected play.
 - The gameplay model owns player position, velocity, facing, and blocking engagement state; Three.js meshes only display that state.
@@ -89,4 +91,4 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Static field markings are batched into a small bounded set of draw calls, and the browser smoke test checks the debug-overlay renderer call budget.
 - Play lookup, formation placement, invalid IDs, selection restrictions, pass eligibility, rejected throws, pass transitions, catch eligibility, incomplete passes, sacks, selected-target cycling, control transfer, and duplicate throw prevention have deterministic tests.
 - Existing tests pass.
-- The browser smoke test proves play selection plus formation, movement, score, tackle, out-of-bounds, and turnover-on-downs outcomes work.
+- The browser smoke test proves play selection plus five-on-five formation, movement, score, tackle, out-of-bounds, and turnover-on-downs outcomes work.

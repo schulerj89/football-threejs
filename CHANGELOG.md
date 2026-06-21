@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.0] - 2026-06-21
+
+### Added
+
+- Expanded the current offensive drill to a stable five-on-five roster across Inside Run, Outside Run, Quick Pass, and Slant Flat.
+- Added pure semantic formation resolution in `src/formationLayout.ts` with hash-aware field/boundary side placement, stable player IDs, assignment validation, and no Three.js dependency.
+- Added `?formationAudit=1` to display resolved formation positions, offsets, sides, and validation issues during development.
+- Added unit coverage for 5v5 formation resolution, roster validation, hash-side mirroring, rusher alignment, coverage alignment, safety midpoint placement, and invalid formations.
+
+### Changed
+
+- Converted play definitions from raw offset placement to semantic formation slots and route/blocking targets.
+- Updated gameplay start-state handling so unrouted offensive receivers stay idle before and after the snap until their play defines a route.
+- Updated browser smoke coverage for five-on-five roster creation, helmet attachment, play selection, passing, rushing, tackle, out-of-bounds, turnover, and audit-overlay startup.
+
 ## [0.18.2] - 2026-06-21
 
 ### Changed

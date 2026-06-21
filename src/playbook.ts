@@ -1,36 +1,38 @@
-import { OPPOSING_GOAL_LINE_Z, PLAYABLE_FIELD_BOUNDS } from './field';
+import { resolveSnapPlacement } from './ballSpotting';
 import type { FootballSpot } from './fieldScale';
+import {
+  FORMATION_MEASUREMENTS,
+  assertValidResolvedFormation,
+  resolveFormation,
+  resolveFormationTarget,
+  type FormationSide,
+  type FormationPoint,
+  type FormationSlot,
+  type LateralAnchor,
+  type LongitudinalAnchor,
+  type PreferredFormationSide,
+  type PreSnapFacingDefinition,
+} from './formationLayout';
 import {
   PLAYER_MOVEMENT_CONFIG,
   createPlayerModel,
   type PlayerModel,
   type PlayerRole,
-  type PlayerTeam,
   type Vector2,
 } from './playerModel';
 
 export type PlayId = 'inside-run' | 'outside-run' | 'quick-pass' | 'slant-flat';
 export type PlayKind = 'run' | 'pass';
-export type PreSnapFacingDefinition =
-  | { kind: 'playDirection' }
-  | { kind: 'againstPlayDirection' };
-
-export interface FormationPlayer {
-  id: string;
-  offset: Vector2;
-  preSnapFacing: PreSnapFacingDefinition;
-  role: PlayerRole;
-  team: PlayerTeam;
-}
+export type FormationPlayer = FormationSlot;
 
 export interface ReceiverRouteDefinition {
-  targetOffset: Vector2;
   speed: number;
+  target: FormationPoint;
 }
 
 export interface PlayDefinition {
   ballCarrierRole: PlayerRole;
-  blockerLaneOffsets: Record<string, Vector2>;
+  blockerLaneTargets: Record<string, FormationPoint>;
   displayName: string;
   formation: FormationPlayer[];
   id: PlayId;
@@ -41,6 +43,7 @@ export interface PlayDefinition {
     eligibleReceiverIds: string[];
     receiverDisplayNames?: Record<string, string>;
   };
+  preferredSide: PreferredFormationSide;
   receiverRoutes?: Record<string, ReceiverRouteDefinition>;
 }
 
@@ -54,256 +57,162 @@ export const PRE_SNAP_FACING_RADIANS = {
   playDirection: 0,
 } as const;
 
+const {
+  blockerSpacing,
+  coverageCushion,
+  defensiveLineDepth,
+  interiorLaneDepth,
+  interiorLaneSpacing,
+  offensiveLineSetback,
+  outsideLeadInset,
+  outsideTrailInset,
+  passProtectDepth,
+  quarterbackDepth,
+  receiverSidelineInset,
+  runningBackDepth,
+  safetyDepth,
+} = FORMATION_MEASUREMENTS;
+
+const PLAY_SIDE: PreferredFormationSide = 'right';
+
 export const PLAYS: PlayDefinition[] = [
   {
     ballCarrierRole: 'runner',
-    blockerLaneOffsets: {
-      'blocker-left': { x: 2.5, z: 14 },
-      'blocker-right': { x: -2.5, z: 14 },
+    blockerLaneTargets: {
+      'offense-blocker-left': point(snap(-interiorLaneSpacing), defenseDepth(interiorLaneDepth)),
+      'offense-blocker-right': point(snap(interiorLaneSpacing), defenseDepth(interiorLaneDepth)),
     },
     displayName: 'Inside Run',
     formation: [
-      {
-        id: 'runner',
-        offset: { x: 0, z: 0 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'runner',
-        team: 'offense',
-      },
-      {
-        id: 'blocker-left',
-        offset: { x: 3, z: 1.5 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'blocker',
-        team: 'offense',
-      },
-      {
-        id: 'blocker-right',
-        offset: { x: -3, z: 1.5 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'blocker',
-        team: 'offense',
-      },
-      {
-        id: 'defender-left',
-        offset: { x: 7, z: 24 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'defender',
-        team: 'defense',
-      },
-      {
-        id: 'defender-middle',
-        offset: { x: 0, z: 45 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'defender',
-        team: 'defense',
-      },
-      {
-        id: 'defender-right',
-        offset: { x: -7, z: 24 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'defender',
-        team: 'defense',
-      },
+      quarterbackSlot(),
+      runningBackSlot('runner'),
+      blockerSlot('offense-blocker-left', -blockerSpacing),
+      blockerSlot('offense-blocker-right', blockerSpacing),
+      receiverSlot('offense-wr', fieldSideline()),
+      rusherSlot('defense-rusher-left', 'offense-blocker-left'),
+      rusherSlot('defense-rusher-right', 'offense-blocker-right'),
+      defenderSlotAtDepth('defense-cover-wr', alignedTo('offense-wr'), coverageCushion),
+      defenderSlotAtDepth('defense-cover-rb', alignedTo('offense-rb'), coverageCushion),
+      defenderSlot('defense-safety', snap()),
     ],
     id: 'inside-run',
     initialMovementDirection: { x: 0, z: 1 },
     kind: 'run',
+    preferredSide: PLAY_SIDE,
   },
   {
     ballCarrierRole: 'runner',
-    blockerLaneOffsets: {
-      'blocker-left': { x: 11, z: 13 },
-      'blocker-right': { x: 15, z: 11 },
+    blockerLaneTargets: {
+      'offense-blocker-left': point(
+        sidelineInset('field', outsideLeadInset),
+        defenseDepth(interiorLaneDepth),
+      ),
+      'offense-blocker-right': point(
+        sidelineInset('field', outsideTrailInset),
+        defenseDepth(interiorLaneDepth - 2),
+      ),
     },
     displayName: 'Outside Run',
     formation: [
-      {
-        id: 'runner',
-        offset: { x: 2.5, z: 0 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'runner',
-        team: 'offense',
-      },
-      {
-        id: 'blocker-left',
-        offset: { x: 6, z: 1.5 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'blocker',
-        team: 'offense',
-      },
-      {
-        id: 'blocker-right',
-        offset: { x: 9, z: 0.5 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'blocker',
-        team: 'offense',
-      },
-      {
-        id: 'defender-left',
-        offset: { x: 9, z: 24 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'defender',
-        team: 'defense',
-      },
-      {
-        id: 'defender-middle',
-        offset: { x: 0, z: 45 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'defender',
-        team: 'defense',
-      },
-      {
-        id: 'defender-right',
-        offset: { x: -7, z: 24 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'defender',
-        team: 'defense',
-      },
+      quarterbackSlot(),
+      runningBackSlot('runner', snapSide('field', 2.5)),
+      blockerSlot('offense-blocker-left', -blockerSpacing),
+      blockerSlot('offense-blocker-right', blockerSpacing),
+      receiverSlot('offense-wr', fieldSideline()),
+      rusherSlot('defense-rusher-left', 'offense-blocker-left'),
+      rusherSlot('defense-rusher-right', 'offense-blocker-right'),
+      defenderSlotAtDepth('defense-cover-wr', alignedTo('offense-wr'), coverageCushion),
+      defenderSlotAtDepth('defense-cover-rb', alignedTo('offense-rb'), coverageCushion),
+      defenderSlot('defense-safety', snap()),
     ],
     id: 'outside-run',
-    initialMovementDirection: { x: 0.7, z: 0.7 },
+    initialMovementDirection: { x: 0, z: 1 },
     kind: 'run',
+    preferredSide: PLAY_SIDE,
   },
   {
     ballCarrierRole: 'quarterback',
-    blockerLaneOffsets: {
-      'blocker-right': { x: 4, z: 8 },
+    blockerLaneTargets: {
+      'offense-blocker-left': point(snap(-blockerSpacing), defenseDepth(passProtectDepth)),
+      'offense-blocker-right': point(snap(blockerSpacing), defenseDepth(passProtectDepth)),
+      'offense-rb': point(snap(), defenseDepth(passProtectDepth)),
     },
     displayName: 'Quick Pass',
     formation: [
-      {
-        id: 'runner',
-        offset: { x: 0, z: 0 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'quarterback',
-        team: 'offense',
-      },
-      {
-        id: 'blocker-left',
-        offset: { x: -7, z: 1.5 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'receiver',
-        team: 'offense',
-      },
-      {
-        id: 'blocker-right',
-        offset: { x: 3, z: 1.5 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'blocker',
-        team: 'offense',
-      },
-      {
-        id: 'defender-left',
-        offset: { x: -8, z: 9 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'coverageDefender',
-        team: 'defense',
-      },
-      {
-        id: 'defender-middle',
-        offset: { x: 0, z: 24 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'defender',
-        team: 'defense',
-      },
-      {
-        id: 'defender-right',
-        offset: { x: 8, z: 24 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'defender',
-        team: 'defense',
-      },
+      quarterbackSlot(),
+      runningBackSlot('blocker'),
+      blockerSlot('offense-blocker-left', -blockerSpacing),
+      blockerSlot('offense-blocker-right', blockerSpacing),
+      receiverSlot('offense-wr', fieldSideline()),
+      rusherSlot('defense-rusher-left', 'offense-blocker-left'),
+      rusherSlot('defense-rusher-right', 'offense-blocker-right'),
+      coverageSlot('defense-cover-wr', 'offense-wr'),
+      coverageSlot('defense-cover-rb', 'offense-rb'),
+      defenderSlot('defense-safety', midpointOf(['offense-wr'])),
     ],
     id: 'quick-pass',
     initialMovementDirection: { x: 0, z: 1 },
     kind: 'pass',
     pass: {
       coverageAssignments: {
-        'defender-left': 'blocker-left',
+        'defense-cover-rb': 'offense-rb',
+        'defense-cover-wr': 'offense-wr',
       },
-      eligibleReceiverIds: ['blocker-left'],
+      eligibleReceiverIds: ['offense-wr'],
       receiverDisplayNames: {
-        'blocker-left': 'Receiver',
+        'offense-wr': 'Receiver',
       },
     },
+    preferredSide: PLAY_SIDE,
     receiverRoutes: {
-      'blocker-left': {
+      'offense-wr': {
         speed: 9.5,
-        targetOffset: { x: -1.5, z: 11 },
+        target: point(fieldCenter(), defenseDepth(11)),
       },
     },
   },
   {
     ballCarrierRole: 'quarterback',
-    blockerLaneOffsets: {},
+    blockerLaneTargets: {
+      'offense-blocker-left': point(snap(-blockerSpacing), defenseDepth(passProtectDepth)),
+      'offense-blocker-right': point(snap(blockerSpacing), defenseDepth(passProtectDepth)),
+    },
     displayName: 'Slant Flat',
     formation: [
-      {
-        id: 'runner',
-        offset: { x: 0, z: 0 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'quarterback',
-        team: 'offense',
-      },
-      {
-        id: 'blocker-left',
-        offset: { x: -8, z: 1.5 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'receiver',
-        team: 'offense',
-      },
-      {
-        id: 'blocker-right',
-        offset: { x: 8, z: 1.5 },
-        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
-        role: 'receiver',
-        team: 'offense',
-      },
-      {
-        id: 'defender-left',
-        offset: { x: -8, z: 9 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'coverageDefender',
-        team: 'defense',
-      },
-      {
-        id: 'defender-middle',
-        offset: { x: 0, z: 24 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'defender',
-        team: 'defense',
-      },
-      {
-        id: 'defender-right',
-        offset: { x: 8, z: 9 },
-        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
-        role: 'coverageDefender',
-        team: 'defense',
-      },
+      quarterbackSlot(),
+      runningBackSlot('receiver'),
+      blockerSlot('offense-blocker-left', -blockerSpacing),
+      blockerSlot('offense-blocker-right', blockerSpacing),
+      receiverSlot('offense-wr', fieldSideline()),
+      rusherSlot('defense-rusher-left', 'offense-blocker-left'),
+      rusherSlot('defense-rusher-right', 'offense-blocker-right'),
+      coverageSlot('defense-cover-wr', 'offense-wr'),
+      coverageSlot('defense-cover-rb', 'offense-rb'),
+      defenderSlot('defense-safety', midpointOf(['offense-wr', 'offense-rb'])),
     ],
     id: 'slant-flat',
     initialMovementDirection: { x: 0, z: 1 },
     kind: 'pass',
     pass: {
       coverageAssignments: {
-        'defender-left': 'blocker-left',
-        'defender-right': 'blocker-right',
+        'defense-cover-rb': 'offense-rb',
+        'defense-cover-wr': 'offense-wr',
       },
-      eligibleReceiverIds: ['blocker-left', 'blocker-right'],
+      eligibleReceiverIds: ['offense-wr', 'offense-rb'],
       receiverDisplayNames: {
-        'blocker-left': 'Slant',
-        'blocker-right': 'Flat',
+        'offense-rb': 'Flat',
+        'offense-wr': 'Slant',
       },
     },
+    preferredSide: PLAY_SIDE,
     receiverRoutes: {
-      'blocker-left': {
-        speed: 9.5,
-        targetOffset: { x: -2, z: 11 },
-      },
-      'blocker-right': {
+      'offense-rb': {
         speed: 8.5,
-        targetOffset: { x: 15, z: 5 },
+        target: point(sidelineInset('boundary', outsideTrailInset), defenseDepth(5)),
+      },
+      'offense-wr': {
+        speed: 9.5,
+        target: point(fieldCenter(), defenseDepth(11)),
       },
     },
   },
@@ -331,8 +240,10 @@ export function createFormationPlayers(
   ballSpot: FootballSpot,
   play: PlayDefinition = getPlay(DEFAULT_PLAY_ID),
 ): PlayerModel[] {
-  return play.formation.map((slot) =>
-    createPlayerModel(calculateFormationSpot(ballSpot, slot.offset), {
+  const formation = resolvePlayFormation(ballSpot, play);
+
+  return formation.slots.map((slot) =>
+    createPlayerModel(slot.position, {
       collisionRadius: PLAYER_MOVEMENT_CONFIG.collisionRadius,
       facingRadians: resolvePreSnapFacing(slot.preSnapFacing),
       id: slot.id,
@@ -348,12 +259,17 @@ export function resetFormationPlayers(
   ballSpot: FootballSpot,
   play: PlayDefinition,
 ): void {
-  for (const player of players) {
-    const slot = getFormationSlot(play, player.id);
-    const spot = calculateFormationSpot(ballSpot, slot.offset);
+  const formation = resolvePlayFormation(ballSpot, play);
 
-    player.position.x = spot.x;
-    player.position.z = spot.z;
+  for (const slot of formation.slots) {
+    const player = players.find((candidate) => candidate.id === slot.id);
+
+    if (!player) {
+      throw new Error(`Missing player ${slot.id} while resetting ${play.displayName}`);
+    }
+
+    player.position.x = slot.position.x;
+    player.position.z = slot.position.z;
     player.velocity.x = 0;
     player.velocity.z = 0;
     player.collisionRadius = PLAYER_MOVEMENT_CONFIG.collisionRadius;
@@ -370,9 +286,9 @@ export function getBlockingLaneTarget(
   play: PlayDefinition,
 ): FootballSpot {
   const slot = getFormationSlot(play, blocker.id);
-  const laneOffset = play.blockerLaneOffsets[blocker.id] ?? slot.offset;
+  const laneTarget = play.blockerLaneTargets[blocker.id] ?? slot;
 
-  return calculateFormationSpot(ballSpot, laneOffset);
+  return resolveFormationTarget(play, laneTarget, resolveSnapPlacement(ballSpot));
 }
 
 export function getFormationSlot(
@@ -403,11 +319,15 @@ export function getReceiverRouteTarget(
     return null;
   }
 
-  return calculateFormationSpot(ballSpot, route.targetOffset);
+  return resolveFormationTarget(play, route.target, resolveSnapPlacement(ballSpot));
 }
 
 export function getReceiverRouteSpeed(receiver: PlayerModel, play: PlayDefinition): number {
   return play.receiverRoutes?.[receiver.id]?.speed ?? 0;
+}
+
+export function hasReceiverRoute(playerId: string, play: PlayDefinition): boolean {
+  return !!play.receiverRoutes?.[playerId];
 }
 
 export function getEligibleReceiverIds(play: PlayDefinition): string[] {
@@ -447,29 +367,127 @@ export function getCoverageAssignmentReceiverId(
   defenderId: string,
 ): string | null {
   const receiverIds = getEligibleReceiverIds(play);
+  const assignment = play.pass?.coverageAssignments?.[defenderId];
 
-  if (receiverIds.length === 0) {
-    return null;
+  if (assignment) {
+    return assignment;
   }
 
-  return play.pass?.coverageAssignments?.[defenderId] ?? receiverIds[0];
+  return receiverIds[0] ?? null;
 }
 
-function calculateFormationSpot(ballSpot: FootballSpot, offset: Vector2): FootballSpot {
-  const minX = PLAYABLE_FIELD_BOUNDS.minX + PLAYER_MOVEMENT_CONFIG.collisionRadius;
-  const maxX = PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.collisionRadius;
-  const minZ = PLAYABLE_FIELD_BOUNDS.minZ + PLAYER_MOVEMENT_CONFIG.collisionRadius;
-  const maxZ = Math.min(
-    OPPOSING_GOAL_LINE_Z - 2,
-    PLAYABLE_FIELD_BOUNDS.maxZ - PLAYER_MOVEMENT_CONFIG.collisionRadius,
-  );
+function resolvePlayFormation(ballSpot: FootballSpot, play: PlayDefinition) {
+  const formation = resolveFormation(play, resolveSnapPlacement(ballSpot));
+  assertValidResolvedFormation(formation);
 
+  return formation;
+}
+
+function quarterbackSlot(): FormationSlot {
+  return offenseSlot('offense-qb', 'quarterback', point(snap(), offenseDepth(quarterbackDepth)));
+}
+
+function runningBackSlot(role: PlayerRole, lateral: LateralAnchor = snap()): FormationSlot {
+  return offenseSlot('offense-rb', role, point(lateral, offenseDepth(runningBackDepth)));
+}
+
+function blockerSlot(id: 'offense-blocker-left' | 'offense-blocker-right', offsetYards: number): FormationSlot {
+  return offenseSlot(id, 'blocker', point(snap(offsetYards), offenseDepth(offensiveLineSetback)));
+}
+
+function receiverSlot(id: 'offense-wr', lateral: LateralAnchor): FormationSlot {
+  return offenseSlot(id, 'receiver', point(lateral, offenseDepth(offensiveLineSetback)));
+}
+
+function rusherSlot(
+  id: 'defense-rusher-left' | 'defense-rusher-right',
+  alignedPlayerId: string,
+): FormationSlot {
+  return defenseSlot(id, 'defender', point(alignedTo(alignedPlayerId), defenseDepth(defensiveLineDepth)));
+}
+
+function coverageSlot(
+  id: 'defense-cover-rb' | 'defense-cover-wr',
+  alignedPlayerId: string,
+): FormationSlot {
+  return defenseSlot(id, 'coverageDefender', point(alignedTo(alignedPlayerId), defenseDepth(coverageCushion)));
+}
+
+function defenderSlot(id: string, lateral: LateralAnchor): FormationSlot {
+  return defenderSlotAtDepth(id, lateral, safetyDepth);
+}
+
+function defenderSlotAtDepth(id: string, lateral: LateralAnchor, depthYards: number): FormationSlot {
+  return defenseSlot(id, 'defender', point(lateral, defenseDepth(depthYards)));
+}
+
+function offenseSlot(id: string, role: PlayerRole, formationPoint: FormationPoint): FormationSlot {
   return {
-    x: clamp(ballSpot.x + offset.x, minX, maxX),
-    z: clamp(ballSpot.z + offset.z, minZ, maxZ),
+    ...formationPoint,
+    id,
+    preSnapFacing: OFFENSE_PRE_SNAP_FACING,
+    role,
+    team: 'offense',
   };
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
+function defenseSlot(id: string, role: PlayerRole, formationPoint: FormationPoint): FormationSlot {
+  return {
+    ...formationPoint,
+    id,
+    preSnapFacing: DEFENSE_PRE_SNAP_FACING,
+    role,
+    team: 'defense',
+  };
+}
+
+function point(lateral: LateralAnchor, longitudinal: LongitudinalAnchor): FormationPoint {
+  return { lateral, longitudinal };
+}
+
+function snap(offsetYards = 0): LateralAnchor {
+  return { kind: 'snap', offsetYards };
+}
+
+function snapSide(side: FormationSide, distanceYards: number): LateralAnchor {
+  return { distanceYards, kind: 'snapSide', side };
+}
+
+function fieldCenter(offsetYards = 0): LateralAnchor {
+  return { kind: 'fieldCenter', offsetYards };
+}
+
+function fieldSideline(): LateralAnchor {
+  return sidelineInset('field', receiverSidelineInset);
+}
+
+function sidelineInset(side: 'left' | 'right' | 'field' | 'boundary', insetYards: number): LateralAnchor {
+  return { insetYards, kind: 'sidelineInset', side };
+}
+
+function alignedTo(playerId: string, offsetYards = 0): LateralAnchor {
+  return { kind: 'alignedToPlayer', offsetYards, playerId };
+}
+
+function midpointOf(playerIds: string[], offsetYards = 0): LateralAnchor {
+  return { kind: 'midpointOfPlayers', offsetYards, playerIds };
+}
+
+function offenseDepth(depthYards: number): LongitudinalAnchor {
+  return lineOfScrimmageDepth('offense', depthYards);
+}
+
+function defenseDepth(depthYards: number): LongitudinalAnchor {
+  return lineOfScrimmageDepth('defense', depthYards);
+}
+
+function lineOfScrimmageDepth(
+  side: LongitudinalAnchor['side'],
+  depthYards: number,
+): LongitudinalAnchor {
+  return {
+    depthYards,
+    kind: 'lineOfScrimmage',
+    side,
+  };
 }

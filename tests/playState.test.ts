@@ -9,6 +9,7 @@ import {
 } from '../src/defenderModel';
 import { INITIAL_BALL_SPOT, LINE_OF_SCRIMMAGE_Z, PLAYABLE_FIELD_BOUNDS } from '../src/field';
 import { calculateYardsGained } from '../src/fieldScale';
+import { FORMATION_MEASUREMENTS } from '../src/formationLayout';
 import { FORWARD_PASS_CONFIG } from '../src/passRules';
 import { PLAYER_MOVEMENT_CONFIG, type PlayerModel } from '../src/playerModel';
 import { PRE_SNAP_FACING_RADIANS } from '../src/playbook';
@@ -33,7 +34,11 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel();
 
     expect(gameplay.playState).toBe('preSnap');
-    expect(gameplay.player.position).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z });
+    expect(gameplay.player).toMatchObject({
+      id: 'offense-rb',
+      position: { x: 0, z: LINE_OF_SCRIMMAGE_Z - FORMATION_MEASUREMENTS.runningBackDepth },
+      role: 'runner',
+    });
     expect(gameplay.player.velocity).toEqual({ x: 0, z: 0 });
     expect(gameplay.activePlayStartSpot).toBeNull();
     expect(gameplay.currentBallSpot).toEqual(INITIAL_BALL_SPOT);
@@ -45,11 +50,10 @@ describe('play state transitions', () => {
       state: 'active',
       yardsToFirstDown: 10,
     });
-    expect(gameplay.players).toHaveLength(6);
-    expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(3);
-    expect(gameplay.players.filter((player) => player.team === 'defense')).toHaveLength(3);
+    expect(gameplay.players).toHaveLength(10);
+    expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(5);
+    expect(gameplay.players.filter((player) => player.team === 'defense')).toHaveLength(5);
     expect(gameplay.players.every((player) => player.currentState === 'idle')).toBe(true);
-    expect(getPrimaryDefender(gameplay.players).position).toEqual(DEFENDER_CONFIG.initialPosition);
     expect(getPrimaryDefender(gameplay.players).velocity).toEqual({ x: 0, z: 0 });
     expect(gameplay.ball.possession).toEqual({ kind: 'none' });
     expect(gameplay.lastPlayResult).toBeNull();
@@ -81,8 +85,10 @@ describe('play state transitions', () => {
         expect.objectContaining({ currentState: 'movingToLane' }),
       ]),
     );
-    expect(gameplay.players.filter((player) => player.role === 'defender')).toEqual(
+    expect(gameplay.players.filter((player) => player.team === 'defense')).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ currentState: 'pursuing' }),
+        expect.objectContaining({ currentState: 'pursuing' }),
         expect.objectContaining({ currentState: 'pursuing' }),
         expect.objectContaining({ currentState: 'pursuing' }),
         expect.objectContaining({ currentState: 'pursuing' }),
@@ -226,7 +232,10 @@ describe('play state transitions', () => {
       yardsToFirstDown: 10,
     });
     expect(gameplay.selectedPlay.id).toBe('inside-run');
-    expect(gameplay.player.position).toEqual(INITIAL_BALL_SPOT);
+    expect(gameplay.player.position).toEqual({
+      x: 0,
+      z: LINE_OF_SCRIMMAGE_Z - FORMATION_MEASUREMENTS.runningBackDepth,
+    });
     expect(gameplay.ball.possession).toEqual({ kind: 'none' });
   });
 
@@ -238,6 +247,9 @@ describe('play state transitions', () => {
 
     expect(gameplay.selectedPlay.id).toBe('outside-run');
     expect(gameplay.player.position.x).toBeCloseTo(2.5);
+    expect(gameplay.player.position.z).toBeCloseTo(
+      LINE_OF_SCRIMMAGE_Z - FORMATION_MEASUREMENTS.runningBackDepth,
+    );
     expect(gameplay.players.every((player) => player.currentState === 'idle')).toBe(true);
     expect(gameplay.ball.possession).toEqual({ kind: 'none' });
     expect(gameplay.ball.position.z).toBeCloseTo(LINE_OF_SCRIMMAGE_Z);
@@ -263,6 +275,9 @@ describe('play state transitions', () => {
 
     expect(gameplay.selectedPlay.id).toBe('outside-run');
     expect(gameplay.player.position.x).toBeCloseTo(2.5);
+    expect(gameplay.player.position.z).toBeCloseTo(
+      LINE_OF_SCRIMMAGE_Z - FORMATION_MEASUREMENTS.runningBackDepth,
+    );
     expect(gameplay.playState).toBe('preSnap');
   });
 
@@ -270,11 +285,17 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel();
 
     expect(selectPlay(gameplay, 'outside-run')).toBe(true);
-    const leftBlocker = getPlayer(gameplay.players, 'blocker-left');
-    const rightBlocker = getPlayer(gameplay.players, 'blocker-right');
+    const leftBlocker = getPlayer(gameplay.players, 'offense-blocker-left');
+    const rightBlocker = getPlayer(gameplay.players, 'offense-blocker-right');
 
-    expect(leftBlocker.position).toEqual({ x: 6, z: LINE_OF_SCRIMMAGE_Z + 1.5 });
-    expect(rightBlocker.position).toEqual({ x: 9, z: LINE_OF_SCRIMMAGE_Z + 0.5 });
+    expect(leftBlocker.position).toEqual({
+      x: -FORMATION_MEASUREMENTS.blockerSpacing,
+      z: LINE_OF_SCRIMMAGE_Z - FORMATION_MEASUREMENTS.offensiveLineSetback,
+    });
+    expect(rightBlocker.position).toEqual({
+      x: FORMATION_MEASUREMENTS.blockerSpacing,
+      z: LINE_OF_SCRIMMAGE_Z - FORMATION_MEASUREMENTS.offensiveLineSetback,
+    });
     expect(leftBlocker.velocity).toEqual({ x: 0, z: 0 });
     expect(rightBlocker.velocity).toEqual({ x: 0, z: 0 });
     expect(leftBlocker.facingRadians).toBe(PRE_SNAP_FACING_RADIANS.playDirection);
@@ -285,8 +306,8 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel();
 
     selectPlay(gameplay, 'outside-run');
-    const leftBlocker = getPlayer(gameplay.players, 'blocker-left');
-    const rightBlocker = getPlayer(gameplay.players, 'blocker-right');
+    const leftBlocker = getPlayer(gameplay.players, 'offense-blocker-left');
+    const rightBlocker = getPlayer(gameplay.players, 'offense-blocker-right');
     const leftStart = snapshotBlockerFormation(leftBlocker);
     const rightStart = snapshotBlockerFormation(rightBlocker);
 
@@ -302,8 +323,8 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel();
 
     selectPlay(gameplay, 'outside-run');
-    const leftBlocker = getPlayer(gameplay.players, 'blocker-left');
-    const rightBlocker = getPlayer(gameplay.players, 'blocker-right');
+    const leftBlocker = getPlayer(gameplay.players, 'offense-blocker-left');
+    const rightBlocker = getPlayer(gameplay.players, 'offense-blocker-right');
     const leftPreSnapFacing = leftBlocker.facingRadians;
     const rightPreSnapFacing = rightBlocker.facingRadians;
 
@@ -318,8 +339,8 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel();
 
     selectPlay(gameplay, 'outside-run');
-    const leftBlocker = getPlayer(gameplay.players, 'blocker-left');
-    const rightBlocker = getPlayer(gameplay.players, 'blocker-right');
+    const leftBlocker = getPlayer(gameplay.players, 'offense-blocker-left');
+    const rightBlocker = getPlayer(gameplay.players, 'offense-blocker-right');
     const leftStart = snapshotBlockerFormation(leftBlocker);
     const rightStart = snapshotBlockerFormation(rightBlocker);
 
@@ -333,8 +354,8 @@ describe('play state transitions', () => {
 
   it('keeps Inside Run blockers in neutral pre-snap facing', () => {
     const gameplay = createGameplayModel();
-    const leftBlocker = getPlayer(gameplay.players, 'blocker-left');
-    const rightBlocker = getPlayer(gameplay.players, 'blocker-right');
+    const leftBlocker = getPlayer(gameplay.players, 'offense-blocker-left');
+    const rightBlocker = getPlayer(gameplay.players, 'offense-blocker-right');
 
     expect(gameplay.selectedPlay.id).toBe('inside-run');
     expect(leftBlocker.facingRadians).toBe(PRE_SNAP_FACING_RADIANS.playDirection);
@@ -345,7 +366,7 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel();
 
     expect(selectPlay(gameplay, 'quick-pass')).toBe(true);
-    const receiver = getPlayer(gameplay.players, 'blocker-left');
+    const receiver = getPlayer(gameplay.players, 'offense-wr');
     const initialReceiverPosition = { ...receiver.position };
 
     expect(gameplay.selectedPlay).toMatchObject({
@@ -353,7 +374,7 @@ describe('play state transitions', () => {
       id: 'quick-pass',
       kind: 'pass',
     });
-    expect(gameplay.player).toMatchObject({ id: 'runner', role: 'quarterback' });
+    expect(gameplay.player).toMatchObject({ id: 'offense-qb', role: 'quarterback' });
     expect(receiver).toMatchObject({ role: 'receiver', currentState: 'idle' });
 
     updateGameplayModel(gameplay, 0.3);
@@ -374,8 +395,8 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel();
 
     expect(selectPlay(gameplay, 'slant-flat')).toBe(true);
-    const leftReceiver = getPlayer(gameplay.players, 'blocker-left');
-    const rightReceiver = getPlayer(gameplay.players, 'blocker-right');
+    const leftReceiver = getPlayer(gameplay.players, 'offense-wr');
+    const rightReceiver = getPlayer(gameplay.players, 'offense-rb');
     const initialLeftPosition = { ...leftReceiver.position };
     const initialRightPosition = { ...rightReceiver.position };
 
@@ -384,10 +405,10 @@ describe('play state transitions', () => {
       id: 'slant-flat',
       kind: 'pass',
     });
-    expect(gameplay.selectedReceiverId).toBe('blocker-left');
+    expect(gameplay.selectedReceiverId).toBe('offense-wr');
     expect(snapshotGameplayModel(gameplay).selectedReceiver).toEqual({
       displayName: 'Slant',
-      id: 'blocker-left',
+      id: 'offense-wr',
     });
     expect(leftReceiver).toMatchObject({ role: 'receiver', currentState: 'idle' });
     expect(rightReceiver).toMatchObject({ role: 'receiver', currentState: 'idle' });
@@ -406,7 +427,7 @@ describe('play state transitions', () => {
     updateGameplayModel(gameplay, 0.1);
 
     expect(leftReceiver.position.z).toBeGreaterThan(initialLeftPosition.z);
-    expect(rightReceiver.position.x).toBeGreaterThan(initialRightPosition.x);
+    expect(rightReceiver.position.x).toBeLessThan(initialRightPosition.x);
   });
 
   it('cycles Slant Flat receivers deterministically before and after the snap', () => {
@@ -414,19 +435,19 @@ describe('play state transitions', () => {
 
     selectPlay(gameplay, 'slant-flat');
 
-    expect(gameplay.selectedReceiverId).toBe('blocker-left');
+    expect(gameplay.selectedReceiverId).toBe('offense-wr');
     expect(cycleSelectedReceiver(gameplay)).toBe(true);
-    expect(gameplay.selectedReceiverId).toBe('blocker-right');
+    expect(gameplay.selectedReceiverId).toBe('offense-rb');
     expect(snapshotGameplayModel(gameplay).selectedReceiver).toEqual({
       displayName: 'Flat',
-      id: 'blocker-right',
+      id: 'offense-rb',
     });
     expect(cycleSelectedReceiver(gameplay)).toBe(true);
-    expect(gameplay.selectedReceiverId).toBe('blocker-left');
+    expect(gameplay.selectedReceiverId).toBe('offense-wr');
 
     startPlay(gameplay);
     expect(cycleSelectedReceiver(gameplay)).toBe(true);
-    expect(gameplay.selectedReceiverId).toBe('blocker-right');
+    expect(gameplay.selectedReceiverId).toBe('offense-rb');
   });
 
   it('throws Slant Flat toward the selected receiver and locks selection after the throw', () => {
@@ -436,7 +457,7 @@ describe('play state transitions', () => {
     cycleSelectedReceiver(gameplay);
     startPlay(gameplay);
 
-    expect(gameplay.selectedReceiverId).toBe('blocker-right');
+    expect(gameplay.selectedReceiverId).toBe('offense-rb');
     expect(attemptPass(gameplay)).toBe(true);
 
     expect(gameplay.passAttempted).toBe(true);
@@ -449,9 +470,9 @@ describe('play state transitions', () => {
     if (gameplay.ball.state.kind !== 'inFlight') {
       throw new Error('Expected Slant Flat pass to be in flight');
     }
-    expect(gameplay.ball.state.target.x).toBeGreaterThan(8);
+    expect(gameplay.ball.state.target.x).toBeLessThan(0);
     expect(cycleSelectedReceiver(gameplay)).toBe(false);
-    expect(gameplay.selectedReceiverId).toBe('blocker-right');
+    expect(gameplay.selectedReceiverId).toBe('offense-rb');
   });
 
   it('restores the Slant Flat default target on reset', () => {
@@ -461,20 +482,20 @@ describe('play state transitions', () => {
     cycleSelectedReceiver(gameplay);
     startPlay(gameplay);
 
-    expect(gameplay.selectedReceiverId).toBe('blocker-right');
+    expect(gameplay.selectedReceiverId).toBe('offense-rb');
 
     resetPlay(gameplay);
 
     expect(gameplay.playState).toBe('preSnap');
     expect(gameplay.selectedPlay.id).toBe('slant-flat');
-    expect(gameplay.selectedReceiverId).toBe('blocker-left');
-    expect(getPlayer(gameplay.players, 'blocker-left').position).toEqual({
-      x: -8,
-      z: LINE_OF_SCRIMMAGE_Z + 1.5,
-    });
-    expect(getPlayer(gameplay.players, 'blocker-right').position).toEqual({
-      x: 8,
-      z: LINE_OF_SCRIMMAGE_Z + 1.5,
+    expect(gameplay.selectedReceiverId).toBe('offense-wr');
+    expect(getPlayer(gameplay.players, 'offense-wr').position.x).toBeGreaterThan(0);
+    expect(getPlayer(gameplay.players, 'offense-wr').position.z).toBeCloseTo(
+      LINE_OF_SCRIMMAGE_Z - FORMATION_MEASUREMENTS.offensiveLineSetback,
+    );
+    expect(getPlayer(gameplay.players, 'offense-rb').position).toEqual({
+      x: 0,
+      z: LINE_OF_SCRIMMAGE_Z - FORMATION_MEASUREMENTS.runningBackDepth,
     });
   });
 
@@ -631,7 +652,7 @@ describe('play state transitions', () => {
     expect(attemptPass(gameplay)).toBe(true);
 
     updateGameplayModel(gameplay, 0.2);
-    const receiver = getPlayer(gameplay.players, 'blocker-left');
+    const receiver = getPlayer(gameplay.players, 'offense-wr');
     receiver.position.x = gameplay.ball.position.x;
     receiver.position.z = gameplay.ball.position.z;
 
@@ -695,7 +716,7 @@ describe('play state transitions', () => {
     startPlay(gameplay);
     expect(attemptPass(gameplay)).toBe(true);
     updateGameplayModel(gameplay, 0.2);
-    const receiver = getPlayer(gameplay.players, 'blocker-left');
+    const receiver = getPlayer(gameplay.players, 'offense-wr');
     receiver.position.x = gameplay.ball.position.x;
     receiver.position.z = gameplay.ball.position.z;
     updateGameplayModel(gameplay, 0);
@@ -770,7 +791,7 @@ describe('play state transitions', () => {
         position: { x: 0, y: BALL_CARRY_ATTACHMENT.y, z: LINE_OF_SCRIMMAGE_Z },
       },
       player: {
-        position: { x: 0, z: LINE_OF_SCRIMMAGE_Z },
+        position: { x: 0, z: LINE_OF_SCRIMMAGE_Z - FORMATION_MEASUREMENTS.runningBackDepth },
         velocity: { x: 0, z: 0 },
       },
       currentBallSpot: INITIAL_BALL_SPOT,
@@ -893,7 +914,10 @@ describe('play state transitions', () => {
     expect(gameplay.currentBallSpot).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z + 5 });
     expect(gameplay.drive.currentDown).toBe(2);
     expect(gameplay.drive.yardsToFirstDown).toBeCloseTo(5);
-    expect(gameplay.player.position).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z + 5 });
+    expect(gameplay.player.position).toEqual({
+      x: 0,
+      z: LINE_OF_SCRIMMAGE_Z + 5 - FORMATION_MEASUREMENTS.runningBackDepth,
+    });
     expect(gameplay.ball.position).toMatchObject({
       x: 0,
       y: BALL_CARRY_ATTACHMENT.y,
@@ -953,7 +977,10 @@ describe('play state transitions', () => {
 
     expect(gameplay.currentBallSpot).toEqual(expectedSnapSpot);
     expect(gameplay.formationOrigin).toEqual(expectedSnapSpot);
-    expect(gameplay.player.position).toEqual(expectedSnapSpot);
+    expect(gameplay.player.position).toEqual({
+      x: expectedSnapSpot.x,
+      z: expectedSnapSpot.z - FORMATION_MEASUREMENTS.runningBackDepth,
+    });
   });
 
   it('ends live play out of bounds and resolves the next snap to the nearest hash', () => {
@@ -991,7 +1018,10 @@ describe('play state transitions', () => {
 
     expect(gameplay.currentBallSpot).toEqual(expectedSnapSpot);
     expect(gameplay.formationOrigin).toEqual(expectedSnapSpot);
-    expect(gameplay.player.position).toEqual(expectedSnapSpot);
+    expect(gameplay.player.position).toEqual({
+      x: expectedSnapSpot.x,
+      z: expectedSnapSpot.z - FORMATION_MEASUREMENTS.runningBackDepth,
+    });
   });
 
   it('keeps receivers inside bounds after a sideline dead-ball reset', () => {
@@ -1039,7 +1069,10 @@ describe('play state transitions', () => {
       },
       lastPlayResult: null,
       nextBallSpot: INITIAL_BALL_SPOT,
-      player: { position: { x: 0, z: LINE_OF_SCRIMMAGE_Z }, velocity: { x: 0, z: 0 } },
+      player: {
+        position: { x: 0, z: LINE_OF_SCRIMMAGE_Z - FORMATION_MEASUREMENTS.runningBackDepth },
+        velocity: { x: 0, z: 0 },
+      },
       playState: 'preSnap',
       score: GAMEPLAY_CONFIG.touchdownPoints,
     });
@@ -1050,7 +1083,7 @@ describe('play state transitions', () => {
 
     updateGameplayModel(gameplay, 1);
 
-    expect(getPrimaryDefender(gameplay.players).position).toEqual(DEFENDER_CONFIG.initialPosition);
+    expect(getPrimaryDefender(gameplay.players).currentState).toBe('idle');
     expect(getPrimaryDefender(gameplay.players).velocity).toEqual({ x: 0, z: 0 });
     expect(gameplay.players.every((player) => player.velocity.x === 0 && player.velocity.z === 0)).toBe(true);
     expect(gameplay.playState).toBe('preSnap');
@@ -1096,6 +1129,8 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel();
     const defender = getPrimaryDefender(gameplay.players);
     startPlay(gameplay);
+    gameplay.player.position.x = INITIAL_BALL_SPOT.x;
+    gameplay.player.position.z = INITIAL_BALL_SPOT.z;
     defender.position.x = gameplay.player.position.x + DEFENDER_CONFIG.tackleRadius;
     defender.position.z = gameplay.player.position.z;
 
@@ -1127,10 +1162,10 @@ describe('play state transitions', () => {
 });
 
 function getPrimaryDefender(players: PlayerModel[]): PlayerModel {
-  const defender = players.find((player) => player.id === 'defender-middle');
+  const defender = players.find((player) => player.id === 'defense-rusher-left');
 
   if (!defender) {
-    throw new Error('Missing middle defender');
+    throw new Error('Missing primary rusher');
   }
 
   return defender;
