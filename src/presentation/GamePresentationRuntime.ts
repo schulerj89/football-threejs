@@ -10,6 +10,7 @@ import {
 } from '../audio/PresentationEventBridge';
 import type { GameplayCameraDebugSnapshot } from '../camera/GameplayCameraController';
 import type { GameplaySnapshot } from '../playState';
+import type { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
 import type {
   CrowdPresentationController,
   CrowdPresentationSnapshot,
@@ -69,6 +70,7 @@ interface GamePresentationRuntimeOptions {
 interface GamePresentationRuntimeUpdateOptions {
   active: boolean;
   commentaryActive: boolean;
+  profiler?: FramePerformanceProfiler;
 }
 
 const DEFAULT_HISTORY_LIMIT = 24;
@@ -107,10 +109,47 @@ export class GamePresentationRuntime {
       return this.recentEvents;
     }
 
+    if (options.profiler?.enabled) {
+      options.profiler.measure('presentationEventProcessing', () => {
+        this.processPresentationFrame(snapshot, deltaSeconds, options);
+      });
+    } else {
+      this.processPresentationFrame(snapshot, deltaSeconds, options);
+    }
+
+    this.previousSnapshot = snapshot;
+    this.recordIntegrationHistory(snapshot);
+    return this.recentEvents;
+  }
+
+  private processPresentationFrame(
+    snapshot: GameplaySnapshot,
+    deltaSeconds: number,
+    options: GamePresentationRuntimeUpdateOptions,
+  ): void {
     const events = selectPresentationEventsByPrecedence(
       derivePresentationAudioEvents(this.previousSnapshot, snapshot),
     );
     this.recentEvents = Object.freeze(events.map((event) => Object.freeze({ ...event })));
+
+    if (options.profiler?.enabled) {
+      options.profiler.measure('audioUpdate', () => {
+        this.gameAudioDirector.processEvents(snapshot, this.recentEvents, deltaSeconds);
+        if (options.commentaryActive) {
+          this.commentaryDirector.processEvents(this.recentEvents, deltaSeconds);
+        }
+      });
+      this.getHoldDirector().update(this.recentEvents, deltaSeconds);
+      options.profiler.measure('crowdBehaviorUpdate', () => {
+        this.getCrowdController()?.update(
+          snapshot,
+          this.recentEvents,
+          deltaSeconds,
+          options.profiler,
+        );
+      });
+      return;
+    }
 
     this.gameAudioDirector.processEvents(snapshot, this.recentEvents, deltaSeconds);
     this.getHoldDirector().update(this.recentEvents, deltaSeconds);
@@ -119,10 +158,6 @@ export class GamePresentationRuntime {
     if (options.commentaryActive) {
       this.commentaryDirector.processEvents(this.recentEvents, deltaSeconds);
     }
-
-    this.previousSnapshot = snapshot;
-    this.recordIntegrationHistory(snapshot);
-    return this.recentEvents;
   }
 
   skipPresentation(): boolean {

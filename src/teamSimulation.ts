@@ -19,6 +19,7 @@ import {
   sampleRouteAtDistance,
   type ReceiverRouteState,
 } from './receiverRoutes';
+import type { FramePerformanceProfiler } from './performance/FramePerformanceProfiler';
 
 export interface BlockingEngagement {
   blockerId: string;
@@ -34,6 +35,7 @@ export interface RushingDrillAiOptions {
   deltaSeconds: number;
   lineOfScrimmage: FootballSpot;
   play: PlayDefinition;
+  profiler?: FramePerformanceProfiler;
   receiverRouteStates?: Record<string, ReceiverRouteState>;
 }
 
@@ -64,22 +66,53 @@ export function updateRushingDrillAi(
   options: RushingDrillAiOptions,
 ): void {
   const delta = Math.max(0, Math.min(options.deltaSeconds, 0.1));
+  const profiler = options.profiler;
 
-  releaseSeparatedEngagements(players, blocking);
-  updateBlockers(players, blocking, options.lineOfScrimmage, options.play, delta);
-  updateReceivers(
-    players,
-    options.lineOfScrimmage,
-    options.play,
-    delta,
-    options.receiverRouteStates,
-  );
-  acquireBlockingEngagements(players, blocking, options.play);
-  updateDefenders(players, blocking, runner, options.play, delta);
+  if (profiler?.enabled) {
+    profiler.measure('blockingAndEngagement', () => releaseSeparatedEngagements(players, blocking));
+    profiler.measure('offensiveAssignments', () => {
+      updateBlockers(players, blocking, options.lineOfScrimmage, options.play, delta);
+    });
+    profiler.measure('receiverRouteUpdates', () => {
+      updateReceivers(
+        players,
+        options.lineOfScrimmage,
+        options.play,
+        delta,
+        options.receiverRouteStates,
+      );
+    });
+    profiler.measure('blockingAndEngagement', () => {
+      acquireBlockingEngagements(players, blocking, options.play);
+    });
+    profiler.measure('defensiveAi', () => {
+      updateDefenders(players, blocking, runner, options.play, delta);
+    });
+  } else {
+    releaseSeparatedEngagements(players, blocking);
+    updateBlockers(players, blocking, options.lineOfScrimmage, options.play, delta);
+    updateReceivers(
+      players,
+      options.lineOfScrimmage,
+      options.play,
+      delta,
+      options.receiverRouteStates,
+    );
+    acquireBlockingEngagements(players, blocking, options.play);
+    updateDefenders(players, blocking, runner, options.play, delta);
+  }
   keepNonCarriersInsidePlayableField(players, runner.id, options.bounds);
-  resolvePlayerOverlaps(players);
+  if (profiler?.enabled) {
+    profiler.measure('playerCollisionSeparation', () => resolvePlayerOverlaps(players));
+  } else {
+    resolvePlayerOverlaps(players);
+  }
   keepNonCarriersInsidePlayableField(players, runner.id, options.bounds);
-  releaseSeparatedEngagements(players, blocking);
+  if (profiler?.enabled) {
+    profiler.measure('blockingAndEngagement', () => releaseSeparatedEngagements(players, blocking));
+  } else {
+    releaseSeparatedEngagements(players, blocking);
+  }
 }
 
 export function acquireBlockingEngagements(

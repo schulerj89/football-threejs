@@ -89,6 +89,7 @@ import {
   type BlockingEngagement,
   type BlockingState,
 } from './teamSimulation';
+import type { FramePerformanceProfiler } from './performance/FramePerformanceProfiler';
 import type { PlaybookId } from './roster';
 
 export type PlayState = 'preSnap' | 'live' | 'dead' | 'gameOver';
@@ -204,6 +205,7 @@ export interface GameplaySnapshot {
 }
 
 export interface GameplayUpdateOptions {
+  profiler?: FramePerformanceProfiler;
   suppressDeadPlayReset?: boolean;
 }
 
@@ -480,10 +482,17 @@ export function updateGameplayModel(
         deltaSeconds: delta,
         lineOfScrimmage: gameplay.currentBallSpot,
         play: gameplay.selectedPlay,
+        profiler: options.profiler,
         receiverRouteStates: gameplay.receiverRouteStates,
       });
       updateForwardPassEligibility(gameplay);
-      updatePassFlight(gameplay, delta, gameplay.previousPlayerPositions);
+      if (options.profiler?.enabled) {
+        options.profiler.measure('passTargetingAndBallSimulation', () => {
+          updatePassFlight(gameplay, delta, gameplay.previousPlayerPositions);
+        });
+      } else {
+        updatePassFlight(gameplay, delta, gameplay.previousPlayerPositions);
+      }
       detectSack(gameplay);
       if (gameplay.playState === 'live') {
         detectTackle(gameplay);

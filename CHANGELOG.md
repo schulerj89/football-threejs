@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.46.0] - 2026-06-21
+
+### Added
+
+- Added a disabled-by-default 11v11 frame profiler with preallocated ring-buffer sampling, exclusive nested phase timing, long-frame records, and renderer/scene-structure metrics.
+- Added deterministic 11v11 performance scenarios for presnap, run, pass, after-catch, touchdown-presentation, and reset-cycle profiling.
+- Added `npm run perf:11v11`, `npm run perf:report`, and `npm run test:perf` for production-build 11v11 profiling and report review.
+- Added production Playwright coverage in `tests/performance/elevenOnEleven.performance.spec.ts` plus focused unit coverage for profiler buffers, reports, and scenario setup.
+
+### Changed
+
+- Extended the readback debug API with performance-only scenario and report methods when `?perfProfile=1` is enabled.
+
 ## [0.45.3] - 2026-06-21
 
 ### Added

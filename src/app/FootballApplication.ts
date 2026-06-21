@@ -14,6 +14,15 @@ import { GameplayRuntime } from './GameplayRuntime';
 import { PlayerVisualRegistry } from './PlayerVisualRegistry';
 import { PresentationRuntime } from './PresentationRuntime';
 import { SceneRuntime } from './SceneRuntime';
+import { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
+import { PerformanceScenarioRunner } from '../performance/PerformanceScenarioRunner';
+import {
+  collectRendererMetrics,
+  collectSceneStructureMetrics,
+  createResourceChangeSnapshot,
+  hasResourceChanged,
+  type ResourceChangeSnapshot,
+} from '../performance/RendererMetricsCollector';
 
 export interface FootballApplicationOptions {
   mount: HTMLDivElement;
@@ -29,14 +38,18 @@ export class FootballApplication {
   private readonly diagnostics: ApplicationDiagnostics;
   private readonly lifecycle: ApplicationLifecycle;
   private readonly developmentTools: DevelopmentToolsRuntime;
+  private readonly performanceProfiler: FramePerformanceProfiler;
+  private readonly performanceScenarioRunner: PerformanceScenarioRunner | null;
   private readonly loop: GameLoop;
   private readonly removeSceneResizeHandler: () => void;
   private gameExperience: ResolvedGameExperienceSettings;
   private hasRenderedFirstFrame = false;
+  private previousPerformanceResourceSnapshot: ResourceChangeSnapshot | null = null;
 
   constructor({ mount, searchParams = new URLSearchParams(window.location.search) }: FootballApplicationOptions) {
     this.searchParams = searchParams;
     this.gameExperience = resolveGameExperienceSettings({ searchParams });
+    this.performanceProfiler = FramePerformanceProfiler.createFromSearchParams(searchParams);
     this.gameplay = new GameplayRuntime({
       consumeSelectedPlayId: () => this.presentation.consumeSelectedPlayId(),
       playbookId: this.gameExperience.settings.playbookId,
@@ -69,11 +82,16 @@ export class FootballApplication {
     this.presentation.syncBall(
       this.gameplay.formationPreviewModel?.ball ?? this.gameplay.gameplayModel.ball,
     );
+    this.performanceScenarioRunner = this.performanceProfiler.enabled
+      ? new PerformanceScenarioRunner(() => this.gameplay.gameplayModel)
+      : null;
     this.diagnostics = new ApplicationDiagnostics({
       gameplay: this.gameplay,
       getGameExperience: () => this.gameExperience,
       isCrowdPresentationDebugEnabled: () => this.isCrowdPresentationDebugEnabled(),
       playerVisuals: this.playerVisuals,
+      performanceProfiler: this.performanceProfiler,
+      performanceScenarioRunner: this.performanceScenarioRunner,
       presentation: this.presentation,
       sceneRuntime: this.sceneRuntime,
       searchParams,
@@ -157,6 +175,18 @@ export class FootballApplication {
   }
 
   private renderFrame(delta: number): void {
+    if (this.performanceProfiler.enabled) {
+      this.performanceProfiler.beginFrame(performance.now());
+    }
+
+    try {
+      this.renderFrameBody(delta);
+    } finally {
+      this.finishPerformanceFrame();
+    }
+  }
+
+  private renderFrameBody(delta: number): void {
     if (this.presentation.crowdPreviewController) {
       this.presentation.renderCrowdPreviewFrame(delta, this.sceneRuntime.renderer);
       this.diagnostics.latestRenderMetrics = this.diagnostics.createRenderMetricsSnapshot(delta);
@@ -170,13 +200,28 @@ export class FootballApplication {
 
     const gameplayActive =
       this.lifecycle.phase === 'gameplay' && !this.lifecycle.isPauseSettingsVisible();
-    this.gameplay.update(delta, gameplayActive);
+    this.gameplay.update(delta, gameplayActive, this.performanceProfiler);
+    if (gameplayActive) {
+      this.performanceScenarioRunner?.update(delta);
+    }
     const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
-    this.sceneRuntime.syncDriveLines(
-      gameplaySnapshot.drive.lineOfScrimmage,
-      gameplaySnapshot.drive.firstDownMarker,
-    );
-    this.playerVisuals.sync(this.getActivePlayers());
+    if (this.performanceProfiler.enabled) {
+      this.performanceProfiler.measure('stadiumUpdate', () => {
+        this.sceneRuntime.syncDriveLines(
+          gameplaySnapshot.drive.lineOfScrimmage,
+          gameplaySnapshot.drive.firstDownMarker,
+        );
+      });
+      this.performanceProfiler.measure('playerVisualSync', () => {
+        this.playerVisuals.sync(this.getActivePlayers());
+      });
+    } else {
+      this.sceneRuntime.syncDriveLines(
+        gameplaySnapshot.drive.lineOfScrimmage,
+        gameplaySnapshot.drive.firstDownMarker,
+      );
+      this.playerVisuals.sync(this.getActivePlayers());
+    }
     this.presentation.updateGameplayFrame({
       active: gameplayActive,
       ball: this.gameplay.formationPreviewModel?.ball ?? this.gameplay.gameplayModel.ball,
@@ -187,18 +232,81 @@ export class FootballApplication {
       deltaSeconds: delta,
       gameplaySnapshot,
       playerVisuals: this.playerVisuals.visuals,
+      profiler: this.performanceProfiler,
       selectedPlay: this.gameplay.gameplayModel.selectedPlay,
     });
-    this.presentation.syncPlayCallUi(gameplaySnapshot, gameplayActive);
-    this.sceneRuntime.render(this.presentation.camera);
+    if (this.performanceProfiler.enabled) {
+      this.performanceProfiler.measure('hudDomUpdate', () => {
+        this.presentation.syncPlayCallUi(gameplaySnapshot, gameplayActive);
+      });
+      this.performanceProfiler.measure('rendererRender', () => {
+        this.sceneRuntime.render(this.presentation.camera);
+      });
+    } else {
+      this.presentation.syncPlayCallUi(gameplaySnapshot, gameplayActive);
+      this.sceneRuntime.render(this.presentation.camera);
+    }
     this.presentation.recordCrowdPresentationFrame(delta, this.sceneRuntime.renderer);
     if (this.developmentTools.shouldCollectPresentationDiagnostics()) {
       this.diagnostics.latestRenderMetrics = this.diagnostics.createRenderMetricsSnapshot(delta);
     }
     this.syncDevelopmentOverlays(delta, gameplaySnapshot);
-    this.lifecycle.syncTitleLoadingState();
-    this.lifecycle.syncChrome();
+    if (this.performanceProfiler.enabled) {
+      this.performanceProfiler.measure('hudDomUpdate', () => {
+        this.lifecycle.syncTitleLoadingState();
+        this.lifecycle.syncChrome();
+      });
+    } else {
+      this.lifecycle.syncTitleLoadingState();
+      this.lifecycle.syncChrome();
+    }
     this.markFirstFrameReady();
+  }
+
+  private finishPerformanceFrame(): void {
+    if (!this.performanceProfiler.enabled || document.visibilityState !== 'visible') {
+      return;
+    }
+
+    const rendererMetrics = collectRendererMetrics(this.sceneRuntime.renderer);
+    const sceneStructure = collectSceneStructureMetrics(
+      this.sceneRuntime.scene,
+      this.playerVisuals.values(),
+    );
+    const resourceSnapshot = createResourceChangeSnapshot(
+      this.sceneRuntime.renderer,
+      sceneStructure,
+    );
+    const resourceCreatedOrDisposed = hasResourceChanged(
+      this.previousPerformanceResourceSnapshot,
+      resourceSnapshot,
+    );
+    this.previousPerformanceResourceSnapshot = resourceSnapshot;
+    const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(
+      !!this.presentation.crowdPreviewController,
+    );
+    const cameraSnapshot = this.presentation.cameraDebugSnapshot;
+    const crowdSnapshot = this.presentation.getCrowdPresentationSnapshot();
+    const presentationSnapshot = this.presentation.getGamePresentationRuntimeSnapshot();
+
+    this.performanceProfiler.endFrame(
+      performance.now(),
+      {
+        activeScenario: this.performanceScenarioRunner?.getActiveScenarioName() ?? 'normal-gameplay',
+        activeShot: cameraSnapshot.activeShotName ?? null,
+        cameraState: cameraSnapshot.state,
+        crowdCount: crowdSnapshot?.actualSpectatorCount ?? 0,
+        crowdReactionBegan:
+          presentationSnapshot.recentEvents.some((event) =>
+            event.type === 'firstDown' || event.type === 'touchdown'),
+        playState: gameplaySnapshot.playState,
+        playerCount: gameplaySnapshot.players.length,
+        presentationState: cameraSnapshot.presentationPhase ?? cameraSnapshot.state,
+        resourceCreatedOrDisposed,
+      },
+      rendererMetrics,
+      sceneStructure,
+    );
   }
 
   private syncDevelopmentOverlays(delta: number, gameplaySnapshot: ReturnType<GameplayRuntime['getActivePresentationSnapshot']>): void {

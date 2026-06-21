@@ -1,0 +1,400 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { expect, test, type Page } from '@playwright/test';
+import {
+  PERFORMANCE_REFERENCE_PROFILE,
+  PERFORMANCE_SCENARIOS,
+  type PerformanceScenarioName,
+} from '../../src/performance/PerformanceBudget';
+import type {
+  PerformanceReport,
+  PerformanceReportEnvironment,
+} from '../../src/performance/PerformanceReport';
+
+interface PerformanceDebugApi {
+  clearPerformanceSamples: () => void;
+  getPerformanceProfileReport: (
+    environment?: Partial<PerformanceReportEnvironment>,
+  ) => PerformanceReport;
+  setPerformanceScenario: (scenario: PerformanceScenarioName) => unknown;
+}
+
+interface ScenarioRun {
+  profileId: string;
+  report: PerformanceReport;
+  sampleDurationMs: number;
+  scenario: PerformanceScenarioName | 'seven-presnap-baseline';
+}
+
+interface ElevenPerformanceMatrixReport {
+  comparisonRuns: ScenarioRun[];
+  fullBroadcastRuns: ScenarioRun[];
+  generatedAt: string;
+  profileDescriptions: Record<string, string>;
+  sevenOnSevenBaseline: ScenarioRun | null;
+  summaryText: string;
+}
+
+const FULL_SAMPLE_DURATION_MS = Number(
+  process.env.FOOTBALL_PERF_SAMPLE_MS ?? PERFORMANCE_REFERENCE_PROFILE.sampleDurationMs,
+);
+const COMPARISON_SAMPLE_DURATION_MS = Number(
+  process.env.FOOTBALL_PERF_COMPARISON_SAMPLE_MS ?? 3_000,
+);
+const WARMUP_MS = Number(
+  process.env.FOOTBALL_PERF_WARMUP_MS ?? PERFORMANCE_REFERENCE_PROFILE.warmupMs,
+);
+
+const PROFILE_DESCRIPTIONS: Record<string, string> = {
+  'crowd-off': '11v11 with visual crowd disabled.',
+  'full-broadcast': '11v11 broadcast profile with low-density crowd, brief cinematics, audio permitted.',
+  'motion-off': '11v11 with procedural player motion disabled.',
+  'officials-off': '11v11 with officials disabled; current prototype has no official visuals.',
+  'players-only': '11v11 players and field with presentation, crowd, route art, and audio disabled.',
+  'presentation-off': '11v11 with cinematics, announcer, captions, crowd reactions, and audio disabled.',
+  'stadium-off': '11v11 with stadium/crowd seating presentation disabled.',
+};
+
+const FULL_BROADCAST_QUERY = {
+  announcer: '1',
+  audio: '1',
+  camera: 'offense',
+  cinematics: 'brief',
+  crowdDensity: 'low',
+  crowdReactions: '1',
+  crowdVisuals: '1',
+  experience: 'broadcast',
+  officials: '1',
+  perfProfile: '1',
+  playbook: '11v11',
+  playerMotion: '1',
+  readback: '1',
+  routeArt: '1',
+  stadium: '1',
+};
+
+const COMPARISON_PROFILES: Array<{
+  id: string;
+  query: Record<string, string>;
+}> = [
+  {
+    id: 'players-only',
+    query: {
+      announcer: '0',
+      audio: '0',
+      camera: 'offense',
+      cinematics: 'off',
+      crowdReactions: '0',
+      crowdVisuals: '0',
+      experience: 'performance',
+      officials: '0',
+      perfProfile: '1',
+      playbook: '11v11',
+      playerMotion: '0',
+      readback: '1',
+      routeArt: '0',
+      stadium: '0',
+    },
+  },
+  {
+    id: 'stadium-off',
+    query: {
+      ...FULL_BROADCAST_QUERY,
+      crowdVisuals: '0',
+      stadium: '0',
+    },
+  },
+  {
+    id: 'crowd-off',
+    query: {
+      ...FULL_BROADCAST_QUERY,
+      crowdReactions: '0',
+      crowdVisuals: '0',
+    },
+  },
+  {
+    id: 'officials-off',
+    query: {
+      ...FULL_BROADCAST_QUERY,
+      officials: '0',
+    },
+  },
+  {
+    id: 'motion-off',
+    query: {
+      ...FULL_BROADCAST_QUERY,
+      playerMotion: '0',
+    },
+  },
+  {
+    id: 'presentation-off',
+    query: {
+      ...FULL_BROADCAST_QUERY,
+      announcer: '0',
+      audio: '0',
+      captions: '0',
+      cinematics: 'off',
+      crowdReactions: '0',
+    },
+  },
+];
+
+test.describe.configure({ mode: 'serial' });
+
+test('profiles deterministic 11v11 production scenarios', async ({ browser }, testInfo) => {
+  const fullBroadcastRuns: ScenarioRun[] = [];
+  const comparisonRuns: ScenarioRun[] = [];
+  let sevenOnSevenBaseline: ScenarioRun | null = null;
+
+  const fullPage = await browser.newPage({
+    deviceScaleFactor: PERFORMANCE_REFERENCE_PROFILE.deviceScaleFactor,
+    viewport: {
+      height: PERFORMANCE_REFERENCE_PROFILE.height,
+      width: PERFORMANCE_REFERENCE_PROFILE.width,
+    },
+  });
+  await preparePerformancePage(fullPage, FULL_BROADCAST_QUERY);
+  const environment = await createEnvironmentSnapshot(fullPage);
+
+  for (const scenario of PERFORMANCE_SCENARIOS) {
+    fullBroadcastRuns.push(await runScenario(
+      fullPage,
+      'full-broadcast',
+      scenario,
+      FULL_SAMPLE_DURATION_MS,
+      environment,
+    ));
+  }
+  await fullPage.close();
+
+  const sevenPage = await browser.newPage({
+    deviceScaleFactor: PERFORMANCE_REFERENCE_PROFILE.deviceScaleFactor,
+    viewport: {
+      height: PERFORMANCE_REFERENCE_PROFILE.height,
+      width: PERFORMANCE_REFERENCE_PROFILE.width,
+    },
+  });
+  await preparePerformancePage(sevenPage, {
+    ...FULL_BROADCAST_QUERY,
+    playbook: '7v7',
+  });
+  sevenOnSevenBaseline = await runCurrentStateProfile(
+    sevenPage,
+    '7v7-baseline',
+    'seven-presnap-baseline',
+    COMPARISON_SAMPLE_DURATION_MS,
+    await createEnvironmentSnapshot(sevenPage),
+  );
+  await sevenPage.close();
+
+  for (const profile of COMPARISON_PROFILES) {
+    const page = await browser.newPage({
+      deviceScaleFactor: PERFORMANCE_REFERENCE_PROFILE.deviceScaleFactor,
+      viewport: {
+        height: PERFORMANCE_REFERENCE_PROFILE.height,
+        width: PERFORMANCE_REFERENCE_PROFILE.width,
+      },
+    });
+    await preparePerformancePage(page, profile.query);
+    const profileEnvironment = await createEnvironmentSnapshot(page);
+
+    for (const scenario of PERFORMANCE_SCENARIOS) {
+      comparisonRuns.push(await runScenario(
+        page,
+        profile.id,
+        scenario,
+        COMPARISON_SAMPLE_DURATION_MS,
+        profileEnvironment,
+      ));
+    }
+    await page.close();
+  }
+
+  const matrixReport = createMatrixReport(fullBroadcastRuns, comparisonRuns, sevenOnSevenBaseline);
+  writeMatrixReport(matrixReport);
+  await testInfo.attach('eleven-performance-report', {
+    body: JSON.stringify(matrixReport, null, 2),
+    contentType: 'application/json',
+  });
+
+  expect(fullBroadcastRuns).toHaveLength(PERFORMANCE_SCENARIOS.length);
+  for (const run of fullBroadcastRuns) {
+    expect(run.report.frame.sampleCount).toBeGreaterThan(0);
+    expect(run.report.scene.playerMeshCount).toBeGreaterThan(0);
+    expect(run.report.scene.crowdInstanceCount).toBeGreaterThanOrEqual(500);
+    expect(run.report.renderer.calls).toBeGreaterThan(0);
+    expect(run.report.bottlenecks).toHaveLength(5);
+  }
+});
+
+async function preparePerformancePage(
+  page: Page,
+  query: Record<string, string>,
+): Promise<void> {
+  await page.goto(`/?${new URLSearchParams(query).toString()}`);
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await startGameIfTitleScreenIsVisible(page);
+  await expect.poll(() => getPerformanceDebugApiReady(page)).toBe(true);
+  await expect(page.locator('.debug-overlay')).toBeHidden();
+}
+
+async function runScenario(
+  page: Page,
+  profileId: string,
+  scenario: PerformanceScenarioName,
+  sampleDurationMs: number,
+  environment: PerformanceReportEnvironment,
+): Promise<ScenarioRun> {
+  await page.evaluate((scenarioName) => {
+    const debugApi = (window as unknown as { __footballDebug?: PerformanceDebugApi }).__footballDebug;
+    debugApi?.setPerformanceScenario(scenarioName);
+  }, scenario);
+  await page.waitForTimeout(WARMUP_MS);
+  await page.evaluate(() => {
+    const debugApi = (window as unknown as { __footballDebug?: PerformanceDebugApi }).__footballDebug;
+    debugApi?.clearPerformanceSamples();
+  });
+  await page.waitForTimeout(sampleDurationMs);
+  const report = await page.evaluate((environmentSnapshot) => {
+    const debugApi = (window as unknown as { __footballDebug?: PerformanceDebugApi }).__footballDebug;
+    if (!debugApi) {
+      throw new Error('Missing football debug API.');
+    }
+    return debugApi.getPerformanceProfileReport(environmentSnapshot);
+  }, environment);
+
+  return {
+    profileId,
+    report,
+    sampleDurationMs,
+    scenario,
+  };
+}
+
+async function runCurrentStateProfile(
+  page: Page,
+  profileId: string,
+  scenario: ScenarioRun['scenario'],
+  sampleDurationMs: number,
+  environment: PerformanceReportEnvironment,
+): Promise<ScenarioRun> {
+  await page.waitForTimeout(WARMUP_MS);
+  await page.evaluate(() => {
+    const debugApi = (window as unknown as { __footballDebug?: PerformanceDebugApi }).__footballDebug;
+    debugApi?.clearPerformanceSamples();
+  });
+  await page.waitForTimeout(sampleDurationMs);
+  const report = await page.evaluate((environmentSnapshot) => {
+    const debugApi = (window as unknown as { __footballDebug?: PerformanceDebugApi }).__footballDebug;
+    if (!debugApi) {
+      throw new Error('Missing football debug API.');
+    }
+    return debugApi.getPerformanceProfileReport(environmentSnapshot);
+  }, environment);
+
+  return {
+    profileId,
+    report,
+    sampleDurationMs,
+    scenario,
+  };
+}
+
+async function startGameIfTitleScreenIsVisible(page: Page): Promise<void> {
+  const titleScreen = page.locator('.title-screen');
+
+  if (await titleScreen.isVisible()) {
+    await page.getByRole('button', { name: 'Start Game' }).click();
+    await expect(titleScreen).toBeHidden();
+  }
+}
+
+async function getPerformanceDebugApiReady(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const debugApi = (window as unknown as { __footballDebug?: PerformanceDebugApi }).__footballDebug;
+    return Boolean(debugApi?.setPerformanceScenario && debugApi?.getPerformanceProfileReport);
+  });
+}
+
+async function createEnvironmentSnapshot(page: Page): Promise<PerformanceReportEnvironment> {
+  const renderer = await getWebGlRendererDescription(page);
+  return page.evaluate(({ rendererDescription, softwareRendering }) => ({
+    deviceScaleFactor: window.devicePixelRatio,
+    hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+    hiddenFrameCount: 0,
+    rendererDescription,
+    softwareRendering,
+    userAgent: navigator.userAgent,
+    viewport: {
+      height: window.innerHeight,
+      width: window.innerWidth,
+    },
+  }), {
+    rendererDescription: renderer,
+    softwareRendering: isSoftwareRenderer(renderer),
+  });
+}
+
+async function getWebGlRendererDescription(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+    const fallback = 'unknown';
+
+    if (!gl) {
+      return fallback;
+    }
+
+    const extension = gl.getExtension('WEBGL_debug_renderer_info');
+    if (!extension) {
+      return fallback;
+    }
+
+    return String(gl.getParameter(extension.UNMASKED_RENDERER_WEBGL) ?? fallback);
+  });
+}
+
+function createMatrixReport(
+  fullBroadcastRuns: ScenarioRun[],
+  comparisonRuns: ScenarioRun[],
+  sevenOnSevenBaseline: ScenarioRun | null,
+): ElevenPerformanceMatrixReport {
+  const slowestRun = [...fullBroadcastRuns]
+    .sort((a, b) => b.report.frame.p95 - a.report.frame.p95)[0];
+  const topBottlenecks = slowestRun?.report.bottlenecks
+    .map((entry, index) =>
+      `${index + 1}. ${entry.phase} avg ${entry.averageMs.toFixed(2)} ms ` +
+      `p95 ${entry.p95Ms.toFixed(2)} ms`)
+    .join('\n') ?? 'No bottlenecks recorded.';
+  const summaryText = [
+    `11v11 performance profile generated for ${fullBroadcastRuns.length} full scenarios ` +
+      `and ${comparisonRuns.length} isolation comparisons.`,
+    slowestRun
+      ? `Slowest full-broadcast scenario by p95 frame time: ${slowestRun.scenario} ` +
+        `at ${slowestRun.report.frame.p95.toFixed(2)} ms.`
+      : 'No full-broadcast scenario was recorded.',
+    `Top bottlenecks in the slowest scenario:\n${topBottlenecks}`,
+  ].join('\n');
+
+  return {
+    comparisonRuns,
+    fullBroadcastRuns,
+    generatedAt: new Date().toISOString(),
+    profileDescriptions: PROFILE_DESCRIPTIONS,
+    sevenOnSevenBaseline,
+    summaryText,
+  };
+}
+
+function writeMatrixReport(report: ElevenPerformanceMatrixReport): void {
+  const jsonPath = 'test-results/eleven-performance-report.json';
+  const textPath = 'test-results/eleven-performance-summary.txt';
+  mkdirSync(dirname(jsonPath), { recursive: true });
+  writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  writeFileSync(textPath, `${report.summaryText}\n`, 'utf8');
+}
+
+function isSoftwareRenderer(rendererDescription: string): boolean {
+  return /swiftshader|software|llvmpipe|microsoft basic render|warp|mesa offscreen/i
+    .test(rendererDescription);
+}

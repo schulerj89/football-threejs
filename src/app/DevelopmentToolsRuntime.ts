@@ -70,6 +70,16 @@ import {
 } from '../presentation/PresentationHardeningAudit';
 import type { PresentationHoldSnapshot } from '../presentation/PresentationHoldDirector';
 import type { GamePresentationRuntimeSnapshot } from '../presentation/GamePresentationRuntime';
+import type {
+  PerformanceReport,
+  PerformanceReportEnvironment,
+} from '../performance/PerformanceReport';
+import type {
+  PerformanceScenarioName,
+} from '../performance/PerformanceBudget';
+import type {
+  PerformanceScenarioSnapshot,
+} from '../performance/PerformanceScenarioRunner';
 import {
   createSevenAuditOverlay,
   syncSevenAuditOverlay,
@@ -112,6 +122,7 @@ export interface ElevenAuditResetCycleResult {
 }
 
 export interface FootballDebugApi {
+  clearPerformanceSamples: () => void;
   forceQuarterbackPastLineForTest: () => boolean;
   getAudioSnapshot: () => RuntimeAudioDebugSnapshot;
   getAppearanceAuditSnapshot: () => AppearanceAuditSnapshot;
@@ -127,6 +138,10 @@ export interface FootballDebugApi {
   getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
   getPassAuditSnapshot: () => PassAuditSnapshot | null;
   getElevenAuditSnapshot: () => ElevenAuditSnapshot | null;
+  getPerformanceProfileReport: (
+    environment?: Partial<PerformanceReportEnvironment>,
+  ) => PerformanceReport;
+  getPerformanceScenarioSnapshot: () => PerformanceScenarioSnapshot | null;
   getPresentationHardeningAuditSnapshot: () => PresentationHardeningAuditSnapshot | null;
   getPresentationHoldSnapshot: () => PresentationHoldSnapshot;
   getPresentationAuditSnapshot: () => PresentationAuditSnapshot | null;
@@ -139,6 +154,7 @@ export interface FootballDebugApi {
   playAudioTestOneShot: () => Promise<boolean>;
   runElevenAuditResetCycles: (cycles?: number) => ElevenAuditResetCycleResult | null;
   runSevenAuditResetCycles: (cycles?: number) => SevenAuditResetCycleResult | null;
+  setPerformanceScenario: (scenario: PerformanceScenarioName) => PerformanceScenarioSnapshot | null;
   setCrowdPreviewCameraView: (view: CrowdPreviewCameraView) => void;
   setAnnouncerEnabled: (enabled: boolean) => void;
   setAnnouncerVolume: (volume: number) => void;
@@ -406,6 +422,7 @@ export class DevelopmentToolsRuntime {
     return import.meta.env.DEV ||
       options.searchParams.has('debug') ||
       options.searchParams.has('readback') ||
+      options.searchParams.has('perfProfile') ||
       options.cameraDebugEnabled ||
       options.presentationAuditEnabled ||
       options.appearanceAuditEnabled ||

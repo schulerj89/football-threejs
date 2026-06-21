@@ -20,6 +20,7 @@ import type {
   CrowdReactionState,
 } from '../crowd/CrowdReactionModel';
 import type { GameplaySnapshot } from '../playState';
+import type { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
 
 export type {
   CrowdDensity,
@@ -126,6 +127,7 @@ export class CrowdPresentationController {
     snapshot: GameplaySnapshot,
     events: readonly PresentationAudioEvent[],
     deltaSeconds: number,
+    profiler?: FramePerformanceProfiler,
   ): void {
     const delta = Math.min(
       CROWD_PRESENTATION_CONFIG.maxDeltaSeconds,
@@ -157,7 +159,13 @@ export class CrowdPresentationController {
 
     if (shouldUpdate && this.matrixUpdateAccumulatorSeconds >= updateIntervalSeconds) {
       this.matrixUpdateAccumulatorSeconds %= updateIntervalSeconds;
-      this.renderReactionState(state, this.reactionSequencer.active);
+      if (profiler?.enabled) {
+        profiler.measure('crowdInstanceUpdates', () => {
+          this.renderReactionState(state, this.reactionSequencer.active);
+        });
+      } else {
+        this.renderReactionState(state, this.reactionSequencer.active);
+      }
     }
   }
 

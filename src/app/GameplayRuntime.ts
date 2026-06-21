@@ -25,6 +25,7 @@ import {
 import { createPresentationAuditGameplaySnapshot, resolvePresentationAuditState, type PresentationAuditState } from '../presentationAudit';
 import { updatePlayerSimulation } from '../playerSimulation';
 import type { PlayerModel } from '../playerModel';
+import type { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
 
 export interface GameplayRuntimeOptions {
   consumeSelectedPlayId: () => string | null;
@@ -70,7 +71,7 @@ export class GameplayRuntime {
     this.playControls.dispose();
   }
 
-  update(delta: number, active: boolean): void {
+  update(delta: number, active: boolean, profiler?: FramePerformanceProfiler): void {
     if (this.formationPreviewModel) {
       for (const player of this.formationPreviewModel.players) {
         player.velocity.x = 0;
@@ -87,25 +88,50 @@ export class GameplayRuntime {
       return;
     }
 
-    this.updatePlayControls();
+    if (profiler?.enabled) {
+      profiler.measure('input', () => this.updatePlayControls(profiler));
+    } else {
+      this.updatePlayControls();
+    }
     if (
       this.gameplayModel.playState === 'live' &&
       this.gameplayModel.player.currentState === 'userControlled'
     ) {
-      updatePlayerSimulation(
-        this.gameplayModel.player,
-        this.keyboardInput.getMovement(),
-        delta,
-        PLAYABLE_FIELD_BOUNDS,
-        { clampSidelines: false },
-      );
+      const movement = this.keyboardInput.getMovement();
+      if (profiler?.enabled) {
+        profiler.measure('playerMovementIntegration', () => {
+          updatePlayerSimulation(
+            this.gameplayModel.player,
+            movement,
+            delta,
+            PLAYABLE_FIELD_BOUNDS,
+            { clampSidelines: false },
+          );
+        });
+      } else {
+        updatePlayerSimulation(
+          this.gameplayModel.player,
+          movement,
+          delta,
+          PLAYABLE_FIELD_BOUNDS,
+          { clampSidelines: false },
+        );
+      }
     } else {
       this.gameplayModel.player.velocity.x = 0;
       this.gameplayModel.player.velocity.z = 0;
     }
-    updateGameplayModel(this.gameplayModel, delta, {
+    const updateOptions = {
+      profiler,
       suppressDeadPlayReset: this.options.shouldHoldDeadPlayReset(),
-    });
+    };
+    if (profiler?.enabled) {
+      profiler.measure('gameplayStateUpdate', () => {
+        updateGameplayModel(this.gameplayModel, delta, updateOptions);
+      });
+    } else {
+      updateGameplayModel(this.gameplayModel, delta, updateOptions);
+    }
   }
 
   rebuildForPlaybook(
@@ -203,7 +229,7 @@ export class GameplayRuntime {
     }
   }
 
-  private updatePlayControls(): void {
+  private updatePlayControls(profiler?: FramePerformanceProfiler): void {
     const requests = this.playControls.consumeRequests();
     if (requests.startPlay || requests.resetPlay || requests.restartChallenge) {
       this.options.skipPresentation();
@@ -225,7 +251,13 @@ export class GameplayRuntime {
       cycleSelectedReceiver(this.gameplayModel);
     }
     if (requests.pass) {
-      attemptPass(this.gameplayModel);
+      if (profiler?.enabled) {
+        profiler.measure('passTargetingAndBallSimulation', () => {
+          attemptPass(this.gameplayModel);
+        });
+      } else {
+        attemptPass(this.gameplayModel);
+      }
     }
     if (requests.startPlay) {
       startPlay(this.gameplayModel);

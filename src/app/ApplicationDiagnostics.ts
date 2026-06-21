@@ -30,6 +30,23 @@ import {
   type SevenAuditSnapshot,
 } from '../sevenOnSevenAudit';
 import type { RenderMetricsSnapshot } from '../debugOverlay';
+import {
+  createPerformanceReport,
+  type PerformanceReport,
+  type PerformanceReportEnvironment,
+} from '../performance/PerformanceReport';
+import type {
+  FramePerformanceProfiler,
+} from '../performance/FramePerformanceProfiler';
+import {
+  collectRendererMetrics,
+  collectSceneStructureMetrics,
+} from '../performance/RendererMetricsCollector';
+import type {
+  PerformanceScenarioRunner,
+  PerformanceScenarioSnapshot,
+} from '../performance/PerformanceScenarioRunner';
+import type { PerformanceScenarioName } from '../performance/PerformanceBudget';
 import type {
   ElevenAuditResetCycleResult,
   FootballDebugApi,
@@ -45,6 +62,8 @@ export interface ApplicationDiagnosticsOptions {
   isCrowdPresentationDebugEnabled: () => boolean;
   gameplay: GameplayRuntime;
   playerVisuals: PlayerVisualRegistry;
+  performanceProfiler: FramePerformanceProfiler;
+  performanceScenarioRunner: PerformanceScenarioRunner | null;
   presentation: PresentationRuntime;
   sceneRuntime: SceneRuntime;
   searchParams: URLSearchParams;
@@ -256,7 +275,11 @@ export class ApplicationDiagnostics {
         this.options.gameplay.getActivePresentationSnapshot(
           !!this.options.presentation.crowdPreviewController,
         ).passAudit,
+      clearPerformanceSamples: () => this.options.performanceProfiler.clear(),
       getElevenAuditSnapshot: () => this.getElevenAuditSnapshot(),
+      getPerformanceProfileReport: (environment) =>
+        this.createPerformanceProfileReport(environment),
+      getPerformanceScenarioSnapshot: () => this.getPerformanceScenarioSnapshot(),
       getPresentationHardeningAuditSnapshot: () => this.getPresentationHardeningAuditSnapshot(),
       getPresentationHoldSnapshot: () => this.options.presentation.holdSnapshot,
       getPresentationAuditSnapshot: () => this.getPresentationAuditSnapshot(),
@@ -270,6 +293,8 @@ export class ApplicationDiagnostics {
       playAudioTestOneShot: () => this.options.presentation.gameAudioDirector.playTestOneShot(),
       runElevenAuditResetCycles: (cycles = 100) => this.runElevenAuditResetCycles(cycles),
       runSevenAuditResetCycles: (cycles = 100) => this.runSevenAuditResetCycles(cycles),
+      setPerformanceScenario: (scenario) =>
+        this.options.performanceScenarioRunner?.setScenario(scenario) ?? null,
       setCrowdPreviewCameraView: (view) => {
         this.options.presentation.crowdPreviewController?.setCameraView(view);
       },
@@ -291,6 +316,48 @@ export class ApplicationDiagnostics {
       startAudioTestLoop: () => this.options.presentation.gameAudioDirector.startTestLoop(),
       stopAudioTestLoop: () => this.options.presentation.gameAudioDirector.stopTestLoop(),
     };
+  }
+
+  private createPerformanceProfileReport(
+    environment: Partial<PerformanceReportEnvironment> = {},
+  ): PerformanceReport {
+    const renderer = collectRendererMetrics(this.options.sceneRuntime.renderer);
+    const scene = collectSceneStructureMetrics(
+      this.options.sceneRuntime.scene,
+      this.options.playerVisuals.values(),
+    );
+    const defaultEnvironment: PerformanceReportEnvironment = {
+      deviceScaleFactor: window.devicePixelRatio,
+      hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+      hiddenFrameCount: 0,
+      rendererDescription: 'unknown',
+      softwareRendering: false,
+      userAgent: navigator.userAgent,
+      viewport: {
+        height: window.innerHeight,
+        width: window.innerWidth,
+      },
+    };
+
+    return createPerformanceReport({
+      activeScenario:
+        this.options.performanceScenarioRunner?.getActiveScenarioName() ?? 'normal-gameplay',
+      environment: {
+        ...defaultEnvironment,
+        ...environment,
+        viewport: {
+          ...defaultEnvironment.viewport,
+          ...environment.viewport,
+        },
+      },
+      renderer,
+      scene,
+      snapshot: this.options.performanceProfiler.getSnapshot(),
+    });
+  }
+
+  private getPerformanceScenarioSnapshot(): PerformanceScenarioSnapshot | null {
+    return this.options.performanceScenarioRunner?.getSnapshot() ?? null;
   }
 
   private runElevenAuditResetCycles(cycles: number): ElevenAuditResetCycleResult | null {

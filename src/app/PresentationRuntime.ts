@@ -68,6 +68,7 @@ import {
 import type { PlayDefinition } from '../playbook';
 import type { BallModel } from '../ballModel';
 import type { RuntimeAudioDebugSnapshot } from '../audio/AudioDebugOverlay';
+import type { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -88,6 +89,7 @@ export interface PresentationFrameOptions {
   gameplaySnapshot: GameplaySnapshot;
   playerVisuals: Map<string, THREE.Group>;
   selectedPlay: PlayDefinition;
+  profiler?: FramePerformanceProfiler;
 }
 
 export class PresentationRuntime {
@@ -278,26 +280,54 @@ export class PresentationRuntime {
     deltaSeconds,
     gameplaySnapshot,
     playerVisuals,
+    profiler,
     selectedPlay,
   }: PresentationFrameOptions): void {
     const presentationEvents = this.gamePresentationRuntime.update(gameplaySnapshot, deltaSeconds, {
       active,
       commentaryActive,
+      profiler,
     });
 
-    syncBallVisual(this.ballVisual, ball);
+    if (profiler?.enabled) {
+      profiler.measure('footballVisualUpdate', () => syncBallVisual(this.ballVisual, ball));
+    } else {
+      syncBallVisual(this.ballVisual, ball);
+    }
     this.routeArtRenderer.update(gameplaySnapshot, selectedPlay);
-    this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
-    this.cameraController.update(gameplaySnapshot, deltaSeconds, {
-      crowdCutawaysEnabled,
-      presentationEvents,
-    });
+    if (profiler?.enabled) {
+      profiler.measure('proceduralPlayerPosing', () => {
+        this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+      });
+      profiler.measure('cameraUpdate', () => {
+        this.cameraController.update(gameplaySnapshot, deltaSeconds, {
+          crowdCutawaysEnabled,
+          presentationEvents,
+        });
+      });
+    } else {
+      this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+      this.cameraController.update(gameplaySnapshot, deltaSeconds, {
+        crowdCutawaysEnabled,
+        presentationEvents,
+      });
+    }
     this.gamePresentationRuntime.recordCameraSnapshot(this.cameraController.getDebugSnapshot());
-    syncGameplayHud(this.gameplayHud, gameplaySnapshot);
-    syncBroadcastCaptions(
-      this.broadcastCaptions,
-      this.broadcastCommentaryDirector.getSnapshot(),
-    );
+    if (profiler?.enabled) {
+      profiler.measure('hudDomUpdate', () => {
+        syncGameplayHud(this.gameplayHud, gameplaySnapshot);
+        syncBroadcastCaptions(
+          this.broadcastCaptions,
+          this.broadcastCommentaryDirector.getSnapshot(),
+        );
+      });
+    } else {
+      syncGameplayHud(this.gameplayHud, gameplaySnapshot);
+      syncBroadcastCaptions(
+        this.broadcastCaptions,
+        this.broadcastCommentaryDirector.getSnapshot(),
+      );
+    }
   }
 
   syncPlayCallUi(gameplaySnapshot: GameplaySnapshot, visible: boolean): void {

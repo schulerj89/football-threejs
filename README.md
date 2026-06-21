@@ -42,6 +42,8 @@ npm run test:unit
 npm run test:smoke
 npm test
 npm run benchmark:reference
+npm run perf:11v11
+npm run perf:report
 ```
 
 Open the dev server at `http://127.0.0.1:5173`.
@@ -57,6 +59,17 @@ Run `npm run benchmark:reference` to build production assets and run the referen
 - The automated gate follows the smoke-test tolerance: `55-60 FPS` is acceptable, and hardware-rendered runs fail only when a rolling one-second window remains below `55 FPS`. Software rendering such as SwiftShader reports timing but does not fail timing gates; structural budgets still apply.
 - Report output: `test-results/reference-performance-report.json`.
 - The current prototype does not yet include referee visuals; the benchmark requests and records the referee dimension so it can become enforced when that feature lands.
+
+## 11v11 Performance Profiling
+
+Run `npm run perf:11v11` to build production assets and profile deterministic 11v11 scenarios in Chromium through `vite preview`.
+
+- Profiling is disabled by default and is activated only with `?perfProfile=1` in the benchmark harness.
+- The report covers complete frame time, CPU/presentation phases, `renderer.render`, renderer counters, scene structure, and retained long-frame correlation.
+- Scenario reports are written to `test-results/eleven-performance-report.json` with a readable summary in `test-results/eleven-performance-summary.txt`.
+- Use `npm run perf:report` to print the latest report summary without rerunning the benchmark.
+- For quick local smoke runs, override durations with environment variables such as `FOOTBALL_PERF_SAMPLE_MS=1500`, `FOOTBALL_PERF_COMPARISON_SAMPLE_MS=750`, and `FOOTBALL_PERF_WARMUP_MS=500`.
+- Current officials/referee visuals are not implemented; the profiling harness records official mesh count and the officials-on/off comparison dimension for future enforcement.
 
 ## Audio Production
 
