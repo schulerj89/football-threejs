@@ -5,6 +5,13 @@ import {
   type SnapPlacement,
 } from './ballSpotting';
 import { DRIVE_CONFIG, type DriveSnapshot } from './driveModel';
+import {
+  ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS,
+  getElevenOnElevenPlayerMetadata,
+  resolveElevenOnElevenPreviewFormation,
+  type ElevenOnElevenAlignment,
+  type FootballPosition,
+} from './elevenOnElevenFormation';
 import { INITIAL_BALL_SPOT, OPPOSING_GOAL_LINE_Z } from './field';
 import { cloneFootballSpot, type FootballSpot } from './fieldScale';
 import {
@@ -22,19 +29,32 @@ import { createPlayerModel, snapshotPlayerModel, type PlayerModel, type PlayerRo
 import { resolvePreSnapFacing } from './playbook';
 import type { GameplaySnapshot } from './playState';
 import {
+  ELEVEN_ON_ELEVEN_DEFENSE_PLAYER_IDS,
+  ELEVEN_ON_ELEVEN_OFFENSE_PLAYER_IDS,
+  ELEVEN_ON_ELEVEN_PLAYER_IDS,
   SEVEN_ON_SEVEN_DEFENSE_PLAYER_IDS,
   SEVEN_ON_SEVEN_OFFENSE_PLAYER_IDS,
   SEVEN_ON_SEVEN_PLAYER_IDS,
 } from './roster';
 import { SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS } from './sevenOnSevenFormation';
 
-export type FormationPreviewMode = '7v7';
+export type FormationPreviewMode = '11v11' | '7v7';
+
+export interface FormationPreviewPlayerLabel {
+  alignment: ElevenOnElevenAlignment | 'unknown';
+  distanceFromLineOfScrimmage: number;
+  distanceFromSnap: number;
+  eligible: boolean;
+  footballPosition: FootballPosition | null;
+  id: string;
+}
 
 export interface FormationPreviewModel {
   ball: BallModel;
   formation: ResolvedFormation;
   mode: FormationPreviewMode;
   players: PlayerModel[];
+  preferredSide: PreferredFormationSide;
   snapPlacement: SnapPlacement;
 }
 
@@ -42,13 +62,19 @@ export interface FormationPreviewSnapshot {
   fieldSide: ResolvedFormation['fieldSide'];
   boundarySide: ResolvedFormation['boundarySide'];
   issues: ResolvedFormation['issues'];
+  labels: FormationPreviewPlayerLabel[];
   mode: FormationPreviewMode;
   players: ReturnType<typeof snapshotPlayerModel>[];
+  preferredSide: PreferredFormationSide;
   snapLane: SnapLane;
   snapPlacement: SnapPlacement;
 }
 
 export {
+  ELEVEN_ON_ELEVEN_DEFENSE_PLAYER_IDS,
+  ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS,
+  ELEVEN_ON_ELEVEN_OFFENSE_PLAYER_IDS,
+  ELEVEN_ON_ELEVEN_PLAYER_IDS,
   SEVEN_ON_SEVEN_DEFENSE_PLAYER_IDS,
   SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS,
   SEVEN_ON_SEVEN_OFFENSE_PLAYER_IDS,
@@ -56,6 +82,7 @@ export {
 };
 
 const PLAY_SIDE: PreferredFormationSide = 'right';
+const PREVIEW_PLAY_ID = 'inside-zone-7';
 const OFFENSE_PRE_SNAP_FACING = { kind: 'playDirection' } as const;
 const DEFENSE_PRE_SNAP_FACING = { kind: 'againstPlayDirection' } as const;
 
@@ -103,6 +130,10 @@ export const SEVEN_ON_SEVEN_PREVIEW_FORMATION: FormationPlayDefinition = {
 };
 
 export function resolveFormationPreviewMode(value: string | null): FormationPreviewMode | null {
+  if (value === '11v11') {
+    return '11v11';
+  }
+
   return value === '7v7' ? '7v7' : null;
 }
 
@@ -111,8 +142,9 @@ export function createFormationPreviewModel(
   lane: SnapLane = 'middle',
   spot: FootballSpot = INITIAL_BALL_SPOT,
 ): FormationPreviewModel {
+  const preferredSide = PLAY_SIDE;
   const snapPlacement = createSnapPlacementForLane(lane, spot.z);
-  const formation = resolveSevenOnSevenPreviewFormation(snapPlacement);
+  const formation = resolvePreviewFormation(mode, snapPlacement, preferredSide);
   const players = createPlayersFromFormation(formation);
   const ball = createBallModel(snapPlacement.spot);
 
@@ -121,6 +153,7 @@ export function createFormationPreviewModel(
     formation,
     mode,
     players,
+    preferredSide,
     snapPlacement,
   };
 }
@@ -130,13 +163,29 @@ export function setFormationPreviewSnapLane(
   lane: SnapLane,
 ): void {
   const snapPlacement = createSnapPlacementForLane(lane, preview.snapPlacement.spot.z);
-  const formation = resolveSevenOnSevenPreviewFormation(snapPlacement);
+  const formation = resolvePreviewFormation(
+    preview.mode,
+    snapPlacement,
+    preview.preferredSide,
+  );
 
   preview.snapPlacement = snapPlacement;
   preview.formation = formation;
   resetPreviewPlayers(preview.players, formation);
   preview.ball.position.x = snapPlacement.spot.x;
   preview.ball.position.z = snapPlacement.spot.z;
+}
+
+export function toggleFormationPreviewPreferredSide(
+  preview: FormationPreviewModel,
+): void {
+  preview.preferredSide = preview.preferredSide === 'left' ? 'right' : 'left';
+  preview.formation = resolvePreviewFormation(
+    preview.mode,
+    preview.snapPlacement,
+    preview.preferredSide,
+  );
+  resetPreviewPlayers(preview.players, preview.formation);
 }
 
 export function snapshotFormationPreviewModel(
@@ -149,8 +198,10 @@ export function snapshotFormationPreviewModel(
       message: issue.message,
       playerIds: [...issue.playerIds],
     })),
+    labels: createPreviewLabels(preview.formation, preview.mode),
     mode: preview.mode,
     players: preview.players.map(snapshotPlayerModel),
+    preferredSide: preview.preferredSide,
     snapLane: preview.snapPlacement.lane,
     snapPlacement: cloneSnapPlacement(preview.snapPlacement),
   };
@@ -209,8 +260,8 @@ export function snapshotFormationPreviewAsGameplay(
       state: 'ready',
     },
     selectedPlay: {
-      displayName: '7v7 Formation Preview',
-      id: 'inside-run',
+      displayName: getPreviewDisplayName(preview.mode),
+      id: PREVIEW_PLAY_ID,
       initialMovementDirection: { x: 0, z: 1 },
       kind: 'run',
     },
@@ -225,6 +276,18 @@ export function resolveSevenOnSevenPreviewFormation(
   const formation = resolveFormation(SEVEN_ON_SEVEN_PREVIEW_FORMATION, snapPlacement);
   assertValidResolvedFormation(formation);
   return formation;
+}
+
+function resolvePreviewFormation(
+  mode: FormationPreviewMode,
+  snapPlacement: SnapPlacement,
+  preferredSide: PreferredFormationSide,
+): ResolvedFormation {
+  if (mode === '11v11') {
+    return resolveElevenOnElevenPreviewFormation(snapPlacement, preferredSide);
+  }
+
+  return resolveSevenOnSevenPreviewFormation(snapPlacement);
 }
 
 export function createSnapPlacementForLane(lane: SnapLane, z: number = INITIAL_BALL_SPOT.z): SnapPlacement {
@@ -272,10 +335,37 @@ function getPreviewPrimaryPlayer(players: PlayerModel[]): PlayerModel {
   const quarterback = players.find((player) => player.id === 'offense-qb');
 
   if (!quarterback) {
-    throw new Error('Missing offense-qb in 7v7 preview');
+    throw new Error('Missing offense-qb in formation preview');
   }
 
   return quarterback;
+}
+
+function getPreviewDisplayName(mode: FormationPreviewMode): string {
+  return mode === '11v11' ? '11v11 Formation Preview' : '7v7 Formation Preview';
+}
+
+function createPreviewLabels(
+  formation: ResolvedFormation,
+  mode: FormationPreviewMode,
+): FormationPreviewPlayerLabel[] {
+  return formation.slots.map((slot) => {
+    const metadata = mode === '11v11'
+      ? getElevenOnElevenPlayerMetadata(slot.id)
+      : null;
+
+    return {
+      alignment: metadata?.alignment ?? 'unknown',
+      distanceFromLineOfScrimmage: slot.distanceFromLineOfScrimmage,
+      distanceFromSnap: Math.hypot(
+        slot.position.x - formation.snapPlacement.spot.x,
+        slot.position.z - formation.snapPlacement.spot.z,
+      ),
+      eligible: metadata?.eligible ?? false,
+      footballPosition: metadata?.footballPosition ?? null,
+      id: slot.id,
+    };
+  });
 }
 
 function offenseSlot(id: string, role: PlayerRole, formationPoint: FormationPoint): FormationSlot {

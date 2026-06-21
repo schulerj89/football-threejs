@@ -33,6 +33,21 @@ describe('presentation camera director', () => {
     }
   });
 
+  it('calculates eleven-on-eleven formation bounds without player-count assumptions', () => {
+    const preview = createFormationPreviewModel('11v11', 'middle');
+    const snapshot = snapshotFormationPreviewAsGameplay(preview);
+    const bounds = calculateFormationBounds(snapshot.players);
+
+    expect(bounds.playerIds).toHaveLength(22);
+    expect(bounds.playerIds).toEqual(snapshot.players.map((player) => player.id).sort());
+    for (const player of snapshot.players) {
+      expect(player.position.x - player.collisionRadius).toBeGreaterThanOrEqual(bounds.min.x);
+      expect(player.position.x + player.collisionRadius).toBeLessThanOrEqual(bounds.max.x);
+      expect(player.position.z - player.collisionRadius).toBeGreaterThanOrEqual(bounds.min.z);
+      expect(player.position.z + player.collisionRadius).toBeLessThanOrEqual(bounds.max.z);
+    }
+  });
+
   it('does not delay snap input during the establishing shot', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
     const director = new PresentationCameraDirector();

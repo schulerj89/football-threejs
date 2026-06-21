@@ -3,6 +3,15 @@ import { SNAP_LANE_X, type SnapLane } from '../src/ballSpotting';
 import { PLAYABLE_FIELD_BOUNDS } from '../src/field';
 import { FORMATION_MEASUREMENTS, resolveFormation } from '../src/formationLayout';
 import {
+  ELEVEN_ON_ELEVEN_BACKFIELD_IDS,
+  ELEVEN_ON_ELEVEN_ELIGIBLE_RECEIVER_IDS,
+  ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS,
+  ELEVEN_ON_ELEVEN_INTERIOR_LINE_IDS,
+  ELEVEN_ON_ELEVEN_OFFENSIVE_LINE_IDS,
+  ELEVEN_ON_ELEVEN_PLAYER_METADATA,
+} from '../src/elevenOnElevenFormation';
+import {
+  ELEVEN_ON_ELEVEN_PLAYER_IDS,
   SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS,
   SEVEN_ON_SEVEN_PLAYER_IDS,
   SEVEN_ON_SEVEN_PREVIEW_FORMATION,
@@ -10,6 +19,7 @@ import {
   createSnapPlacementForLane,
   setFormationPreviewSnapLane,
   snapshotFormationPreviewModel,
+  toggleFormationPreviewPreferredSide,
 } from '../src/formationPreview';
 import type { ResolvedFormation, ResolvedFormationSlot } from '../src/formationLayout';
 
@@ -157,6 +167,136 @@ describe('7v7 formation preview', () => {
   });
 });
 
+describe('11v11 formation preview', () => {
+  it('resolves all three snap lanes into valid eleven-on-eleven formations', () => {
+    for (const lane of ['leftHash', 'middle', 'rightHash'] satisfies SnapLane[]) {
+      const preview = createFormationPreviewModel('11v11', lane);
+      const snapshot = snapshotFormationPreviewModel(preview);
+
+      expect(snapshot).toMatchObject({
+        issues: [],
+        mode: '11v11',
+        snapLane: lane,
+      });
+      expect(snapshot.snapPlacement.spot.x).toBe(SNAP_LANE_X[lane]);
+      expect(snapshot.players).toHaveLength(22);
+      expect(snapshot.players.filter((player) => player.team === 'offense')).toHaveLength(11);
+      expect(snapshot.players.filter((player) => player.team === 'defense')).toHaveLength(11);
+      expect(snapshot.players.map((player) => player.id).sort()).toEqual(
+        [...ELEVEN_ON_ELEVEN_PLAYER_IDS].sort(),
+      );
+      expect(new Set(snapshot.players.map((player) => player.id)).size).toBe(22);
+      expect(snapshot.players.every((player) => player.currentState === 'idle')).toBe(true);
+      expect(snapshot.players.every((player) => insidePlayableBounds(player.position))).toBe(true);
+      expect(snapshot.labels).toHaveLength(22);
+      expect(snapshot.labels.find((label) => label.id === 'offense-center')).toMatchObject({
+        alignment: 'line',
+        eligible: false,
+        footballPosition: 'C',
+      });
+    }
+  });
+
+  it('places exactly seven offensive players on the line and four in the backfield', () => {
+    const formation = createFormationPreviewModel('11v11', 'middle').formation;
+    const lineSlots = ELEVEN_ON_ELEVEN_OFFENSIVE_LINE_IDS.map((playerId) =>
+      getSlot(formation, playerId),
+    );
+    const backfieldSlots = ELEVEN_ON_ELEVEN_BACKFIELD_IDS.map((playerId) =>
+      getSlot(formation, playerId),
+    );
+
+    expect(lineSlots).toHaveLength(7);
+    expect(backfieldSlots).toHaveLength(4);
+    for (const slot of lineSlots) {
+      expect(slot.distanceFromLineOfScrimmage).toBeCloseTo(
+        -ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.offensiveLineSetback,
+      );
+    }
+    for (const slot of backfieldSlots) {
+      expect(slot.distanceFromLineOfScrimmage).toBeLessThan(
+        -ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.offensiveLineSetback,
+      );
+    }
+  });
+
+  it('marks only line-end and backfield receivers as eligible', () => {
+    const eligibleIds = Object.entries(ELEVEN_ON_ELEVEN_PLAYER_METADATA)
+      .filter(([, metadata]) => metadata.eligible)
+      .map(([playerId]) => playerId)
+      .sort();
+
+    expect(eligibleIds).toEqual([...ELEVEN_ON_ELEVEN_ELIGIBLE_RECEIVER_IDS].sort());
+    for (const interiorId of ELEVEN_ON_ELEVEN_INTERIOR_LINE_IDS) {
+      expect(ELEVEN_ON_ELEVEN_PLAYER_METADATA[interiorId].eligible).toBe(false);
+    }
+  });
+
+  it('aligns corners to outside receivers and safeties to receiving threat midpoints', () => {
+    const formation = createFormationPreviewModel('11v11', 'middle').formation;
+    const eligibleThreatMidpoint = average(
+      ELEVEN_ON_ELEVEN_ELIGIBLE_RECEIVER_IDS.map((playerId) =>
+        getSlot(formation, playerId).position.x,
+      ),
+    );
+    const strongSafetyThreatMidpoint = average(
+      ['offense-tight-end', 'offense-slot', 'offense-rb'].map((playerId) =>
+        getSlot(formation, playerId).position.x,
+      ),
+    );
+
+    expect(getSlot(formation, 'defense-corner-left').position.x).toBeCloseTo(
+      getSlot(formation, 'offense-wr-left').position.x,
+    );
+    expect(getSlot(formation, 'defense-corner-right').position.x).toBeCloseTo(
+      getSlot(formation, 'offense-wr-right').position.x,
+    );
+    expect(getSlot(formation, 'defense-safety').position.x).toBeCloseTo(
+      eligibleThreatMidpoint,
+    );
+    expect(getSlot(formation, 'defense-safety-strong').position.x).toBeCloseTo(
+      strongSafetyThreatMidpoint,
+    );
+  });
+
+  it('mirrors the preferred formation side without replacing player models', () => {
+    const preview = createFormationPreviewModel('11v11', 'middle');
+    const playersBefore = preview.players;
+    const rightPreferredFormation = preview.formation;
+
+    toggleFormationPreviewPreferredSide(preview);
+
+    expect(preview.players).toBe(playersBefore);
+    expect(preview.preferredSide).toBe('left');
+    expect(getSlot(preview.formation, 'offense-tight-end').position.x).toBeCloseTo(
+      -getSlot(rightPreferredFormation, 'offense-tight-end').position.x,
+    );
+    expect(getSlot(preview.formation, 'offense-slot').position.x).toBeCloseTo(
+      -getSlot(rightPreferredFormation, 'offense-slot').position.x,
+    );
+    expect(getSlot(preview.formation, 'offense-wr-left').position.x).toBeCloseTo(
+      -getSlot(rightPreferredFormation, 'offense-wr-left').position.x,
+    );
+    expect(preview.players.every((player) => player.currentState === 'idle')).toBe(true);
+  });
+
+  it('has no duplicate or overlapping eleven-on-eleven positions', () => {
+    const formation = createFormationPreviewModel('11v11', 'middle').formation;
+
+    for (let outer = 0; outer < formation.slots.length; outer += 1) {
+      for (let inner = outer + 1; inner < formation.slots.length; inner += 1) {
+        const first = formation.slots[outer];
+        const second = formation.slots[inner];
+
+        expect(first.position).not.toEqual(second.position);
+        expect(distance(first, second)).toBeGreaterThanOrEqual(
+          FORMATION_MEASUREMENTS.minimumPlayerClearance,
+        );
+      }
+    }
+  });
+});
+
 function getSlot(formation: ResolvedFormation, playerId: string): ResolvedFormationSlot {
   const slot = formation.slots.find((candidate) => candidate.id === playerId);
 
@@ -198,4 +338,8 @@ function sidelineInset(slot: ResolvedFormationSlot): number {
 
 function distance(first: ResolvedFormationSlot, second: ResolvedFormationSlot): number {
   return Math.hypot(first.position.x - second.position.x, first.position.z - second.position.z);
+}
+
+function average(values: number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }

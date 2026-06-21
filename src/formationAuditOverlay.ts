@@ -4,7 +4,13 @@ import {
   type ResolvedFormation,
   type ResolvedFormationSlot,
 } from './formationLayout';
+import type { FormationPreviewPlayerLabel } from './formationPreview';
 import type { GameplayModel } from './playState';
+
+interface FormationAuditOptions {
+  labels?: FormationPreviewPlayerLabel[];
+  previewName?: string;
+}
 
 export function createFormationAuditOverlay(): HTMLDivElement {
   const element = document.createElement('div');
@@ -18,32 +24,46 @@ export function syncFormationAuditOverlay(
   element: HTMLDivElement,
   gameplay: GameplayModel,
   resolvedFormation?: ResolvedFormation,
+  options: FormationAuditOptions = {},
 ): void {
   const formation = resolvedFormation ?? resolveFormation(gameplay.selectedPlay, {
     lane: gameplay.drive.snapLane,
     spot: gameplay.drive.lineOfScrimmage,
   });
+  const labelsById = new Map((options.labels ?? []).map((label) => [label.id, label]));
   const invalidPlayerIds = new Set(
     formation.issues.flatMap((issue) => issue.playerIds),
   );
   const rows = [
     createRow('FORMATION AUDIT'),
-    createRow(`PLAY ${resolvedFormation ? '7v7 Formation Preview' : gameplay.selectedPlay.displayName}`),
+    createRow(`PLAY ${resolvedFormation ? options.previewName ?? 'Formation Preview' : gameplay.selectedPlay.displayName}`),
     createRow(`SNAP ${formation.snapPlacement.lane} ${formatSpot(formation.snapPlacement.spot)}`),
     createRow(`FIELD ${formation.fieldSide} BOUNDARY ${formation.boundarySide}`),
     createRow(`ISSUES ${formation.issues.length === 0 ? 'none' : formation.issues.length}`),
     ...formation.issues.map((issue) => createIssueRow(issue)),
-    ...formation.slots.map((slot) => createSlotRow(slot, invalidPlayerIds.has(slot.id))),
+    ...formation.slots.map((slot) =>
+      createSlotRow(slot, invalidPlayerIds.has(slot.id), labelsById.get(slot.id)),
+    ),
   ];
 
   element.replaceChildren(...rows);
 }
 
-function createSlotRow(slot: ResolvedFormationSlot, invalid: boolean): HTMLDivElement {
+function createSlotRow(
+  slot: ResolvedFormationSlot,
+  invalid: boolean,
+  label?: FormationPreviewPlayerLabel,
+): HTMLDivElement {
+  const labelText = label
+    ? ` football ${label.footballPosition ?? 'none'} ${label.alignment} ` +
+      `${label.eligible ? 'eligible' : 'ineligible'} snap ${label.distanceFromSnap.toFixed(1)} ` +
+      `los ${label.distanceFromLineOfScrimmage.toFixed(1)}`
+    : '';
   const row = createRow(
     `${slot.id} ${slot.team}/${slot.role} pos ${formatSpot(slot.position)} ` +
       `dx ${slot.lateralDistanceFromSnap.toFixed(1)} dz ${slot.distanceFromLineOfScrimmage.toFixed(1)} ` +
-      `lat ${slot.lateral.kind} depth ${slot.longitudinal.side}:${slot.longitudinal.depthYards}`,
+      `lat ${slot.lateral.kind} depth ${slot.longitudinal.side}:${slot.longitudinal.depthYards}` +
+      labelText,
   );
   row.classList.toggle('invalid', invalid);
 

@@ -224,6 +224,28 @@ describe('gameplay camera controller', () => {
     }
   });
 
+  it('calculates eleven-on-eleven pre-play orbit paths for every snap lane', () => {
+    for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+      const preview = createFormationPreviewModel('11v11', lane);
+      const snapshot = snapshotFormationPreviewAsGameplay(preview);
+      const controller = new GameplayCameraController({
+        cinematics: 'full',
+        height: 900,
+        initialMode: 'offensePerspective',
+        width: 1440,
+      });
+
+      controller.update(snapshot, 0);
+      const debug = controller.getDebugSnapshot();
+
+      expect(debug.activeShotName).toBe('prePlayOrbit180');
+      expect(debug.formationBounds?.playerIds).toHaveLength(22);
+      expect(debug.orbitCenter?.x).toBeCloseTo(debug.formationBounds?.center.x ?? 0);
+      expect(debug.orbitCenter?.z).toBeCloseTo(debug.formationBounds?.center.z ?? 0);
+      expect(debug.orbitRadius).toBeGreaterThan(0);
+    }
+  });
+
   it('updates orbit framing when resized', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);

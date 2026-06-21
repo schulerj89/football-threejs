@@ -269,8 +269,34 @@ interface FormationPreviewSnapshot {
   boundarySide: 'left' | 'right';
   fieldSide: 'left' | 'right';
   issues: Array<{ message: string; playerIds: string[] }>;
-  mode: '7v7';
+  labels: Array<{
+    alignment: 'backfield' | 'defense' | 'line' | 'unknown';
+    distanceFromLineOfScrimmage: number;
+    distanceFromSnap: number;
+    eligible: boolean;
+    footballPosition:
+      | 'C'
+      | 'CB'
+      | 'DL'
+      | 'FS'
+      | 'ILB'
+      | 'LG'
+      | 'OLB'
+      | 'QB'
+      | 'RB'
+      | 'RG'
+      | 'RT'
+      | 'LT'
+      | 'SLOT'
+      | 'SS'
+      | 'TE'
+      | 'WR'
+      | null;
+    id: string;
+  }>;
+  mode: '11v11' | '7v7';
   players: PlayerSnapshot[];
+  preferredSide: 'left' | 'right';
   snapLane: 'leftHash' | 'middle' | 'rightHash';
   snapPlacement: { lane: 'leftHash' | 'middle' | 'rightHash'; spot: FootballSpot };
 }
@@ -1342,6 +1368,158 @@ test('stages a static 7v7 formation preview across snap lanes and camera modes',
     state: 'cinematicBroadcast',
   });
   await expect(page.locator('.debug-overlay')).toContainText('PRESENT preSnapEstablish');
+  await expect(page.locator('.debug-overlay')).toContainText('FORM_BOUNDS');
+  await expect.poll(() => getCameraFramingSnapshot(page)).toMatchObject({
+    unframedPlayerIds: [],
+  });
+  await expectNonBlankCanvas(page);
+
+  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('stages a static 11v11 formation preview across snap lanes and camera modes', async ({ page }) => {
+  const consoleErrors: string[] = [];
+  const pageErrors: string[] = [];
+  const expectedPlayerIds = [
+    'defense-corner-left',
+    'defense-corner-right',
+    'defense-line-left',
+    'defense-line-middle',
+    'defense-line-right',
+    'defense-linebacker',
+    'defense-linebacker-inside',
+    'defense-linebacker-left',
+    'defense-linebacker-right',
+    'defense-safety',
+    'defense-safety-strong',
+    'offense-center',
+    'offense-line-left',
+    'offense-line-right',
+    'offense-qb',
+    'offense-rb',
+    'offense-slot',
+    'offense-tackle-left',
+    'offense-tackle-right',
+    'offense-tight-end',
+    'offense-wr-left',
+    'offense-wr-right',
+  ];
+
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text());
+    }
+  });
+
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message);
+  });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical&formationPreview=11v11&formationAudit=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.play-call-ui')).toBeHidden();
+  await expect(page.locator('.play-call')).toHaveText('11v11 Formation Preview');
+  await expect(page.locator('.formation-audit-overlay')).toContainText('PLAY 11v11 Formation Preview');
+  await expect(page.locator('.formation-audit-overlay')).toContainText('ISSUES none');
+  await expect(page.locator('.formation-audit-overlay')).toContainText('offense-center offense/blocker');
+  await expect(page.locator('.formation-audit-overlay')).toContainText('football C line ineligible');
+
+  const initialPreview = await getFormationPreviewSnapshot(page);
+  expect(initialPreview).toMatchObject({
+    issues: [],
+    mode: '11v11',
+    preferredSide: 'right',
+    snapLane: 'middle',
+  });
+  expect(initialPreview.players).toHaveLength(22);
+  expect(initialPreview.players.filter((player) => player.team === 'offense')).toHaveLength(11);
+  expect(initialPreview.players.filter((player) => player.team === 'defense')).toHaveLength(11);
+  expect(initialPreview.players.map((player) => player.id).sort()).toEqual(expectedPlayerIds);
+  expect(new Set(initialPreview.players.map((player) => player.id)).size).toBe(22);
+  expect(initialPreview.players.every((player) => player.currentState === 'idle')).toBe(true);
+  expect(initialPreview.labels.filter((label) => label.alignment === 'line')).toHaveLength(7);
+  expect(initialPreview.labels.filter((label) => label.alignment === 'backfield')).toHaveLength(4);
+  expect(initialPreview.labels.filter((label) => label.eligible)).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: 'offense-rb', footballPosition: 'RB' }),
+      expect.objectContaining({ id: 'offense-slot', footballPosition: 'SLOT' }),
+      expect.objectContaining({ id: 'offense-tight-end', footballPosition: 'TE' }),
+      expect.objectContaining({ id: 'offense-wr-left', footballPosition: 'WR' }),
+      expect.objectContaining({ id: 'offense-wr-right', footballPosition: 'WR' }),
+    ]),
+  );
+
+  await expect.poll(() => getHelmetAssetSnapshot(page), { timeout: 5000 }).toMatchObject({
+    attachedPlayerIds: expect.arrayContaining(expectedPlayerIds),
+    status: 'loaded',
+  });
+  expect(await getPlayerBodyVisualSnapshots(page)).toHaveLength(22);
+  await expect.poll(() => getCameraFramingSnapshot(page)).toMatchObject({
+    unframedPlayerIds: [],
+  });
+
+  await page.keyboard.press('1');
+  await expect.poll(() => getFormationPreviewSnapshot(page)).toMatchObject({
+    issues: [],
+    snapLane: 'leftHash',
+  });
+  await page.keyboard.press('2');
+  await expect.poll(() => getFormationPreviewSnapshot(page)).toMatchObject({
+    issues: [],
+    snapLane: 'middle',
+  });
+  const beforeMirror = await getFormationPreviewSnapshot(page);
+  await page.keyboard.press('4');
+  const afterMirror = await getFormationPreviewSnapshot(page);
+  expect(afterMirror.preferredSide).toBe('left');
+  expect(getPreviewPlayer(afterMirror, 'offense-tight-end').position.x).toBeCloseTo(
+    -getPreviewPlayer(beforeMirror, 'offense-tight-end').position.x,
+  );
+  expect(afterMirror.players.every((player) => player.currentState === 'idle')).toBe(true);
+  await page.keyboard.press('3');
+  await expect.poll(() => getFormationPreviewSnapshot(page)).toMatchObject({
+    issues: [],
+    snapLane: 'rightHash',
+  });
+
+  const beforeSpace = await getFormationPreviewSnapshot(page);
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(100);
+  const afterSpace = await getFormationPreviewSnapshot(page);
+  expect(afterSpace.snapLane).toBe(beforeSpace.snapLane);
+  expect(afterSpace.players.every((player) => player.currentState === 'idle')).toBe(true);
+  expect((await getGameplaySnapshot(page)).playState).toBe('preSnap');
+
+  await expect(page.locator('.debug-overlay')).toContainText('FRAME_MS');
+  await expect(page.locator('.debug-overlay')).toContainText('PLAYERS 22');
+  const metrics = await getRenderMetrics(page);
+  expect(metrics).toMatchObject({
+    playerCount: 22,
+  });
+  expect(metrics.calls).toBeGreaterThan(0);
+  expect(metrics.calls).toBeLessThan(420);
+  expect(metrics.triangles).toBeGreaterThan(0);
+  expect(metrics.geometries).toBeGreaterThan(0);
+  expect(metrics.sceneMaterialCount).toBeGreaterThan(0);
+
+  await page.keyboard.press('c');
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'offensePerspective',
+    state: 'preSnapFormation',
+  });
+  await expect.poll(() => getCameraFramingSnapshot(page)).toMatchObject({
+    unframedPlayerIds: [],
+  });
+  await expectNonBlankCanvas(page);
+
+  await page.keyboard.press('c');
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'cinematicBroadcast',
+    presentationPhase: 'preSnapEstablish',
+    state: 'cinematicBroadcast',
+  });
   await expect(page.locator('.debug-overlay')).toContainText('FORM_BOUNDS');
   await expect.poll(() => getCameraFramingSnapshot(page)).toMatchObject({
     unframedPlayerIds: [],
@@ -2482,6 +2660,19 @@ function getPlayer(gameplay: GameplaySnapshot, playerId: string): PlayerSnapshot
 
   if (!player) {
     throw new Error(`Missing player ${playerId}`);
+  }
+
+  return player;
+}
+
+function getPreviewPlayer(
+  preview: FormationPreviewSnapshot,
+  playerId: string,
+): PlayerSnapshot {
+  const player = preview.players.find((candidate) => candidate.id === playerId);
+
+  if (!player) {
+    throw new Error(`Missing preview player ${playerId}`);
   }
 
   return player;

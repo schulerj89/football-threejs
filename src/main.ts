@@ -82,6 +82,7 @@ import {
   setFormationPreviewSnapLane,
   snapshotFormationPreviewAsGameplay,
   snapshotFormationPreviewModel,
+  toggleFormationPreviewPreferredSide,
   type FormationPreviewSnapshot,
 } from './formationPreview';
 import {
@@ -628,7 +629,20 @@ function renderFrame(delta: number): void {
     syncPlayerPoseDebugOverlay(poseDebugOverlay, playerPoseController.getPoseSnapshots());
   }
   if (formationAuditOverlay) {
-    syncFormationAuditOverlay(formationAuditOverlay, gameplayModel, formationPreviewModel?.formation);
+    const formationPreviewSnapshot = formationPreviewModel
+      ? snapshotFormationPreviewModel(formationPreviewModel)
+      : null;
+    syncFormationAuditOverlay(
+      formationAuditOverlay,
+      gameplayModel,
+      formationPreviewModel?.formation,
+      formationPreviewSnapshot
+        ? {
+            labels: formationPreviewSnapshot.labels,
+            previewName: `${formationPreviewSnapshot.mode} Formation Preview`,
+          }
+        : undefined,
+    );
   }
   renderer.render(scene, cameraController.camera);
   crowdPresentationController?.recordFrame(delta, renderer);
@@ -1007,6 +1021,13 @@ function handleFormationPreviewLaneControls(event: KeyboardEvent): void {
 
   if (event.key === '3') {
     setFormationPreviewSnapLane(formationPreviewModel, 'rightHash');
+    cameraController.resetPresentation();
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key === '4' && formationPreviewModel.mode === '11v11') {
+    toggleFormationPreviewPreferredSide(formationPreviewModel);
     cameraController.resetPresentation();
     event.preventDefault();
   }

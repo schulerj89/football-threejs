@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.43.0] - 2026-06-21
+
+### Added
+
+- Added 11v11 roster constants and static development formation staging with `ELEVEN_ON_ELEVEN_ROSTER`, stable twenty-two-player IDs, and football-position metadata separate from gameplay roles.
+- Added `src/elevenOnElevenFormation.ts` with named formation measurements, semantic 11v11 position resolution, eligibility metadata, line/backfield validation, corner alignment, safety-threat midpoint validation, and clear failure instead of clamping invalid geometry.
+- Added `?formationPreview=11v11` with all twenty-two mannequins and helmets, left/middle/right snap-lane controls, preferred-side mirroring on `4`, formation audit labels, and tactical/offense/cinematic camera framing.
+- Added unit and browser smoke coverage for 11v11 snap lanes, mirroring, line/backfield counts, eligibility, corner/safety alignment, no overlaps, static preview behavior, resource counters, and camera containment.
+
+### Changed
+
+- Extended formation preview snapshots and audit output with football position, line/backfield status, eligibility, distance from snap, distance from the line of scrimmage, and preferred formation side while preserving 7v7 as the default playable mode.
+- Updated README and AGENTS to describe 11v11 as static development staging and keep active 11v11 gameplay in future scope.
+
 ## [0.42.1] - 2026-06-21
 
 ### Added
