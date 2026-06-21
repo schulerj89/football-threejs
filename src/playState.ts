@@ -1,9 +1,17 @@
 import {
+  PASSING_CONFIG,
   createBallModel,
   giveBallToPlayer,
+  isBallCatchableByPlayer,
+  isPassFlightFinished,
+  markBallDead,
+  markBallIncomplete,
   resetBallModel,
+  throwBallToward,
   updateCarriedBallPosition,
+  updateInFlightBall,
   type BallModel,
+  type Vector3,
 } from './ballModel';
 import {
   isTackleContact,
@@ -25,13 +33,13 @@ import {
 import {
   DEFAULT_PLAY_ID,
   createFormationPlayers,
-  getRushingPlay,
+  getPlay,
+  getReceiverRouteTarget,
   resetFormationPlayers,
   type PlayId,
-  type RushingPlayDefinition,
+  type PlayDefinition,
 } from './playbook';
 import {
-  RUNNER_PLAYER_ID,
   snapshotPlayerModel,
   type PlayerModel,
   type PlayerSnapshot,
@@ -45,7 +53,7 @@ import {
 } from './teamSimulation';
 
 export type PlayState = 'preSnap' | 'live' | 'dead';
-export type PlayResultType = 'tackle' | 'outOfBounds' | 'touchdown';
+export type PlayResultType = 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete';
 export type PlayEndReason = PlayResultType;
 export type ScoringTeam = 'offense' | null;
 
@@ -64,6 +72,7 @@ export const GAMEPLAY_CONFIG = {
   touchdownResetDelaySeconds: 1.25,
   opposingGoalLineZ: OPPOSING_GOAL_LINE_Z,
   outOfBoundsResetDelaySeconds: 1.25,
+  incompleteResetDelaySeconds: 1.25,
   tackleResetDelaySeconds: 1.25,
   turnoverResetDelaySeconds: 1.25,
 } as const;
@@ -77,9 +86,10 @@ export interface GameplayModel {
   lastPlayResult: PlayResult | null;
   nextBallSpot: FootballSpot;
   nextPlayResultId: number;
+  passAttempted: boolean;
   player: PlayerModel;
   players: PlayerModel[];
-  selectedPlay: RushingPlayDefinition;
+  selectedPlay: PlayDefinition;
   playState: PlayState;
   playResetTimerSeconds: number | null;
   score: number;
@@ -89,6 +99,7 @@ export interface GameplaySnapshot {
   ball: {
     possession: BallModel['possession'];
     position: BallModel['position'];
+    state: BallModel['state'];
   };
   activePlayStartSpot: FootballSpot | null;
   blocking: {
@@ -103,17 +114,19 @@ export interface GameplaySnapshot {
   selectedPlay: {
     displayName: string;
     id: PlayId;
+    kind: PlayDefinition['kind'];
     initialMovementDirection: FootballSpot;
   };
   playState: PlayState;
   score: number;
+  passAttempted: boolean;
 }
 
 export function createGameplayModel(): GameplayModel {
   const initialSpot = cloneFootballSpot(INITIAL_BALL_SPOT);
-  const selectedPlay = getRushingPlay(DEFAULT_PLAY_ID);
+  const selectedPlay = getPlay(DEFAULT_PLAY_ID);
   const players = createFormationPlayers(initialSpot, selectedPlay);
-  const runner = getRunner(players);
+  const ballCarrier = getBallCarrier(players, selectedPlay);
 
   return {
     activePlayStartSpot: null,
@@ -124,7 +137,8 @@ export function createGameplayModel(): GameplayModel {
     lastPlayResult: null,
     nextBallSpot: cloneFootballSpot(initialSpot),
     nextPlayResultId: 1,
-    player: runner,
+    passAttempted: false,
+    player: ballCarrier,
     players,
     selectedPlay,
     playState: 'preSnap',
@@ -138,10 +152,12 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
     return false;
   }
 
-  const play = getRushingPlay(playId);
+  const play = getPlay(playId);
   gameplay.selectedPlay = play;
+  gameplay.passAttempted = false;
   resetBlockingState(gameplay.blocking);
   resetFormationPlayers(gameplay.players, gameplay.currentBallSpot, play);
+  gameplay.player = getBallCarrier(gameplay.players, play);
   resetBallModel(gameplay.ball, gameplay.currentBallSpot);
   return true;
 }
@@ -155,19 +171,54 @@ export function startPlay(gameplay: GameplayModel): boolean {
   gameplay.activePlayStartSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
   gameplay.lastPlayResult = null;
   gameplay.nextBallSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
+  gameplay.passAttempted = false;
   gameplay.playResetTimerSeconds = null;
   gameplay.playState = 'live';
   resetBlockingState(gameplay.blocking);
+  gameplay.player = getBallCarrier(gameplay.players, gameplay.selectedPlay);
   for (const player of gameplay.players) {
-    if (player.role === 'runner') {
+    if (player.id === gameplay.player.id) {
       player.currentState = 'userControlled';
     } else if (player.role === 'blocker') {
       player.currentState = 'movingToLane';
+    } else if (player.role === 'receiver') {
+      player.currentState = 'runningRoute';
     } else {
       player.currentState = 'pursuing';
     }
   }
   giveBallToPlayer(gameplay.ball, gameplay.player);
+  return true;
+}
+
+export function attemptPass(gameplay: GameplayModel): boolean {
+  if (
+    gameplay.playState !== 'live' ||
+    gameplay.selectedPlay.kind !== 'pass' ||
+    gameplay.passAttempted ||
+    gameplay.ball.state.kind !== 'possessed' ||
+    gameplay.ball.possession.kind !== 'player' ||
+    gameplay.ball.possession.playerId !== gameplay.player.id
+  ) {
+    return false;
+  }
+
+  const receiver = getEligibleReceiver(gameplay);
+  if (!receiver) {
+    return false;
+  }
+
+  const target = calculatePassTarget(gameplay, receiver);
+  const thrown = throwBallToward(gameplay.ball, target);
+
+  if (!thrown) {
+    return false;
+  }
+
+  gameplay.passAttempted = true;
+  gameplay.player.velocity.x = 0;
+  gameplay.player.velocity.z = 0;
+  gameplay.player.currentState = 'idle';
   return true;
 }
 
@@ -195,10 +246,12 @@ export function resetPlay(gameplay: GameplayModel): void {
   gameplay.currentBallSpot = cloneFootballSpot(resetSpot);
   gameplay.lastPlayResult = null;
   gameplay.nextBallSpot = cloneFootballSpot(resetSpot);
+  gameplay.passAttempted = false;
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
   resetBlockingState(gameplay.blocking);
   resetFormationPlayers(gameplay.players, resetSpot, gameplay.selectedPlay);
+  gameplay.player = getBallCarrier(gameplay.players, gameplay.selectedPlay);
   resetBallModel(gameplay.ball, resetSpot);
 }
 
@@ -213,6 +266,7 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
         lineOfScrimmage: gameplay.currentBallSpot,
         play: gameplay.selectedPlay,
       });
+      updatePassFlight(gameplay, deltaSeconds);
       detectTackle(gameplay);
     }
 
@@ -242,6 +296,7 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     ball: {
       possession: { ...gameplay.ball.possession },
       position: { ...gameplay.ball.position },
+      state: cloneBallState(gameplay.ball.state),
     },
     blocking: {
       engagements: gameplay.blocking.engagements.map((engagement) => ({ ...engagement })),
@@ -250,11 +305,13 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     drive: snapshotDriveModel(gameplay.drive),
     lastPlayResult: clonePlayResult(gameplay.lastPlayResult),
     nextBallSpot: cloneFootballSpot(gameplay.nextBallSpot),
+    passAttempted: gameplay.passAttempted,
     player: snapshotPlayerModel(gameplay.player),
     players: gameplay.players.map(snapshotPlayerModel),
     selectedPlay: {
       displayName: gameplay.selectedPlay.displayName,
       id: gameplay.selectedPlay.id,
+      kind: gameplay.selectedPlay.kind,
       initialMovementDirection: { ...gameplay.selectedPlay.initialMovementDirection },
     },
     playState: gameplay.playState,
@@ -300,12 +357,13 @@ function detectTouchdown(gameplay: GameplayModel): void {
 
 function detectTackle(gameplay: GameplayModel): void {
   const tackler = gameplay.players.find(
-    (player) => player.team === 'defense' && player.role === 'defender' && isTackleContact(player, gameplay.player),
+    (player) => player.team === 'defense' && isTackleContact(player, gameplay.player),
   );
 
   if (
     gameplay.ball.possession.kind !== 'player' ||
     gameplay.ball.possession.playerId !== gameplay.player.id ||
+    !canCarrierBeTackled(gameplay) ||
     !tackler
   ) {
     return;
@@ -320,6 +378,14 @@ function detectTackle(gameplay: GameplayModel): void {
     endingSpot,
     GAMEPLAY_CONFIG.tackleResetDelaySeconds,
     null,
+  );
+}
+
+function canCarrierBeTackled(gameplay: GameplayModel): boolean {
+  return !(
+    gameplay.selectedPlay.kind === 'pass' &&
+    gameplay.ball.state.kind === 'possessed' &&
+    gameplay.player.role === 'quarterback'
   );
 }
 
@@ -340,6 +406,55 @@ function detectOutOfBounds(gameplay: GameplayModel): void {
     endingSpot,
     endingSpot,
     GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds,
+    null,
+  );
+}
+
+function updatePassFlight(gameplay: GameplayModel, deltaSeconds: number): void {
+  if (gameplay.ball.state.kind !== 'inFlight') {
+    return;
+  }
+
+  updateInFlightBall(gameplay.ball, deltaSeconds);
+
+  const receiver = getEligibleReceiver(gameplay);
+  if (
+    receiver &&
+    gameplay.playState === 'live' &&
+    isBallCatchableByPlayer(gameplay.ball, receiver)
+  ) {
+    completePass(gameplay, receiver);
+    return;
+  }
+
+  if (
+    isPassFlightFinished(gameplay.ball) ||
+    isBallOutsidePlayableField(gameplay.ball.position)
+  ) {
+    recordIncompletePass(gameplay);
+  }
+}
+
+function completePass(gameplay: GameplayModel, receiver: PlayerModel): void {
+  gameplay.player.currentState = 'idle';
+  gameplay.player.velocity.x = 0;
+  gameplay.player.velocity.z = 0;
+  gameplay.player = receiver;
+  receiver.currentState = 'userControlled';
+  receiver.velocity.x = 0;
+  receiver.velocity.z = 0;
+  giveBallToPlayer(gameplay.ball, receiver, 'caught');
+}
+
+function recordIncompletePass(gameplay: GameplayModel): void {
+  const startingSpot = gameplay.activePlayStartSpot ?? gameplay.currentBallSpot;
+
+  recordPlayResult(
+    gameplay,
+    'incomplete',
+    startingSpot,
+    startingSpot,
+    GAMEPLAY_CONFIG.incompleteResetDelaySeconds,
     null,
   );
 }
@@ -369,6 +484,11 @@ function recordPlayResult(
 
   const driveUpdate = applyPlayResultToDrive(gameplay.drive, playResult);
   gameplay.nextBallSpot = cloneFootballSpot(driveUpdate.nextBallSpot);
+  if (type === 'incomplete') {
+    markBallIncomplete(gameplay.ball);
+  } else {
+    markBallDead(gameplay.ball);
+  }
   gameplay.playState = 'dead';
   gameplay.playResetTimerSeconds =
     gameplay.drive.lastDriveResult?.type === 'turnoverOnDowns'
@@ -383,6 +503,55 @@ function stopLiveActors(gameplay: GameplayModel): void {
     player.velocity.z = 0;
     player.currentState = 'idle';
   }
+}
+
+function calculatePassTarget(gameplay: GameplayModel, receiver: PlayerModel): Vector3 {
+  const routeTarget = getReceiverRouteTarget(receiver, gameplay.currentBallSpot, gameplay.selectedPlay);
+  const velocityLength = Math.hypot(receiver.velocity.x, receiver.velocity.z);
+  let lead = { x: 0, z: 0 };
+
+  if (velocityLength > 0) {
+    lead = {
+      x: receiver.velocity.x * PASSING_CONFIG.receiverLeadSeconds,
+      z: receiver.velocity.z * PASSING_CONFIG.receiverLeadSeconds,
+    };
+  } else if (routeTarget) {
+    const routeDeltaX = routeTarget.x - receiver.position.x;
+    const routeDeltaZ = routeTarget.z - receiver.position.z;
+    const routeLength = Math.hypot(routeDeltaX, routeDeltaZ);
+
+    if (routeLength > 0) {
+      lead = {
+        x: (routeDeltaX / routeLength) * PASSING_CONFIG.receiverLeadDistance,
+        z: (routeDeltaZ / routeLength) * PASSING_CONFIG.receiverLeadDistance,
+      };
+    }
+  }
+
+  return {
+    x: receiver.position.x + lead.x,
+    y: PASSING_CONFIG.targetHeight,
+    z: receiver.position.z + lead.z,
+  };
+}
+
+function getEligibleReceiver(gameplay: GameplayModel): PlayerModel | null {
+  const receiverId = gameplay.selectedPlay.pass?.eligibleReceiverId;
+
+  if (!receiverId) {
+    return null;
+  }
+
+  return gameplay.players.find((player) => player.id === receiverId) ?? null;
+}
+
+function isBallOutsidePlayableField(position: Vector3): boolean {
+  return (
+    position.x < PLAYABLE_FIELD_BOUNDS.minX ||
+    position.x > PLAYABLE_FIELD_BOUNDS.maxX ||
+    position.z < PLAYABLE_FIELD_BOUNDS.minZ ||
+    position.z > PLAYABLE_FIELD_BOUNDS.maxZ
+  );
 }
 
 function getCarrierBallSpot(player: PlayerModel): FootballSpot {
@@ -402,14 +571,14 @@ function getOutOfBoundsBallSpot(player: PlayerModel): FootballSpot {
   };
 }
 
-function getRunner(players: PlayerModel[]): PlayerModel {
-  const runner = players.find((player) => player.id === RUNNER_PLAYER_ID);
+function getBallCarrier(players: PlayerModel[], play: PlayDefinition): PlayerModel {
+  const carrier = players.find((player) => player.role === play.ballCarrierRole);
 
-  if (!runner) {
-    throw new Error('Missing runner in rushing drill formation');
+  if (!carrier) {
+    throw new Error(`Missing ${play.ballCarrierRole} in ${play.displayName} formation`);
   }
 
-  return runner;
+  return carrier;
 }
 
 function clonePlayResult(playResult: PlayResult | null): PlayResult | null {
@@ -426,6 +595,22 @@ function clonePlayResult(playResult: PlayResult | null): PlayResult | null {
     type: playResult.type,
     yardsGained: playResult.yardsGained,
   };
+}
+
+function cloneBallState(state: BallModel['state']): BallModel['state'] {
+  if (state.kind === 'inFlight') {
+    return {
+      durationSeconds: state.durationSeconds,
+      elapsedSeconds: state.elapsedSeconds,
+      kind: 'inFlight',
+      maxFlightTimeSeconds: state.maxFlightTimeSeconds,
+      peakHeight: state.peakHeight,
+      start: { ...state.start },
+      target: { ...state.target },
+    };
+  }
+
+  return { ...state };
 }
 
 function clamp(value: number, min: number, max: number): number {

@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a three-on-three rushing drill with two data-defined rushing plays and a basic offensive drive: a graybox American-football field, one controllable placeholder ball carrier, two AI blockers, three AI defenders, selectable Inside Run and Outside Run play calls, downs, yards-to-go, first-down line, touchdown scoring, tackle and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a three-on-three offensive drill with two data-defined rushing plays, one Quick Pass play, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, and Quick Pass play calls, route-running receiver behavior, single-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
 
 ## World Scale
 
@@ -31,14 +31,19 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Move with `WASD` or the arrow keys.
 - Press `1` during pre-snap to select `Inside Run`.
 - Press `2` during pre-snap to select `Outside Run`.
+- Press `3` during pre-snap to select `Quick Pass`.
 - Press `Space` from pre-snap to start the play and give the player possession.
+- Press `F` during Quick Pass to throw once toward the eligible receiver.
 - Press `R` to reset the play to pre-snap.
 - Play selection is locked while a play is live; reset preserves the selected play.
+- Quick Pass starts with the quarterback in possession; after a catch, possession and user control transfer to the receiver.
 - Cross the opposing goal line during a live play to score a touchdown.
 - Avoid defenders to score; defender contact ends the play as a tackle.
 - AI blockers move toward lane targets and can engage one defender each to slow pursuit.
+- The Quick Pass coverage defender tracks the receiver while the other defenders use the existing simple pursuit behavior.
 - Crossing a sideline during a live play ends the play out of bounds.
-- Tackle and out-of-bounds results display signed yards gained or lost, then reset the next play at the dead-ball spot.
+- Tackle, completed pass, and out-of-bounds results display signed yards gained or lost, then reset the next play at the dead-ball spot.
+- Incomplete passes end the play at the original line of scrimmage and advance the down.
 - The drill tracks down, distance, ball position, and score.
 - Reaching the first-down line resets to first-and-10; a failed fourth down shows `TURNOVER ON DOWNS` and starts a new offensive drill.
 - Diagonal movement is normalized to the same max speed as cardinal movement.
@@ -53,15 +58,22 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No stadium
 - No crowd
 - No imported assets
-- No throwing
 - No loose-ball physics
 - No large play-calling menu
 - No audibles
 - No defensive play selection
-- No passing plays
+- No interceptions
+- No multiple receivers
+- No bullet/lob selection
+- No pump fake
+- No sacks
+- No pass rush logic beyond existing defender behavior
+- No user-controlled catch mechanic
+- No contested-catch ratings
+- No quarterback animations
 - No route editor
 - No procedural play generation
-- No additional formations beyond the two current rushing plays
+- No additional formations beyond the current three plays
 - No offensive linemen rules
 - No holding penalties
 - No pancake blocks
@@ -69,7 +81,6 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No pulling guards
 - No diving tackles
 - No tackling animations
-- No passing
 - No pathfinding library
 - No sprinting
 - No animation

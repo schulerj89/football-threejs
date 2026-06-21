@@ -78,6 +78,7 @@ canvas {
 }
 
 .tackle-message,
+.incomplete-message,
 .out-of-bounds-message,
 .turnover-message,
 .touchdown-message {
@@ -107,6 +108,11 @@ canvas {
   border-color: rgba(243, 245, 246, 0.4);
 }
 
+.incomplete-message {
+  color: #f3f5f6;
+  border-color: rgba(243, 245, 246, 0.4);
+}
+
 .turnover-message {
   color: #f3f5f6;
   border-color: rgba(243, 245, 246, 0.4);
@@ -128,6 +134,7 @@ canvas {
 }
 
 .tackle-message[hidden],
+.incomplete-message[hidden],
 .out-of-bounds-message[hidden],
 .result-message[hidden],
 .turnover-message[hidden],

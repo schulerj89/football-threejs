@@ -5,7 +5,10 @@ const PLAYER_CENTER_Y = 1.1;
 
 const PLAYER_COLORS = {
   blocker: 0x285fb8,
+  coverageDefender: 0xc95a42,
   defender: 0xb83737,
+  quarterback: 0x5b7ee5,
+  receiver: 0x35a6d8,
   runner: 0x2f66d8,
 } as const;
 
@@ -42,4 +45,15 @@ export function createPlaceholderPlayerVisual(player?: PlayerModel): THREE.Group
 export function syncPlayerVisual(playerVisual: THREE.Object3D, playerModel: PlayerModel): void {
   playerVisual.position.set(playerModel.position.x, PLAYER_CENTER_Y, playerModel.position.z);
   playerVisual.rotation.y = playerModel.facingRadians;
+  syncPlayerRoleColor(playerVisual, playerModel);
+}
+
+function syncPlayerRoleColor(playerVisual: THREE.Object3D, playerModel: PlayerModel): void {
+  const body = playerVisual.getObjectByName('placeholder-player-body');
+
+  if (!(body instanceof THREE.Mesh) || !(body.material instanceof THREE.MeshLambertMaterial)) {
+    return;
+  }
+
+  body.material.color.setHex(PLAYER_COLORS[playerModel.role]);
 }

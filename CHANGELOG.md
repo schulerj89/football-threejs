@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0] - 2026-06-21
+
+### Added
+
+- Added `Quick Pass` as a third data-defined selectable play with quarterback, receiver, blocker, coverage defender, and two additional defenders.
+- Added receiver route movement after the snap and a single `F` pass control that throws once toward a predicted receiver target.
+- Added explicit gameplay ball states for `dead`, `possessed`, `inFlight`, `caught`, and `incomplete`.
+- Added deterministic pass catch checks, possession transfer, and user-control transfer to the receiver after a completion.
+- Added incomplete-pass results that end the play at the original line of scrimmage and advance the down.
+- Added minimal `INCOMPLETE` HUD messaging and role-aware primitive player coloring for pass-play roles.
+- Added deterministic tests for Quick Pass lookup, formation placement, receiver routes, ball-state transitions, catch transfer, incompletions, completed-pass yardage, and duplicate throw prevention.
+- Expanded browser smoke coverage for Quick Pass selection, route start, and pass-button handling.
+
 ## [0.9.0] - 2026-06-21
 
 ### Added

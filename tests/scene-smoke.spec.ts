@@ -2,11 +2,11 @@ import { expect, test, type Page } from '@playwright/test';
 
 interface PlayerSnapshot {
   collisionRadius: number;
-  currentState: 'idle' | 'userControlled' | 'movingToLane' | 'pursuing' | 'engaged';
+  currentState: 'idle' | 'userControlled' | 'movingToLane' | 'runningRoute' | 'pursuing' | 'engaged';
   facingRadians: number;
   id: string;
   position: { x: number; z: number };
-  role: 'runner' | 'blocker' | 'defender';
+  role: 'runner' | 'quarterback' | 'receiver' | 'blocker' | 'defender' | 'coverageDefender';
   team: 'offense' | 'defense';
   velocity: { x: number; z: number };
 }
@@ -19,10 +19,10 @@ interface FootballSpot {
 interface PlayResultSnapshot {
   endingBallSpot: FootballSpot;
   id: number;
-  reason: 'tackle' | 'outOfBounds' | 'touchdown';
+  reason: 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete';
   scoringTeam: 'offense' | null;
   startingBallSpot: FootballSpot;
-  type: 'tackle' | 'outOfBounds' | 'touchdown';
+  type: 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete';
   yardsGained: number;
 }
 
@@ -46,6 +46,20 @@ interface GameplaySnapshot {
   ball: {
     possession: { kind: 'none' } | { kind: 'player'; playerId: string };
     position: { x: number; y: number; z: number };
+    state:
+      | { kind: 'dead' }
+      | { kind: 'possessed'; playerId: string }
+      | {
+          durationSeconds: number;
+          elapsedSeconds: number;
+          kind: 'inFlight';
+          maxFlightTimeSeconds: number;
+          peakHeight: number;
+          start: { x: number; y: number; z: number };
+          target: { x: number; y: number; z: number };
+        }
+      | { kind: 'caught'; playerId: string }
+      | { kind: 'incomplete' };
   };
   blocking: {
     engagements: Array<{ blockerId: string; defenderId: string }>;
@@ -58,9 +72,11 @@ interface GameplaySnapshot {
   players: PlayerSnapshot[];
   selectedPlay: {
     displayName: string;
-    id: 'inside-run' | 'outside-run';
+    id: 'inside-run' | 'outside-run' | 'quick-pass';
+    kind: 'run' | 'pass';
     initialMovementDirection: FootballSpot;
   };
+  passAttempted: boolean;
   playState: 'preSnap' | 'live' | 'dead';
   score: number;
 }
@@ -168,7 +184,7 @@ test('keeps D reserved for movement instead of debug toggling', async ({ page })
   await expect(page.locator('.debug-overlay')).toBeVisible();
 });
 
-test('selects rushing plays before snap and locks selection while live', async ({ page }) => {
+test('selects plays before snap and locks selection while live', async ({ page }) => {
   await page.goto('/?debug=1&readback=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
@@ -189,9 +205,26 @@ test('selects rushing plays before snap and locks selection while live', async (
   const inside = await getGameplaySnapshot(page);
   expect(inside.player.position.x).toBeCloseTo(0);
 
+  await page.keyboard.press('3');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'quick-pass', displayName: 'Quick Pass', kind: 'pass' },
+  });
+  await expect(page.locator('.play-call')).toHaveText('Quick Pass');
+  const quickPass = await getGameplaySnapshot(page);
+  expect(quickPass.player).toMatchObject({ id: 'runner', role: 'quarterback' });
+  expect(quickPass.players.find((player) => player.id === 'blocker-left')).toMatchObject({
+    role: 'receiver',
+  });
+
+  await page.keyboard.press('1');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'inside-run', displayName: 'Inside Run' },
+  });
+
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await page.keyboard.press('2');
+  await page.keyboard.press('3');
   await page.waitForTimeout(100);
 
   expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('inside-run');
@@ -250,6 +283,41 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
     playState: 'preSnap',
   });
   await expect(page.locator('.drive-status')).toHaveText('1st & 10 | Ball -15');
+});
+
+test('selects Quick Pass, starts the route after snap, and throws once', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  await page.keyboard.press('3');
+  await expect(page.locator('.play-call')).toHaveText('Quick Pass');
+  const preSnap = await getGameplaySnapshot(page);
+  const receiverBeforeSnap = getPlayer(preSnap, 'blocker-left');
+
+  expect(preSnap.selectedPlay).toMatchObject({ id: 'quick-pass', kind: 'pass' });
+  expect(preSnap.player).toMatchObject({ id: 'runner', role: 'quarterback' });
+  expect(receiverBeforeSnap).toMatchObject({ role: 'receiver', currentState: 'idle' });
+  expect(preSnap.ball.state).toEqual({ kind: 'dead' });
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    ball: { state: { kind: 'possessed' } },
+    playState: 'live',
+  });
+
+  const live = await getGameplaySnapshot(page);
+  expect(getPlayer(live, 'blocker-left').currentState).toBe('runningRoute');
+
+  await page.keyboard.press('f');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    passAttempted: true,
+  });
+  const afterThrow = await getGameplaySnapshot(page);
+  expect(['inFlight', 'caught', 'incomplete', 'dead']).toContain(afterThrow.ball.state.kind);
+
+  await page.keyboard.press('f');
+  await page.waitForTimeout(100);
+  expect((await getGameplaySnapshot(page)).passAttempted).toBe(true);
 });
 
 test('scores touchdown by avoiding the defender and auto-resets', async ({ page }) => {
@@ -510,6 +578,16 @@ async function waitForPreSnap(page: Page): Promise<GameplaySnapshot> {
 
 function getDefenders(gameplay: GameplaySnapshot): PlayerSnapshot[] {
   return gameplay.players.filter((player) => player.role === 'defender');
+}
+
+function getPlayer(gameplay: GameplaySnapshot, playerId: string): PlayerSnapshot {
+  const player = gameplay.players.find((candidate) => candidate.id === playerId);
+
+  if (!player) {
+    throw new Error(`Missing player ${playerId}`);
+  }
+
+  return player;
 }
 
 function vectorLength(vector: { x: number; z: number }): number {

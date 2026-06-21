@@ -69,6 +69,7 @@ export class KeyboardMovementInput {
 }
 
 export interface PlayControlRequests {
+  pass: boolean;
   resetPlay: boolean;
   selectedPlayId: string | null;
   startPlay: boolean;
@@ -76,6 +77,7 @@ export interface PlayControlRequests {
 
 export class KeyboardPlayControls {
   private readonly target: Window;
+  private passRequested = false;
   private resetRequested = false;
   private selectedPlayId: string | null = null;
   private startRequested = false;
@@ -87,11 +89,13 @@ export class KeyboardPlayControls {
 
   consumeRequests(): PlayControlRequests {
     const requests = {
+      pass: this.passRequested,
       resetPlay: this.resetRequested,
       selectedPlayId: this.selectedPlayId,
       startPlay: this.startRequested,
     };
 
+    this.passRequested = false;
     this.resetRequested = false;
     this.selectedPlayId = null;
     this.startRequested = false;
@@ -101,6 +105,7 @@ export class KeyboardPlayControls {
 
   dispose(): void {
     this.target.removeEventListener('keydown', this.handleKeyDown);
+    this.passRequested = false;
     this.resetRequested = false;
     this.selectedPlayId = null;
     this.startRequested = false;
@@ -119,6 +124,12 @@ export class KeyboardPlayControls {
       return;
     }
 
+    if (normalizeKey(event.key) === 'f') {
+      this.passRequested = true;
+      event.preventDefault();
+      return;
+    }
+
     if (event.key === '1') {
       this.selectedPlayId = 'inside-run';
       event.preventDefault();
@@ -127,6 +138,12 @@ export class KeyboardPlayControls {
 
     if (event.key === '2') {
       this.selectedPlayId = 'outside-run';
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === '3') {
+      this.selectedPlayId = 'quick-pass';
       event.preventDefault();
     }
   };

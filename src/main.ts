@@ -11,6 +11,7 @@ import {
 import { createGameplayHud, syncGameplayHud } from './gameplayHud';
 import { KeyboardMovementInput, KeyboardPlayControls } from './input';
 import {
+  attemptPass,
   createGameplayModel,
   resetPlay,
   selectPlay,
@@ -45,7 +46,6 @@ const field = createFootballField();
 scene.add(field.group);
 
 const gameplayModel = createGameplayModel();
-const playerModel = gameplayModel.player;
 const playerVisuals = new Map<string, THREE.Group>();
 for (const gamePlayer of gameplayModel.players) {
   const playerVisual = createPlaceholderPlayerVisual(gamePlayer);
@@ -80,7 +80,7 @@ scene.add(directionalLight);
 
 const keyboardInput = new KeyboardMovementInput(window);
 const playControls = new KeyboardPlayControls(window);
-const debugOverlay = new DebugOverlay({ renderer, player: playerModel });
+const debugOverlay = new DebugOverlay({ renderer, player: gameplayModel.player });
 const gameplayHud = createGameplayHud();
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
@@ -88,7 +88,7 @@ let hasRenderedFirstFrame = false;
 if (import.meta.env.DEV || searchParams.has('debug')) {
   window.__footballDebug = {
     getGameplaySnapshot: () => snapshotGameplayModel(gameplayModel),
-    getPlayerSnapshot: () => snapshotPlayerModel(playerModel),
+    getPlayerSnapshot: () => snapshotPlayerModel(gameplayModel.player),
   };
 }
 
@@ -108,13 +108,16 @@ renderer.setAnimationLoop(() => {
 function renderFrame(delta: number): void {
   updatePlayControls();
 
-  if (gameplayModel.playState === 'live') {
-    updatePlayerSimulation(playerModel, keyboardInput.getMovement(), delta, PLAYABLE_FIELD_BOUNDS, {
+  if (
+    gameplayModel.playState === 'live' &&
+    gameplayModel.player.currentState === 'userControlled'
+  ) {
+    updatePlayerSimulation(gameplayModel.player, keyboardInput.getMovement(), delta, PLAYABLE_FIELD_BOUNDS, {
       clampSidelines: false,
     });
   } else {
-    playerModel.velocity.x = 0;
-    playerModel.velocity.z = 0;
+    gameplayModel.player.velocity.x = 0;
+    gameplayModel.player.velocity.z = 0;
   }
 
   updateGameplayModel(gameplayModel, delta);
@@ -132,7 +135,7 @@ function renderFrame(delta: number): void {
   syncBallVisual(ballVisual, gameplayModel.ball);
   syncGameplayHud(gameplayHud, snapshotGameplayModel(gameplayModel));
   renderer.render(scene, camera);
-  debugOverlay.update(delta, renderer, playerModel);
+  debugOverlay.update(delta, renderer, gameplayModel.player);
 
   if (!hasRenderedFirstFrame) {
     hasRenderedFirstFrame = true;
@@ -150,6 +153,10 @@ function updatePlayControls(): void {
 
   if (requests.selectedPlayId) {
     selectPlay(gameplayModel, requests.selectedPlayId);
+  }
+
+  if (requests.pass) {
+    attemptPass(gameplayModel);
   }
 
   if (requests.startPlay) {

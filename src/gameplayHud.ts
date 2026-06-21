@@ -2,6 +2,7 @@ import type { GameplaySnapshot } from './playState';
 
 export interface GameplayHud {
   driveStatus: HTMLDivElement;
+  incompleteMessage: HTMLDivElement;
   outOfBoundsMessage: HTMLDivElement;
   playCall: HTMLDivElement;
   resultMessage: HTMLDivElement;
@@ -43,6 +44,11 @@ export function createGameplayHud(): GameplayHud {
   outOfBoundsMessage.textContent = 'OUT OF BOUNDS';
   root.appendChild(outOfBoundsMessage);
 
+  const incompleteMessage = document.createElement('div');
+  incompleteMessage.className = 'incomplete-message';
+  incompleteMessage.textContent = 'INCOMPLETE';
+  root.appendChild(incompleteMessage);
+
   const resultMessage = document.createElement('div');
   resultMessage.className = 'result-message';
   root.appendChild(resultMessage);
@@ -56,6 +62,7 @@ export function createGameplayHud(): GameplayHud {
 
   return {
     driveStatus,
+    incompleteMessage,
     outOfBoundsMessage,
     playCall,
     resultMessage,
@@ -79,9 +86,10 @@ export function syncGameplayHud(hud: GameplayHud, gameplay: GameplaySnapshot): v
   hud.tackleMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'tackle';
   hud.touchdownMessage.hidden = lastPlayResult?.type !== 'touchdown';
   hud.outOfBoundsMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'outOfBounds';
+  hud.incompleteMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'incomplete';
   hud.turnoverMessage.hidden = !isTurnoverOnDowns;
   hud.resultMessage.hidden =
-    !lastPlayResult || !['tackle', 'outOfBounds'].includes(lastPlayResult.type);
+    !lastPlayResult || !['tackle', 'outOfBounds', 'incomplete'].includes(lastPlayResult.type);
   hud.resultMessage.textContent = lastPlayResult ? formatYards(lastPlayResult.yardsGained) : '';
 }
 

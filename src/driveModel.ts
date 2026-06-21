@@ -12,10 +12,10 @@ export type DriveEndType = 'touchdown' | 'turnoverOnDowns';
 export interface DrivePlayResult {
   endingBallSpot: FootballSpot;
   id: number;
-  reason: 'tackle' | 'outOfBounds' | 'touchdown';
+  reason: 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete';
   scoringTeam: 'offense' | null;
   startingBallSpot: FootballSpot;
-  type: 'tackle' | 'outOfBounds' | 'touchdown';
+  type: 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete';
   yardsGained: number;
 }
 

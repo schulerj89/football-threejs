@@ -2,22 +2,29 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a three-on-three rushing drill with two data-defined rushing plays, a controllable primitive ball carrier, two AI blockers, three AI defenders, deterministic blocking engagements, a basic offensive drive, downs, yards-to-go, touchdown scoring, tackle and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, and delayed reset.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a three-on-three offensive drill with two data-defined rushing plays, one Quick Pass play, a controllable primitive ball carrier or quarterback, one eligible receiver on the pass play, AI blockers, AI defenders, deterministic blocking engagements, a deterministic passing arc, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, and delayed reset.
 
 ## Current Non-Goals
 
 - No stadium
 - No crowd
 - No imported assets
-- No throwing
 - No loose-ball physics
 - No large play-calling menu
 - No audibles
 - No defensive play selection
-- No passing plays
+- No interceptions
+- No multiple receivers
+- No bullet/lob selection
+- No pump fake
+- No sacks
+- No pass rush logic beyond existing defender behavior
+- No user-controlled catch mechanic
+- No contested-catch ratings
+- No quarterback animations
 - No route editor
 - No procedural play generation
-- No additional formations beyond the two current rushing plays
+- No additional formations beyond the current three plays
 - No offensive linemen rules
 - No holding penalties
 - No pancake blocks
@@ -25,7 +32,6 @@ This repository is a low-poly 3D American football game prototype built with Thr
 - No pulling guards
 - No diving tackles
 - No tackling animations
-- No passing
 - No pathfinding library
 - No sprinting
 - No animation
@@ -64,10 +70,10 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Keep input, simulation, and visual synchronization in separate modules.
 - All gameplay players use the common player model with stable ID, team, role, position, velocity, facing, collision radius, and current state.
 - Initial formations belong in data, not hard-coded mesh positions.
-- Rushing play definitions belong in data and must stay independent from Three.js scene objects.
+- Play definitions belong in data and must stay independent from Three.js scene objects.
 - Play selection is allowed during pre-snap only; resetting preserves the selected play.
 - The gameplay model owns player position, velocity, facing, and blocking engagement state; Three.js meshes only display that state.
-- The gameplay model owns play state and ball possession; the ball mesh is never authoritative.
+- The gameplay model owns play state, ball possession, pass state, and pass flight data; the ball mesh is never authoritative.
 - The gameplay model owns play results, start spots, dead-ball spots, yards gained, and scoring team data; UI and meshes only display that state.
 - Drive and down rules belong in a dedicated model, not renderer or HUD code.
 - Keep conversion between world units and football yards centralized.
@@ -75,6 +81,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Sideline and dead-ball spotting must use gameplay coordinates, not mesh positions.
 - Defender AI must use gameplay positions and stay deliberately simple.
 - Blocking is deterministic gameplay state, not force-based physics.
+- Passing uses deterministic gameplay state and a controlled arc, not a general-purpose physics engine.
 - Tackling must use explicit configurable collision radii.
 - Preserve the fixed three-quarter gameplay camera unless the user asks for a camera system.
 - Handle browser resizing whenever camera or renderer code changes.
@@ -84,12 +91,13 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- Inside Run and Outside Run can be selected before the snap.
-- Each play has a stable ID, display name, formation, ball-carrier role, initial direction, and blocker lane data.
+- Inside Run, Outside Run, and Quick Pass can be selected before the snap.
+- Each play has a stable ID, display name, formation, ball-carrier role, initial direction, and blocker lane or route data.
 - Selecting a play resets players into valid positions and visibly changes formation or blocking direction.
 - Selection cannot change during live play.
 - Reset preserves the current selected play.
-- Both plays work with downs, yardage, tackles, touchdowns, and resets.
-- Play lookup, formation placement, invalid IDs, and selection restrictions have deterministic tests.
+- Rushing plays work with downs, yardage, tackles, touchdowns, and resets.
+- Quick Pass works with quarterback possession, a route-running receiver, one pass attempt, catch transfer, incompletions, completed-pass yardage, tackles, touchdowns, and resets.
+- Play lookup, formation placement, invalid IDs, selection restrictions, pass transitions, catch eligibility, incomplete passes, control transfer, and duplicate throw prevention have deterministic tests.
 - Existing tests pass.
 - The browser smoke test proves play selection plus formation, movement, score, tackle, out-of-bounds, and turnover-on-downs outcomes work.

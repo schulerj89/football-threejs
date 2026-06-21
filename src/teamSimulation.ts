@@ -1,5 +1,10 @@
 import type { PlayableFieldBounds } from './field';
-import { getBlockingLaneTarget, type RushingPlayDefinition } from './playbook';
+import {
+  getBlockingLaneTarget,
+  getReceiverRouteSpeed,
+  getReceiverRouteTarget,
+  type PlayDefinition,
+} from './playbook';
 import type { FootballSpot } from './fieldScale';
 import { DEFENDER_CONFIG, updateDefenderPursuit } from './defenderModel';
 import type { PlayerModel, Vector2 } from './playerModel';
@@ -17,7 +22,7 @@ export interface RushingDrillAiOptions {
   bounds: PlayableFieldBounds;
   deltaSeconds: number;
   lineOfScrimmage: FootballSpot;
-  play: RushingPlayDefinition;
+  play: PlayDefinition;
 }
 
 export const BLOCKING_CONFIG = {
@@ -46,8 +51,9 @@ export function updateRushingDrillAi(
 
   releaseSeparatedEngagements(players, blocking);
   updateBlockers(players, blocking, options.lineOfScrimmage, options.play, delta);
+  updateReceivers(players, options.lineOfScrimmage, options.play, delta);
   acquireBlockingEngagements(players, blocking);
-  updateDefenders(players, blocking, runner, delta);
+  updateDefenders(players, blocking, runner, options.play, delta);
   keepPlayersInFieldDepth(players, options.bounds);
   resolvePlayerOverlaps(players);
   releaseSeparatedEngagements(players, blocking);
@@ -131,7 +137,7 @@ function updateBlockers(
   players: PlayerModel[],
   blocking: BlockingState,
   lineOfScrimmage: FootballSpot,
-  play: RushingPlayDefinition,
+  play: PlayDefinition,
   deltaSeconds: number,
 ): void {
   for (const blocker of players) {
@@ -156,28 +162,72 @@ function updateBlockers(
   }
 }
 
+function updateReceivers(
+  players: PlayerModel[],
+  lineOfScrimmage: FootballSpot,
+  play: PlayDefinition,
+  deltaSeconds: number,
+): void {
+  for (const receiver of players) {
+    if (receiver.team !== 'offense' || receiver.role !== 'receiver') {
+      continue;
+    }
+
+    const routeTarget = getReceiverRouteTarget(receiver, lineOfScrimmage, play);
+    const routeSpeed = getReceiverRouteSpeed(receiver, play);
+
+    if (!routeTarget || routeSpeed <= 0) {
+      receiver.velocity.x = 0;
+      receiver.velocity.z = 0;
+      continue;
+    }
+
+    receiver.currentState = receiver.currentState === 'userControlled'
+      ? 'userControlled'
+      : 'runningRoute';
+    if (receiver.currentState === 'runningRoute') {
+      movePlayerToward(receiver, routeTarget, routeSpeed, deltaSeconds);
+    }
+  }
+}
+
 function updateDefenders(
   players: PlayerModel[],
   blocking: BlockingState,
   runner: PlayerModel,
+  play: PlayDefinition,
   deltaSeconds: number,
 ): void {
   const engagedDefenderIds = getEngagedDefenderIds(blocking);
+  const coverageTarget = getCoverageTarget(players, play);
 
   for (const defender of players) {
-    if (defender.team !== 'defense' || defender.role !== 'defender') {
+    if (defender.team !== 'defense') {
       continue;
     }
 
     const isEngaged = engagedDefenderIds.has(defender.id);
     defender.currentState = isEngaged ? 'engaged' : 'pursuing';
+    const target = defender.role === 'coverageDefender' && coverageTarget
+      ? coverageTarget
+      : runner;
     updateDefenderPursuit(
       defender,
-      runner,
+      target,
       deltaSeconds,
       isEngaged ? BLOCKING_CONFIG.engagedDefenderSpeedMultiplier : 1,
     );
   }
+}
+
+function getCoverageTarget(players: PlayerModel[], play: PlayDefinition): PlayerModel | null {
+  const receiverId = play.pass?.eligibleReceiverId;
+
+  if (!receiverId) {
+    return null;
+  }
+
+  return players.find((player) => player.id === receiverId) ?? null;
 }
 
 function findNearestEligibleDefender(

@@ -9,7 +9,8 @@ import {
   type Vector2,
 } from './playerModel';
 
-export type PlayId = 'inside-run' | 'outside-run';
+export type PlayId = 'inside-run' | 'outside-run' | 'quick-pass';
+export type PlayKind = 'run' | 'pass';
 
 export interface FormationPlayer {
   facingRadians: number;
@@ -19,16 +20,28 @@ export interface FormationPlayer {
   team: PlayerTeam;
 }
 
-export interface RushingPlayDefinition {
+export interface ReceiverRouteDefinition {
+  targetOffset: Vector2;
+  speed: number;
+}
+
+export interface PlayDefinition {
   ballCarrierRole: PlayerRole;
   blockerLaneOffsets: Record<string, Vector2>;
   displayName: string;
   formation: FormationPlayer[];
   id: PlayId;
   initialMovementDirection: Vector2;
+  kind: PlayKind;
+  pass?: {
+    eligibleReceiverId: string;
+  };
+  receiverRoutes?: Record<string, ReceiverRouteDefinition>;
 }
 
-export const RUSHING_PLAYS: RushingPlayDefinition[] = [
+export type RushingPlayDefinition = PlayDefinition;
+
+export const PLAYS: PlayDefinition[] = [
   {
     ballCarrierRole: 'runner',
     blockerLaneOffsets: {
@@ -82,6 +95,7 @@ export const RUSHING_PLAYS: RushingPlayDefinition[] = [
     ],
     id: 'inside-run',
     initialMovementDirection: { x: 0, z: 1 },
+    kind: 'run',
   },
   {
     ballCarrierRole: 'runner',
@@ -136,24 +150,94 @@ export const RUSHING_PLAYS: RushingPlayDefinition[] = [
     ],
     id: 'outside-run',
     initialMovementDirection: { x: 0.7, z: 0.7 },
+    kind: 'run',
   },
-] as const;
+  {
+    ballCarrierRole: 'quarterback',
+    blockerLaneOffsets: {
+      'blocker-right': { x: 4, z: 8 },
+    },
+    displayName: 'Quick Pass',
+    formation: [
+      {
+        facingRadians: 0,
+        id: 'runner',
+        offset: { x: 0, z: 0 },
+        role: 'quarterback',
+        team: 'offense',
+      },
+      {
+        facingRadians: 0.15,
+        id: 'blocker-left',
+        offset: { x: -7, z: 1.5 },
+        role: 'receiver',
+        team: 'offense',
+      },
+      {
+        facingRadians: 0.25,
+        id: 'blocker-right',
+        offset: { x: 3, z: 1.5 },
+        role: 'blocker',
+        team: 'offense',
+      },
+      {
+        facingRadians: Math.PI,
+        id: 'defender-left',
+        offset: { x: -8, z: 9 },
+        role: 'coverageDefender',
+        team: 'defense',
+      },
+      {
+        facingRadians: Math.PI,
+        id: 'defender-middle',
+        offset: { x: 0, z: 24 },
+        role: 'defender',
+        team: 'defense',
+      },
+      {
+        facingRadians: Math.PI,
+        id: 'defender-right',
+        offset: { x: 8, z: 24 },
+        role: 'defender',
+        team: 'defense',
+      },
+    ],
+    id: 'quick-pass',
+    initialMovementDirection: { x: 0, z: 1 },
+    kind: 'pass',
+    pass: {
+      eligibleReceiverId: 'blocker-left',
+    },
+    receiverRoutes: {
+      'blocker-left': {
+        speed: 9.5,
+        targetOffset: { x: -1.5, z: 11 },
+      },
+    },
+  },
+];
+
+export const RUSHING_PLAYS = PLAYS.filter((play) => play.kind === 'run');
 
 export const DEFAULT_PLAY_ID: PlayId = 'inside-run';
 
-export function getRushingPlay(playId: string): RushingPlayDefinition {
-  const play = RUSHING_PLAYS.find((candidate) => candidate.id === playId);
+export function getPlay(playId: string): PlayDefinition {
+  const play = PLAYS.find((candidate) => candidate.id === playId);
 
   if (!play) {
-    throw new Error(`Unknown rushing play ${playId}`);
+    throw new Error(`Unknown play ${playId}`);
   }
 
   return play;
 }
 
+export function getRushingPlay(playId: string): RushingPlayDefinition {
+  return getPlay(playId);
+}
+
 export function createFormationPlayers(
   ballSpot: FootballSpot,
-  play: RushingPlayDefinition = getRushingPlay(DEFAULT_PLAY_ID),
+  play: PlayDefinition = getPlay(DEFAULT_PLAY_ID),
 ): PlayerModel[] {
   return play.formation.map((slot) =>
     createPlayerModel(calculateFormationSpot(ballSpot, slot.offset), {
@@ -170,7 +254,7 @@ export function createFormationPlayers(
 export function resetFormationPlayers(
   players: PlayerModel[],
   ballSpot: FootballSpot,
-  play: RushingPlayDefinition,
+  play: PlayDefinition,
 ): void {
   for (const player of players) {
     const slot = getFormationSlot(play, player.id);
@@ -180,7 +264,10 @@ export function resetFormationPlayers(
     player.position.z = spot.z;
     player.velocity.x = 0;
     player.velocity.z = 0;
+    player.collisionRadius = PLAYER_MOVEMENT_CONFIG.collisionRadius;
     player.facingRadians = slot.facingRadians;
+    player.role = slot.role;
+    player.team = slot.team;
     player.currentState = 'idle';
   }
 }
@@ -188,7 +275,7 @@ export function resetFormationPlayers(
 export function getBlockingLaneTarget(
   blocker: PlayerModel,
   ballSpot: FootballSpot,
-  play: RushingPlayDefinition,
+  play: PlayDefinition,
 ): FootballSpot {
   const slot = getFormationSlot(play, blocker.id);
   const laneOffset = play.blockerLaneOffsets[blocker.id] ?? slot.offset;
@@ -197,7 +284,7 @@ export function getBlockingLaneTarget(
 }
 
 export function getFormationSlot(
-  play: RushingPlayDefinition,
+  play: PlayDefinition,
   playerId: string,
 ): FormationPlayer {
   const slot = play.formation.find((formationSlot) => formationSlot.id === playerId);
@@ -207,6 +294,24 @@ export function getFormationSlot(
   }
 
   return slot;
+}
+
+export function getReceiverRouteTarget(
+  receiver: PlayerModel,
+  ballSpot: FootballSpot,
+  play: PlayDefinition,
+): FootballSpot | null {
+  const route = play.receiverRoutes?.[receiver.id];
+
+  if (!route) {
+    return null;
+  }
+
+  return calculateFormationSpot(ballSpot, route.targetOffset);
+}
+
+export function getReceiverRouteSpeed(receiver: PlayerModel, play: PlayDefinition): number {
+  return play.receiverRoutes?.[receiver.id]?.speed ?? 0;
 }
 
 function calculateFormationSpot(ballSpot: FootballSpot, offset: Vector2): FootballSpot {

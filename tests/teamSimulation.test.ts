@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFENDER_CONFIG, isTackleContact } from '../src/defenderModel';
 import { INITIAL_BALL_SPOT, PLAYABLE_FIELD_BOUNDS } from '../src/field';
-import { createFormationPlayers, getRushingPlay } from '../src/playbook';
+import { createFormationPlayers, getPlay, getRushingPlay } from '../src/playbook';
 import { createPlayerModel, type PlayerModel } from '../src/playerModel';
 import {
   BLOCKING_CONFIG,
@@ -73,6 +73,27 @@ describe('three-on-three rushing drill simulation', () => {
       DEFENDER_CONFIG.pursuitSpeed * BLOCKING_CONFIG.engagedDefenderSpeedMultiplier,
     );
     expect(vectorLength(unblockedDefender.velocity)).toBeCloseTo(DEFENDER_CONFIG.pursuitSpeed);
+  });
+
+  it('runs the Quick Pass receiver route and has the coverage defender track the receiver', () => {
+    const play = getPlay('quick-pass');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+    const quarterback = getPlayer(players, 'runner');
+    const receiver = getPlayer(players, 'blocker-left');
+    const coverageDefender = getPlayer(players, 'defender-left');
+    const receiverStart = { ...receiver.position };
+
+    updateRushingDrillAi(players, createBlockingState(), quarterback, {
+      bounds: PLAYABLE_FIELD_BOUNDS,
+      deltaSeconds: 0.1,
+      lineOfScrimmage: INITIAL_BALL_SPOT,
+      play,
+    });
+
+    expect(receiver.currentState).toBe('runningRoute');
+    expect(receiver.position.z).toBeGreaterThan(receiverStart.z);
+    expect(coverageDefender.currentState).toBe('pursuing');
+    expect(coverageDefender.velocity.z).toBeLessThan(0);
   });
 
   it('disengages blockers and defenders after they separate', () => {

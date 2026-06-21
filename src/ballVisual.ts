@@ -13,6 +13,6 @@ export function createBallVisual(): THREE.Mesh {
 }
 
 export function syncBallVisual(ballVisual: THREE.Object3D, ballModel: BallModel): void {
-  ballVisual.visible = ballModel.possession.kind === 'player';
+  ballVisual.visible = ['caught', 'inFlight', 'possessed'].includes(ballModel.state.kind);
   ballVisual.position.set(ballModel.position.x, ballModel.position.y, ballModel.position.z);
 }

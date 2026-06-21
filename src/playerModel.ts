@@ -7,8 +7,20 @@ export interface Vector2 {
 }
 
 export type PlayerTeam = 'offense' | 'defense';
-export type PlayerRole = 'runner' | 'blocker' | 'defender';
-export type PlayerState = 'idle' | 'userControlled' | 'movingToLane' | 'pursuing' | 'engaged';
+export type PlayerRole =
+  | 'runner'
+  | 'quarterback'
+  | 'receiver'
+  | 'blocker'
+  | 'defender'
+  | 'coverageDefender';
+export type PlayerState =
+  | 'idle'
+  | 'userControlled'
+  | 'movingToLane'
+  | 'runningRoute'
+  | 'pursuing'
+  | 'engaged';
 
 export interface PlayerModel {
   collisionRadius: number;

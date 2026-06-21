@@ -11,6 +11,7 @@ import { calculateYardsGained } from '../src/fieldScale';
 import { PLAYER_MOVEMENT_CONFIG, type PlayerModel } from '../src/playerModel';
 import {
   GAMEPLAY_CONFIG,
+  attemptPass,
   createGameplayModel,
   hasCrossedOpposingGoalLine,
   hasCrossedSideline,
@@ -115,6 +116,133 @@ describe('play state transitions', () => {
     expect(gameplay.selectedPlay.id).toBe('outside-run');
     expect(gameplay.player.position.x).toBeCloseTo(2.5);
     expect(gameplay.playState).toBe('preSnap');
+  });
+
+  it('selects Quick Pass during preSnap and starts the receiver route only after the snap', () => {
+    const gameplay = createGameplayModel();
+
+    expect(selectPlay(gameplay, 'quick-pass')).toBe(true);
+    const receiver = getPlayer(gameplay.players, 'blocker-left');
+    const initialReceiverPosition = { ...receiver.position };
+
+    expect(gameplay.selectedPlay).toMatchObject({
+      displayName: 'Quick Pass',
+      id: 'quick-pass',
+      kind: 'pass',
+    });
+    expect(gameplay.player).toMatchObject({ id: 'runner', role: 'quarterback' });
+    expect(receiver).toMatchObject({ role: 'receiver', currentState: 'idle' });
+
+    updateGameplayModel(gameplay, 0.3);
+
+    expect(receiver.position).toEqual(initialReceiverPosition);
+    expect(receiver.currentState).toBe('idle');
+
+    expect(startPlay(gameplay)).toBe(true);
+    expect(gameplay.ball.state).toEqual({ kind: 'possessed', playerId: gameplay.player.id });
+    expect(receiver.currentState).toBe('runningRoute');
+
+    updateGameplayModel(gameplay, 0.1);
+
+    expect(receiver.position.z).toBeGreaterThan(initialReceiverPosition.z);
+  });
+
+  it('throws Quick Pass once and transitions the ball to inFlight state', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+
+    expect(attemptPass(gameplay)).toBe(true);
+    expect(gameplay.passAttempted).toBe(true);
+    expect(gameplay.ball.possession).toEqual({ kind: 'none' });
+    expect(gameplay.ball.state).toMatchObject({ kind: 'inFlight' });
+    expect(gameplay.player.currentState).toBe('idle');
+    expect(attemptPass(gameplay)).toBe(false);
+  });
+
+  it('catches a pass, transfers possession and control to the receiver, and records completed-pass yardage', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    expect(attemptPass(gameplay)).toBe(true);
+
+    updateGameplayModel(gameplay, 0.2);
+    const receiver = getPlayer(gameplay.players, 'blocker-left');
+    receiver.position.x = gameplay.ball.position.x;
+    receiver.position.z = gameplay.ball.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.ball.state).toEqual({ kind: 'caught', playerId: receiver.id });
+    expect(gameplay.ball.possession).toEqual({ kind: 'player', playerId: receiver.id });
+    expect(gameplay.player.id).toBe(receiver.id);
+    expect(gameplay.player.currentState).toBe('userControlled');
+
+    receiver.position.x = 0;
+    receiver.position.z = LINE_OF_SCRIMMAGE_Z + 8;
+    const defender = getPrimaryDefender(gameplay.players);
+    defender.position.x = receiver.position.x;
+    defender.position.z = receiver.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: { x: 0, z: LINE_OF_SCRIMMAGE_Z + 8 },
+      reason: 'tackle',
+      startingBallSpot: INITIAL_BALL_SPOT,
+      type: 'tackle',
+    });
+    expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(8);
+    expect(gameplay.drive.currentDown).toBe(2);
+    expect(gameplay.drive.yardsToFirstDown).toBeCloseTo(2);
+  });
+
+  it('ends an incomplete Quick Pass at the original line of scrimmage and advances the down', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    expect(attemptPass(gameplay)).toBe(true);
+
+    updateGameplayModel(gameplay, 2);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.ball.state).toEqual({ kind: 'incomplete' });
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: INITIAL_BALL_SPOT,
+      reason: 'incomplete',
+      scoringTeam: null,
+      startingBallSpot: INITIAL_BALL_SPOT,
+      type: 'incomplete',
+      yardsGained: 0,
+    });
+    expect(gameplay.drive.currentDown).toBe(2);
+    expect(gameplay.drive.lineOfScrimmage).toEqual(INITIAL_BALL_SPOT);
+    expect(gameplay.nextBallSpot).toEqual(INITIAL_BALL_SPOT);
+    expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.incompleteResetDelaySeconds);
+  });
+
+  it('lets the receiver score after catching Quick Pass', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    expect(attemptPass(gameplay)).toBe(true);
+    updateGameplayModel(gameplay, 0.2);
+    const receiver = getPlayer(gameplay.players, 'blocker-left');
+    receiver.position.x = gameplay.ball.position.x;
+    receiver.position.z = gameplay.ball.position.z;
+    updateGameplayModel(gameplay, 0);
+
+    receiver.position.z = GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult?.type).toBe('touchdown');
+    expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
   });
 
   it('rejects invalid start and dead transitions', () => {
@@ -449,4 +577,14 @@ function getPrimaryDefender(players: PlayerModel[]): PlayerModel {
   }
 
   return defender;
+}
+
+function getPlayer(players: PlayerModel[], playerId: string): PlayerModel {
+  const player = players.find((candidate) => candidate.id === playerId);
+
+  if (!player) {
+    throw new Error(`Missing player ${playerId}`);
+  }
+
+  return player;
 }
