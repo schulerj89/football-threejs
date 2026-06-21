@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-06-21
+
+### Added
+
+- Added the official two-button Football JS title screen with selected title artwork, emblem fallback handling, crisp HTML title text, and a hidden reusable settings overlay.
+- Added runtime title-music playback through a dedicated streamed music bus, first-gesture audio unlock, fade-in, looping, and pregame handoff state.
+- Added a persisted music-volume setting and tests for streamed title music, handoff behavior, settings migration, and the player-facing title flow.
+
+### Changed
+
+- Updated the runtime audio manifest to include the selected `football-js-title` MP3 as a streamed local asset instead of a decoded buffer.
+- Updated the title/start lifecycle so Settings opens from the title screen, Escape closes Settings, Enter starts the game, and debug tools remain behind F1.
+
 ## [1.2.0] - 2026-06-21
 
 ### Added

@@ -8,6 +8,10 @@ import {
 } from '../ballVisual';
 import { AudioMixer } from '../audio/AudioMixer';
 import {
+  TitleMusicController,
+  type TitleMusicControllerSnapshot,
+} from '../audio/TitleMusicController';
+import {
   BroadcastCommentaryDirector,
 } from '../audio/BroadcastCommentaryDirector';
 import {
@@ -129,6 +133,7 @@ export class PresentationRuntime {
   readonly playerPoseController: PlayerPoseController;
   readonly routeArtRenderer: RouteArtRenderer;
   readonly stadiumController: StadiumController;
+  readonly titleMusicController: TitleMusicController;
   readonly officialsController: OfficialsPresentationController;
   readonly controlledPlayerLabels: ControlledPlayerLabelRenderer;
 
@@ -252,6 +257,7 @@ export class PresentationRuntime {
       settings: gameExperience.audioSettings,
       warn,
     });
+    this.titleMusicController = new TitleMusicController(this.audioMixer);
     this.gameAudioDirector = new GameAudioDirector(this.audioMixer);
     this.broadcastCommentaryDirector = new BroadcastCommentaryDirector(this.audioMixer, {
       enabled: true,
@@ -520,7 +526,12 @@ export class PresentationRuntime {
     return {
       ...this.gameAudioDirector.getSnapshot(),
       commentary: this.broadcastCommentaryDirector.getSnapshot(),
+      titleMusic: this.titleMusicController.getSnapshot(),
     };
+  }
+
+  getTitleMusicSnapshot(): TitleMusicControllerSnapshot {
+    return this.titleMusicController.getSnapshot();
   }
 
   getGameExperienceSnapshot(): GameExperienceDebugSnapshot {

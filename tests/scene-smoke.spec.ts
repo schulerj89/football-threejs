@@ -436,6 +436,13 @@ interface AudioRuntimeSnapshot {
   }>;
   recentEvents: Array<{ type: string }>;
   streamedAssetIds: string[];
+  titleMusic?: {
+    assetId: string;
+    attempted: boolean;
+    handoffRequested: boolean;
+    loopActive: boolean;
+    state: string;
+  };
 }
 
 interface CrowdPreviewSnapshot {
@@ -750,6 +757,7 @@ interface GameExperienceSettingsSnapshot {
   gameMode: 'exhibition' | 'scoreAttack';
   masterVolume: number;
   matchDifficulty: 'allPro' | 'pro' | 'rookie';
+  musicVolume: number;
   muted: boolean;
   officialsDebugLabels: boolean;
   officialsEnabled: boolean;
@@ -878,9 +886,24 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.title-screen')).toBeVisible();
+  await expect(page.locator('.title-content h1')).toHaveText('Football JS');
+  await expect(page.locator('.title-primary-actions button')).toHaveCount(2);
   await expect(page.getByRole('button', { name: 'Start Game' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
   await expect(page.locator('.gameplay-hud')).toBeHidden();
   await expect(page.locator('.play-call-ui')).toBeHidden();
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.locator('.title-settings-overlay')).toBeVisible();
+  await expect(page.getByLabel('Settings').getByText('Music volume')).toBeVisible();
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
+  await expect.poll(() =>
+    getAudioSnapshot(page).then((snapshot) =>
+      snapshot.streamedAssetIds.includes('football-js-title'),
+    ),
+  ).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.title-settings-overlay')).toBeHidden();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('.title-screen')).toBeVisible();
@@ -915,6 +938,12 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   await expect(page.locator('.gameplay-hud')).toBeVisible();
   await expect(page.locator('.play-call-ui')).toBeVisible();
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
+  await expect.poll(() =>
+    getAudioSnapshot(page).then((snapshot) => snapshot.activeLoops.includes('football-js-title')),
+  ).toBe(true);
+  await expect.poll(() =>
+    getAudioSnapshot(page).then((snapshot) => snapshot.titleMusic?.state),
+  ).toBe('handoff');
 
   const started = await getGameplaySnapshot(page);
   const experience = await getGameExperienceSnapshot(page);
@@ -1016,7 +1045,10 @@ test('keeps the gameplay camera still while scrolling pause settings', async ({ 
 test('starts the performance preset without visual crowd or cinematics', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.locator('.title-screen').getByLabel('Presentation preset').selectOption('performance');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.title-settings-overlay')).toBeHidden();
   await page.getByRole('button', { name: 'Start Game' }).click();
 
   await expect(page.locator('.title-screen')).toBeHidden();
@@ -1055,8 +1087,11 @@ test('exposes adaptive quality debug state without gameplay mutation', async ({ 
 test('selects the 5v5 legacy development mode from the title screen', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.locator('.title-screen').getByLabel('Game mode').selectOption('scoreAttack');
   await page.locator('.title-screen').getByLabel('Regression playbook').selectOption('5v5');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.title-settings-overlay')).toBeHidden();
   await page.getByRole('button', { name: 'Start Game' }).click();
 
   await expect(page.locator('.title-screen')).toBeHidden();
@@ -1072,6 +1107,7 @@ test('selects the 5v5 legacy development mode from the title screen', async ({ p
 test('persists title-screen settings across reloads', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.locator('.title-screen').getByLabel('Presentation preset').selectOption('performance');
   await page.locator('.title-screen').getByLabel('Game mode').selectOption('scoreAttack');
   await page.locator('.title-screen').getByLabel('Regression playbook').selectOption('5v5');
@@ -1079,6 +1115,7 @@ test('persists title-screen settings across reloads', async ({ page }) => {
   await page.reload();
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.title-screen')).toBeVisible();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.locator('.title-screen').getByLabel('Presentation preset')).toHaveValue('performance');
   await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveValue('scoreAttack');
   await expect(page.locator('.title-screen').getByLabel('Regression playbook')).toHaveValue('5v5');
@@ -1169,12 +1206,14 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
   await page.locator('.debug-feature-row').filter({ hasText: 'Officials' }).getByRole('checkbox').uncheck();
   await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
 
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.locator('.title-screen').getByLabel('Debug tools').check();
   let experience = await getGameExperienceSnapshot(page);
   expect(experience.finalSettings.debugToolsEnabled).toBe(true);
 
   await page.reload();
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.locator('.title-screen').getByLabel('Debug tools')).toBeChecked();
   await expect(page.locator('.debug-panel')).toBeVisible();
   experience = await getGameExperienceSnapshot(page);
@@ -1318,7 +1357,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     customSettings: null,
     preset: 'broadcast',
     settings: null,
-    version: 6,
+    version: 7,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({

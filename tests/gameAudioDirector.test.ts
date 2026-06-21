@@ -383,6 +383,7 @@ class FakeAudioPlaybackPort implements AudioPlaybackPort {
       crowd: 0.45,
       gameplaySfx: 0.85,
       master: 0.85,
+      music: 0.72,
       ui: 0.85,
     },
     captionsEnabled: false,

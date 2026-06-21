@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 6;
+export const GAME_SETTINGS_SCHEMA_VERSION = 7;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -45,6 +45,7 @@ function migrateOfficialSettings(value: unknown): unknown {
       controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
       gameMode: value.gameMode ?? 'exhibition',
       matchDifficulty: value.matchDifficulty ?? 'pro',
+      musicVolume: value.musicVolume ?? 0.72,
       officialsDebugLabels: value.officialsDebugLabels ?? false,
       officialsEnabled: true,
       quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
@@ -58,6 +59,7 @@ function migrateOfficialSettings(value: unknown): unknown {
       controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
       gameMode: value.gameMode ?? 'exhibition',
       matchDifficulty: value.matchDifficulty ?? 'pro',
+      musicVolume: value.musicVolume ?? 0.72,
       officialsDebugLabels: value.officialsDebugLabels ?? false,
       officialsEnabled: false,
       quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
@@ -70,6 +72,7 @@ function migrateOfficialSettings(value: unknown): unknown {
     controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
     gameMode: value.gameMode ?? 'exhibition',
     matchDifficulty: value.matchDifficulty ?? 'pro',
+    musicVolume: value.musicVolume ?? 0.72,
     officialsDebugLabels: value.officialsDebugLabels ?? false,
     quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
     selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,

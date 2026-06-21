@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AudioAssetLoader } from '../src/audio/AudioAssetLoader';
 import type { LocalAudioAsset } from '../src/audio/AudioAssetManifest';
 import { AudioMixer } from '../src/audio/AudioMixer';
+import { TitleMusicController } from '../src/audio/TitleMusicController';
 import { GameAudioDirector } from '../src/audio/GameAudioDirector';
 import {
   AUDIO_SETTINGS_STORAGE_KEY,
@@ -38,6 +39,17 @@ const STREAM_TEST_ASSET: LocalAudioAsset = {
   url: '/audio/crowd/test-loop.wav',
 };
 
+const MUSIC_TEST_ASSET: LocalAudioAsset = {
+  assetId: 'football-js-title',
+  category: 'music',
+  defaultGain: 0.72,
+  loadingStrategy: 'stream',
+  loop: true,
+  maxSimultaneousInstances: 1,
+  optional: true,
+  url: '/audio/music/football-js-title.mp3',
+};
+
 describe('runtime audio mixer', () => {
   it('creates one AudioContext and routes category buses into master', () => {
     const fakeContext = new FakeAudioContext('suspended');
@@ -56,6 +68,7 @@ describe('runtime audio mixer', () => {
     expect(getFakeNode(mixer.buses.crowd).connections).toContain(mixer.buses.master);
     expect(getFakeNode(mixer.buses.announcer).connections).toContain(mixer.buses.master);
     expect(getFakeNode(mixer.buses.gameplaySfx).connections).toContain(mixer.buses.master);
+    expect(getFakeNode(mixer.buses.music).connections).toContain(mixer.buses.master);
     expect(getFakeNode(mixer.buses.ui).connections).toContain(mixer.buses.master);
     expect(getFakeNode(mixer.buses.master).connections).toContain(fakeContext.destination);
   });
@@ -244,6 +257,44 @@ describe('runtime audio mixer', () => {
     expect(mixer.getSnapshot().activeLoops).toEqual([STREAM_TEST_ASSET.assetId]);
     expect(mixer.getSnapshot().preparedMediaElementSourceCount).toBe(1);
     expect(mixer.getSnapshot().streamedAssetIds).toEqual([STREAM_TEST_ASSET.assetId]);
+  });
+
+  it('streams title music through the music bus and preserves it for pregame handoff', async () => {
+    const fakeContext = new FakeAudioContext('suspended');
+    const fakeElement = createFakeAudioElement(MUSIC_TEST_ASSET.url);
+    const loader = new AudioAssetLoader({
+      audioContext: fakeContext.asAudioContext(),
+      createAudioElement: () => fakeElement,
+      manifest: [MUSIC_TEST_ASSET],
+      warn: () => undefined,
+    });
+    const mixer = createMixer(fakeContext, { loader });
+    const titleMusic = new TitleMusicController(mixer, {
+      assetId: MUSIC_TEST_ASSET.assetId,
+      fadeInSeconds: 1.2,
+    });
+
+    await expect(titleMusic.startFromUserGesture()).resolves.toBe(true);
+
+    expect(fakeContext.resumeCalls).toBe(1);
+    expect(fakeContext.decodeCalls).toBe(0);
+    expect(fakeContext.mediaSources).toHaveLength(1);
+    expect(fakeElement.loop).toBe(true);
+    expect(mixer.getSnapshot().streamedAssetIds).toEqual([MUSIC_TEST_ASSET.assetId]);
+    expect(mixer.getSnapshot().activeLoops).toEqual([MUSIC_TEST_ASSET.assetId]);
+    expect(mixer.getSnapshot().busGains.music).toBe(DEFAULT_AUDIO_SETTINGS.musicVolume);
+    expect(titleMusic.getSnapshot()).toMatchObject({
+      loopActive: true,
+      state: 'playing',
+    });
+
+    titleMusic.handoffToPregame();
+
+    expect(titleMusic.getSnapshot()).toMatchObject({
+      handoffRequested: true,
+      loopActive: true,
+      state: 'handoff',
+    });
   });
 
   it('reuses active loop instances while allowing gain updates', async () => {

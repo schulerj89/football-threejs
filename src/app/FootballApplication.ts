@@ -167,6 +167,9 @@ export class FootballApplication {
       onPauseSettingsChange: (settings) => this.handlePauseSettingsChange(settings),
       onReturnToTitle: () => this.returnToTitleScreen(),
       onStart: () => this.startGameFromTitle(),
+      onTitleFirstGesture: () => {
+        void this.presentation.titleMusicController.startFromUserGesture();
+      },
       onTitleSettingsChange: (settings) => this.applyExperienceSettings(settings, { persist: true }),
       syncChrome: (phase) => this.presentation.syncApplicationChrome(phase),
     });
@@ -464,7 +467,8 @@ export class FootballApplication {
     }
     this.syncAfterGameplayRebuild();
     this.lifecycle.startGameplay();
-    void this.presentation.audioMixer.unlockFromUserGesture();
+    void this.presentation.titleMusicController.startFromUserGesture();
+    this.presentation.titleMusicController.handoffToPregame();
     this.presentation.resetCameraPresentation();
   }
 

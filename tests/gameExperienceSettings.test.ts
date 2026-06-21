@@ -111,7 +111,7 @@ describe('game experience settings', () => {
     const storedBefore = storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY);
 
     const resolved = resolveGameExperienceSettings({
-      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&announcer=0&captions=1&playbook=5v5&stadium=0'),
+      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&announcer=0&captions=1&playbook=5v5&stadium=0&musicVolume=0.33'),
       storage,
     });
 
@@ -123,6 +123,7 @@ describe('game experience settings', () => {
       crowdVisualsEnabled: true,
       gameplayCamera: 'cinematic',
       gameMode: 'scoreAttack',
+      musicVolume: 0.33,
       playbookId: '5v5',
       preset: 'performance',
       stadiumEnabled: false,
@@ -135,6 +136,7 @@ describe('game experience settings', () => {
       crowdVisualsEnabled: true,
       gameplayCamera: 'cinematic',
       gameMode: 'scoreAttack',
+      musicVolume: 0.33,
       playbookId: '5v5',
       stadiumEnabled: false,
     });

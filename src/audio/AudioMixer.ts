@@ -43,6 +43,7 @@ export interface AudioMixerSnapshot {
 
 export interface AudioLoopStartOptions {
   gain?: number;
+  rampSeconds?: number;
 }
 
 export interface AudioMixerOptions {
@@ -94,6 +95,7 @@ export class AudioMixer {
     crowd: 0,
     gameplaySfx: 0,
     master: 0,
+    music: 0,
     ui: 0,
   };
   private readonly activeOneShotNodes = new Set<ActiveOneShot>();
@@ -261,7 +263,7 @@ export class AudioMixer {
 
     if (activeLoop) {
       if (options.gain !== undefined) {
-        this.rampLoopGain(activeLoop, options.gain);
+        this.rampLoopGain(activeLoop, options.gain, options.rampSeconds);
       }
       return true;
     }
@@ -299,7 +301,7 @@ export class AudioMixer {
       clearTimeout(loop.stopTimer);
       loop.stopTimer = null;
     }
-    this.rampLoopGain(loop, options.gain ?? loop.asset.defaultGain);
+    this.rampLoopGain(loop, options.gain ?? loop.asset.defaultGain, options.rampSeconds);
 
     try {
       await loop.element.play();
@@ -316,14 +318,14 @@ export class AudioMixer {
     return true;
   }
 
-  setLoopGain(assetId: string, gain: number): boolean {
+  setLoopGain(assetId: string, gain: number, rampSeconds?: number): boolean {
     const activeLoop = this.activeLoops.get(assetId);
 
     if (!activeLoop) {
       return false;
     }
 
-    this.rampLoopGain(activeLoop, gain);
+    this.rampLoopGain(activeLoop, gain, rampSeconds);
     return true;
   }
 
@@ -413,6 +415,7 @@ export class AudioMixer {
         : 0,
     );
     this.setBusGain('gameplaySfx', this.settings.effectsVolume);
+    this.setBusGain('music', this.settings.musicVolume);
     this.setBusGain('ui', this.settings.effectsVolume);
     saveAudioSettings(this.settings, this.storage);
   }
@@ -423,10 +426,10 @@ export class AudioMixer {
     scheduleGain(this.buses[busName].gain, targetGain, this.context.currentTime, BUS_GAIN_RAMP_SECONDS);
   }
 
-  private rampLoopGain(loop: ActiveLoop, gain: number): void {
+  private rampLoopGain(loop: ActiveLoop, gain: number, rampSeconds = LOOP_GAIN_RAMP_SECONDS): void {
     const targetGain = clampGain(gain);
     loop.gainValue = targetGain;
-    scheduleGain(loop.gain.gain, targetGain, this.context.currentTime, LOOP_GAIN_RAMP_SECONDS);
+    scheduleGain(loop.gain.gain, targetGain, this.context.currentTime, rampSeconds);
   }
 
   private getActiveAudioNodeCount(): number {
@@ -484,12 +487,14 @@ function createBusGraph(audioContext: AudioContext): BusGainMap {
   const crowd = audioContext.createGain();
   const announcer = audioContext.createGain();
   const gameplaySfx = audioContext.createGain();
-  const ui = audioContext.createGain();
+    const music = audioContext.createGain();
+    const ui = audioContext.createGain();
 
-  crowd.connect(master);
-  announcer.connect(master);
-  gameplaySfx.connect(master);
-  ui.connect(master);
+    crowd.connect(master);
+    announcer.connect(master);
+    gameplaySfx.connect(master);
+    music.connect(master);
+    ui.connect(master);
   master.connect(audioContext.destination);
 
   return {
@@ -497,6 +502,7 @@ function createBusGraph(audioContext: AudioContext): BusGainMap {
     crowd,
     gameplaySfx,
     master,
+    music,
     ui,
   };
 }

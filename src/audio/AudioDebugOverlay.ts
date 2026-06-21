@@ -1,8 +1,10 @@
 import type { GameAudioDirectorSnapshot } from './GameAudioDirector';
 import type { BroadcastCommentarySnapshot } from './BroadcastCommentaryDirector';
+import type { TitleMusicControllerSnapshot } from './TitleMusicController';
 
 export type RuntimeAudioDebugSnapshot = GameAudioDirectorSnapshot & {
   commentary?: BroadcastCommentarySnapshot;
+  titleMusic?: TitleMusicControllerSnapshot;
 };
 
 export function createAudioDebugOverlay(): HTMLDivElement {
@@ -40,6 +42,7 @@ export function syncAudioDebugOverlay(
     `EVENTS ${snapshot.recentEvents.map((event) => event.type).join(',') || 'none'}`,
     `EVENT_HISTORY ${formatEventHistory(snapshot.eventHistory)}`,
     `COMMENTARY ${formatCommentary(snapshot.commentary)}`,
+    `TITLE_MUSIC ${formatTitleMusic(snapshot.titleMusic)}`,
     `UNLOCK_ERROR ${snapshot.lastUnlockError ?? 'none'}`,
   ].join('\n');
 }
@@ -92,5 +95,18 @@ function formatCommentary(snapshot: BroadcastCommentarySnapshot | undefined): st
     `cooldown:${cooldown}`,
     `queue:${queue}`,
     `crowd:${duck}`,
+  ].join(' ');
+}
+
+function formatTitleMusic(snapshot: TitleMusicControllerSnapshot | undefined): string {
+  if (!snapshot) {
+    return 'none';
+  }
+
+  return [
+    `asset:${snapshot.assetId || 'none'}`,
+    `state:${snapshot.state}`,
+    `loop:${snapshot.loopActive}`,
+    `handoff:${snapshot.handoffRequested}`,
   ].join(' ');
 }

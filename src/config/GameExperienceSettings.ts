@@ -69,6 +69,7 @@ export interface GameExperienceSettings {
   gameMode: ExhibitionGameMode;
   masterVolume: number;
   matchDifficulty: MatchDifficulty;
+  musicVolume: number;
   muted: boolean;
   officialsDebugLabels: boolean;
   officialsEnabled: boolean;
@@ -107,6 +108,7 @@ export interface GameExperienceQueryOverrides {
   gameMode?: ExhibitionGameMode;
   masterVolume?: number;
   matchDifficulty?: MatchDifficulty;
+  musicVolume?: number;
   muted?: boolean;
   officialsDebugLabels?: boolean;
   officialsEnabled?: boolean;
@@ -188,6 +190,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   gameMode: 'exhibition',
   masterVolume: DEFAULT_AUDIO_SETTINGS.masterVolume,
   matchDifficulty: 'pro',
+  musicVolume: DEFAULT_AUDIO_SETTINGS.musicVolume,
   muted: DEFAULT_AUDIO_SETTINGS.muted,
   officialsDebugLabels: false,
   officialsEnabled: true,
@@ -242,6 +245,7 @@ export function resolveGameExperienceSettings({
     captionsEnabled: settings.captionsEnabled,
     crowdVolume: settings.crowdVolume,
     masterVolume: settings.masterVolume,
+    musicVolume: settings.musicVolume,
     muted: settings.muted,
   });
   const resolvedCrowdSettings = normalizeCrowdPresentationSettings({
@@ -345,6 +349,7 @@ export function normalizeGameExperienceSettings(
     matchDifficulty: isMatchDifficulty(settings.matchDifficulty)
       ? settings.matchDifficulty
       : presetDefaults.matchDifficulty,
+    musicVolume: clampVolume(settings.musicVolume ?? presetDefaults.musicVolume),
     muted: settings.muted ?? presetDefaults.muted,
     officialsDebugLabels:
       settings.officialsDebugLabels ?? presetDefaults.officialsDebugLabels,
@@ -466,6 +471,7 @@ export function resolveGameExperienceQueryOverrides(
   applyVolumeOverride(overrides, 'announcerVolume', searchParams, 'announcerVolume');
   applyVolumeOverride(overrides, 'crowdVolume', searchParams, 'crowdVolume');
   applyVolumeOverride(overrides, 'masterVolume', searchParams, 'masterVolume');
+  applyVolumeOverride(overrides, 'musicVolume', searchParams, 'musicVolume');
   applyTeamProfileOverrides(overrides, searchParams);
 
   return overrides;
@@ -572,6 +578,7 @@ function createCustomSettingsFromExisting(
     crowdVisualsEnabled: crowdPresentationSettings.crowdVisualsEnabled,
     crowdVolume: audioSettings.crowdVolume,
     masterVolume: audioSettings.masterVolume,
+    musicVolume: audioSettings.musicVolume,
     muted: audioSettings.muted,
     preset: 'custom',
     teamProfiles: DEFAULT_TEAM_PROFILE_SETTINGS,
@@ -670,7 +677,7 @@ function applyVolumeOverride(
   overrides: GameExperienceQueryOverrides,
   key: keyof Pick<
     GameExperienceQueryOverrides,
-    'announcerVolume' | 'crowdVolume' | 'masterVolume'
+    'announcerVolume' | 'crowdVolume' | 'masterVolume' | 'musicVolume'
   >,
   searchParams: URLSearchParams,
   queryKey: string,

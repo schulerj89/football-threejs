@@ -1,7 +1,7 @@
 import { COMMENTARY_CATALOG } from './CommentaryCatalog';
 
-export type AudioBusName = 'announcer' | 'crowd' | 'gameplaySfx' | 'master' | 'ui';
-export type AudioPlaybackCategory = 'announcer' | 'crowd' | 'gameplaySfx' | 'ui';
+export type AudioBusName = 'announcer' | 'crowd' | 'gameplaySfx' | 'master' | 'music' | 'ui';
+export type AudioPlaybackCategory = 'announcer' | 'crowd' | 'gameplaySfx' | 'music' | 'ui';
 export type AudioLoadingStrategy = 'buffer' | 'stream';
 
 export interface LocalAudioAsset {
@@ -27,6 +27,16 @@ const ANNOUNCER_AUDIO_ASSETS: readonly LocalAudioAsset[] = COMMENTARY_CATALOG.ma
 }));
 
 export const LOCAL_AUDIO_ASSET_MANIFEST: readonly LocalAudioAsset[] = [
+  {
+    assetId: 'football-js-title',
+    category: 'music',
+    defaultGain: 0.72,
+    loadingStrategy: 'stream',
+    loop: true,
+    maxSimultaneousInstances: 1,
+    optional: true,
+    url: '/audio/music/football-js-title.mp3',
+  },
   {
     assetId: 'crowd_idle_loop_01',
     category: 'crowd',

@@ -37,9 +37,9 @@ export interface AudioPlaybackPort {
   hasActiveLoop(assetId: string): boolean;
   installUserGestureUnlock(target: Window): void;
   playOneShot(assetId: string): Promise<boolean>;
-  setLoopGain(assetId: string, gain: number): boolean;
+  setLoopGain(assetId: string, gain: number, rampSeconds?: number): boolean;
   setMuted(muted: boolean): unknown;
-  startLoop(assetId: string, options?: { gain?: number }): Promise<boolean>;
+  startLoop(assetId: string, options?: { gain?: number; rampSeconds?: number }): Promise<boolean>;
   stopLoop(assetId: string): boolean;
   toggleMuted(): unknown;
 }
