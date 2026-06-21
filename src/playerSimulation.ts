@@ -5,11 +5,16 @@ import {
   type Vector2,
 } from './playerModel';
 
+export interface PlayerSimulationOptions {
+  clampSidelines?: boolean;
+}
+
 export function updatePlayerSimulation(
   player: PlayerModel,
   input: Vector2,
   deltaSeconds: number,
   bounds: PlayableFieldBounds,
+  options: PlayerSimulationOptions = {},
 ): void {
   const delta = clamp(deltaSeconds, 0, 0.1);
   const hasInput = input.x !== 0 || input.z !== 0;
@@ -30,20 +35,28 @@ export function updatePlayerSimulation(
 
   player.position.x += player.velocity.x * delta;
   player.position.z += player.velocity.z * delta;
-  keepPlayerInPlayableBounds(player, bounds);
+  keepPlayerInPlayableBounds(player, bounds, options);
 }
 
-function keepPlayerInPlayableBounds(player: PlayerModel, bounds: PlayableFieldBounds): void {
+function keepPlayerInPlayableBounds(
+  player: PlayerModel,
+  bounds: PlayableFieldBounds,
+  options: PlayerSimulationOptions,
+): void {
+  const clampSidelines = options.clampSidelines ?? true;
   const minX = bounds.minX + PLAYER_MOVEMENT_CONFIG.halfWidth;
   const maxX = bounds.maxX - PLAYER_MOVEMENT_CONFIG.halfWidth;
   const minZ = bounds.minZ + PLAYER_MOVEMENT_CONFIG.halfDepth;
   const maxZ = bounds.maxZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
-  const clampedX = clamp(player.position.x, minX, maxX);
   const clampedZ = clamp(player.position.z, minZ, maxZ);
 
-  if (clampedX !== player.position.x) {
-    player.position.x = clampedX;
-    player.velocity.x = 0;
+  if (clampSidelines) {
+    const clampedX = clamp(player.position.x, minX, maxX);
+
+    if (clampedX !== player.position.x) {
+      player.position.x = clampedX;
+      player.velocity.x = 0;
+    }
   }
 
   if (clampedZ !== player.position.z) {
@@ -71,4 +84,3 @@ function moveVectorToward(current: Vector2, target: Vector2, maxDelta: number): 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
-

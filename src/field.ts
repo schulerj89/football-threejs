@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 export const WORLD_SCALE = {
   units: '1 Three.js world unit = 1 yard',
+  worldUnitsPerYard: 1,
   fieldLength: 120,
   playableLength: 100,
   endZoneDepth: 10,
@@ -10,6 +11,7 @@ export const WORLD_SCALE = {
 } as const;
 
 export const LINE_OF_SCRIMMAGE_Z = -15;
+export const INITIAL_BALL_SPOT = { x: 0, z: LINE_OF_SCRIMMAGE_Z } as const;
 export const OPPOSING_GOAL_LINE_Z = WORLD_SCALE.playableLength / 2;
 
 export interface PlayableFieldBounds {
@@ -46,8 +48,10 @@ const materials = {
 
 export interface FootballField {
   group: THREE.Group;
+  lineOfScrimmageMarker: THREE.Mesh;
   lineOfScrimmageZ: number;
   playDirection: THREE.Vector3;
+  playDirectionMarker: THREE.Group;
 }
 
 export function createFootballField(): FootballField {
@@ -66,14 +70,25 @@ export function createFootballField(): FootballField {
   addBoundaryLines(group);
   addYardLines(group);
   addHashMarks(group);
-  addLineOfScrimmage(group);
-  addPlayDirectionMarker(group);
+  const lineOfScrimmageMarker = addLineOfScrimmage(group);
+  const playDirectionMarker = addPlayDirectionMarker(group);
 
   return {
     group,
+    lineOfScrimmageMarker,
     lineOfScrimmageZ: LINE_OF_SCRIMMAGE_Z,
     playDirection: new THREE.Vector3(0, 0, 1),
+    playDirectionMarker,
   };
+}
+
+export function syncFootballFieldLineOfScrimmage(
+  field: FootballField,
+  ballSpot: { z: number },
+): void {
+  field.lineOfScrimmageZ = ballSpot.z;
+  field.lineOfScrimmageMarker.position.z = ballSpot.z;
+  field.playDirectionMarker.position.z = ballSpot.z + 7;
 }
 
 function addEndZones(group: THREE.Group): void {
@@ -132,8 +147,8 @@ function addHashMarks(group: THREE.Group): void {
   }
 }
 
-function addLineOfScrimmage(group: THREE.Group): void {
-  addLine(
+function addLineOfScrimmage(group: THREE.Group): THREE.Mesh {
+  return addLine(
     group,
     'line-of-scrimmage',
     WORLD_SCALE.fieldWidth + 1.5,
@@ -145,7 +160,7 @@ function addLineOfScrimmage(group: THREE.Group): void {
   );
 }
 
-function addPlayDirectionMarker(group: THREE.Group): void {
+function addPlayDirectionMarker(group: THREE.Group): THREE.Group {
   const marker = new THREE.Group();
   marker.name = 'play-direction-marker';
   marker.position.set(0, 0.12, LINE_OF_SCRIMMAGE_Z + 7);
@@ -160,6 +175,7 @@ function addPlayDirectionMarker(group: THREE.Group): void {
   marker.add(head);
 
   group.add(marker);
+  return marker;
 }
 
 function addLine(
@@ -171,10 +187,11 @@ function addLine(
   z: number,
   color?: number,
   material?: THREE.Material,
-): void {
+): THREE.Mesh {
   const lineMaterial = material ?? (color ? new THREE.MeshBasicMaterial({ color }) : materials.line);
   const line = new THREE.Mesh(new THREE.BoxGeometry(width, 0.04, depth), lineMaterial);
   line.position.set(x, LINE_Y, z);
   line.name = name;
   group.add(line);
+  return line;
 }

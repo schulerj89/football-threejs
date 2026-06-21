@@ -6,17 +6,34 @@ interface PlayerSnapshot {
   facingRadians: number;
 }
 
+interface FootballSpot {
+  x: number;
+  z: number;
+}
+
+interface PlayResultSnapshot {
+  endingBallSpot: FootballSpot;
+  reason: 'tackle' | 'outOfBounds' | 'touchdown';
+  scoringTeam: 'offense' | null;
+  startingBallSpot: FootballSpot;
+  type: 'tackle' | 'outOfBounds' | 'touchdown';
+  yardsGained: number;
+}
+
 interface GameplaySnapshot {
+  activePlayStartSpot: FootballSpot | null;
   ball: {
     possession: { kind: 'none' } | { kind: 'player'; playerId: string };
     position: { x: number; y: number; z: number };
   };
+  currentBallSpot: FootballSpot;
   defender: {
     position: { x: number; z: number };
     velocity: { x: number; z: number };
     facingRadians: number;
   };
-  lastPlayResult: 'none' | 'tackle' | 'touchdown';
+  lastPlayResult: PlayResultSnapshot | null;
+  nextBallSpot: FootballSpot;
   player: PlayerSnapshot;
   playState: 'preSnap' | 'live' | 'dead';
   score: number;
@@ -153,7 +170,7 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
   await page.keyboard.press('r');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: { possession: { kind: 'none' } },
-    lastPlayResult: 'none',
+    lastPlayResult: null,
     player: { position: { x: 0, z: -15 }, velocity: { x: 0, z: 0 } },
     playState: 'preSnap',
   });
@@ -166,16 +183,18 @@ test('scores touchdown by avoiding the defender and auto-resets', async ({ page 
 
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
-  await page.keyboard.down('d');
   await page.keyboard.down('w');
+  await page.keyboard.down('d');
+  await page.waitForTimeout(850);
+  await page.keyboard.up('d');
   await expect.poll(async () => (await getGameplaySnapshot(page)).playState, {
     timeout: 9000,
   }).toBe('dead');
   await page.keyboard.up('w');
-  await page.keyboard.up('d');
 
   const touchdown = await getGameplaySnapshot(page);
-  expect(touchdown.lastPlayResult).toBe('touchdown');
+  expect(touchdown.lastPlayResult?.type).toBe('touchdown');
+  expect(touchdown.lastPlayResult?.scoringTeam).toBe('offense');
   expect(touchdown.score).toBe(6);
   await expect(page.locator('.score-counter')).toHaveText('Score 6');
   await expect(page.locator('.touchdown-message')).toBeVisible();
@@ -189,7 +208,8 @@ test('scores touchdown by avoiding the defender and auto-resets', async ({ page 
 
   await expect.poll(() => getGameplaySnapshot(page), { timeout: 3000 }).toMatchObject({
     ball: { possession: { kind: 'none' } },
-    lastPlayResult: 'none',
+    currentBallSpot: { x: 0, z: -15 },
+    lastPlayResult: null,
     player: { position: { x: 0, z: -15 }, velocity: { x: 0, z: 0 } },
     playState: 'preSnap',
     score: 6,
@@ -212,10 +232,12 @@ test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
   await page.keyboard.up('w');
 
   const tackle = await getGameplaySnapshot(page);
-  expect(tackle.lastPlayResult).toBe('tackle');
+  expect(tackle.lastPlayResult?.type).toBe('tackle');
+  expect(tackle.lastPlayResult?.yardsGained).toBeGreaterThan(0);
   expect(tackle.score).toBe(0);
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
   await expect(page.locator('.tackle-message')).toBeVisible();
+  await expect(page.locator('.result-message')).toContainText('+');
 
   await page.keyboard.down('w');
   await page.waitForTimeout(250);
@@ -226,12 +248,41 @@ test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
 
   await expect.poll(() => getGameplaySnapshot(page), { timeout: 3000 }).toMatchObject({
     ball: { possession: { kind: 'none' } },
-    lastPlayResult: 'none',
-    player: { position: { x: 0, z: -15 }, velocity: { x: 0, z: 0 } },
+    currentBallSpot: tackle.nextBallSpot,
+    lastPlayResult: null,
+    player: { position: tackle.nextBallSpot, velocity: { x: 0, z: 0 } },
     playState: 'preSnap',
     score: 0,
   });
   await expect(page.locator('.tackle-message')).toBeHidden();
+});
+
+test('going out of bounds ends the play and resets at the sideline spot', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await page.keyboard.down('d');
+  await expect.poll(async () => (await getGameplaySnapshot(page)).playState, {
+    timeout: 5000,
+  }).toBe('dead');
+  await page.keyboard.up('d');
+
+  const outOfBounds = await getGameplaySnapshot(page);
+  expect(outOfBounds.lastPlayResult?.type).toBe('outOfBounds');
+  expect(Math.abs(outOfBounds.lastPlayResult?.yardsGained ?? 99)).toBeLessThan(1);
+  await expect(page.locator('.out-of-bounds-message')).toBeVisible();
+  await expect(page.locator('.result-message')).toHaveText('0 yards');
+
+  await expect.poll(() => getGameplaySnapshot(page), { timeout: 3000 }).toMatchObject({
+    ball: { possession: { kind: 'none' } },
+    currentBallSpot: outOfBounds.nextBallSpot,
+    lastPlayResult: null,
+    player: { position: outOfBounds.nextBallSpot, velocity: { x: 0, z: 0 } },
+    playState: 'preSnap',
+  });
+  await expect(page.locator('.out-of-bounds-message')).toBeHidden();
 });
 
 async function expectNonBlankCanvas(page: Page): Promise<void> {

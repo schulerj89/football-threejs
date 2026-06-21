@@ -1,4 +1,5 @@
-import { LINE_OF_SCRIMMAGE_Z } from './field';
+import { INITIAL_BALL_SPOT } from './field';
+import type { FootballSpot } from './fieldScale';
 import type { PlayerModel } from './playerModel';
 
 export interface Vector3 {
@@ -22,18 +23,18 @@ export const BALL_CARRY_ATTACHMENT = {
   z: 0.58,
 } as const;
 
-export function createBallModel(): BallModel {
+export function createBallModel(initialSpot: FootballSpot = INITIAL_BALL_SPOT): BallModel {
   return {
-    position: { x: 0, y: BALL_CARRY_ATTACHMENT.y, z: LINE_OF_SCRIMMAGE_Z },
+    position: { x: initialSpot.x, y: BALL_CARRY_ATTACHMENT.y, z: initialSpot.z },
     possession: { kind: 'none' },
   };
 }
 
-export function resetBallModel(ball: BallModel): void {
+export function resetBallModel(ball: BallModel, spot: FootballSpot = INITIAL_BALL_SPOT): void {
   ball.possession = { kind: 'none' };
-  ball.position.x = 0;
+  ball.position.x = spot.x;
   ball.position.y = BALL_CARRY_ATTACHMENT.y;
-  ball.position.z = LINE_OF_SCRIMMAGE_Z;
+  ball.position.z = spot.z;
 }
 
 export function giveBallToPlayer(ball: BallModel, player: PlayerModel): void {

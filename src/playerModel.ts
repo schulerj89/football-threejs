@@ -1,4 +1,5 @@
-import { LINE_OF_SCRIMMAGE_Z } from './field';
+import { INITIAL_BALL_SPOT } from './field';
+import type { FootballSpot } from './fieldScale';
 
 export interface Vector2 {
   x: number;
@@ -29,10 +30,10 @@ export const PLAYER_MOVEMENT_CONFIG = {
   initialFacingRadians: 0,
 } as const;
 
-export function createPlayerModel(): PlayerModel {
+export function createPlayerModel(initialSpot: FootballSpot = INITIAL_BALL_SPOT): PlayerModel {
   const player = {
     id: PLACEHOLDER_PLAYER_ID,
-    position: { x: 0, z: LINE_OF_SCRIMMAGE_Z },
+    position: { x: initialSpot.x, z: initialSpot.z },
     velocity: { x: 0, z: 0 },
     facingRadians: PLAYER_MOVEMENT_CONFIG.initialFacingRadians,
   };
@@ -40,9 +41,12 @@ export function createPlayerModel(): PlayerModel {
   return player;
 }
 
-export function resetPlayerModel(player: PlayerModel): void {
-  player.position.x = 0;
-  player.position.z = LINE_OF_SCRIMMAGE_Z;
+export function resetPlayerModel(
+  player: PlayerModel,
+  spot: FootballSpot = INITIAL_BALL_SPOT,
+): void {
+  player.position.x = spot.x;
+  player.position.z = spot.z;
   player.velocity.x = 0;
   player.velocity.z = 0;
   player.facingRadians = PLAYER_MOVEMENT_CONFIG.initialFacingRadians;

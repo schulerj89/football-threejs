@@ -1,3 +1,5 @@
+import { OPPOSING_GOAL_LINE_Z } from './field';
+import type { FootballSpot } from './fieldScale';
 import type { PlayerModel, Vector2 } from './playerModel';
 
 export interface DefenderModel {
@@ -19,23 +21,26 @@ export const DEFENDER_COLLISION_RADII = {
 
 export const DEFENDER_CONFIG = {
   initialPosition: { x: 0, z: 18 },
+  initialDepthFromBall: 33,
   initialFacingRadians: Math.PI,
   pursuitSpeed: 12,
   steeringRateRadiansPerSecond: 2.4,
   tackleRadius: DEFENDER_COLLISION_RADII.ballCarrier + DEFENDER_COLLISION_RADII.defender,
 } as const;
 
-export function createDefenderModel(): DefenderModel {
+export function createDefenderModel(ballSpot?: FootballSpot): DefenderModel {
   return {
-    position: { ...DEFENDER_CONFIG.initialPosition },
+    position: getDefenderResetPosition(ballSpot),
     velocity: { x: 0, z: 0 },
     facingRadians: DEFENDER_CONFIG.initialFacingRadians,
   };
 }
 
-export function resetDefenderModel(defender: DefenderModel): void {
-  defender.position.x = DEFENDER_CONFIG.initialPosition.x;
-  defender.position.z = DEFENDER_CONFIG.initialPosition.z;
+export function resetDefenderModel(defender: DefenderModel, ballSpot?: FootballSpot): void {
+  const resetPosition = getDefenderResetPosition(ballSpot);
+
+  defender.position.x = resetPosition.x;
+  defender.position.z = resetPosition.z;
   defender.velocity.x = 0;
   defender.velocity.z = 0;
   defender.facingRadians = DEFENDER_CONFIG.initialFacingRadians;
@@ -79,6 +84,17 @@ export function snapshotDefenderModel(defender: DefenderModel): DefenderSnapshot
     position: { ...defender.position },
     velocity: { ...defender.velocity },
     facingRadians: defender.facingRadians,
+  };
+}
+
+function getDefenderResetPosition(ballSpot?: FootballSpot): Vector2 {
+  if (!ballSpot) {
+    return { ...DEFENDER_CONFIG.initialPosition };
+  }
+
+  return {
+    x: DEFENDER_CONFIG.initialPosition.x,
+    z: Math.min(OPPOSING_GOAL_LINE_Z - 2, ballSpot.z + DEFENDER_CONFIG.initialDepthFromBall),
   };
 }
 

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-06-21
+
+### Added
+
+- Added structured gameplay play results with start spot, ending spot, reason, yards gained, and scoring team data.
+- Added centralized world-unit to football-yard conversion for yardage calculations.
+- Added dead-ball spotting for tackle and out-of-bounds outcomes, with the next snap resetting at the recorded spot.
+- Added out-of-bounds play ending, signed yardage HUD display, and moving line-of-scrimmage visual sync.
+- Added deterministic tests for positive gain, negative gain, out-of-bounds, touchdown, and next-play spot resets.
+- Expanded browser smoke coverage for out-of-bounds play ending and sideline-spot reset.
+
 ## [0.5.0] - 2026-06-20
 
 ### Added

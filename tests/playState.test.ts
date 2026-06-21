@@ -6,12 +6,14 @@ import {
   isTackleContact,
   updateDefenderPursuit,
 } from '../src/defenderModel';
-import { LINE_OF_SCRIMMAGE_Z } from '../src/field';
+import { INITIAL_BALL_SPOT, LINE_OF_SCRIMMAGE_Z, PLAYABLE_FIELD_BOUNDS } from '../src/field';
+import { calculateYardsGained } from '../src/fieldScale';
 import { PLAYER_MOVEMENT_CONFIG } from '../src/playerModel';
 import {
   GAMEPLAY_CONFIG,
   createGameplayModel,
   hasCrossedOpposingGoalLine,
+  hasCrossedSideline,
   markPlayDead,
   resetPlay,
   snapshotGameplayModel,
@@ -26,9 +28,13 @@ describe('play state transitions', () => {
     expect(gameplay.playState).toBe('preSnap');
     expect(gameplay.player.position).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z });
     expect(gameplay.player.velocity).toEqual({ x: 0, z: 0 });
+    expect(gameplay.activePlayStartSpot).toBeNull();
+    expect(gameplay.currentBallSpot).toEqual(INITIAL_BALL_SPOT);
+    expect(gameplay.nextBallSpot).toEqual(INITIAL_BALL_SPOT);
     expect(gameplay.defender.position).toEqual(DEFENDER_CONFIG.initialPosition);
     expect(gameplay.defender.velocity).toEqual({ x: 0, z: 0 });
     expect(gameplay.ball.possession).toEqual({ kind: 'none' });
+    expect(gameplay.lastPlayResult).toBeNull();
   });
 
   it('starts a valid play from preSnap and gives the player possession', () => {
@@ -37,6 +43,7 @@ describe('play state transitions', () => {
     expect(startPlay(gameplay)).toBe(true);
 
     expect(gameplay.playState).toBe('live');
+    expect(gameplay.activePlayStartSpot).toEqual(INITIAL_BALL_SPOT);
     expect(gameplay.ball.possession).toEqual({
       kind: 'player',
       playerId: gameplay.player.id,
@@ -78,6 +85,9 @@ describe('play state transitions', () => {
         position: { x: 0, z: LINE_OF_SCRIMMAGE_Z },
         velocity: { x: 0, z: 0 },
       },
+      currentBallSpot: INITIAL_BALL_SPOT,
+      lastPlayResult: null,
+      nextBallSpot: INITIAL_BALL_SPOT,
       playState: 'preSnap',
     });
 
@@ -111,7 +121,19 @@ describe('play state transitions', () => {
     updateGameplayModel(gameplay, 0);
 
     expect(gameplay.playState).toBe('dead');
-    expect(gameplay.lastPlayResult).toBe('touchdown');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: { z: GAMEPLAY_CONFIG.opposingGoalLineZ },
+      reason: 'touchdown',
+      scoringTeam: 'offense',
+      startingBallSpot: INITIAL_BALL_SPOT,
+      type: 'touchdown',
+    });
+    expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(
+      calculateYardsGained(INITIAL_BALL_SPOT, {
+        x: gameplay.player.position.x,
+        z: GAMEPLAY_CONFIG.opposingGoalLineZ,
+      }),
+    );
     expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
     expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.touchdownResetDelaySeconds);
   });
@@ -126,7 +148,7 @@ describe('play state transitions', () => {
     updateGameplayModel(gameplay, 0);
 
     expect(gameplay.playState).toBe('live');
-    expect(gameplay.lastPlayResult).toBe('none');
+    expect(gameplay.lastPlayResult).toBeNull();
     expect(gameplay.score).toBe(0);
   });
 
@@ -144,6 +166,89 @@ describe('play state transitions', () => {
     expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
   });
 
+  it('records positive yards and resets the next play at a tackle spot', () => {
+    const gameplay = createGameplayModel();
+    startPlay(gameplay);
+    gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z + 5;
+    gameplay.defender.position.x = gameplay.player.position.x;
+    gameplay.defender.position.z = gameplay.player.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: { x: 0, z: LINE_OF_SCRIMMAGE_Z + 5 },
+      reason: 'tackle',
+      startingBallSpot: INITIAL_BALL_SPOT,
+      type: 'tackle',
+    });
+    expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(5);
+    expect(gameplay.nextBallSpot).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z + 5 });
+
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.tackleResetDelaySeconds);
+
+    expect(gameplay.currentBallSpot).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z + 5 });
+    expect(gameplay.player.position).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z + 5 });
+    expect(gameplay.ball.position).toMatchObject({
+      x: 0,
+      y: BALL_CARRY_ATTACHMENT.y,
+      z: LINE_OF_SCRIMMAGE_Z + 5,
+    });
+    expect(gameplay.lastPlayResult).toBeNull();
+  });
+
+  it('records negative yards when the carrier is tackled behind the starting spot', () => {
+    const gameplay = createGameplayModel();
+    startPlay(gameplay);
+    gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z - 4;
+    gameplay.defender.position.x = gameplay.player.position.x;
+    gameplay.defender.position.z = gameplay.player.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: { x: 0, z: LINE_OF_SCRIMMAGE_Z - 4 },
+      reason: 'tackle',
+      startingBallSpot: INITIAL_BALL_SPOT,
+      type: 'tackle',
+    });
+    expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(-4);
+    expect(gameplay.nextBallSpot).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z - 4 });
+  });
+
+  it('ends live play out of bounds and spots the ball at the sideline', () => {
+    const gameplay = createGameplayModel();
+    const expectedSpot = {
+      x: PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.halfWidth,
+      z: LINE_OF_SCRIMMAGE_Z + 6,
+    };
+
+    startPlay(gameplay);
+    gameplay.player.position.x = PLAYABLE_FIELD_BOUNDS.maxX;
+    gameplay.player.position.z = expectedSpot.z;
+
+    expect(hasCrossedSideline(gameplay.player)).toBe(true);
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: expectedSpot,
+      reason: 'outOfBounds',
+      scoringTeam: null,
+      startingBallSpot: INITIAL_BALL_SPOT,
+      type: 'outOfBounds',
+    });
+    expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(6);
+    expect(gameplay.nextBallSpot).toEqual(expectedSpot);
+    expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds);
+
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds);
+
+    expect(gameplay.currentBallSpot).toEqual(expectedSpot);
+    expect(gameplay.player.position).toEqual(expectedSpot);
+  });
+
   it('auto-resets after the configured touchdown delay without clearing score', () => {
     const gameplay = createGameplayModel();
     startPlay(gameplay);
@@ -155,8 +260,10 @@ describe('play state transitions', () => {
 
     expect(snapshotGameplayModel(gameplay)).toMatchObject({
       ball: { possession: { kind: 'none' } },
+      currentBallSpot: INITIAL_BALL_SPOT,
       defender: { position: DEFENDER_CONFIG.initialPosition, velocity: { x: 0, z: 0 } },
-      lastPlayResult: 'none',
+      lastPlayResult: null,
+      nextBallSpot: INITIAL_BALL_SPOT,
       player: { position: { x: 0, z: LINE_OF_SCRIMMAGE_Z }, velocity: { x: 0, z: 0 } },
       playState: 'preSnap',
       score: GAMEPLAY_CONFIG.touchdownPoints,
@@ -216,7 +323,14 @@ describe('play state transitions', () => {
     updateGameplayModel(gameplay, 0);
 
     expect(gameplay.playState).toBe('dead');
-    expect(gameplay.lastPlayResult).toBe('tackle');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: INITIAL_BALL_SPOT,
+      reason: 'tackle',
+      scoringTeam: null,
+      startingBallSpot: INITIAL_BALL_SPOT,
+      type: 'tackle',
+      yardsGained: 0,
+    });
     expect(gameplay.score).toBe(0);
     expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.tackleResetDelaySeconds);
 
@@ -224,7 +338,7 @@ describe('play state transitions', () => {
 
     expect(snapshotGameplayModel(gameplay)).toMatchObject({
       defender: { position: DEFENDER_CONFIG.initialPosition, velocity: { x: 0, z: 0 } },
-      lastPlayResult: 'none',
+      lastPlayResult: null,
       playState: 'preSnap',
       score: 0,
     });

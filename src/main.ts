@@ -3,7 +3,12 @@ import './style.css';
 import { createBallVisual, syncBallVisual } from './ballVisual';
 import { createDefenderVisual, syncDefenderVisual } from './defenderVisual';
 import { DebugOverlay } from './debugOverlay';
-import { PLAYABLE_FIELD_BOUNDS, WORLD_SCALE, createFootballField } from './field';
+import {
+  PLAYABLE_FIELD_BOUNDS,
+  WORLD_SCALE,
+  createFootballField,
+  syncFootballFieldLineOfScrimmage,
+} from './field';
 import { createGameplayHud, syncGameplayHud } from './gameplayHud';
 import { KeyboardMovementInput, KeyboardPlayControls } from './input';
 import {
@@ -104,13 +109,16 @@ function renderFrame(delta: number): void {
   updatePlayControls();
 
   if (gameplayModel.playState === 'live') {
-    updatePlayerSimulation(playerModel, keyboardInput.getMovement(), delta, PLAYABLE_FIELD_BOUNDS);
+    updatePlayerSimulation(playerModel, keyboardInput.getMovement(), delta, PLAYABLE_FIELD_BOUNDS, {
+      clampSidelines: false,
+    });
   } else {
     playerModel.velocity.x = 0;
     playerModel.velocity.z = 0;
   }
 
   updateGameplayModel(gameplayModel, delta);
+  syncFootballFieldLineOfScrimmage(field, gameplayModel.currentBallSpot);
   syncDefenderVisual(defenderVisual, gameplayModel.defender);
   syncPlayerVisual(playerVisual, playerModel);
   syncBallVisual(ballVisual, gameplayModel.ball);

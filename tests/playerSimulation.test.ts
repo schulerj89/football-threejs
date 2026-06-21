@@ -85,6 +85,19 @@ describe('player movement simulation', () => {
     expect(minCornerPlayer.position.x).toBeCloseTo(minCenterX);
     expect(minCornerPlayer.position.z).toBeCloseTo(minCenterZ);
   });
+
+  it('can allow sideline crossing for gameplay out-of-bounds detection', () => {
+    const player = createPlayerModel();
+    player.position.x = PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.halfWidth - 0.1;
+
+    updatePlayerSimulation(player, { x: 1, z: 0 }, 0.1, PLAYABLE_FIELD_BOUNDS, {
+      clampSidelines: false,
+    });
+
+    expect(player.position.x + PLAYER_MOVEMENT_CONFIG.halfWidth).toBeGreaterThan(
+      PLAYABLE_FIELD_BOUNDS.maxX,
+    );
+  });
 });
 
 function stepForSeconds(player: PlayerModel, input: Vector2, seconds: number): void {

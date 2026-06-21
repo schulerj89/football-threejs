@@ -15,7 +15,12 @@ import {
   type DefenderModel,
   type DefenderSnapshot,
 } from './defenderModel';
-import { OPPOSING_GOAL_LINE_Z } from './field';
+import { INITIAL_BALL_SPOT, OPPOSING_GOAL_LINE_Z, PLAYABLE_FIELD_BOUNDS } from './field';
+import {
+  calculateYardsGained,
+  cloneFootballSpot,
+  type FootballSpot,
+} from './fieldScale';
 import {
   PLAYER_MOVEMENT_CONFIG,
   createPlayerModel,
@@ -26,19 +31,34 @@ import {
 } from './playerModel';
 
 export type PlayState = 'preSnap' | 'live' | 'dead';
-export type PlayResult = 'none' | 'tackle' | 'touchdown';
+export type PlayResultType = 'tackle' | 'outOfBounds' | 'touchdown';
+export type PlayEndReason = PlayResultType;
+export type ScoringTeam = 'offense' | null;
+
+export interface PlayResult {
+  endingBallSpot: FootballSpot;
+  reason: PlayEndReason;
+  scoringTeam: ScoringTeam;
+  startingBallSpot: FootballSpot;
+  type: PlayResultType;
+  yardsGained: number;
+}
 
 export const GAMEPLAY_CONFIG = {
   touchdownPoints: 6,
   touchdownResetDelaySeconds: 1.25,
   opposingGoalLineZ: OPPOSING_GOAL_LINE_Z,
+  outOfBoundsResetDelaySeconds: 1.25,
   tackleResetDelaySeconds: 1.25,
 } as const;
 
 export interface GameplayModel {
+  activePlayStartSpot: FootballSpot | null;
   ball: BallModel;
+  currentBallSpot: FootballSpot;
   defender: DefenderModel;
-  lastPlayResult: PlayResult;
+  lastPlayResult: PlayResult | null;
+  nextBallSpot: FootballSpot;
   player: PlayerModel;
   playState: PlayState;
   playResetTimerSeconds: number | null;
@@ -50,19 +70,27 @@ export interface GameplaySnapshot {
     possession: BallModel['possession'];
     position: BallModel['position'];
   };
+  activePlayStartSpot: FootballSpot | null;
+  currentBallSpot: FootballSpot;
   defender: DefenderSnapshot;
-  lastPlayResult: PlayResult;
+  lastPlayResult: PlayResult | null;
+  nextBallSpot: FootballSpot;
   player: PlayerSnapshot;
   playState: PlayState;
   score: number;
 }
 
 export function createGameplayModel(): GameplayModel {
+  const initialSpot = cloneFootballSpot(INITIAL_BALL_SPOT);
+
   return {
-    ball: createBallModel(),
-    defender: createDefenderModel(),
-    lastPlayResult: 'none',
-    player: createPlayerModel(),
+    activePlayStartSpot: null,
+    ball: createBallModel(initialSpot),
+    currentBallSpot: cloneFootballSpot(initialSpot),
+    defender: createDefenderModel(initialSpot),
+    lastPlayResult: null,
+    nextBallSpot: cloneFootballSpot(initialSpot),
+    player: createPlayerModel(initialSpot),
     playState: 'preSnap',
     playResetTimerSeconds: null,
     score: 0,
@@ -74,7 +102,9 @@ export function startPlay(gameplay: GameplayModel): boolean {
     return false;
   }
 
-  gameplay.lastPlayResult = 'none';
+  gameplay.activePlayStartSpot = cloneFootballSpot(gameplay.currentBallSpot);
+  gameplay.lastPlayResult = null;
+  gameplay.nextBallSpot = cloneFootballSpot(gameplay.currentBallSpot);
   gameplay.playResetTimerSeconds = null;
   gameplay.playState = 'live';
   giveBallToPlayer(gameplay.ball, gameplay.player);
@@ -91,12 +121,17 @@ export function markPlayDead(gameplay: GameplayModel): boolean {
 }
 
 export function resetPlay(gameplay: GameplayModel): void {
-  gameplay.lastPlayResult = 'none';
+  const resetSpot = cloneFootballSpot(gameplay.nextBallSpot);
+
+  gameplay.activePlayStartSpot = null;
+  gameplay.currentBallSpot = cloneFootballSpot(resetSpot);
+  gameplay.lastPlayResult = null;
+  gameplay.nextBallSpot = cloneFootballSpot(resetSpot);
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
-  resetPlayerModel(gameplay.player);
-  resetDefenderModel(gameplay.defender);
-  resetBallModel(gameplay.ball);
+  resetPlayerModel(gameplay.player, resetSpot);
+  resetDefenderModel(gameplay.defender, resetSpot);
+  resetBallModel(gameplay.ball, resetSpot);
 }
 
 export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): void {
@@ -106,6 +141,10 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
 
     if (gameplay.playState === 'live') {
       detectTouchdown(gameplay);
+    }
+
+    if (gameplay.playState === 'live') {
+      detectOutOfBounds(gameplay);
     }
   } else if (gameplay.playResetTimerSeconds !== null) {
     gameplay.playResetTimerSeconds -= Math.max(0, deltaSeconds);
@@ -120,12 +159,17 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
 
 export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot {
   return {
+    activePlayStartSpot: gameplay.activePlayStartSpot
+      ? cloneFootballSpot(gameplay.activePlayStartSpot)
+      : null,
     ball: {
       possession: { ...gameplay.ball.possession },
       position: { ...gameplay.ball.position },
     },
+    currentBallSpot: cloneFootballSpot(gameplay.currentBallSpot),
     defender: snapshotDefenderModel(gameplay.defender),
-    lastPlayResult: gameplay.lastPlayResult,
+    lastPlayResult: clonePlayResult(gameplay.lastPlayResult),
+    nextBallSpot: cloneFootballSpot(gameplay.nextBallSpot),
     player: snapshotPlayerModel(gameplay.player),
     playState: gameplay.playState,
     score: gameplay.score,
@@ -134,6 +178,13 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
 
 export function hasCrossedOpposingGoalLine(player: PlayerModel): boolean {
   return player.position.z + PLAYER_MOVEMENT_CONFIG.halfDepth >= GAMEPLAY_CONFIG.opposingGoalLineZ;
+}
+
+export function hasCrossedSideline(player: PlayerModel): boolean {
+  return (
+    player.position.x - PLAYER_MOVEMENT_CONFIG.halfWidth < PLAYABLE_FIELD_BOUNDS.minX ||
+    player.position.x + PLAYER_MOVEMENT_CONFIG.halfWidth > PLAYABLE_FIELD_BOUNDS.maxX
+  );
 }
 
 function detectTouchdown(gameplay: GameplayModel): void {
@@ -145,11 +196,20 @@ function detectTouchdown(gameplay: GameplayModel): void {
     return;
   }
 
+  const endingSpot = {
+    x: gameplay.player.position.x,
+    z: GAMEPLAY_CONFIG.opposingGoalLineZ,
+  };
+
   gameplay.score += GAMEPLAY_CONFIG.touchdownPoints;
-  gameplay.lastPlayResult = 'touchdown';
-  gameplay.playState = 'dead';
-  gameplay.playResetTimerSeconds = GAMEPLAY_CONFIG.touchdownResetDelaySeconds;
-  stopLiveActors(gameplay);
+  recordPlayResult(
+    gameplay,
+    'touchdown',
+    endingSpot,
+    cloneFootballSpot(INITIAL_BALL_SPOT),
+    GAMEPLAY_CONFIG.touchdownResetDelaySeconds,
+    'offense',
+  );
 }
 
 function detectTackle(gameplay: GameplayModel): void {
@@ -161,9 +221,60 @@ function detectTackle(gameplay: GameplayModel): void {
     return;
   }
 
-  gameplay.lastPlayResult = 'tackle';
+  const endingSpot = getCarrierBallSpot(gameplay.player);
+
+  recordPlayResult(
+    gameplay,
+    'tackle',
+    endingSpot,
+    endingSpot,
+    GAMEPLAY_CONFIG.tackleResetDelaySeconds,
+    null,
+  );
+}
+
+function detectOutOfBounds(gameplay: GameplayModel): void {
+  if (
+    gameplay.ball.possession.kind !== 'player' ||
+    gameplay.ball.possession.playerId !== gameplay.player.id ||
+    !hasCrossedSideline(gameplay.player)
+  ) {
+    return;
+  }
+
+  const endingSpot = getOutOfBoundsBallSpot(gameplay.player);
+
+  recordPlayResult(
+    gameplay,
+    'outOfBounds',
+    endingSpot,
+    endingSpot,
+    GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds,
+    null,
+  );
+}
+
+function recordPlayResult(
+  gameplay: GameplayModel,
+  type: PlayResultType,
+  endingSpot: FootballSpot,
+  nextBallSpot: FootballSpot,
+  resetDelaySeconds: number,
+  scoringTeam: ScoringTeam,
+): void {
+  const startingSpot = gameplay.activePlayStartSpot ?? gameplay.currentBallSpot;
+
+  gameplay.lastPlayResult = {
+    endingBallSpot: cloneFootballSpot(endingSpot),
+    reason: type,
+    scoringTeam,
+    startingBallSpot: cloneFootballSpot(startingSpot),
+    type,
+    yardsGained: calculateYardsGained(startingSpot, endingSpot),
+  };
+  gameplay.nextBallSpot = cloneFootballSpot(nextBallSpot);
   gameplay.playState = 'dead';
-  gameplay.playResetTimerSeconds = GAMEPLAY_CONFIG.tackleResetDelaySeconds;
+  gameplay.playResetTimerSeconds = resetDelaySeconds;
   stopLiveActors(gameplay);
 }
 
@@ -171,4 +282,40 @@ function stopLiveActors(gameplay: GameplayModel): void {
   gameplay.player.velocity.x = 0;
   gameplay.player.velocity.z = 0;
   stopDefender(gameplay.defender);
+}
+
+function getCarrierBallSpot(player: PlayerModel): FootballSpot {
+  return {
+    x: player.position.x,
+    z: player.position.z,
+  };
+}
+
+function getOutOfBoundsBallSpot(player: PlayerModel): FootballSpot {
+  const minCenterX = PLAYABLE_FIELD_BOUNDS.minX + PLAYER_MOVEMENT_CONFIG.halfWidth;
+  const maxCenterX = PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.halfWidth;
+
+  return {
+    x: clamp(player.position.x, minCenterX, maxCenterX),
+    z: player.position.z,
+  };
+}
+
+function clonePlayResult(playResult: PlayResult | null): PlayResult | null {
+  if (!playResult) {
+    return null;
+  }
+
+  return {
+    endingBallSpot: cloneFootballSpot(playResult.endingBallSpot),
+    reason: playResult.reason,
+    scoringTeam: playResult.scoringTeam,
+    startingBallSpot: cloneFootballSpot(playResult.startingBallSpot),
+    type: playResult.type,
+    yardsGained: playResult.yardsGained,
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

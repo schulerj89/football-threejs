@@ -48,6 +48,7 @@ canvas {
 }
 
 .tackle-message,
+.out-of-bounds-message,
 .touchdown-message {
   position: absolute;
   left: 50%;
@@ -70,7 +71,29 @@ canvas {
   border-color: rgba(243, 245, 246, 0.4);
 }
 
+.out-of-bounds-message {
+  color: #f3f5f6;
+  border-color: rgba(243, 245, 246, 0.4);
+}
+
+.result-message {
+  position: absolute;
+  left: 50%;
+  top: calc(18% + 62px);
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(8, 12, 14, 0.72);
+  color: #f3f5f6;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: center;
+}
+
 .tackle-message[hidden],
+.out-of-bounds-message[hidden],
+.result-message[hidden],
 .touchdown-message[hidden] {
   display: none;
 }

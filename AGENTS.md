@@ -2,7 +2,7 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a one-defender rushing drill with a controllable primitive ball carrier, one simple pursuing defender, touchdown scoring, tackle outcomes, and delayed reset.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a one-defender rushing drill with a controllable primitive ball carrier, one simple pursuing defender, touchdown scoring, tackle and out-of-bounds outcomes, dead-ball spotting, signed yardage, moving line of scrimmage, and delayed reset.
 
 ## Current Non-Goals
 
@@ -22,10 +22,13 @@ This repository is a low-poly 3D American football game prototype built with Thr
 - No animation
 - No game clock
 - No downs
+- No first downs
+- No possession changes
+- No additional players
 - No celebration animation
 - No stadium presentation
 - No center or snap animation
-- No game rules
+- No full game rules
 - No menus
 - No physics engine
 - No collision with other players
@@ -50,7 +53,10 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Keep input, simulation, and visual synchronization in separate modules.
 - The gameplay model owns player position, velocity, and facing; Three.js meshes only display that state.
 - The gameplay model owns play state and ball possession; the ball mesh is never authoritative.
+- The gameplay model owns play results, start spots, dead-ball spots, yards gained, and scoring team data; UI and meshes only display that state.
+- Keep conversion between world units and football yards centralized.
 - Goal-line detection and scoring must use gameplay coordinates, not mesh positions.
+- Sideline and dead-ball spotting must use gameplay coordinates, not mesh positions.
 - Defender AI must use gameplay positions and stay deliberately simple.
 - Tackling must use explicit configurable collision radii.
 - Preserve the fixed three-quarter gameplay camera unless the user asks for a camera system.
@@ -61,10 +67,10 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- The player can score by avoiding the defender.
-- The defender can pursue the ball carrier and end the play through contact.
-- Both touchdown and tackle outcomes show simple HUD messages.
-- Both outcomes reset reliably after a configured delay.
-- Pursuit direction, tackle detection, and play-state changes have deterministic tests.
+- A live play records its starting ball spot and completed play result as gameplay data.
+- Tackle and out-of-bounds plays record the dead-ball spot, signed yards gained or lost, and reset the next snap at that spot.
+- Touchdowns keep the existing score, message, and reset behavior.
+- The visible line of scrimmage follows the current gameplay ball spot.
+- Positive gain, negative gain, out-of-bounds, and touchdown outcomes have deterministic tests.
 - Existing tests pass.
-- The browser smoke test proves both score and tackle outcomes work.
+- The browser smoke test proves score, tackle, and out-of-bounds outcomes work.
