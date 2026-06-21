@@ -52,7 +52,7 @@ describe('field geometry integration', () => {
     expect(independentStaticHashesOrYardLines).toEqual([]);
     expect(field.group.getObjectByName('line-of-scrimmage')).toBeInstanceOf(THREE.Mesh);
     expect(field.group.getObjectByName('first-down-line')).toBeInstanceOf(THREE.Mesh);
-    expect(field.group.getObjectByName('play-direction-marker')).toBeInstanceOf(THREE.Group);
+    expect(field.group.getObjectByName('play-direction-marker')).toBeUndefined();
   });
 
   it('adds presentation-only field elements without changing gameplay bounds', () => {

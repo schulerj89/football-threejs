@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.47.1] - 2026-06-21
+
+### Changed
+
+- Centered normal gameplay camera focus on the authoritative football position for pre-snap, live possession, pass-flight, dead-ball, and reset phases while preserving cinematic overrides and camera smoothing.
+- Removed the yellow play-direction arrow from the field while keeping the line of scrimmage, first-down line, route art, yard lines, bounds, and field-audit behavior intact.
+
+### Tests
+
+- Added projection-based camera coverage that validates the ball remains near normalized-device-coordinate center during live gameplay and pass flight.
+- Added field coverage proving the normal field contains no play-direction arrow or direction-marker mesh.
+
 ## [0.47.0] - 2026-06-21
 
 ### Added

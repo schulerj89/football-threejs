@@ -188,6 +188,9 @@ function resolvePreSnapFocus(snapshot: GameplaySnapshot, isResettingLineOfScrimm
   const focusPosition = requireFallbackFocus(snapshot.nextSnapSpot, snapshot.currentBallSpot);
 
   return createCameraFocusResult({
+    cameraDistanceBehindFocus: GAMEPLAY_CAMERA_CONFIG.offensePerspective.preSnapDistanceBehindFocus,
+    cameraFieldOfView: GAMEPLAY_CAMERA_CONFIG.offensePerspective.preSnapFieldOfView,
+    cameraHeight: GAMEPLAY_CAMERA_CONFIG.offensePerspective.preSnapHeight,
     focusPosition,
     focusSource: isResettingLineOfScrimmage ? 'nextSnapSpot' : 'snapBall',
     phase: isResettingLineOfScrimmage ? 'resetLineOfScrimmage' : 'preSnap',
@@ -196,6 +199,9 @@ function resolvePreSnapFocus(snapshot: GameplaySnapshot, isResettingLineOfScrimm
 }
 
 interface CameraFocusResultInput {
+  cameraDistanceBehindFocus?: number;
+  cameraFieldOfView?: number;
+  cameraHeight?: number;
   focusPosition: { x: number; y: number; z: number };
   focusSource: CameraFocusResult['focusSource'];
   framingTargetPosition?: { x: number; y: number; z: number };

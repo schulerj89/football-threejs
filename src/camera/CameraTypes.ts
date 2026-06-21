@@ -169,6 +169,9 @@ export interface PresentationCameraUpdateOptions {
 }
 
 export interface GameplayCameraFocus {
+  cameraDistanceBehindFocus?: number;
+  cameraFieldOfView?: number;
+  cameraHeight?: number;
   focusPosition: { x: number; y: number; z: number };
   focusSource: GameplayCameraFocusSource;
   focus: { x: number; y: number; z: number };
@@ -188,6 +191,9 @@ export interface GameplayFocusRequest {
 }
 
 export interface CameraFocusResult {
+  cameraDistanceBehindFocus?: number;
+  cameraFieldOfView?: number;
+  cameraHeight?: number;
   focusPosition: { x: number; y: number; z: number };
   focusSource: GameplayCameraFocusSource;
   framingTargetPosition?: { x: number; y: number; z: number };

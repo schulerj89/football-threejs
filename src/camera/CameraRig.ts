@@ -61,10 +61,13 @@ export class GameplayCameraRig {
     const config = GAMEPLAY_CAMERA_CONFIG.offensePerspective;
     const focus = toVector3(framing.focus);
     const target = toVector3(framing.target);
+    const distanceBehindFocus = framing.cameraDistanceBehindFocus ?? config.distanceBehindFocus;
+    const cameraHeight = framing.cameraHeight ?? config.height;
+    const cameraFieldOfView = framing.cameraFieldOfView ?? config.fieldOfView;
     const desiredCameraPosition = new THREE.Vector3(
-      focus.x - playDirection.x * config.distanceBehindFocus,
-      config.height,
-      focus.z - playDirection.z * config.distanceBehindFocus,
+      focus.x - playDirection.x * distanceBehindFocus,
+      cameraHeight,
+      focus.z - playDirection.z * distanceBehindFocus,
     );
     const positionAlpha = isInitialized
       ? calculateSmoothingAlpha(config.positionSmoothing, deltaSeconds)
@@ -73,6 +76,8 @@ export class GameplayCameraRig {
       ? calculateSmoothingAlpha(config.targetSmoothing, deltaSeconds)
       : 1;
 
+    this.perspectiveCamera.fov = cameraFieldOfView;
+    this.perspectiveCamera.updateProjectionMatrix();
     this.perspectiveCamera.position.lerp(desiredCameraPosition, positionAlpha);
     this.smoothedFocus.lerp(focus, targetAlpha);
     this.smoothedTarget.lerp(target, targetAlpha);
