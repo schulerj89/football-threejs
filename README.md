@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, two passing plays, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, final-score game over, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, two passing plays, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
 
 ## World Scale
 
@@ -38,6 +38,8 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Press `F` during a passing play to throw once toward the selected eligible receiver.
 - Press `R` to reset the play to pre-snap.
 - Press `Enter` from game over to restart the two-minute score attack.
+- Press `C` in development or with `?debug=1` to toggle between the tactical orthographic camera and the behind-the-offense perspective camera.
+- Use `?camera=tactical` or `?camera=offense` to choose the starting camera mode.
 - Play selection is locked while a play is live; reset preserves the selected play.
 - The HUD shows the selected target for passing plays.
 - The score-attack clock starts on the first snap, runs continuously after that, and clamps at `0:00`.
@@ -63,7 +65,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 
 ## Debug Overlay
 
-Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, and triangle count.
+Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, triangle count, camera mode, camera state, focus position, and camera position.
 
 ## Current Non-Goals
 
@@ -115,6 +117,8 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No center or snap animation
 - No full game rules
 - No menus
+- No freely rotating camera
+- No camera-relative controls
 - No force-based physics
 - No ragdoll physics
 - No unrelated refactoring

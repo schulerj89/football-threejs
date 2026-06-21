@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import './style.css';
 import { createBallVisual, syncBallVisual } from './ballVisual';
+import {
+  GameplayCameraController,
+  resolveGameplayCameraMode,
+  type GameplayCameraDebugSnapshot,
+} from './camera/GameplayCameraController';
 import { DebugOverlay } from './debugOverlay';
 import {
   PLAYABLE_FIELD_BOUNDS,
@@ -35,6 +40,7 @@ import { createPlaceholderPlayerVisual, syncPlayerVisual } from './playerVisual'
 declare global {
   interface Window {
     __footballDebug?: {
+      getCameraSnapshot: () => GameplayCameraDebugSnapshot;
       getGameplaySnapshot: () => GameplaySnapshot;
       getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
       getPlayerSnapshot: () => PlayerSnapshot;
@@ -68,10 +74,12 @@ const ballVisual = createBallVisual();
 syncBallVisual(ballVisual, gameplayModel.ball);
 scene.add(ballVisual);
 
-const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
-positionGameplayCamera(camera);
-
 const searchParams = new URLSearchParams(window.location.search);
+const cameraController = new GameplayCameraController({
+  height: window.innerHeight,
+  initialMode: resolveGameplayCameraMode(searchParams.get('camera')),
+  width: window.innerWidth,
+});
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
   preserveDrawingBuffer: searchParams.has('readback'),
@@ -97,10 +105,12 @@ let hasRenderedFirstFrame = false;
 
 if (import.meta.env.DEV || searchParams.has('debug')) {
   window.__footballDebug = {
+    getCameraSnapshot: () => cameraController.getDebugSnapshot(),
     getGameplaySnapshot: () => snapshotGameplayModel(gameplayModel),
     getHelmetAssetSnapshot,
     getPlayerSnapshot: () => snapshotPlayerModel(gameplayModel.player),
   };
+  window.addEventListener('keydown', handleDevelopmentCameraToggle);
 }
 
 window.addEventListener('resize', resize);
@@ -145,9 +155,11 @@ function renderFrame(delta: number): void {
     }
   }
   syncBallVisual(ballVisual, gameplayModel.ball);
-  syncGameplayHud(gameplayHud, snapshotGameplayModel(gameplayModel));
-  renderer.render(scene, camera);
-  debugOverlay.update(delta, renderer, gameplayModel.player);
+  const gameplaySnapshot = snapshotGameplayModel(gameplayModel);
+  cameraController.update(gameplaySnapshot, delta);
+  syncGameplayHud(gameplayHud, gameplaySnapshot);
+  renderer.render(scene, cameraController.camera);
+  debugOverlay.update(delta, renderer, gameplayModel.player, cameraController.getDebugSnapshot());
 
   if (!hasRenderedFirstFrame) {
     hasRenderedFirstFrame = true;
@@ -185,28 +197,22 @@ function updatePlayControls(): void {
   }
 }
 
+function handleDevelopmentCameraToggle(event: KeyboardEvent): void {
+  if (event.ctrlKey || event.metaKey || event.altKey || event.key.toLowerCase() !== 'c') {
+    return;
+  }
+
+  cameraController.toggleMode(snapshotGameplayModel(gameplayModel));
+  event.preventDefault();
+}
+
 function resize(): void {
   const width = window.innerWidth;
   const height = window.innerHeight;
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(width, height);
-  positionGameplayCamera(camera);
-}
-
-function positionGameplayCamera(activeCamera: THREE.OrthographicCamera): void {
-  const aspect = window.innerWidth / window.innerHeight;
-  const viewHeight = aspect < 0.75 ? 155 : 96;
-  const viewWidth = viewHeight * aspect;
-  const target = new THREE.Vector3(0, 0, 0);
-
-  activeCamera.left = -viewWidth / 2;
-  activeCamera.right = viewWidth / 2;
-  activeCamera.top = viewHeight / 2;
-  activeCamera.bottom = -viewHeight / 2;
-  activeCamera.position.set(18, 74, -110);
-  activeCamera.lookAt(target);
-  activeCamera.updateProjectionMatrix();
+  cameraController.resize(width, height);
 }
 
 console.info(

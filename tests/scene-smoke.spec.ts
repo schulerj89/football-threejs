@@ -99,6 +99,21 @@ interface HelmetAssetSnapshot {
   status: 'idle' | 'loading' | 'loaded' | 'error';
 }
 
+interface CameraSnapshot {
+  cameraPosition: { x: number; y: number; z: number };
+  focusPosition: { x: number; y: number; z: number };
+  mode: 'offensePerspective' | 'tacticalOrthographic';
+  state:
+    | 'carrierFollow'
+    | 'deadBall'
+    | 'gameOver'
+    | 'passFlight'
+    | 'preSnapFormation'
+    | 'resetLineOfScrimmage'
+    | 'tacticalOverview';
+  targetPosition: { x: number; y: number; z: number };
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -148,6 +163,7 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   await expect(page.locator('.debug-overlay')).toContainText('FPS');
+  await expect(page.locator('.debug-overlay')).toContainText('CAM tacticalOrthographic');
   await expectNonBlankCanvas(page);
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -159,6 +175,60 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
 
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test('selects offense perspective camera and toggles modes without resetting gameplay', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?debug=1&readback=1&camera=offense');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'offensePerspective',
+    state: 'preSnapFormation',
+  });
+  await expect(page.locator('.debug-overlay')).toContainText('CAM offensePerspective');
+  await expectNonBlankCanvas(page);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForFunction(() => {
+    const canvasElement = document.querySelector('canvas');
+    return canvasElement?.clientWidth === window.innerWidth && canvasElement.clientHeight === window.innerHeight;
+  });
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'offensePerspective',
+  });
+  await expectNonBlankCanvas(page);
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await page.keyboard.down('w');
+  await page.waitForTimeout(250);
+  await page.keyboard.up('w');
+  const beforeToggle = await getGameplaySnapshot(page);
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'offensePerspective',
+    state: 'carrierFollow',
+  });
+
+  await page.keyboard.press('c');
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'tacticalOrthographic',
+    state: 'tacticalOverview',
+  });
+  expect((await getGameplaySnapshot(page)).playState).toBe(beforeToggle.playState);
+  expect((await getGameplaySnapshot(page)).score).toBe(beforeToggle.score);
+  await expectNonBlankCanvas(page);
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.waitForFunction(() => {
+    const canvasElement = document.querySelector('canvas');
+    return canvasElement?.clientWidth === window.innerWidth && canvasElement.clientHeight === window.innerHeight;
+  });
+  await expectNonBlankCanvas(page);
+
+  await page.keyboard.press('c');
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'offensePerspective',
+  });
 });
 
 test('moves the placeholder player with WASD and arrow keys', async ({ page }) => {
@@ -437,6 +507,24 @@ test('selects Slant Flat, cycles the target, and throws to the selected receiver
     displayName: 'Flat',
     id: 'blocker-right',
   });
+});
+
+test('offense perspective tracks an in-flight pass', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1&camera=offense');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  await page.keyboard.press('4');
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    ball: { state: { kind: 'possessed' } },
+    playState: 'live',
+  });
+  await page.keyboard.press('f');
+  await expect.poll(() => getCameraSnapshot(page), { timeout: 1500 }).toMatchObject({
+    mode: 'offensePerspective',
+    state: 'passFlight',
+  });
+  await expectNonBlankCanvas(page);
 });
 
 test('rejects Quick Pass after the quarterback crosses the line of scrimmage', async ({ page }) => {
@@ -777,6 +865,24 @@ async function getGameplaySnapshot(page: Page): Promise<GameplaySnapshot> {
     }
 
     return debugApi.getGameplaySnapshot();
+  });
+}
+
+async function getCameraSnapshot(page: Page): Promise<CameraSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getCameraSnapshot: () => CameraSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getCameraSnapshot();
   });
 }
 

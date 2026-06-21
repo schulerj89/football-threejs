@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.16.0] - 2026-06-21
+
+### Added
+
+- Added `src/camera/GameplayCameraController.ts` to own gameplay camera behavior outside `main.ts`.
+- Added a selectable `offensePerspective` camera alongside the existing `tacticalOrthographic` camera.
+- Added `?camera=tactical` and `?camera=offense` URL selection plus a development/debug `C` camera toggle.
+- Added perspective camera framing for pre-snap formations, live ball carriers, in-flight passes, dead-ball spots, and reset returns to the new line of scrimmage.
+- Added configurable perspective camera field of view, height, behind-distance, look-ahead, smoothing, and field-position bounds.
+- Added camera mode/state/focus/position data to the optional debug overlay and debug snapshot API.
+- Added unit and browser smoke coverage for camera mode selection, toggling, resize behavior, and pass-flight tracking.
+
 ## [0.15.0] - 2026-06-21
 
 ### Added
