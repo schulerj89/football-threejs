@@ -11,11 +11,14 @@ import {
 
 export type PlayId = 'inside-run' | 'outside-run' | 'quick-pass';
 export type PlayKind = 'run' | 'pass';
+export type PreSnapFacingDefinition =
+  | { kind: 'playDirection' }
+  | { kind: 'againstPlayDirection' };
 
 export interface FormationPlayer {
-  facingRadians: number;
   id: string;
   offset: Vector2;
+  preSnapFacing: PreSnapFacingDefinition;
   role: PlayerRole;
   team: PlayerTeam;
 }
@@ -41,6 +44,14 @@ export interface PlayDefinition {
 
 export type RushingPlayDefinition = PlayDefinition;
 
+const OFFENSE_PRE_SNAP_FACING: PreSnapFacingDefinition = { kind: 'playDirection' };
+const DEFENSE_PRE_SNAP_FACING: PreSnapFacingDefinition = { kind: 'againstPlayDirection' };
+
+export const PRE_SNAP_FACING_RADIANS = {
+  againstPlayDirection: Math.PI,
+  playDirection: 0,
+} as const;
+
 export const PLAYS: PlayDefinition[] = [
   {
     ballCarrierRole: 'runner',
@@ -51,44 +62,44 @@ export const PLAYS: PlayDefinition[] = [
     displayName: 'Inside Run',
     formation: [
       {
-        facingRadians: 0,
         id: 'runner',
         offset: { x: 0, z: 0 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
         role: 'runner',
         team: 'offense',
       },
       {
-        facingRadians: 0,
         id: 'blocker-left',
         offset: { x: 3, z: 1.5 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
         role: 'blocker',
         team: 'offense',
       },
       {
-        facingRadians: 0,
         id: 'blocker-right',
         offset: { x: -3, z: 1.5 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
         role: 'blocker',
         team: 'offense',
       },
       {
-        facingRadians: Math.PI,
         id: 'defender-left',
         offset: { x: 7, z: 24 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
         role: 'defender',
         team: 'defense',
       },
       {
-        facingRadians: Math.PI,
         id: 'defender-middle',
         offset: { x: 0, z: 45 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
         role: 'defender',
         team: 'defense',
       },
       {
-        facingRadians: Math.PI,
         id: 'defender-right',
         offset: { x: -7, z: 24 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
         role: 'defender',
         team: 'defense',
       },
@@ -106,44 +117,44 @@ export const PLAYS: PlayDefinition[] = [
     displayName: 'Outside Run',
     formation: [
       {
-        facingRadians: 0.35,
         id: 'runner',
         offset: { x: 2.5, z: 0 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
         role: 'runner',
         team: 'offense',
       },
       {
-        facingRadians: 0.45,
         id: 'blocker-left',
         offset: { x: 6, z: 1.5 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
         role: 'blocker',
         team: 'offense',
       },
       {
-        facingRadians: 0.55,
         id: 'blocker-right',
         offset: { x: 9, z: 0.5 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
         role: 'blocker',
         team: 'offense',
       },
       {
-        facingRadians: Math.PI,
         id: 'defender-left',
         offset: { x: 9, z: 24 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
         role: 'defender',
         team: 'defense',
       },
       {
-        facingRadians: Math.PI,
         id: 'defender-middle',
         offset: { x: 0, z: 45 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
         role: 'defender',
         team: 'defense',
       },
       {
-        facingRadians: Math.PI,
         id: 'defender-right',
         offset: { x: -7, z: 24 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
         role: 'defender',
         team: 'defense',
       },
@@ -160,44 +171,44 @@ export const PLAYS: PlayDefinition[] = [
     displayName: 'Quick Pass',
     formation: [
       {
-        facingRadians: 0,
         id: 'runner',
         offset: { x: 0, z: 0 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
         role: 'quarterback',
         team: 'offense',
       },
       {
-        facingRadians: 0.15,
         id: 'blocker-left',
         offset: { x: -7, z: 1.5 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
         role: 'receiver',
         team: 'offense',
       },
       {
-        facingRadians: 0.25,
         id: 'blocker-right',
         offset: { x: 3, z: 1.5 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
         role: 'blocker',
         team: 'offense',
       },
       {
-        facingRadians: Math.PI,
         id: 'defender-left',
         offset: { x: -8, z: 9 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
         role: 'coverageDefender',
         team: 'defense',
       },
       {
-        facingRadians: Math.PI,
         id: 'defender-middle',
         offset: { x: 0, z: 24 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
         role: 'defender',
         team: 'defense',
       },
       {
-        facingRadians: Math.PI,
         id: 'defender-right',
         offset: { x: 8, z: 24 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
         role: 'defender',
         team: 'defense',
       },
@@ -242,7 +253,7 @@ export function createFormationPlayers(
   return play.formation.map((slot) =>
     createPlayerModel(calculateFormationSpot(ballSpot, slot.offset), {
       collisionRadius: PLAYER_MOVEMENT_CONFIG.collisionRadius,
-      facingRadians: slot.facingRadians,
+      facingRadians: resolvePreSnapFacing(slot.preSnapFacing),
       id: slot.id,
       role: slot.role,
       state: 'idle',
@@ -265,7 +276,7 @@ export function resetFormationPlayers(
     player.velocity.x = 0;
     player.velocity.z = 0;
     player.collisionRadius = PLAYER_MOVEMENT_CONFIG.collisionRadius;
-    player.facingRadians = slot.facingRadians;
+    player.facingRadians = resolvePreSnapFacing(slot.preSnapFacing);
     player.role = slot.role;
     player.team = slot.team;
     player.currentState = 'idle';
@@ -294,6 +305,10 @@ export function getFormationSlot(
   }
 
   return slot;
+}
+
+export function resolvePreSnapFacing(facing: PreSnapFacingDefinition): number {
+  return PRE_SNAP_FACING_RADIANS[facing.kind];
 }
 
 export function getReceiverRouteTarget(

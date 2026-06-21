@@ -9,6 +9,7 @@ import {
 import { INITIAL_BALL_SPOT, LINE_OF_SCRIMMAGE_Z, PLAYABLE_FIELD_BOUNDS } from '../src/field';
 import { calculateYardsGained } from '../src/fieldScale';
 import { PLAYER_MOVEMENT_CONFIG, type PlayerModel } from '../src/playerModel';
+import { PRE_SNAP_FACING_RADIANS } from '../src/playbook';
 import {
   GAMEPLAY_CONFIG,
   attemptPass,
@@ -116,6 +117,81 @@ describe('play state transitions', () => {
     expect(gameplay.selectedPlay.id).toBe('outside-run');
     expect(gameplay.player.position.x).toBeCloseTo(2.5);
     expect(gameplay.playState).toBe('preSnap');
+  });
+
+  it('sets Outside Run blockers in neutral pre-snap facing at their formation positions', () => {
+    const gameplay = createGameplayModel();
+
+    expect(selectPlay(gameplay, 'outside-run')).toBe(true);
+    const leftBlocker = getPlayer(gameplay.players, 'blocker-left');
+    const rightBlocker = getPlayer(gameplay.players, 'blocker-right');
+
+    expect(leftBlocker.position).toEqual({ x: 6, z: LINE_OF_SCRIMMAGE_Z + 1.5 });
+    expect(rightBlocker.position).toEqual({ x: 9, z: LINE_OF_SCRIMMAGE_Z + 0.5 });
+    expect(leftBlocker.velocity).toEqual({ x: 0, z: 0 });
+    expect(rightBlocker.velocity).toEqual({ x: 0, z: 0 });
+    expect(leftBlocker.facingRadians).toBe(PRE_SNAP_FACING_RADIANS.playDirection);
+    expect(rightBlocker.facingRadians).toBe(PRE_SNAP_FACING_RADIANS.playDirection);
+  });
+
+  it('does not let preSnap simulation frames change Outside Run blocker facing', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'outside-run');
+    const leftBlocker = getPlayer(gameplay.players, 'blocker-left');
+    const rightBlocker = getPlayer(gameplay.players, 'blocker-right');
+    const leftStart = snapshotBlockerFormation(leftBlocker);
+    const rightStart = snapshotBlockerFormation(rightBlocker);
+
+    updateGameplayModel(gameplay, 0.1);
+    updateGameplayModel(gameplay, 0.1);
+    updateGameplayModel(gameplay, 0.1);
+
+    expect(snapshotBlockerFormation(leftBlocker)).toEqual(leftStart);
+    expect(snapshotBlockerFormation(rightBlocker)).toEqual(rightStart);
+  });
+
+  it('allows Outside Run blockers to turn toward assignments after the snap', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'outside-run');
+    const leftBlocker = getPlayer(gameplay.players, 'blocker-left');
+    const rightBlocker = getPlayer(gameplay.players, 'blocker-right');
+    const leftPreSnapFacing = leftBlocker.facingRadians;
+    const rightPreSnapFacing = rightBlocker.facingRadians;
+
+    startPlay(gameplay);
+    updateGameplayModel(gameplay, 0.1);
+
+    expect(leftBlocker.facingRadians).not.toBeCloseTo(leftPreSnapFacing);
+    expect(rightBlocker.facingRadians).not.toBeCloseTo(rightPreSnapFacing);
+  });
+
+  it('restores Outside Run blocker formation position and pre-snap facing on reset', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'outside-run');
+    const leftBlocker = getPlayer(gameplay.players, 'blocker-left');
+    const rightBlocker = getPlayer(gameplay.players, 'blocker-right');
+    const leftStart = snapshotBlockerFormation(leftBlocker);
+    const rightStart = snapshotBlockerFormation(rightBlocker);
+
+    startPlay(gameplay);
+    updateGameplayModel(gameplay, 0.1);
+    resetPlay(gameplay);
+
+    expect(snapshotBlockerFormation(leftBlocker)).toEqual(leftStart);
+    expect(snapshotBlockerFormation(rightBlocker)).toEqual(rightStart);
+  });
+
+  it('keeps Inside Run blockers in neutral pre-snap facing', () => {
+    const gameplay = createGameplayModel();
+    const leftBlocker = getPlayer(gameplay.players, 'blocker-left');
+    const rightBlocker = getPlayer(gameplay.players, 'blocker-right');
+
+    expect(gameplay.selectedPlay.id).toBe('inside-run');
+    expect(leftBlocker.facingRadians).toBe(PRE_SNAP_FACING_RADIANS.playDirection);
+    expect(rightBlocker.facingRadians).toBe(PRE_SNAP_FACING_RADIANS.playDirection);
   });
 
   it('selects Quick Pass during preSnap and starts the receiver route only after the snap', () => {
@@ -587,4 +663,16 @@ function getPlayer(players: PlayerModel[], playerId: string): PlayerModel {
   }
 
   return player;
+}
+
+function snapshotBlockerFormation(player: PlayerModel): {
+  facingRadians: number;
+  position: PlayerModel['position'];
+  velocity: PlayerModel['velocity'];
+} {
+  return {
+    facingRadians: player.facingRadians,
+    position: { ...player.position },
+    velocity: { ...player.velocity },
+  };
 }

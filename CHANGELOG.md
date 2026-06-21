@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1] - 2026-06-21
+
+### Fixed
+
+- Corrected Outside Run blocker pre-snap facing so blockers hold a neutral stance facing the defense before the snap.
+- Separated formation pre-snap facing from post-snap blocking lane targets in playbook formation data.
+- Added deterministic tests for Outside Run pre-snap facing, pre-snap frame stability, post-snap blocker turning, reset restoration, and Inside Run facing.
+
 ## [0.10.0] - 2026-06-21
 
 ### Added
