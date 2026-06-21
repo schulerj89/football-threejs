@@ -75,6 +75,32 @@ describe('game experience settings', () => {
     });
   });
 
+  it('persists non-custom game mode selections', () => {
+    const storage = createMemoryStorage();
+
+    saveGameExperienceSettings({
+      ...BROADCAST_EXPERIENCE_SETTINGS,
+      playbookId: '7v7',
+    }, storage);
+
+    const resolved = resolveGameExperienceSettings({
+      searchParams: new URLSearchParams(),
+      storage,
+    });
+
+    expect(resolved.persistedSettings).toMatchObject({
+      preset: 'broadcast',
+      settings: {
+        playbookId: '7v7',
+        preset: 'broadcast',
+      },
+    });
+    expect(resolved.settings).toMatchObject({
+      playbookId: '7v7',
+      preset: 'broadcast',
+    });
+  });
+
   it('lets query overrides win without modifying persisted settings', () => {
     const storage = createMemoryStorage();
     saveGameExperienceSettings(PERFORMANCE_EXPERIENCE_SETTINGS, storage);

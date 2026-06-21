@@ -86,7 +86,7 @@ export class AudioMixer {
 
   private readonly activeLoops = new Map<string, ActiveLoop>();
   private readonly activeOneShotsByAsset = new Map<string, number>();
-  private readonly flags: AudioFeatureFlags;
+  private flags: AudioFeatureFlags;
   private readonly loader: AudioAssetLoader;
   private readonly preparedLoops = new Map<string, ActiveLoop>();
   private readonly reportedBusGains: Record<AudioBusName, number> = {
@@ -163,6 +163,15 @@ export class AudioMixer {
     this.settings = updateAudioSettings(this.settings, patch, this.storage);
     this.applySettings();
     return this.getSettings();
+  }
+
+  setFeatureFlags(patch: Partial<AudioFeatureFlags>): AudioFeatureFlags {
+    this.flags = {
+      ...this.flags,
+      ...patch,
+    };
+    this.applySettings();
+    return { ...this.flags };
   }
 
   setMuted(muted: boolean): AudioSettings {

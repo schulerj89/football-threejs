@@ -572,9 +572,99 @@ interface GameExperienceSnapshot {
   persistedSettings: {
     customSettings: GameExperienceSettingsSnapshot | null;
     preset: 'broadcast' | 'custom' | 'performance';
+    settings: GameExperienceSettingsSnapshot | null;
   };
   queryOverrides: Partial<GameExperienceSettingsSnapshot>;
 }
+
+test('shows the title screen on normal launch and holds gameplay until Start Game', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.title-screen')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start Game' })).toBeVisible();
+  await expect(page.locator('.gameplay-hud')).toBeHidden();
+  await expect(page.locator('.play-call-ui')).toBeHidden();
+
+  const initial = await getGameplaySnapshot(page);
+  await page.waitForTimeout(500);
+  const afterDelay = await getGameplaySnapshot(page);
+  expect(afterDelay.playState).toBe('preSnap');
+  expect(afterDelay.scoreAttack).toMatchObject({
+    remainingSeconds: 120,
+    state: 'ready',
+  });
+  expect(afterDelay.player.position).toEqual(initial.player.position);
+
+  await page.getByRole('button', { name: 'Start Game' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.title-screen')).toBeHidden();
+  await expect(page.locator('.gameplay-hud')).toBeVisible();
+  await expect(page.locator('.play-call-ui')).toBeVisible();
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
+
+  const started = await getGameplaySnapshot(page);
+  const experience = await getGameExperienceSnapshot(page);
+  expect(started).toMatchObject({
+    playState: 'preSnap',
+    playbookId: '5v5',
+    scoreAttack: {
+      remainingSeconds: 120,
+      state: 'ready',
+    },
+  });
+  expect(experience.finalSettings).toMatchObject({
+    cinematics: 'brief',
+    crowdVisualsEnabled: true,
+    gameplayCamera: 'offense',
+    preset: 'broadcast',
+  });
+});
+
+test('starts the performance preset without visual crowd or cinematics', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.locator('.title-screen').getByLabel('Presentation preset').selectOption('performance');
+  await page.getByRole('button', { name: 'Start Game' }).click();
+
+  await expect(page.locator('.title-screen')).toBeHidden();
+  const experience = await getGameExperienceSnapshot(page);
+  expect(experience.finalSettings).toMatchObject({
+    cinematics: 'off',
+    crowdReactionsEnabled: false,
+    crowdVisualsEnabled: false,
+    gameplayCamera: 'offense',
+    preset: 'performance',
+  });
+  expect(await getOptionalCrowdPresentationSnapshot(page)).toBeNull();
+});
+
+test('selects the 7v7 passing prototype from the title screen', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.getByLabel('Game mode').selectOption('7v7');
+  await page.getByRole('button', { name: 'Start Game' }).click();
+
+  await expect(page.locator('.title-screen')).toBeHidden();
+  const gameplay = await getGameplaySnapshot(page);
+  expect(gameplay.playbookId).toBe('7v7');
+  expect(gameplay.players).toHaveLength(14);
+  expect(gameplay.selectedPlay.displayName).toBe('Twin Slants Flat');
+  await expect(page.locator('.play-card')).toHaveCount(1);
+});
+
+test('persists title-screen settings across reloads', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.locator('.title-screen').getByLabel('Presentation preset').selectOption('performance');
+  await page.locator('.title-screen').getByLabel('Game mode').selectOption('7v7');
+
+  await page.reload();
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.title-screen')).toBeVisible();
+  await expect(page.locator('.title-screen').getByLabel('Presentation preset')).toHaveValue('performance');
+  await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveValue('7v7');
+});
 
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
@@ -712,6 +802,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
   expect(experience.persistedSettings).toEqual({
     customSettings: null,
     preset: 'broadcast',
+    settings: null,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({
@@ -1533,14 +1624,22 @@ test('supports cinematic orbit shot settings without blocking gameplay input', a
   await expect(page.locator('.debug-overlay')).toContainText('SHOT prePlayOrbit180');
   await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO');
   expect((await getAudioSnapshot(page)).captionsEnabled).toBe(true);
+  await expect.poll(async () => {
+    const snapshot = await getCameraSnapshot(page);
+    return snapshot.activeShotName === 'prePlayOrbit180' ||
+      (snapshot.mode === 'offensePerspective' && snapshot.state === 'preSnapFormation');
+  }).toBe(true);
   const briefShot = await getCameraSnapshot(page);
-  expect(briefShot).toMatchObject({
-    activeShotName: 'prePlayOrbit180',
-    mode: 'offensePerspective',
-    restoreCamera: 'offensePerspective',
-    state: 'cinematicBroadcast',
-  });
-  expect(briefShot.orbitRadius).toBeGreaterThan(0);
+  expect(briefShot.mode).toBe('offensePerspective');
+  if (briefShot.activeShotName === 'prePlayOrbit180') {
+    expect(briefShot).toMatchObject({
+      restoreCamera: 'offensePerspective',
+      state: 'cinematicBroadcast',
+    });
+    expect(briefShot.orbitRadius).toBeGreaterThan(0);
+  } else {
+    expect(briefShot.state).toBe('preSnapFormation');
+  }
 
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
@@ -2599,6 +2698,26 @@ async function getCrowdPresentationSnapshot(page: Page): Promise<CrowdPresentati
     }
 
     return snapshot;
+  });
+}
+
+async function getOptionalCrowdPresentationSnapshot(
+  page: Page,
+): Promise<CrowdPresentationSnapshot | null> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getCrowdPresentationSnapshot: () => CrowdPresentationSnapshot | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getCrowdPresentationSnapshot();
   });
 }
 

@@ -43,6 +43,7 @@ export interface GameExperienceSettings {
 export interface PersistedGameExperienceSettings {
   customSettings: GameExperienceSettings | null;
   preset: ExperiencePreset;
+  settings: GameExperienceSettings | null;
 }
 
 export interface GameExperienceQueryOverrides {
@@ -222,6 +223,7 @@ export function saveGameExperienceSettings(
       ? normalizedSettings
       : null,
     preset: normalizedSettings.preset,
+    settings: normalizedSettings,
   };
 
   storage.setItem(
@@ -354,6 +356,9 @@ export function createGameExperienceDebugSnapshot(
         ? { ...resolvedSettings.persistedSettings.customSettings }
         : null,
       preset: resolvedSettings.persistedSettings.preset,
+      settings: resolvedSettings.persistedSettings.settings
+        ? { ...resolvedSettings.persistedSettings.settings }
+        : null,
     },
     queryOverrides: { ...resolvedSettings.queryOverrides },
   };
@@ -365,6 +370,10 @@ function resolveBaseSettings(
   audioSettings: AudioSettings,
   crowdPresentationSettings: CrowdPresentationSettings,
 ): GameExperienceSettings {
+  if (persistedSettings.settings?.preset === preset) {
+    return persistedSettings.settings;
+  }
+
   if (preset === 'performance') {
     return PERFORMANCE_EXPERIENCE_SETTINGS;
   }
@@ -396,13 +405,19 @@ function normalizePersistedGameExperienceSettings(
   persisted: Partial<PersistedGameExperienceSettings>,
 ): PersistedGameExperienceSettings {
   const preset = isExperiencePreset(persisted.preset) ? persisted.preset : 'broadcast';
+  const settings = persisted.settings
+    ? normalizeGameExperienceSettings(persisted.settings)
+    : null;
   const customSettings = persisted.customSettings
     ? normalizeGameExperienceSettings({ ...persisted.customSettings, preset: 'custom' })
+    : settings?.preset === 'custom'
+      ? settings
     : null;
 
   return {
     customSettings,
     preset,
+    settings,
   };
 }
 
@@ -410,6 +425,7 @@ function createDefaultPersistedSettings(): PersistedGameExperienceSettings {
   return {
     customSettings: null,
     preset: 'broadcast',
+    settings: null,
   };
 }
 

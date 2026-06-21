@@ -44,6 +44,10 @@ export class KeyboardMovementInput {
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (shouldLetBrowserHandleKey(event)) {
+      return;
+    }
+
     const key = normalizeKey(event.key);
     if (!MOVEMENT_KEYS[key]) {
       return;
@@ -54,6 +58,10 @@ export class KeyboardMovementInput {
   };
 
   private readonly handleKeyUp = (event: KeyboardEvent): void => {
+    if (shouldLetBrowserHandleKey(event)) {
+      return;
+    }
+
     const key = normalizeKey(event.key);
     if (!MOVEMENT_KEYS[key]) {
       return;
@@ -124,6 +132,10 @@ export class KeyboardPlayControls {
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (shouldLetBrowserHandleKey(event)) {
+      return;
+    }
+
     if (isSpaceKey(event)) {
       this.startRequested = true;
       event.preventDefault();
@@ -192,4 +204,12 @@ function normalizeKey(key: string): string {
 
 function isSpaceKey(event: KeyboardEvent): boolean {
   return event.code === 'Space' || event.key === ' ' || normalizeKey(event.key) === 'spacebar';
+}
+
+function shouldLetBrowserHandleKey(event: KeyboardEvent): boolean {
+  if (typeof Element === 'undefined' || !(event.target instanceof Element)) {
+    return false;
+  }
+
+  return !!event.target.closest('button,input,select,textarea,[contenteditable="true"]');
 }

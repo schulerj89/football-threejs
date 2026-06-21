@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.39.0] - 2026-06-21
+
+### Added
+
+- Added a player-facing title screen and setup flow so a normal launch starts from `Start Game` instead of immediately entering gameplay.
+- Added a reusable game setup UI with presentation preset, game mode, and custom presentation controls for camera, cinematics, crowd visuals, crowd density, crowd reactions, master audio, crowd audio, announcer, and captions.
+- Added a pre-snap/dead-ball pause settings panel opened with `Escape`, with immediate safe application for presentation and audio settings and a return-to-title path for game mode changes.
+- Added app-phase gating so the score clock, gameplay AI, play controls, play cards, and presentation events do not advance behind the title screen or pause settings panel.
+- Added title-screen loading/readiness states for helmets, optional audio unlock/readiness, and crowd initialization.
+- Added persisted non-custom game mode settings so broadcast/performance selections can retain the selected 5v5 or limited 7v7 prototype across reloads.
+- Added browser smoke coverage for title launch gating, Start Game audio unlock, broadcast/performance startup, 5v5/7v7 playbook selection, persisted title settings, and direct-query compatibility.
+
 ## [0.38.0] - 2026-06-21
 
 ### Added

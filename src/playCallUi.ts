@@ -19,7 +19,7 @@ export class PlayCallUi {
   private lastRenderKey = '';
   private pendingSelectedPlayId: string | null = null;
 
-  constructor(private readonly plays: PlayDefinition[] = PLAYS) {
+  constructor(private plays: PlayDefinition[] = PLAYS) {
     this.root = document.createElement('div');
     this.root.className = 'play-call-ui';
     this.root.hidden = true;
@@ -36,6 +36,24 @@ export class PlayCallUi {
     this.pendingSelectedPlayId = null;
 
     return selectedPlayId;
+  }
+
+  setPlays(plays: PlayDefinition[]): void {
+    this.plays = plays;
+    this.lastRenderKey = '';
+    this.pendingSelectedPlayId = null;
+    this.grid.replaceChildren();
+  }
+
+  hide(): void {
+    this.enabled = false;
+    this.root.hidden = true;
+  }
+
+  dispose(): void {
+    this.root.removeEventListener('pointerup', this.handlePointerUp);
+    this.root.remove();
+    this.pendingSelectedPlayId = null;
   }
 
   sync(gameplay: GameplaySnapshot): void {

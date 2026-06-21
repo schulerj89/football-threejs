@@ -557,6 +557,208 @@ canvas {
   display: none;
 }
 
+.gameplay-hud[hidden],
+.title-screen[hidden],
+.pause-settings-panel[hidden],
+.title-development-details[hidden] {
+  display: none;
+}
+
+.title-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(7, 12, 13, 0.78);
+  color: #f7fbf8;
+  overflow: auto;
+}
+
+.title-panel {
+  width: min(980px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(12, 19, 18, 0.92);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+}
+
+.title-header h1 {
+  margin: 2px 0 8px;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.title-eyebrow,
+.title-subtitle,
+.settings-note {
+  margin: 0;
+  color: #cbd8d0;
+}
+
+.title-eyebrow {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.title-subtitle {
+  max-width: 620px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.title-start-button,
+.return-title-button,
+.pause-close-button {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 6px;
+  background: #f0f5ea;
+  color: #101512;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.title-start-button {
+  width: 100%;
+  margin: 22px 0 18px;
+  padding: 14px 16px;
+  font-size: 18px;
+}
+
+.title-panel h2,
+.title-panel h3,
+.pause-settings-card h2 {
+  margin: 18px 0 10px;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.game-setup-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.2fr);
+  gap: 16px;
+}
+
+.title-info-grid {
+  display: grid;
+  grid-template-columns: minmax(340px, 1.25fr) minmax(220px, 0.75fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.game-setup-primary,
+.game-setup-custom,
+.title-controls,
+.title-loading {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(150px, 1.1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+  color: #e8f0ea;
+  font-size: 14px;
+}
+
+.settings-row select {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  background: #101817;
+  color: #f7fbf8;
+  font: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+  justify-self: start;
+  width: 18px;
+  height: 18px;
+}
+
+.settings-row :disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.title-controls ul,
+.title-loading ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #dfe9e2;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.title-loading li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 2px 0;
+}
+
+.title-development-details {
+  margin: 8px 0 0;
+  color: #f2d37a;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+}
+
+.pause-settings-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 8, 9, 0.62);
+  color: #f7fbf8;
+}
+
+.pause-settings-card {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(12, 19, 18, 0.94);
+}
+
+.pause-settings-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pause-settings-card h2 {
+  margin: 0;
+}
+
+.pause-close-button,
+.return-title-button {
+  padding: 9px 12px;
+}
+
+.return-title-button {
+  margin-top: 14px;
+  background: #dbe6d8;
+}
+
 @media (max-width: 760px) {
   .play-call-ui {
     right: 12px;
@@ -575,6 +777,34 @@ canvas {
 
   .play-card-title {
     font-size: 12px;
+  }
+
+  .title-screen,
+  .pause-settings-panel {
+    padding: 12px;
+  }
+
+  .title-panel,
+  .pause-settings-card {
+    max-height: calc(100vh - 24px);
+    padding: 16px;
+  }
+
+  .title-header h1 {
+    font-size: 34px;
+  }
+
+  .game-setup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .title-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-row {
+    grid-template-columns: 1fr;
+    gap: 5px;
   }
 }
 

@@ -33,8 +33,11 @@ import {
 import {
   createGameExperienceDebugSnapshot,
   resolveGameExperienceSettings,
+  saveGameExperienceSettings,
   toGameplayCameraMode,
   type GameExperienceDebugSnapshot,
+  type GameExperienceSettings,
+  type ResolvedGameExperienceSettings,
 } from './config/GameExperienceSettings';
 import { DebugOverlay, type RenderMetricsSnapshot } from './debugOverlay';
 import {
@@ -142,6 +145,9 @@ import {
   createBroadcastCaptions,
   syncBroadcastCaptions,
 } from './ui/BroadcastCaptions';
+import { GameSetupScreen } from './ui/GameSetupScreen';
+import { PauseSettingsPanel } from './ui/PauseSettingsPanel';
+import { TitleScreen, type TitleLoadingState } from './ui/TitleScreen';
 
 declare global {
   interface Window {
@@ -199,25 +205,25 @@ const crowdPreviewCount = resolveCrowdPreviewCount(searchParams);
 const crowdPreviewCameraView = resolveCrowdPreviewCameraView(searchParams.get('crowdCamera'));
 const cameraDebugEnabled = searchParams.has('cameraDebug');
 const shotPreview = resolvePresentationShotPreview(searchParams.get('shotPreview'));
-const gameExperience = resolveGameExperienceSettings({ searchParams });
-const effectiveExperienceSettings = gameExperience.settings;
-const cinematicsSetting = effectiveExperienceSettings.cinematics;
+let gameExperience: ResolvedGameExperienceSettings = resolveGameExperienceSettings({ searchParams });
+let effectiveExperienceSettings = gameExperience.settings;
+let cinematicsSetting = effectiveExperienceSettings.cinematics;
 const playerVisualOptions = {
   bodyStyle: resolvePlayerBodyVisualStyle(searchParams.get('playerBody')),
   debugRoleColors: searchParams.has('debugRoleColors'),
 };
 const ballVisualStyle = resolveBallVisualStyle(searchParams.get('ballVisual'));
-const playerMotionEnabled = effectiveExperienceSettings.playerMotionEnabled;
+let playerMotionEnabled = effectiveExperienceSettings.playerMotionEnabled;
 const formationPreviewMode = resolveFormationPreviewMode(searchParams.get('formationPreview'));
-const playbookId = effectiveExperienceSettings.playbookId;
+let playbookId = effectiveExperienceSettings.playbookId;
 const presentationAuditEnabled = searchParams.has('presentationAudit');
 const routeAuditEnabled = searchParams.has('routeAudit');
-const routeArtEnabled = effectiveExperienceSettings.routeArtEnabled;
+let routeArtEnabled = effectiveExperienceSettings.routeArtEnabled;
 const passAuditEnabled = searchParams.has('passAudit');
 const appearanceAuditEnabled = searchParams.has('appearanceAudit');
-const audioFeatureFlags = gameExperience.audioFeatureFlags;
+let audioFeatureFlags = gameExperience.audioFeatureFlags;
 const commentaryDebugEnabled = searchParams.has('commentaryDebug');
-const crowdPresentationSettings = gameExperience.crowdPresentationSettings;
+let crowdPresentationSettings = gameExperience.crowdPresentationSettings;
 const crowdPresentationDebugEnabled =
   searchParams.has('crowdDebug') ||
   (presentationAuditEnabled && !crowdPreviewEnabled);
@@ -229,7 +235,7 @@ const field = createFootballField({
 });
 scene.add(field.group);
 
-const gameplayModel = createGameplayModel({ playbookId });
+let gameplayModel = createGameplayModel({ playbookId });
 const formationPreviewModel = formationPreviewMode
   ? createFormationPreviewModel(formationPreviewMode)
   : null;
@@ -253,7 +259,7 @@ const routeArtRenderer = new RouteArtRenderer({
 });
 scene.add(routeArtRenderer.group);
 
-const cameraController = new GameplayCameraController({
+let cameraController = new GameplayCameraController({
   cinematics: cinematicsSetting,
   height: window.innerHeight,
   holdCinematicPreSnapEstablish: presentationAuditEnabled,
@@ -285,7 +291,7 @@ if (crowdPreviewController) {
   scene.add(crowdPreviewController.group);
 }
 
-const crowdPresentationController = !crowdPreviewController && crowdPresentationSettings.crowdVisualsEnabled
+let crowdPresentationController = !crowdPreviewController && crowdPresentationSettings.crowdVisualsEnabled
   ? new CrowdPresentationController({ settings: crowdPresentationSettings })
   : null;
 
@@ -301,7 +307,7 @@ directionalLight.position.set(-20, 45, -25);
 scene.add(directionalLight);
 
 const keyboardInput = new KeyboardMovementInput(window);
-const playControls = new KeyboardPlayControls(
+let playControls = new KeyboardPlayControls(
   window,
   gameplayModel.availablePlays.map((play) => play.id),
 );
@@ -316,16 +322,16 @@ const audioMixer = new AudioMixer({
 });
 const gameAudioDirector = new GameAudioDirector(audioMixer);
 const broadcastCommentaryDirector = new BroadcastCommentaryDirector(audioMixer, {
-  enabled: audioFeatureFlags.announcerEnabled,
+  enabled: true,
 });
-const presentationHoldDirector = new PresentationHoldDirector(cinematicsSetting);
+let presentationHoldDirector = new PresentationHoldDirector(cinematicsSetting);
 gameAudioDirector.installControls(window);
 gameAudioDirector.setPageActive(!document.hidden);
 broadcastCommentaryDirector.setPageActive(!document.hidden);
 const debugOverlay = new DebugOverlay({ renderer, player: getActivePrimaryPlayer() });
 const gameplayHud = createGameplayHud();
 const broadcastCaptions = createBroadcastCaptions();
-const playCallUi = formationPreviewModel || crowdPreviewEnabled
+let playCallUi = formationPreviewModel || crowdPreviewEnabled
   ? null
   : createPlayCallUi(gameplayModel.availablePlays);
 const playerPoseController = new PlayerPoseController(undefined, {
@@ -351,9 +357,45 @@ const crowdPresentationOverlay = crowdPresentationDebugEnabled && crowdPresentat
 const presentationHardeningAuditOverlay = presentationAuditEnabled && !crowdPreviewController
   ? createPresentationHardeningAuditOverlay()
   : null;
+type AppPhase = 'gameplay' | 'title';
+
+const normalLaunchShouldShowTitle =
+  !crowdPreviewEnabled &&
+  !formationPreviewMode &&
+  searchParams.toString().length === 0;
+let appPhase: AppPhase = normalLaunchShouldShowTitle ? 'title' : 'gameplay';
+const titleSetupScreen = !crowdPreviewEnabled && !formationPreviewModel
+  ? new GameSetupScreen({
+      initialSettings: effectiveExperienceSettings,
+      onSettingsChange: handleTitleSettingsChange,
+    })
+  : null;
+const titleScreen = titleSetupScreen
+  ? new TitleScreen({
+      onStart: startGameFromTitle,
+      setupElement: titleSetupScreen.root,
+    })
+  : null;
+const pauseSetupScreen = !crowdPreviewEnabled && !formationPreviewModel
+  ? new GameSetupScreen({
+      initialSettings: effectiveExperienceSettings,
+      onSettingsChange: handlePauseSettingsChange,
+      showGameMode: false,
+    })
+  : null;
+const pauseSettingsPanel = pauseSetupScreen
+  ? new PauseSettingsPanel({
+      onClose: () => setPauseSettingsVisible(false),
+      onReturnToTitle: returnToTitleScreen,
+      setupElement: pauseSetupScreen.root,
+    })
+  : null;
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 let latestRenderMetrics: RenderMetricsSnapshot | null = null;
+
+titleScreen?.setVisible(appPhase === 'title');
+syncApplicationChrome();
 
 if (
   import.meta.env.DEV ||
@@ -440,6 +482,10 @@ if (crowdPreviewController) {
   window.addEventListener('keydown', handleCrowdPreviewControls);
 }
 
+if (!crowdPreviewController && !formationPreviewModel) {
+  window.addEventListener('keydown', handlePauseSettingsShortcut);
+}
+
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', resize);
 document.addEventListener('visibilitychange', syncAudioPageActivity);
@@ -481,6 +527,10 @@ function renderFrame(delta: number): void {
       player.velocity.z = 0;
       player.currentState = 'idle';
     }
+  } else if (appPhase !== 'gameplay' || pauseSettingsPanel?.isVisible()) {
+    playControls.consumeRequests();
+    gameplayModel.player.velocity.x = 0;
+    gameplayModel.player.velocity.z = 0;
   } else {
     updatePlayControls();
 
@@ -502,11 +552,18 @@ function renderFrame(delta: number): void {
   }
 
   const gameplaySnapshot = getActivePresentationSnapshot();
-  gameAudioDirector.update(gameplaySnapshot, delta);
-  const presentationEvents = gameAudioDirector.getSnapshot().recentEvents;
-  presentationHoldDirector.update(presentationEvents, delta);
-  crowdPresentationController?.update(gameplaySnapshot, presentationEvents, delta);
-  if (!formationPreviewModel) {
+  const gameplayPresentationActive = appPhase === 'gameplay' && !pauseSettingsPanel?.isVisible();
+  if (gameplayPresentationActive) {
+    gameAudioDirector.update(gameplaySnapshot, delta);
+  }
+  const presentationEvents = gameplayPresentationActive
+    ? gameAudioDirector.getSnapshot().recentEvents
+    : [];
+  if (gameplayPresentationActive) {
+    presentationHoldDirector.update(presentationEvents, delta);
+    crowdPresentationController?.update(gameplaySnapshot, presentationEvents, delta);
+  }
+  if (!formationPreviewModel && gameplayPresentationActive) {
     broadcastCommentaryDirector.update(gameplaySnapshot, delta);
   }
   syncFootballFieldDriveLines(
@@ -532,8 +589,10 @@ function renderFrame(delta: number): void {
   });
   syncGameplayHud(gameplayHud, gameplaySnapshot);
   syncBroadcastCaptions(broadcastCaptions, broadcastCommentaryDirector.getSnapshot());
-  if (playCallUi) {
+  if (playCallUi && appPhase === 'gameplay' && !pauseSettingsPanel?.isVisible()) {
     syncPlayCallUi(playCallUi, gameplaySnapshot);
+  } else {
+    playCallUi?.hide();
   }
   if (poseDebugOverlay) {
     syncPlayerPoseDebugOverlay(poseDebugOverlay, playerPoseController.getPoseSnapshots());
@@ -588,6 +647,8 @@ function renderFrame(delta: number): void {
       : undefined,
     renderMetrics,
   );
+  syncTitleLoadingState();
+  syncApplicationChrome();
 
   if (!hasRenderedFirstFrame) {
     hasRenderedFirstFrame = true;
@@ -631,6 +692,263 @@ function updatePlayControls(): void {
   if (requests.startPlay) {
     startPlay(gameplayModel);
   }
+}
+
+function startGameFromTitle(): void {
+  const selectedSettings = titleSetupScreen?.getSettings() ?? effectiveExperienceSettings;
+  applyExperienceSettings(selectedSettings, { persist: true });
+  rebuildGameplayForPlaybook(effectiveExperienceSettings.playbookId, true);
+  appPhase = 'gameplay';
+  titleScreen?.setVisible(false);
+  setPauseSettingsVisible(false);
+  void audioMixer.unlockFromUserGesture();
+  cameraController.resetPresentation();
+  syncApplicationChrome();
+}
+
+function handleTitleSettingsChange(settings: GameExperienceSettings): void {
+  applyExperienceSettings(settings, { persist: true });
+}
+
+function handlePauseSettingsChange(settings: GameExperienceSettings): void {
+  applyExperienceSettings({
+    ...settings,
+    playbookId,
+  }, { persist: true });
+}
+
+function applyExperienceSettings(
+  settings: GameExperienceSettings,
+  options: { persist?: boolean } = {},
+): void {
+  const previousPlaybookId = playbookId;
+  const previousCameraSetting = effectiveExperienceSettings.gameplayCamera;
+  const previousCinematicsSetting = cinematicsSetting;
+  const previousCrowdSettings = crowdPresentationSettings;
+
+  if (options.persist ?? true) {
+    saveGameExperienceSettings(settings);
+  }
+
+  gameExperience = resolveGameExperienceSettings({
+    audioSettings: audioMixer.getSettings(),
+    crowdPresentationSettings,
+    searchParams,
+  });
+  effectiveExperienceSettings = gameExperience.settings;
+  cinematicsSetting = effectiveExperienceSettings.cinematics;
+  playerMotionEnabled = effectiveExperienceSettings.playerMotionEnabled;
+  playbookId = effectiveExperienceSettings.playbookId;
+  routeArtEnabled = effectiveExperienceSettings.routeArtEnabled;
+  audioFeatureFlags = gameExperience.audioFeatureFlags;
+  crowdPresentationSettings = gameExperience.crowdPresentationSettings;
+
+  audioMixer.setFeatureFlags(audioFeatureFlags);
+  audioMixer.setSettings(gameExperience.audioSettings);
+  broadcastCommentaryDirector.setAnnouncerEnabled(effectiveExperienceSettings.announcerEnabled);
+  broadcastCommentaryDirector.setCaptionsEnabled(effectiveExperienceSettings.captionsEnabled);
+
+  if (
+    previousCameraSetting !== effectiveExperienceSettings.gameplayCamera ||
+    previousCinematicsSetting !== cinematicsSetting
+  ) {
+    recreateCameraController();
+  }
+  presentationHoldDirector = new PresentationHoldDirector(cinematicsSetting);
+
+  if (!areCrowdSettingsEqual(previousCrowdSettings, crowdPresentationSettings)) {
+    rebuildCrowdPresentationController();
+  }
+
+  if (previousPlaybookId !== playbookId) {
+    rebuildGameplayForPlaybook(playbookId);
+  }
+
+  titleSetupScreen?.setSettings(effectiveExperienceSettings);
+  pauseSetupScreen?.setSettings(effectiveExperienceSettings);
+  syncTitleLoadingState();
+  syncApplicationChrome();
+}
+
+function rebuildGameplayForPlaybook(
+  nextPlaybookId: GameExperienceSettings['playbookId'],
+  force = false,
+): void {
+  if (!force && gameplayModel.playbookId === nextPlaybookId) {
+    return;
+  }
+
+  gameplayModel = createGameplayModel({ playbookId: nextPlaybookId });
+  playControls.dispose();
+  playControls = new KeyboardPlayControls(
+    window,
+    gameplayModel.availablePlays.map((play) => play.id),
+  );
+  playCallUi?.setPlays(gameplayModel.availablePlays);
+  reconcilePlayerVisuals();
+  syncBallVisual(ballVisual, gameplayModel.ball);
+  cameraController.resetPresentation();
+}
+
+function reconcilePlayerVisuals(): void {
+  const activePlayers = getActivePlayers();
+  const activeIds = new Set(activePlayers.map((player) => player.id));
+
+  for (const [playerId, playerVisual] of [...playerVisuals.entries()]) {
+    if (activeIds.has(playerId)) {
+      continue;
+    }
+
+    scene.remove(playerVisual);
+    playerVisuals.delete(playerId);
+  }
+
+  for (const gamePlayer of activePlayers) {
+    let playerVisual = playerVisuals.get(gamePlayer.id);
+    if (!playerVisual) {
+      playerVisual = createPlaceholderPlayerVisual(gamePlayer, playerVisualOptions);
+      playerVisuals.set(gamePlayer.id, playerVisual);
+      scene.add(playerVisual);
+    }
+    syncPlayerVisual(playerVisual, gamePlayer, playerVisualOptions);
+    syncHelmetTeamMaterials(playerVisual, gamePlayer);
+  }
+
+  attachHelmetsToPlayerVisuals(playerVisuals, activePlayers);
+}
+
+function recreateCameraController(): void {
+  cameraController = new GameplayCameraController({
+    cinematics: cinematicsSetting,
+    height: window.innerHeight,
+    holdCinematicPreSnapEstablish: presentationAuditEnabled,
+    initialMode: toGameplayCameraMode(effectiveExperienceSettings.gameplayCamera),
+    shotPreview,
+    width: window.innerWidth,
+  });
+}
+
+function rebuildCrowdPresentationController(): void {
+  if (crowdPresentationController) {
+    scene.remove(crowdPresentationController.group);
+    crowdPresentationController.dispose();
+    crowdPresentationController = null;
+  }
+
+  if (crowdPreviewController || !crowdPresentationSettings.crowdVisualsEnabled) {
+    return;
+  }
+
+  crowdPresentationController = new CrowdPresentationController({
+    settings: crowdPresentationSettings,
+  });
+  crowdPresentationController.setPageActive(!document.hidden && document.hasFocus());
+  scene.add(crowdPresentationController.group);
+}
+
+function setPauseSettingsVisible(visible: boolean): void {
+  if (!pauseSettingsPanel) {
+    return;
+  }
+
+  const canOpen = appPhase === 'gameplay' &&
+    (gameplayModel.playState === 'preSnap' || gameplayModel.playState === 'dead');
+  const nextVisible = visible && canOpen;
+  pauseSettingsPanel.setVisible(nextVisible);
+  if (nextVisible) {
+    pauseSetupScreen?.setSettings(effectiveExperienceSettings);
+  }
+  syncApplicationChrome();
+}
+
+function returnToTitleScreen(): void {
+  if (!titleScreen) {
+    setPauseSettingsVisible(false);
+    return;
+  }
+
+  appPhase = 'title';
+  setPauseSettingsVisible(false);
+  titleSetupScreen?.setSettings(effectiveExperienceSettings);
+  titleScreen.setVisible(true);
+  syncApplicationChrome();
+}
+
+function handlePauseSettingsShortcut(event: KeyboardEvent): void {
+  if (event.ctrlKey || event.metaKey || event.altKey || event.key !== 'Escape') {
+    return;
+  }
+
+  if (pauseSettingsPanel?.isVisible()) {
+    setPauseSettingsVisible(false);
+    event.preventDefault();
+    return;
+  }
+
+  if (
+    appPhase === 'gameplay' &&
+    (gameplayModel.playState === 'preSnap' || gameplayModel.playState === 'dead')
+  ) {
+    setPauseSettingsVisible(true);
+    event.preventDefault();
+  }
+}
+
+function syncApplicationChrome(): void {
+  document.body.dataset.appPhase = appPhase;
+  gameplayHud.root.hidden = appPhase !== 'gameplay';
+  if (appPhase !== 'gameplay') {
+    playCallUi?.hide();
+    broadcastCaptions.hidden = true;
+    broadcastCaptions.textContent = '';
+  }
+}
+
+function syncTitleLoadingState(): void {
+  if (!titleScreen) {
+    return;
+  }
+
+  titleScreen.syncLoadingState(createTitleLoadingState());
+}
+
+function createTitleLoadingState(): TitleLoadingState {
+  const helmetSnapshot = getHelmetAssetSnapshot();
+  const audioSnapshot = getRuntimeAudioSnapshot();
+  const crowdSnapshot = crowdPresentationController?.getSnapshot() ?? null;
+  const audioStatus = effectiveExperienceSettings.audioEnabled
+    ? audioSnapshot.userGestureUnlocked
+      ? `Ready (${audioSnapshot.contextState})`
+      : 'Ready after Start'
+    : 'Disabled';
+  const crowdStatus = effectiveExperienceSettings.crowdVisualsEnabled
+    ? crowdSnapshot
+      ? `Ready (${crowdSnapshot.actualSpectatorCount})`
+      : 'Initializing'
+    : 'Disabled';
+  const developmentDetails = import.meta.env.DEV
+    ? [
+        audioSnapshot.missingOptionalAssetIds.length > 0
+          ? `Missing optional audio: ${audioSnapshot.missingOptionalAssetIds.length}`
+          : '',
+      ]
+    : [];
+
+  return {
+    audio: audioStatus,
+    crowd: crowdStatus,
+    developmentDetails,
+    helmet: helmetSnapshot.status,
+  };
+}
+
+function areCrowdSettingsEqual(
+  a: typeof crowdPresentationSettings,
+  b: typeof crowdPresentationSettings,
+): boolean {
+  return a.crowdDensity === b.crowdDensity &&
+    a.crowdReactionsEnabled === b.crowdReactionsEnabled &&
+    a.crowdVisualsEnabled === b.crowdVisualsEnabled;
 }
 
 function handleFormationPreviewLaneControls(event: KeyboardEvent): void {
