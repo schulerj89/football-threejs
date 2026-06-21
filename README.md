@@ -4,7 +4,7 @@ Low-poly 3D American football prototype built with Three.js, Vite, and TypeScrip
 
 The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness for validating controls, play states, formations, ball spotting, passing, tackling, downs, and camera language before the full game structure arrives.
 
-The current milestone adds an ElevenLabs audio-production foundation: official ElevenLabs skills are installed for local reference, project-specific football audio and broadcast-writing skills define production rules, and Node-only dry-run tooling plans future sound effects, crowd beds, and announcer speech without adding runtime game audio. The default playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, and `?playbook=7v7` runs the optional Twin Slants Flat passing drill. The prototype includes graphical pre-snap SVG play cards generated from gameplay data, visual-only procedural player poses and locomotion, route-aware passing consistency, receiver routes as ordered mathematical paths, pre-snap field route art, development-only route/pass/appearance auditing, a procedural football, visible low-poly player heads, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, swept catch detection, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, a development-only `?formationPreview=7v7` staging mode, the preserved orthographic three-quarter camera, the behind-the-offense perspective camera, and the optional cinematic broadcast camera.
+The current milestone adds a runtime audio mixer foundation for local browser playback: one gesture-unlocked `AudioContext`, master/crowd/announcer/gameplay/UI gain buses, persisted settings, a typed local asset manifest, streaming crowd-loop support, decoded one-shot support, and `?audioDebug=1` diagnostics. ElevenLabs remains offline-only production tooling. The default playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, and `?playbook=7v7` runs the optional Twin Slants Flat passing drill. The prototype includes graphical pre-snap SVG play cards generated from gameplay data, visual-only procedural player poses and locomotion, route-aware passing consistency, receiver routes as ordered mathematical paths, pre-snap field route art, development-only route/pass/appearance/audio auditing, a procedural football, visible low-poly player heads, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, swept catch detection, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, a development-only `?formationPreview=7v7` staging mode, the preserved orthographic three-quarter camera, the behind-the-offense perspective camera, and the optional cinematic broadcast camera.
 
 ## World Scale
 
@@ -48,7 +48,7 @@ ElevenLabs is used for offline generation only. Production browser code must not
 
 `npm run audio:generate:sfx` and `npm run audio:generate:speech` default to dry-run. Paid API calls require `-- --execute`, existing files require `--force` to replace, and one execution is capped by `--max-files` or `AUDIO_MAX_FILES`.
 
-Runtime audio playback, generated asset approval/import, announcer playback, crowd rendering, and audio mixing are queued future tasks.
+The browser runtime mixer consumes local files only. Generated asset approval/import, announcer playback, crowd reactions, spatial player sounds, and music are queued future tasks.
 
 ## Controls
 
@@ -65,7 +65,9 @@ Runtime audio playback, generated asset approval/import, announcer playback, cro
 - Press `R` to reset the play to pre-snap.
 - Press `Enter` from game over to restart the two-minute score attack.
 - Press `C` in development or with `?debug=1` to cycle through tactical orthographic, behind-the-offense perspective, and cinematic broadcast cameras.
+- Press `M` to toggle the temporary runtime audio mute setting after the first user gesture unlocks audio.
 - Use `?camera=tactical`, `?camera=offense`, or `?camera=cinematic` to choose the starting camera mode.
+- Use `?audio=0`, `?crowdAudio=0`, or `?announcer=0` to disable runtime audio, crowd-loop playback, or announcer playback paths during development.
 - The graphical play cards are visible only during pre-snap and are generated from the same play definitions, resolved formation positions, routes, and blocker assignments used by gameplay.
 - Play selection is locked while a play is live; reset preserves the selected play.
 - The HUD shows the selected target for passing plays.
@@ -120,6 +122,8 @@ Add `?passAudit=1` to show the development-only pass audit overlay for route-awa
 
 Add `?appearanceAudit=1` to show the development-only player appearance audit. It reports player ID, skin-tone ID, head bounds, helmet bounds, and head-to-helmet clearance.
 
+Add `?audioDebug=1` to show the runtime audio debug overlay. It reports `AudioContext` state, active buses, gain values, active loops, active one-shots, loaded compressed bytes, estimated decoded buffer bytes, missing optional local assets, recent audio-observed gameplay events, and unlock errors.
+
 ## Current Non-Goals And Future Scope
 
 - Presentation future scope: stadium, crowd presentation, announcer audio, cinematic presentation polish, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, and broader stadium presentation are planned later, not permanent exclusions.
@@ -130,5 +134,5 @@ Add `?appearanceAudit=1` to show the development-only player appearance audit. I
 - Blocking and tackling: no offensive linemen rules, holding penalties, pancake blocks, double-team blocks, pulling guards, diving tackles, advanced pursuit/pathfinding library, or physics-driven contact.
 - Game structure: no quarters, opponent score, halftime, timeouts, NFL clock-stoppage rules, play clock, punts, field goals, penalties, defensive possessions, full game rules, season modes, or franchise systems.
 - Controls and camera: no sprinting, stamina, freely rotating camera, camera-relative controls, instant replay, replay recording, camera collision, or camera redesign beyond the current tactical, offense-perspective, and cinematic broadcast modes.
-- Audio runtime: no `AudioContext`, runtime sound, announcer playback, crowd rendering, music playback, audio mixing, or browser-side ElevenLabs calls in the current milestone.
+- Audio future scope: no generated audio integration, announcer playback, crowd reactions, spatial player sounds, music playback, or browser-side ElevenLabs calls in the current milestone. The runtime mixer currently uses local test assets only.
 - Simulation architecture: no force-based physics, ragdoll physics, general-purpose physics engine, advanced AI rewrite, or unrelated refactoring.

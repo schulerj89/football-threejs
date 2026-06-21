@@ -7,6 +7,16 @@ import {
   syncBallVisual,
   type BallVisualSnapshot,
 } from './ballVisual';
+import { createAudioDebugOverlay, syncAudioDebugOverlay } from './audio/AudioDebugOverlay';
+import { AudioMixer } from './audio/AudioMixer';
+import {
+  GameAudioDirector,
+  type GameAudioDirectorSnapshot,
+} from './audio/GameAudioDirector';
+import {
+  loadAudioSettings,
+  resolveAudioFeatureFlags,
+} from './audio/AudioSettings';
 import {
   createAppearanceAuditOverlay,
   createAppearanceAuditSnapshot,
@@ -99,6 +109,7 @@ declare global {
   interface Window {
     __footballDebug?: {
       forceQuarterbackPastLineForTest: () => boolean;
+      getAudioSnapshot: () => GameAudioDirectorSnapshot;
       getAppearanceAuditSnapshot: () => AppearanceAuditSnapshot;
       getBallVisualSnapshot: () => BallVisualSnapshot;
       getCameraSnapshot: () => GameplayCameraDebugSnapshot;
@@ -113,6 +124,10 @@ declare global {
       getPlayerSnapshot: () => PlayerSnapshot;
       getRenderMetrics: () => RenderMetricsSnapshot;
       getRouteArtSnapshot: () => RouteArtRendererSnapshot;
+      playAudioTestOneShot: () => Promise<boolean>;
+      setAudioMuted: (muted: boolean) => void;
+      startAudioTestLoop: () => Promise<boolean>;
+      stopAudioTestLoop: () => boolean;
     };
   }
 }
@@ -140,6 +155,7 @@ const routeAuditEnabled = searchParams.has('routeAudit');
 const routeArtEnabled = searchParams.get('routeArt') !== '0';
 const passAuditEnabled = searchParams.has('passAudit');
 const appearanceAuditEnabled = searchParams.has('appearanceAudit');
+const audioFeatureFlags = resolveAudioFeatureFlags(searchParams);
 let presentationAuditState: PresentationAuditState = resolvePresentationAuditState(
   searchParams.get('presentationState'),
 );
@@ -198,6 +214,16 @@ const playControls = new KeyboardPlayControls(
   window,
   gameplayModel.availablePlays.map((play) => play.id),
 );
+const gameAudioDirector = new GameAudioDirector(new AudioMixer({
+  flags: audioFeatureFlags,
+  settings: loadAudioSettings(),
+  warn: (message) => {
+    if (import.meta.env.DEV) {
+      console.warn(message);
+    }
+  },
+}));
+gameAudioDirector.installControls(window);
 const debugOverlay = new DebugOverlay({ renderer, player: getActivePrimaryPlayer() });
 const gameplayHud = createGameplayHud();
 const playCallUi = formationPreviewModel ? null : createPlayCallUi(gameplayModel.availablePlays);
@@ -214,6 +240,7 @@ const presentationAuditOverlay = presentationAuditEnabled
 const routeAuditOverlay = routeAuditEnabled ? createRouteAuditOverlay() : null;
 const passAuditOverlay = passAuditEnabled ? createPassAuditOverlay() : null;
 const appearanceAuditOverlay = appearanceAuditEnabled ? createAppearanceAuditOverlay() : null;
+const audioDebugOverlay = audioFeatureFlags.audioDebug ? createAudioDebugOverlay() : null;
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 let latestRenderMetrics: RenderMetricsSnapshot | null = null;
@@ -222,7 +249,8 @@ if (
   import.meta.env.DEV ||
   searchParams.has('debug') ||
   presentationAuditEnabled ||
-  appearanceAuditEnabled
+  appearanceAuditEnabled ||
+  audioFeatureFlags.audioDebug
 ) {
   window.__footballDebug = {
     forceQuarterbackPastLineForTest: () => {
@@ -238,6 +266,7 @@ if (
       gameplayModel.player.velocity.z = 0;
       return true;
     },
+    getAudioSnapshot: () => gameAudioDirector.getSnapshot(),
     getAppearanceAuditSnapshot: () => createAppearanceAuditSnapshot(playerVisuals),
     getBallVisualSnapshot: () => getBallVisualSnapshot(ballVisual),
     getCameraSnapshot: () => cameraController.getDebugSnapshot(),
@@ -254,6 +283,12 @@ if (
     getPlayerSnapshot: () => snapshotPlayerModel(getActivePrimaryPlayer()),
     getRenderMetrics: () => latestRenderMetrics ?? createRenderMetricsSnapshot(0),
     getRouteArtSnapshot: () => routeArtRenderer.getSnapshot(),
+    playAudioTestOneShot: () => gameAudioDirector.playTestOneShot(),
+    setAudioMuted: (muted: boolean) => {
+      gameAudioDirector.setMuted(muted);
+    },
+    startAudioTestLoop: () => gameAudioDirector.startTestLoop(),
+    stopAudioTestLoop: () => gameAudioDirector.stopTestLoop(),
   };
   window.addEventListener('keydown', handleDevelopmentCameraToggle);
 }
@@ -305,6 +340,7 @@ function renderFrame(delta: number): void {
   }
 
   const gameplaySnapshot = getActivePresentationSnapshot();
+  gameAudioDirector.update(gameplaySnapshot);
   syncFootballFieldDriveLines(
     field,
     gameplaySnapshot.drive.lineOfScrimmage,
@@ -352,6 +388,9 @@ function renderFrame(delta: number): void {
       appearanceAuditOverlay,
       createAppearanceAuditSnapshot(playerVisuals),
     );
+  }
+  if (audioDebugOverlay) {
+    syncAudioDebugOverlay(audioDebugOverlay, gameAudioDirector.getSnapshot());
   }
   const renderMetrics = debugOverlay.isVisible() ? latestRenderMetrics ?? undefined : undefined;
   debugOverlay.update(

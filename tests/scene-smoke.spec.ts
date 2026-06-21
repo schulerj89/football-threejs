@@ -337,6 +337,23 @@ interface RouteArtRendererSnapshot {
   visible: boolean;
 }
 
+interface AudioRuntimeSnapshot {
+  activeBuses: string[];
+  activeLoops: string[];
+  activeOneShots: number;
+  busGains: Record<string, number>;
+  contextState: 'closed' | 'running' | 'suspended' | 'unavailable';
+  decodedBufferBytes: number;
+  enabled: boolean;
+  lastUnlockError: string | null;
+  loadedAssetIds: string[];
+  loadedCompressedBytes: number;
+  missingOptionalAssetIds: string[];
+  muted: boolean;
+  recentEvents: Array<{ type: string }>;
+  streamedAssetIds: string[];
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -473,6 +490,42 @@ test('supports the box player body comparison URL option', async ({ page }) => {
   expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'box')).toBe(true);
   await expect(page.locator('.debug-overlay')).toContainText('BODY box');
   await expectNonBlankCanvas(page);
+});
+
+test('starts runtime audio debug and plays local test assets without mutating gameplay', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1&audioDebug=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO');
+
+  const before = await getGameplaySnapshot(page);
+  const initialAudio = await getAudioSnapshot(page);
+  expect(initialAudio.enabled).toBe(true);
+  expect(initialAudio.activeBuses).toContain('master');
+
+  await page.keyboard.press('M');
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.muted)).toBe(true);
+  await page.keyboard.press('M');
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.muted)).toBe(false);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.contextState)).toBe('running');
+
+  await expect(playAudioTestOneShot(page)).resolves.toBe(true);
+  await expect.poll(
+    () => getAudioSnapshot(page).then((snapshot) => snapshot.loadedAssetIds.includes('runtime-test-click')),
+  ).toBe(true);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.decodedBufferBytes)).toBeGreaterThan(0);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.loadedCompressedBytes)).toBeGreaterThan(0);
+
+  await expect(startAudioTestLoop(page)).resolves.toBe(true);
+  await expect.poll(
+    () => getAudioSnapshot(page).then((snapshot) => snapshot.activeLoops.includes('runtime-test-crowd-loop')),
+  ).toBe(true);
+  await expect.poll(
+    () => getAudioSnapshot(page).then((snapshot) => snapshot.streamedAssetIds.includes('runtime-test-crowd-loop')),
+  ).toBe(true);
+  await expect(stopAudioTestLoop(page)).resolves.toBe(true);
+
+  const after = await getGameplaySnapshot(page);
+  expect(after).toEqual(before);
 });
 
 test('supports football visual and appearance audit presentation options', async ({ page }) => {
@@ -1993,6 +2046,78 @@ async function getRouteArtSnapshot(page: Page): Promise<RouteArtRendererSnapshot
     }
 
     return debugApi.getRouteArtSnapshot();
+  });
+}
+
+async function getAudioSnapshot(page: Page): Promise<AudioRuntimeSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getAudioSnapshot: () => AudioRuntimeSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getAudioSnapshot();
+  });
+}
+
+async function playAudioTestOneShot(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          playAudioTestOneShot: () => Promise<boolean>;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.playAudioTestOneShot();
+  });
+}
+
+async function startAudioTestLoop(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          startAudioTestLoop: () => Promise<boolean>;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.startAudioTestLoop();
+  });
+}
+
+async function stopAudioTestLoop(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          stopAudioTestLoop: () => boolean;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.stopAudioTestLoop();
   });
 }
 

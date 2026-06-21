@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0] - 2026-06-21
+
+### Added
+
+- Added a browser runtime audio mixer foundation with one gesture-unlocked `AudioContext`, master/crowd/announcer/gameplay SFX/UI gain buses, persisted settings, and the temporary `M` mute shortcut.
+- Added a typed local audio asset manifest, decoded one-shot loading, streamed long-loop loading, optional-file warnings, and tiny local WAV test assets under `public/audio`.
+- Added `?audio=0`, `?crowdAudio=0`, `?announcer=0`, and `?audioDebug=1` runtime audio development controls.
+- Added a read-only game audio director and debug overlay that observe gameplay snapshots/events without modifying gameplay state.
+- Added unit and browser smoke coverage for bus routing, gesture unlock, mute persistence, optional missing assets, one-shot limits, streamed loop behavior, local test asset playback, and browser-secret scanning.
+
 ## [0.29.0] - 2026-06-21
 
 ### Added
