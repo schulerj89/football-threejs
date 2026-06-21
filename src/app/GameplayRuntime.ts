@@ -1,0 +1,241 @@
+import { PLAYABLE_FIELD_BOUNDS } from '../field';
+import { KeyboardMovementInput, KeyboardPlayControls } from '../input';
+import {
+  createFormationPreviewModel,
+  resolveFormationPreviewMode,
+  setFormationPreviewSnapLane,
+  snapshotFormationPreviewAsGameplay,
+  toggleFormationPreviewPreferredSide,
+  type FormationPreviewModel,
+} from '../formationPreview';
+import type { GameExperienceSettings } from '../config/GameExperienceSettings';
+import {
+  attemptPass,
+  createGameplayModel,
+  cycleSelectedReceiver,
+  resetPlay,
+  restartScoreAttack,
+  selectPlay,
+  snapshotGameplayModel,
+  startPlay,
+  updateGameplayModel,
+  type GameplayModel,
+  type GameplaySnapshot,
+} from '../playState';
+import { createPresentationAuditGameplaySnapshot, resolvePresentationAuditState, type PresentationAuditState } from '../presentationAudit';
+import { updatePlayerSimulation } from '../playerSimulation';
+import type { PlayerModel } from '../playerModel';
+
+export interface GameplayRuntimeOptions {
+  consumeSelectedPlayId: () => string | null;
+  playbookId: GameExperienceSettings['playbookId'];
+  searchParams: URLSearchParams;
+  shouldHoldDeadPlayReset: () => boolean;
+  skipPresentation: () => void;
+}
+
+export class GameplayRuntime {
+  readonly formationPreviewModel: FormationPreviewModel | null;
+  private readonly keyboardInput = new KeyboardMovementInput(window);
+  private readonly searchParams: URLSearchParams;
+  private playControls: KeyboardPlayControls;
+  private presentationAuditState: PresentationAuditState;
+
+  gameplayModel: GameplayModel;
+
+  constructor(private readonly options: GameplayRuntimeOptions) {
+    this.searchParams = options.searchParams;
+    this.presentationAuditState = resolvePresentationAuditState(
+      options.searchParams.get('presentationState'),
+    );
+    this.gameplayModel = createGameplayModel({ playbookId: options.playbookId });
+    const formationPreviewMode = resolveFormationPreviewMode(
+      options.searchParams.get('formationPreview'),
+    );
+    this.formationPreviewModel = formationPreviewMode
+      ? createFormationPreviewModel(formationPreviewMode)
+      : null;
+    this.playControls = this.createPlayControls();
+  }
+
+  get auditState(): PresentationAuditState {
+    return this.presentationAuditState;
+  }
+
+  get availablePlays() {
+    return this.gameplayModel.availablePlays;
+  }
+
+  dispose(): void {
+    this.playControls.dispose();
+  }
+
+  update(delta: number, active: boolean): void {
+    if (this.formationPreviewModel) {
+      for (const player of this.formationPreviewModel.players) {
+        player.velocity.x = 0;
+        player.velocity.z = 0;
+        player.currentState = 'idle';
+      }
+      return;
+    }
+
+    if (!active) {
+      this.playControls.consumeRequests();
+      this.gameplayModel.player.velocity.x = 0;
+      this.gameplayModel.player.velocity.z = 0;
+      return;
+    }
+
+    this.updatePlayControls();
+    if (
+      this.gameplayModel.playState === 'live' &&
+      this.gameplayModel.player.currentState === 'userControlled'
+    ) {
+      updatePlayerSimulation(
+        this.gameplayModel.player,
+        this.keyboardInput.getMovement(),
+        delta,
+        PLAYABLE_FIELD_BOUNDS,
+        { clampSidelines: false },
+      );
+    } else {
+      this.gameplayModel.player.velocity.x = 0;
+      this.gameplayModel.player.velocity.z = 0;
+    }
+    updateGameplayModel(this.gameplayModel, delta, {
+      suppressDeadPlayReset: this.options.shouldHoldDeadPlayReset(),
+    });
+  }
+
+  rebuildForPlaybook(
+    nextPlaybookId: GameExperienceSettings['playbookId'],
+    force = false,
+  ): boolean {
+    if (!force && this.gameplayModel.playbookId === nextPlaybookId) {
+      return false;
+    }
+
+    this.gameplayModel = createGameplayModel({ playbookId: nextPlaybookId });
+    this.playControls.dispose();
+    this.playControls = this.createPlayControls();
+    return true;
+  }
+
+  getActivePlayers(crowdPreviewEnabled: boolean): PlayerModel[] {
+    if (crowdPreviewEnabled) {
+      return [];
+    }
+    return this.formationPreviewModel?.players ?? this.gameplayModel.players;
+  }
+
+  getActivePrimaryPlayer(): PlayerModel {
+    return this.formationPreviewModel
+      ? this.formationPreviewModel.players.find((player) => player.id === 'offense-qb') ??
+          this.formationPreviewModel.players[0]
+      : this.gameplayModel.player;
+  }
+
+  getActiveGameplaySnapshot(crowdPreviewEnabled: boolean): GameplaySnapshot {
+    const snapshot = this.formationPreviewModel
+      ? snapshotFormationPreviewAsGameplay(this.formationPreviewModel)
+      : snapshotGameplayModel(this.gameplayModel);
+    if (crowdPreviewEnabled) {
+      return { ...snapshot, players: [] };
+    }
+    return snapshot;
+  }
+
+  getActivePresentationSnapshot(crowdPreviewEnabled: boolean): GameplaySnapshot {
+    const snapshot = this.getActiveGameplaySnapshot(crowdPreviewEnabled);
+    if (!this.searchParams.has('presentationAudit') || !this.formationPreviewModel) {
+      return snapshot;
+    }
+    return createPresentationAuditGameplaySnapshot(snapshot, this.presentationAuditState);
+  }
+
+  startFromTitle(playbookId: GameExperienceSettings['playbookId']): void {
+    this.rebuildForPlaybook(playbookId, true);
+  }
+
+  handleFormationPreviewLaneControls(event: KeyboardEvent, resetCamera: () => void): void {
+    if (!this.formationPreviewModel || event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+    if (event.key === '1') {
+      setFormationPreviewSnapLane(this.formationPreviewModel, 'leftHash');
+      resetCamera();
+      event.preventDefault();
+      return;
+    }
+    if (event.key === '2') {
+      setFormationPreviewSnapLane(this.formationPreviewModel, 'middle');
+      resetCamera();
+      event.preventDefault();
+      return;
+    }
+    if (event.key === '3') {
+      setFormationPreviewSnapLane(this.formationPreviewModel, 'rightHash');
+      resetCamera();
+      event.preventDefault();
+      return;
+    }
+    if (event.key === '4' && this.formationPreviewModel.mode === '11v11') {
+      toggleFormationPreviewPreferredSide(this.formationPreviewModel);
+      resetCamera();
+      event.preventDefault();
+    }
+  }
+
+  handlePresentationAuditControls(event: KeyboardEvent, resetCamera: () => void): void {
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+    if (event.key.toLowerCase() === 'l') {
+      this.presentationAuditState = 'locomotionPreview';
+      event.preventDefault();
+      return;
+    }
+    if (event.key.toLowerCase() === 'p') {
+      this.presentationAuditState = 'preSnap';
+      resetCamera();
+      event.preventDefault();
+    }
+  }
+
+  private updatePlayControls(): void {
+    const requests = this.playControls.consumeRequests();
+    if (requests.startPlay || requests.resetPlay || requests.restartChallenge) {
+      this.options.skipPresentation();
+    }
+    if (requests.restartChallenge) {
+      restartScoreAttack(this.gameplayModel);
+      return;
+    }
+    if (requests.resetPlay) {
+      resetPlay(this.gameplayModel);
+      return;
+    }
+
+    const selectedPlayId = requests.selectedPlayId ?? this.options.consumeSelectedPlayId();
+    if (selectedPlayId) {
+      selectPlay(this.gameplayModel, selectedPlayId);
+    }
+    if (requests.cycleReceiver) {
+      cycleSelectedReceiver(this.gameplayModel);
+    }
+    if (requests.pass) {
+      attemptPass(this.gameplayModel);
+    }
+    if (requests.startPlay) {
+      startPlay(this.gameplayModel);
+    }
+  }
+
+  private createPlayControls(): KeyboardPlayControls {
+    return new KeyboardPlayControls(
+      window,
+      this.gameplayModel.availablePlays.map((play) => play.id),
+    );
+  }
+}
