@@ -1,0 +1,4 @@
+interface:
+  display_name: "Football Audio Director"
+  short_description: "Plan secure offline football audio generation and budgets"
+  default_prompt: "Plan a secure offline football audio asset batch for this project."

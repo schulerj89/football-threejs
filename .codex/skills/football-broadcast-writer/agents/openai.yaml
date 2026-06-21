@@ -1,0 +1,4 @@
+interface:
+  display_name: "Football Broadcast Writer"
+  short_description: "Draft original football commentary and matching captions"
+  default_prompt: "Write concise original broadcast lines for football gameplay events."

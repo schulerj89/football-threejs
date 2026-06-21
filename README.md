@@ -4,7 +4,7 @@ Low-poly 3D American football prototype built with Three.js, Vite, and TypeScrip
 
 The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness for validating controls, play states, formations, ball spotting, passing, tackling, downs, and camera language before the full game structure arrives.
 
-The current milestone adds presentation-only football and player-head polish: the ball now defaults to a procedural low-poly football with seam and laces, and every procedural mannequin has a visible low-poly head and neck with deterministic skin tone inside the reusable helmet. The default playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, and `?playbook=7v7` runs the optional Twin Slants Flat passing drill. The prototype includes graphical pre-snap SVG play cards generated from gameplay data, visual-only procedural player poses and locomotion, route-aware passing consistency, receiver routes as ordered mathematical paths, pre-snap field route art, development-only route/pass/appearance auditing, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, swept catch detection, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, a development-only `?formationPreview=7v7` staging mode, the preserved orthographic three-quarter camera, the behind-the-offense perspective camera, and the optional cinematic broadcast camera.
+The current milestone adds an ElevenLabs audio-production foundation: official ElevenLabs skills are installed for local reference, project-specific football audio and broadcast-writing skills define production rules, and Node-only dry-run tooling plans future sound effects, crowd beds, and announcer speech without adding runtime game audio. The default playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, and `?playbook=7v7` runs the optional Twin Slants Flat passing drill. The prototype includes graphical pre-snap SVG play cards generated from gameplay data, visual-only procedural player poses and locomotion, route-aware passing consistency, receiver routes as ordered mathematical paths, pre-snap field route art, development-only route/pass/appearance auditing, a procedural football, visible low-poly player heads, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, swept catch detection, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, a development-only `?formationPreview=7v7` staging mode, the preserved orthographic three-quarter camera, the behind-the-offense perspective camera, and the optional cinematic broadcast camera.
 
 ## World Scale
 
@@ -25,12 +25,30 @@ The current milestone adds presentation-only football and player-head polish: th
 npm install
 npm run dev
 npm run build
+npm run audio:plan
+npm run audio:generate:sfx
+npm run audio:generate:speech
+npm run audio:report
 npm run test:unit
 npm run test:smoke
 npm test
 ```
 
 Open the dev server at `http://127.0.0.1:5173`.
+
+## Audio Production
+
+ElevenLabs is used for offline generation only. Production browser code must not call ElevenLabs, receive `ELEVENLABS_API_KEY`, or use any `VITE_`-prefixed ElevenLabs secret.
+
+- Official installed skills: `.agents/skills/setup-api-key`, `.agents/skills/sound-effects`, and `.agents/skills/text-to-speech`.
+- Project skills: `.codex/skills/football-audio-director` and `.codex/skills/football-broadcast-writer`.
+- Typed plan: `tools/audio/audioPlan.ts`.
+- Safe local example: `.env.example`.
+- Future output roots: `public/audio/sfx`, `public/audio/crowd`, and `public/audio/announcer`.
+
+`npm run audio:generate:sfx` and `npm run audio:generate:speech` default to dry-run. Paid API calls require `-- --execute`, existing files require `--force` to replace, and one execution is capped by `--max-files` or `AUDIO_MAX_FILES`.
+
+Runtime audio playback, generated asset approval/import, announcer playback, crowd rendering, and audio mixing are queued future tasks.
 
 ## Controls
 
@@ -104,7 +122,7 @@ Add `?appearanceAudit=1` to show the development-only player appearance audit. I
 
 ## Current Non-Goals And Future Scope
 
-- Presentation future scope: stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, and broader stadium presentation are planned later, not permanent exclusions.
+- Presentation future scope: stadium, crowd presentation, announcer audio, cinematic presentation polish, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, and broader stadium presentation are planned later, not permanent exclusions.
 - Roster future scope: broader active 7v7 playbooks, 11v11, full special teams, additional offensive or defensive gameplay players beyond the current five-on-five drill and optional Twin Slants Flat 7v7 passing drill, player switching, and formations beyond the current Inside Run, Outside Run, Quick Pass, Slant Flat, Twin Slants Flat, and static 7v7 preview data are deferred.
 - Assets and animation future scope: imported full-body player models, imported head models, facial features, hair, skeletal animation, quarterback animation, scramble animation, tackling animation, celebration animation, and center or snap animation are deferred. The current milestone intentionally uses procedural low-poly silhouettes, procedural heads, a procedural football, and the reusable low-poly helmet.
 - Play calling: no large playbook menu, title screen, audibles, defensive play selection, route editor, procedural play generation, hot routes, or menus beyond the current pre-snap play cards and minimal HUD/debug displays.
@@ -112,4 +130,5 @@ Add `?appearanceAudit=1` to show the development-only player appearance audit. I
 - Blocking and tackling: no offensive linemen rules, holding penalties, pancake blocks, double-team blocks, pulling guards, diving tackles, advanced pursuit/pathfinding library, or physics-driven contact.
 - Game structure: no quarters, opponent score, halftime, timeouts, NFL clock-stoppage rules, play clock, punts, field goals, penalties, defensive possessions, full game rules, season modes, or franchise systems.
 - Controls and camera: no sprinting, stamina, freely rotating camera, camera-relative controls, instant replay, replay recording, camera collision, or camera redesign beyond the current tactical, offense-perspective, and cinematic broadcast modes.
+- Audio runtime: no `AudioContext`, runtime sound, announcer playback, crowd rendering, music playback, audio mixing, or browser-side ElevenLabs calls in the current milestone.
 - Simulation architecture: no force-based physics, ragdoll physics, general-purpose physics engine, advanced AI rewrite, or unrelated refactoring.

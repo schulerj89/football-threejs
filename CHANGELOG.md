@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.29.0] - 2026-06-21
+
+### Added
+
+- Installed the official ElevenLabs `setup-api-key`, `sound-effects`, and `text-to-speech` skills under `.agents/skills` with `skills-lock.json`.
+- Added project-specific `football-audio-director` and `football-broadcast-writer` skills for secure offline football audio planning and original broadcast-copy writing.
+- Added a typed Node-only audio plan and dry-run generation/reporting pipeline under `tools/audio`.
+- Added `npm run audio:plan`, `npm run audio:generate:sfx`, `npm run audio:generate:speech`, and `npm run audio:report`.
+- Added safe `.env.example`, `public/audio` staging folders, and documentation for audio direction, secure asset generation, and broadcast writing.
+- Added unit coverage for plan validation, missing-key failure, dry-run behavior, existing-file protection, path validation, and secret scanning.
+
 ## [0.28.0] - 2026-06-21
 
 ### Added
