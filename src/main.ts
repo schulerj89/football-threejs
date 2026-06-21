@@ -37,6 +37,17 @@ import {
 } from './camera/GameplayCameraController';
 import { DebugOverlay, type RenderMetricsSnapshot } from './debugOverlay';
 import {
+  CrowdPreviewController,
+  createCrowdPreviewOverlay,
+  resolveCrowdBenchmarkDurationSeconds,
+  resolveCrowdPreviewCameraView,
+  resolveCrowdPreviewCount,
+  resolveCrowdPreviewEnabled,
+  syncCrowdPreviewOverlay,
+  type CrowdPreviewCameraView,
+  type CrowdPreviewSnapshot,
+} from './crowdPreview';
+import {
   PLAYABLE_FIELD_BOUNDS,
   WORLD_SCALE,
   createFootballField,
@@ -125,6 +136,7 @@ declare global {
       getBallVisualSnapshot: () => BallVisualSnapshot;
       getCameraSnapshot: () => GameplayCameraDebugSnapshot;
       getCameraFramingSnapshot: () => CameraFramingSnapshot;
+      getCrowdPreviewSnapshot: () => CrowdPreviewSnapshot | null;
       getFormationPreviewSnapshot: () => FormationPreviewSnapshot | null;
       getGameplaySnapshot: () => GameplaySnapshot;
       getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
@@ -136,6 +148,7 @@ declare global {
       getRenderMetrics: () => RenderMetricsSnapshot;
       getRouteArtSnapshot: () => RouteArtRendererSnapshot;
       playAudioTestOneShot: () => Promise<boolean>;
+      setCrowdPreviewCameraView: (view: CrowdPreviewCameraView) => void;
       setAnnouncerEnabled: (enabled: boolean) => void;
       setAnnouncerVolume: (volume: number) => void;
       setAudioPageActiveForTest: (active: boolean) => void;
@@ -157,6 +170,13 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x101920);
 
 const searchParams = new URLSearchParams(window.location.search);
+const crowdPreviewEnabled = resolveCrowdPreviewEnabled(searchParams);
+const crowdBenchmarkEnabled = crowdPreviewEnabled && searchParams.get('crowdBenchmark') === '1';
+const crowdBenchmarkDurationSeconds = resolveCrowdBenchmarkDurationSeconds(
+  searchParams.get('crowdBenchmarkDuration'),
+);
+const crowdPreviewCount = resolveCrowdPreviewCount(searchParams);
+const crowdPreviewCameraView = resolveCrowdPreviewCameraView(searchParams.get('crowdCamera'));
 const playerVisualOptions = {
   bodyStyle: resolvePlayerBodyVisualStyle(searchParams.get('playerBody')),
   debugRoleColors: searchParams.has('debugRoleColors'),
@@ -195,6 +215,7 @@ attachHelmetsToPlayerVisuals(playerVisuals, getActivePlayers());
 
 const ballVisual = createBallVisual({ style: ballVisualStyle });
 syncBallVisual(ballVisual, gameplayModel.ball);
+ballVisual.visible = !crowdPreviewEnabled;
 scene.add(ballVisual);
 
 const routeArtRenderer = new RouteArtRenderer({
@@ -217,6 +238,21 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 app.appendChild(renderer.domElement);
+
+const crowdPreviewController = crowdPreviewEnabled
+  ? new CrowdPreviewController({
+      benchmarkDurationSeconds: crowdBenchmarkDurationSeconds,
+      benchmarkEnabled: crowdBenchmarkEnabled,
+      height: window.innerHeight,
+      requestedCount: crowdPreviewCount,
+      view: crowdPreviewCameraView,
+      width: window.innerWidth,
+    })
+  : null;
+
+if (crowdPreviewController) {
+  scene.add(crowdPreviewController.group);
+}
 
 const ambientLight = new THREE.HemisphereLight(0xdde7ef, 0x344038, 2.4);
 scene.add(ambientLight);
@@ -249,7 +285,9 @@ broadcastCommentaryDirector.setPageActive(!document.hidden);
 const debugOverlay = new DebugOverlay({ renderer, player: getActivePrimaryPlayer() });
 const gameplayHud = createGameplayHud();
 const broadcastCaptions = createBroadcastCaptions();
-const playCallUi = formationPreviewModel ? null : createPlayCallUi(gameplayModel.availablePlays);
+const playCallUi = formationPreviewModel || crowdPreviewEnabled
+  ? null
+  : createPlayCallUi(gameplayModel.availablePlays);
 const playerPoseController = new PlayerPoseController(undefined, {
   enabled: playerMotionEnabled,
 });
@@ -266,6 +304,7 @@ const appearanceAuditOverlay = appearanceAuditEnabled ? createAppearanceAuditOve
 const audioDebugOverlay = audioFeatureFlags.audioDebug || commentaryDebugEnabled
   ? createAudioDebugOverlay()
   : null;
+const crowdPreviewOverlay = crowdPreviewController ? createCrowdPreviewOverlay() : null;
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 let latestRenderMetrics: RenderMetricsSnapshot | null = null;
@@ -276,7 +315,8 @@ if (
   presentationAuditEnabled ||
   appearanceAuditEnabled ||
   audioFeatureFlags.audioDebug ||
-  commentaryDebugEnabled
+  commentaryDebugEnabled ||
+  crowdPreviewEnabled
 ) {
   window.__footballDebug = {
     forceQuarterbackPastLineForTest: () => {
@@ -297,6 +337,7 @@ if (
     getBallVisualSnapshot: () => getBallVisualSnapshot(ballVisual),
     getCameraSnapshot: () => cameraController.getDebugSnapshot(),
     getCameraFramingSnapshot: () => getCameraFramingSnapshot(),
+    getCrowdPreviewSnapshot: () => crowdPreviewController?.getSnapshot() ?? null,
     getFormationPreviewSnapshot: () =>
       formationPreviewModel ? snapshotFormationPreviewModel(formationPreviewModel) : null,
     getGameplaySnapshot: () => getActivePresentationSnapshot(),
@@ -310,6 +351,9 @@ if (
     getRenderMetrics: () => latestRenderMetrics ?? createRenderMetricsSnapshot(0),
     getRouteArtSnapshot: () => routeArtRenderer.getSnapshot(),
     playAudioTestOneShot: () => gameAudioDirector.playTestOneShot(),
+    setCrowdPreviewCameraView: (view: CrowdPreviewCameraView) => {
+      crowdPreviewController?.setCameraView(view);
+    },
     setAnnouncerEnabled: (enabled: boolean) => {
       broadcastCommentaryDirector.setAnnouncerEnabled(enabled);
     },
@@ -340,6 +384,10 @@ if (presentationAuditEnabled) {
   window.addEventListener('keydown', handlePresentationAuditControls);
 }
 
+if (crowdPreviewController) {
+  window.addEventListener('keydown', handleCrowdPreviewControls);
+}
+
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', resize);
 document.addEventListener('visibilitychange', syncAudioPageActivity);
@@ -357,6 +405,24 @@ renderer.setAnimationLoop(() => {
 });
 
 function renderFrame(delta: number): void {
+  if (crowdPreviewController) {
+    crowdPreviewController.updateBeforeRender();
+    renderer.render(scene, crowdPreviewController.camera);
+    crowdPreviewController.recordFrame(delta, renderer);
+    latestRenderMetrics = createRenderMetricsSnapshot(delta);
+
+    if (crowdPreviewOverlay) {
+      syncCrowdPreviewOverlay(crowdPreviewOverlay, crowdPreviewController.getSnapshot());
+    }
+
+    if (!hasRenderedFirstFrame) {
+      hasRenderedFirstFrame = true;
+      document.body.dataset.sceneReady = 'true';
+    }
+
+    return;
+  }
+
   if (formationPreviewModel) {
     for (const player of formationPreviewModel.players) {
       player.velocity.x = 0;
@@ -533,6 +599,35 @@ function handlePresentationAuditControls(event: KeyboardEvent): void {
   }
 }
 
+function handleCrowdPreviewControls(event: KeyboardEvent): void {
+  if (!crowdPreviewController || event.ctrlKey || event.metaKey || event.altKey) {
+    return;
+  }
+
+  if (event.key === '1') {
+    crowdPreviewController.setCameraView('wide');
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key === '2') {
+    crowdPreviewController.setCameraView('sideline');
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key === '3') {
+    crowdPreviewController.setCameraView('endZone');
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key === '4') {
+    crowdPreviewController.setCameraView('close');
+    event.preventDefault();
+  }
+}
+
 function handleDevelopmentCameraToggle(event: KeyboardEvent): void {
   if (event.ctrlKey || event.metaKey || event.altKey || event.key.toLowerCase() !== 'c') {
     return;
@@ -548,7 +643,11 @@ function resize(): void {
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(width, height);
-  cameraController.resize(width, height);
+  if (crowdPreviewController) {
+    crowdPreviewController.resize(width, height);
+  } else {
+    cameraController.resize(width, height);
+  }
 }
 
 function syncAudioPageActivity(): void {
@@ -558,6 +657,10 @@ function syncAudioPageActivity(): void {
 }
 
 function getActivePlayers() {
+  if (crowdPreviewEnabled) {
+    return [];
+  }
+
   return formationPreviewModel?.players ?? gameplayModel.players;
 }
 
@@ -568,9 +671,18 @@ function getActivePrimaryPlayer() {
 }
 
 function getActiveGameplaySnapshot(): GameplaySnapshot {
-  return formationPreviewModel
+  const snapshot = formationPreviewModel
     ? snapshotFormationPreviewAsGameplay(formationPreviewModel)
     : snapshotGameplayModel(gameplayModel);
+
+  if (crowdPreviewEnabled) {
+    return {
+      ...snapshot,
+      players: [],
+    };
+  }
+
+  return snapshot;
 }
 
 function getActivePresentationSnapshot(): GameplaySnapshot {

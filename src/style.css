@@ -487,6 +487,26 @@ canvas {
   white-space: pre-wrap;
 }
 
+.crowd-preview-overlay {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 28;
+  max-width: min(500px, calc(100vw - 24px));
+  max-height: min(62vh, 620px);
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(8, 12, 14, 0.84);
+  color: #f3f5f6;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  pointer-events: none;
+  white-space: pre-wrap;
+}
+
 .broadcast-captions {
   position: fixed;
   left: 50%;

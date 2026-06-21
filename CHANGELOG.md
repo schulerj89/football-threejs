@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.35.0] - 2026-06-21
+
+### Added
+
+- Added a development-only `?crowdPreview=1` mode with a simple procedural seating shell, sideline and end-zone stands, and instanced low-poly spectators.
+- Added deterministic spectator placement, shared geometry/material resources, near/far LOD tiers, and explicit per-instance memory estimates.
+- Added crowd preview camera controls for wide, sideline, end-zone, and close inspection views.
+- Added a crowd preview overlay and `?crowdBenchmark=1` sweep for 500, 2,000, 5,000, and 10,000 spectators reporting draw calls, triangles, resource counts, frame time, minimum observed FPS, and renderer counters.
+- Added unit and browser smoke coverage for crowd count clamping, deterministic layouts, instancing/resource budgets, no active gameplay players in preview mode, disposal, camera controls, and benchmark output.
+
 ## [0.34.0] - 2026-06-21
 
 ### Added

@@ -389,6 +389,49 @@ interface AudioRuntimeSnapshot {
   streamedAssetIds: string[];
 }
 
+interface CrowdPreviewSnapshot {
+  actualSpectatorCount: number;
+  averageFrameTimeMs: number;
+  benchmark: {
+    active: boolean;
+    completed: boolean;
+    currentCount: number | null;
+    reports: Array<{
+      actualSpectatorCount: number;
+      averageFrameTimeMs: number;
+      crowdDrawCalls: number;
+      crowdTriangles: number;
+      estimatedInstanceBufferBytes: number;
+      frameCount: number;
+      minimumObservedFps: number;
+      requestedSpectatorCount: number;
+      rendererMemory: { geometries: number; textures: number };
+    }>;
+  };
+  cameraView: 'close' | 'endZone' | 'sideline' | 'wide';
+  crowdDrawCalls: number;
+  crowdTriangles: number;
+  estimatedInstanceBufferBytes: number;
+  farInstanceCount: number;
+  frameCount: number;
+  gameplayPlayerCount: number;
+  geometryCount: number;
+  materialCount: number;
+  minimumObservedFps: number;
+  nearInstanceCount: number;
+  perInstanceStorage: {
+    colorBytes: number;
+    customReactionDataBytes: number;
+    farMeshesPerSpectator: number;
+    nearMeshesPerSpectator: number;
+    transformMatrixBytes: number;
+  };
+  requestedSpectatorCount: number;
+  rendererMemory: { geometries: number; textures: number };
+  rendererRender: { calls: number; triangles: number };
+  textureCount: number;
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -513,6 +556,41 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
 
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test('renders the development crowd preview with bounded instanced resources', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?crowdPreview=1&crowdCount=5000&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.crowd-preview-overlay')).toContainText('CROWD PREVIEW');
+
+  const initial = await getCrowdPreviewSnapshot(page);
+  expect(initial.requestedSpectatorCount).toBe(5000);
+  expect(initial.actualSpectatorCount).toBe(5000);
+  expect(initial.nearInstanceCount + initial.farInstanceCount).toBe(5000);
+  expect(initial.gameplayPlayerCount).toBe(0);
+  expect(initial.crowdDrawCalls).toBe(6);
+  expect(initial.geometryCount).toBe(5);
+  expect(initial.materialCount).toBe(4);
+  expect(initial.textureCount).toBe(0);
+  expect((await getGameplaySnapshot(page)).players).toHaveLength(0);
+  expect(initial.perInstanceStorage).toMatchObject({
+    colorBytes: 12,
+    customReactionDataBytes: 0,
+    farMeshesPerSpectator: 1,
+    nearMeshesPerSpectator: 4,
+    transformMatrixBytes: 64,
+  });
+  expect(initial.estimatedInstanceBufferBytes).toBeGreaterThan(0);
+
+  await page.keyboard.press('2');
+  await expect.poll(() => getCrowdPreviewSnapshot(page).then((snapshot) => snapshot.cameraView)).toBe('sideline');
+  await page.keyboard.press('3');
+  await expect.poll(() => getCrowdPreviewSnapshot(page).then((snapshot) => snapshot.cameraView)).toBe('endZone');
+  await page.keyboard.press('4');
+  await expect.poll(() => getCrowdPreviewSnapshot(page).then((snapshot) => snapshot.cameraView)).toBe('close');
+
+  await expectNonBlankCanvas(page);
 });
 
 test('supports the box player body comparison URL option', async ({ page }) => {
@@ -2164,6 +2242,30 @@ async function getAudioSnapshot(page: Page): Promise<AudioRuntimeSnapshot> {
     }
 
     return debugApi.getAudioSnapshot();
+  });
+}
+
+async function getCrowdPreviewSnapshot(page: Page): Promise<CrowdPreviewSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getCrowdPreviewSnapshot: () => CrowdPreviewSnapshot | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    const snapshot = debugApi.getCrowdPreviewSnapshot();
+
+    if (!snapshot) {
+      throw new Error('Missing crowd preview snapshot');
+    }
+
+    return snapshot;
   });
 }
 
