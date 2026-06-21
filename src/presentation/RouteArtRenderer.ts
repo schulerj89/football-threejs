@@ -129,14 +129,24 @@ export class RouteArtRenderer {
   private lastRebuildKey = '';
   private snapshot: RouteArtRendererSnapshot;
 
+  private enabled: boolean;
+
   constructor(private readonly options: RouteArtRendererOptions = {}) {
+    this.enabled = options.enabled !== false;
     this.group.name = 'route-art-root';
     this.group.visible = false;
     this.snapshot = this.createSnapshot(false);
   }
 
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    if (!this.enabled && !this.options.auditEnabled) {
+      this.group.visible = false;
+    }
+  }
+
   update(gameplay: GameplaySnapshot, play: PlayDefinition): void {
-    const enabled = this.options.enabled !== false || this.options.auditEnabled === true;
+    const enabled = this.enabled || this.options.auditEnabled === true;
     const auditEnabled = this.options.auditEnabled === true;
     const shouldShow = enabled &&
       play.kind === 'pass' &&
@@ -393,7 +403,7 @@ export class RouteArtRenderer {
   private createSnapshot(visible: boolean): RouteArtRendererSnapshot {
     return {
       auditEnabled: this.options.auditEnabled === true,
-      enabled: this.options.enabled !== false || this.options.auditEnabled === true,
+      enabled: this.enabled || this.options.auditEnabled === true,
       rebuildKey: this.lastRebuildKey,
       routeCount: this.routeVisuals.size,
       routes: [...this.routeVisuals.values()].map((visual) => ({

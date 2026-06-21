@@ -1,4 +1,5 @@
 import {
+  DEFAULT_AUDIO_SETTINGS,
   loadAudioSettings,
   normalizeAudioSettings,
   type AudioFeatureFlags,
@@ -21,6 +22,12 @@ import {
   normalizeQualityMode,
   type QualityMode,
 } from '../performance/QualityProfile';
+import {
+  GAME_SETTINGS_SCHEMA_VERSION,
+  GAME_SETTINGS_STORAGE_KEY,
+  loadStoredGameSettingsEnvelope,
+  saveStoredGameSettingsEnvelope,
+} from './GameSettingsStore';
 
 export type ExperiencePreset =
   | 'broadcast'
@@ -31,14 +38,20 @@ export type ExperienceCameraMode = 'cinematic' | 'offense' | 'tactical';
 
 export interface GameExperienceSettings {
   announcerEnabled: boolean;
+  announcerVolume: number;
   audioEnabled: boolean;
   captionsEnabled: boolean;
   cinematics: CinematicsSetting;
   crowdAudioEnabled: boolean;
   crowdDensity: CrowdDensity;
   crowdReactionsEnabled: boolean;
+  crowdVolume: number;
   crowdVisualsEnabled: boolean;
+  debugToolsEnabled: boolean;
   gameplayCamera: ExperienceCameraMode;
+  masterVolume: number;
+  muted: boolean;
+  officialsEnabled: boolean;
   playerMotionEnabled: boolean;
   playbookId: PlaybookId;
   preset: ExperiencePreset;
@@ -50,18 +63,25 @@ export interface PersistedGameExperienceSettings {
   customSettings: GameExperienceSettings | null;
   preset: ExperiencePreset;
   settings: GameExperienceSettings | null;
+  version: number;
 }
 
 export interface GameExperienceQueryOverrides {
   announcerEnabled?: boolean;
+  announcerVolume?: number;
   audioEnabled?: boolean;
   captionsEnabled?: boolean;
   cinematics?: CinematicsSetting;
   crowdAudioEnabled?: boolean;
   crowdDensity?: CrowdDensity;
   crowdReactionsEnabled?: boolean;
+  crowdVolume?: number;
   crowdVisualsEnabled?: boolean;
+  debugToolsEnabled?: boolean;
   gameplayCamera?: ExperienceCameraMode;
+  masterVolume?: number;
+  muted?: boolean;
+  officialsEnabled?: boolean;
   playerMotionEnabled?: boolean;
   playbookId?: PlaybookId;
   preset?: ExperiencePreset;
@@ -117,18 +137,24 @@ interface ResolveGameExperienceSettingsOptions {
   storage?: StorageLike | null;
 }
 
-export const GAME_EXPERIENCE_SETTINGS_STORAGE_KEY = 'football-threejs.gameExperienceSettings.v1';
+export const GAME_EXPERIENCE_SETTINGS_STORAGE_KEY = GAME_SETTINGS_STORAGE_KEY;
 
 export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   announcerEnabled: true,
+  announcerVolume: DEFAULT_AUDIO_SETTINGS.announcerVolume,
   audioEnabled: true,
   captionsEnabled: false,
   cinematics: 'brief',
   crowdAudioEnabled: true,
   crowdDensity: 'low',
   crowdReactionsEnabled: true,
+  crowdVolume: DEFAULT_AUDIO_SETTINGS.crowdVolume,
   crowdVisualsEnabled: true,
+  debugToolsEnabled: false,
   gameplayCamera: 'offense',
+  masterVolume: DEFAULT_AUDIO_SETTINGS.masterVolume,
+  muted: DEFAULT_AUDIO_SETTINGS.muted,
+  officialsEnabled: false,
   playerMotionEnabled: true,
   playbookId: '11v11',
   preset: 'broadcast',
@@ -170,7 +196,11 @@ export function resolveGameExperienceSettings({
   const resolvedAudioSettings = normalizeAudioSettings({
     ...existingAudioSettings,
     announcerEnabled: settings.announcerEnabled,
+    announcerVolume: settings.announcerVolume,
     captionsEnabled: settings.captionsEnabled,
+    crowdVolume: settings.crowdVolume,
+    masterVolume: settings.masterVolume,
+    muted: settings.muted,
   });
   const resolvedCrowdSettings = normalizeCrowdPresentationSettings({
     ...existingCrowdSettings,
@@ -203,19 +233,15 @@ export function loadPersistedGameExperienceSettings(
     return createDefaultPersistedSettings();
   }
 
-  const stored = storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY);
+  const stored = loadStoredGameSettingsEnvelope(storage);
 
   if (!stored) {
     return createDefaultPersistedSettings();
   }
 
-  try {
-    return normalizePersistedGameExperienceSettings(
-      JSON.parse(stored) as Partial<PersistedGameExperienceSettings>,
-    );
-  } catch {
-    return createDefaultPersistedSettings();
-  }
+  return normalizePersistedGameExperienceSettings(
+    stored as Partial<PersistedGameExperienceSettings>,
+  );
 }
 
 export function saveGameExperienceSettings(
@@ -233,12 +259,10 @@ export function saveGameExperienceSettings(
       : null,
     preset: normalizedSettings.preset,
     settings: normalizedSettings,
+    version: GAME_SETTINGS_SCHEMA_VERSION,
   };
 
-  storage.setItem(
-    GAME_EXPERIENCE_SETTINGS_STORAGE_KEY,
-    JSON.stringify(persistedSettings),
-  );
+  saveStoredGameSettingsEnvelope(storage, persistedSettings);
 }
 
 export function normalizeGameExperienceSettings(
@@ -251,6 +275,7 @@ export function normalizeGameExperienceSettings(
 
   return {
     announcerEnabled: settings.announcerEnabled ?? presetDefaults.announcerEnabled,
+    announcerVolume: clampVolume(settings.announcerVolume ?? presetDefaults.announcerVolume),
     audioEnabled: settings.audioEnabled ?? presetDefaults.audioEnabled,
     captionsEnabled: settings.captionsEnabled ?? presetDefaults.captionsEnabled,
     cinematics: isCinematicsSetting(settings.cinematics)
@@ -262,11 +287,16 @@ export function normalizeGameExperienceSettings(
       : presetDefaults.crowdDensity,
     crowdReactionsEnabled:
       settings.crowdReactionsEnabled ?? presetDefaults.crowdReactionsEnabled,
+    crowdVolume: clampVolume(settings.crowdVolume ?? presetDefaults.crowdVolume),
     crowdVisualsEnabled:
       settings.crowdVisualsEnabled ?? presetDefaults.crowdVisualsEnabled,
+    debugToolsEnabled: settings.debugToolsEnabled ?? presetDefaults.debugToolsEnabled,
     gameplayCamera: isExperienceCameraMode(settings.gameplayCamera)
       ? settings.gameplayCamera
       : presetDefaults.gameplayCamera,
+    masterVolume: clampVolume(settings.masterVolume ?? presetDefaults.masterVolume),
+    muted: settings.muted ?? presetDefaults.muted,
+    officialsEnabled: settings.officialsEnabled ?? presetDefaults.officialsEnabled,
     playerMotionEnabled: settings.playerMotionEnabled ?? presetDefaults.playerMotionEnabled,
     playbookId: isPlaybookId(settings.playbookId)
       ? settings.playbookId
@@ -326,8 +356,14 @@ export function resolveGameExperienceQueryOverrides(
   applyBooleanOverride(overrides, 'crowdAudioEnabled', searchParams, 'crowdAudio');
   applyBooleanOverride(overrides, 'announcerEnabled', searchParams, 'announcer');
   applyBooleanOverride(overrides, 'captionsEnabled', searchParams, 'captions');
+  applyBooleanOverride(overrides, 'debugToolsEnabled', searchParams, 'debugTools');
+  applyBooleanOverride(overrides, 'muted', searchParams, 'muted');
+  applyBooleanOverride(overrides, 'officialsEnabled', searchParams, 'officials');
   applyBooleanOverride(overrides, 'routeArtEnabled', searchParams, 'routeArt');
   applyBooleanOverride(overrides, 'playerMotionEnabled', searchParams, 'playerMotion');
+  applyVolumeOverride(overrides, 'announcerVolume', searchParams, 'announcerVolume');
+  applyVolumeOverride(overrides, 'crowdVolume', searchParams, 'crowdVolume');
+  applyVolumeOverride(overrides, 'masterVolume', searchParams, 'masterVolume');
 
   return overrides;
 }
@@ -378,6 +414,7 @@ export function createGameExperienceDebugSnapshot(
       settings: resolvedSettings.persistedSettings.settings
         ? { ...resolvedSettings.persistedSettings.settings }
         : null,
+      version: resolvedSettings.persistedSettings.version,
     },
     queryOverrides: { ...resolvedSettings.queryOverrides },
   };
@@ -412,10 +449,14 @@ function createCustomSettingsFromExisting(
   return normalizeGameExperienceSettings({
     ...BROADCAST_EXPERIENCE_SETTINGS,
     announcerEnabled: audioSettings.announcerEnabled,
+    announcerVolume: audioSettings.announcerVolume,
     captionsEnabled: audioSettings.captionsEnabled,
     crowdDensity: crowdPresentationSettings.crowdDensity,
     crowdReactionsEnabled: crowdPresentationSettings.crowdReactionsEnabled,
     crowdVisualsEnabled: crowdPresentationSettings.crowdVisualsEnabled,
+    crowdVolume: audioSettings.crowdVolume,
+    masterVolume: audioSettings.masterVolume,
+    muted: audioSettings.muted,
     preset: 'custom',
   });
 }
@@ -437,6 +478,7 @@ function normalizePersistedGameExperienceSettings(
     customSettings,
     preset,
     settings,
+    version: GAME_SETTINGS_SCHEMA_VERSION,
   };
 }
 
@@ -445,6 +487,7 @@ function createDefaultPersistedSettings(): PersistedGameExperienceSettings {
     customSettings: null,
     preset: 'broadcast',
     settings: null,
+    version: GAME_SETTINGS_SCHEMA_VERSION,
   };
 }
 
@@ -458,6 +501,9 @@ function applyBooleanOverride(
     | 'crowdAudioEnabled'
     | 'crowdReactionsEnabled'
     | 'crowdVisualsEnabled'
+    | 'debugToolsEnabled'
+    | 'muted'
+    | 'officialsEnabled'
     | 'playerMotionEnabled'
     | 'routeArtEnabled'
   >,
@@ -470,6 +516,22 @@ function applyBooleanOverride(
 
   const value = searchParams.get(queryKey);
   overrides[key] = value !== '0';
+}
+
+function applyVolumeOverride(
+  overrides: GameExperienceQueryOverrides,
+  key: keyof Pick<
+    GameExperienceQueryOverrides,
+    'announcerVolume' | 'crowdVolume' | 'masterVolume'
+  >,
+  searchParams: URLSearchParams,
+  queryKey: string,
+): void {
+  if (!searchParams.has(queryKey)) {
+    return;
+  }
+
+  overrides[key] = clampVolume(Number(searchParams.get(queryKey)));
 }
 
 function isExperiencePreset(value: unknown): value is ExperiencePreset {
@@ -490,6 +552,14 @@ function isCrowdDensity(value: unknown): value is CrowdDensity {
 
 function isPlaybookId(value: unknown): value is PlaybookId {
   return value === '5v5' || value === '7v7' || value === '11v11';
+}
+
+function clampVolume(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 1;
+  }
+
+  return Math.min(1, Math.max(0, value));
 }
 
 function getLocalStorage(): StorageLike | null {

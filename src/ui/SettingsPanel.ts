@@ -1,0 +1,326 @@
+import {
+  BROADCAST_EXPERIENCE_SETTINGS,
+  PERFORMANCE_EXPERIENCE_SETTINGS,
+  normalizeGameExperienceSettings,
+  type ExperienceCameraMode,
+  type ExperiencePreset,
+  type GameExperienceSettings,
+} from '../config/GameExperienceSettings';
+import type { CinematicsSetting } from '../camera/PresentationCameraDirector';
+import type { CrowdDensity } from '../presentation/CrowdPresentationController';
+import type { QualityMode } from '../performance/QualityProfile';
+import { getPlaybookOptions } from '../playbook';
+import type { PlaybookId } from '../roster';
+
+export interface SettingsPanelOptions {
+  initialSettings: GameExperienceSettings;
+  onSettingsChange?: (settings: GameExperienceSettings) => void;
+  showGameMode?: boolean;
+}
+
+export class SettingsPanel {
+  readonly root = document.createElement('section');
+
+  private settings: GameExperienceSettings;
+  private readonly onSettingsChange?: (settings: GameExperienceSettings) => void;
+  private readonly showGameMode: boolean;
+  private readonly presetSelect = document.createElement('select');
+  private readonly playbookSelect = document.createElement('select');
+  private readonly qualityModeSelect = document.createElement('select');
+  private readonly debugToolsInput = document.createElement('input');
+  private readonly cameraSelect = document.createElement('select');
+  private readonly cinematicsSelect = document.createElement('select');
+  private readonly crowdVisualsInput = document.createElement('input');
+  private readonly crowdDensitySelect = document.createElement('select');
+  private readonly crowdReactionsInput = document.createElement('input');
+  private readonly audioEnabledInput = document.createElement('input');
+  private readonly mutedInput = document.createElement('input');
+  private readonly masterVolumeInput = document.createElement('input');
+  private readonly crowdAudioInput = document.createElement('input');
+  private readonly crowdVolumeInput = document.createElement('input');
+  private readonly announcerInput = document.createElement('input');
+  private readonly announcerVolumeInput = document.createElement('input');
+  private readonly captionsInput = document.createElement('input');
+  private readonly routeArtInput = document.createElement('input');
+  private readonly playerMotionInput = document.createElement('input');
+  private readonly officialsInput = document.createElement('input');
+  private readonly customControls: HTMLElement[] = [];
+
+  constructor(options: SettingsPanelOptions) {
+    this.settings = normalizeGameExperienceSettings(options.initialSettings);
+    this.onSettingsChange = options.onSettingsChange;
+    this.showGameMode = options.showGameMode ?? true;
+    this.root.className = 'game-setup-screen settings-panel';
+    this.root.append(this.createContent());
+    this.syncControls();
+  }
+
+  getSettings(): GameExperienceSettings {
+    return { ...this.settings };
+  }
+
+  setSettings(settings: GameExperienceSettings): void {
+    this.settings = normalizeGameExperienceSettings(settings);
+    this.syncControls();
+  }
+
+  private createContent(): HTMLElement {
+    const content = document.createElement('div');
+    content.className = 'game-setup-grid';
+
+    const primary = document.createElement('div');
+    primary.className = 'game-setup-primary';
+    primary.append(
+      this.createSelectRow('Presentation preset', this.presetSelect, [
+        ['broadcast', 'Broadcast'],
+        ['performance', 'Performance'],
+        ['custom', 'Custom'],
+      ]),
+      this.createSelectRow('Quality mode', this.qualityModeSelect, [
+        ['adaptive60', 'Adaptive 60 FPS'],
+        ['lockedBroadcast', 'Broadcast Quality Locked'],
+        ['lockedPerformance', 'Performance Quality Locked'],
+      ]),
+      this.createCheckboxRow('Debug tools', this.debugToolsInput, false),
+    );
+
+    if (this.showGameMode) {
+      primary.append(
+        this.createSelectRow(
+          'Game mode',
+          this.playbookSelect,
+          getPlaybookOptions().map((option) => [option.id, option.displayName]),
+        ),
+      );
+    } else {
+      const lockedMode = document.createElement('p');
+      lockedMode.className = 'settings-note';
+      lockedMode.textContent = 'Game mode changes require returning to the title screen.';
+      primary.append(lockedMode);
+    }
+
+    const custom = document.createElement('div');
+    custom.className = 'game-setup-custom';
+    const customTitle = document.createElement('h3');
+    customTitle.textContent = 'Custom Settings';
+    custom.append(
+      customTitle,
+      this.createSelectRow('Gameplay camera', this.cameraSelect, [
+        ['offense', 'Offense'],
+        ['tactical', 'Tactical'],
+        ['cinematic', 'Cinematic'],
+      ]),
+      this.createSelectRow('Cinematics', this.cinematicsSelect, [
+        ['off', 'Off'],
+        ['brief', 'Brief'],
+        ['full', 'Full'],
+      ]),
+      this.createCheckboxRow('Crowd visuals', this.crowdVisualsInput),
+      this.createSelectRow('Crowd density', this.crowdDensitySelect, [
+        ['low', 'Low'],
+        ['medium', 'Medium'],
+        ['high', 'High'],
+      ]),
+      this.createCheckboxRow('Crowd reactions', this.crowdReactionsInput),
+      this.createCheckboxRow('Master audio', this.audioEnabledInput),
+      this.createCheckboxRow('Muted', this.mutedInput),
+      this.createRangeRow('Master volume', this.masterVolumeInput),
+      this.createCheckboxRow('Crowd audio', this.crowdAudioInput),
+      this.createRangeRow('Crowd volume', this.crowdVolumeInput),
+      this.createCheckboxRow('Announcer', this.announcerInput),
+      this.createRangeRow('Announcer volume', this.announcerVolumeInput),
+      this.createCheckboxRow('Captions', this.captionsInput),
+      this.createCheckboxRow('Route art', this.routeArtInput),
+      this.createCheckboxRow('Player motion', this.playerMotionInput),
+      this.createCheckboxRow('Officials', this.officialsInput),
+    );
+
+    content.append(primary, custom);
+    this.installHandlers();
+    return content;
+  }
+
+  private createSelectRow(
+    labelText: string,
+    select: HTMLSelectElement,
+    options: Array<readonly [string, string]>,
+  ): HTMLElement {
+    const label = document.createElement('label');
+    label.className = 'settings-row';
+    const span = document.createElement('span');
+    span.textContent = labelText;
+    for (const [value, text] of options) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = text;
+      select.append(option);
+    }
+    label.append(span, select);
+    this.customControls.push(select);
+    return label;
+  }
+
+  private createCheckboxRow(
+    labelText: string,
+    input: HTMLInputElement,
+    customControl = true,
+  ): HTMLElement {
+    const label = document.createElement('label');
+    label.className = 'settings-row settings-row-checkbox';
+    input.type = 'checkbox';
+    const span = document.createElement('span');
+    span.textContent = labelText;
+    label.append(span, input);
+    if (customControl) {
+      this.customControls.push(input);
+    }
+    return label;
+  }
+
+  private createRangeRow(labelText: string, input: HTMLInputElement): HTMLElement {
+    const label = document.createElement('label');
+    label.className = 'settings-row settings-row-range';
+    const span = document.createElement('span');
+    span.textContent = labelText;
+    input.type = 'range';
+    input.min = '0';
+    input.max = '1';
+    input.step = '0.01';
+    label.append(span, input);
+    this.customControls.push(input);
+    return label;
+  }
+
+  private installHandlers(): void {
+    this.presetSelect.addEventListener('change', () => {
+      const preset = this.presetSelect.value as ExperiencePreset;
+      const playbookId = this.settings.playbookId;
+      const debugToolsEnabled = this.settings.debugToolsEnabled;
+      const next =
+        preset === 'broadcast'
+          ? { ...BROADCAST_EXPERIENCE_SETTINGS, debugToolsEnabled, playbookId }
+          : preset === 'performance'
+            ? { ...PERFORMANCE_EXPERIENCE_SETTINGS, debugToolsEnabled, playbookId }
+            : { ...this.settings, preset: 'custom' as const };
+      this.updateSettings(next);
+    });
+
+    this.playbookSelect.addEventListener('change', () => {
+      this.updateSettings({
+        ...this.settings,
+        playbookId: this.playbookSelect.value as PlaybookId,
+      });
+    });
+    this.qualityModeSelect.addEventListener('change', () => {
+      this.updateSettings({
+        ...this.settings,
+        qualityMode: this.qualityModeSelect.value as QualityMode,
+      });
+    });
+    this.debugToolsInput.addEventListener('change', () => {
+      this.updateSettings({
+        ...this.settings,
+        debugToolsEnabled: this.debugToolsInput.checked,
+      });
+    });
+    this.cameraSelect.addEventListener('change', () => {
+      this.updateCustomSettings({ gameplayCamera: this.cameraSelect.value as ExperienceCameraMode });
+    });
+    this.cinematicsSelect.addEventListener('change', () => {
+      this.updateCustomSettings({ cinematics: this.cinematicsSelect.value as CinematicsSetting });
+    });
+    this.crowdVisualsInput.addEventListener('change', () => {
+      this.updateCustomSettings({ crowdVisualsEnabled: this.crowdVisualsInput.checked });
+    });
+    this.crowdDensitySelect.addEventListener('change', () => {
+      this.updateCustomSettings({ crowdDensity: this.crowdDensitySelect.value as CrowdDensity });
+    });
+    this.crowdReactionsInput.addEventListener('change', () => {
+      this.updateCustomSettings({ crowdReactionsEnabled: this.crowdReactionsInput.checked });
+    });
+    this.audioEnabledInput.addEventListener('change', () => {
+      this.updateCustomSettings({ audioEnabled: this.audioEnabledInput.checked });
+    });
+    this.mutedInput.addEventListener('change', () => {
+      this.updateCustomSettings({ muted: this.mutedInput.checked });
+    });
+    this.masterVolumeInput.addEventListener('input', () => {
+      this.updateCustomSettings({ masterVolume: Number(this.masterVolumeInput.value) });
+    });
+    this.crowdAudioInput.addEventListener('change', () => {
+      this.updateCustomSettings({ crowdAudioEnabled: this.crowdAudioInput.checked });
+    });
+    this.crowdVolumeInput.addEventListener('input', () => {
+      this.updateCustomSettings({ crowdVolume: Number(this.crowdVolumeInput.value) });
+    });
+    this.announcerInput.addEventListener('change', () => {
+      this.updateCustomSettings({ announcerEnabled: this.announcerInput.checked });
+    });
+    this.announcerVolumeInput.addEventListener('input', () => {
+      this.updateCustomSettings({ announcerVolume: Number(this.announcerVolumeInput.value) });
+    });
+    this.captionsInput.addEventListener('change', () => {
+      this.updateCustomSettings({ captionsEnabled: this.captionsInput.checked });
+    });
+    this.routeArtInput.addEventListener('change', () => {
+      this.updateCustomSettings({ routeArtEnabled: this.routeArtInput.checked });
+    });
+    this.playerMotionInput.addEventListener('change', () => {
+      this.updateCustomSettings({ playerMotionEnabled: this.playerMotionInput.checked });
+    });
+    this.officialsInput.addEventListener('change', () => {
+      this.updateCustomSettings({ officialsEnabled: this.officialsInput.checked });
+    });
+  }
+
+  private updateCustomSettings(patch: Partial<GameExperienceSettings>): void {
+    this.updateSettings({
+      ...this.settings,
+      ...patch,
+      preset: 'custom',
+    });
+  }
+
+  private updateSettings(settings: GameExperienceSettings): void {
+    this.settings = normalizeGameExperienceSettings(settings);
+    this.syncControls();
+    this.onSettingsChange?.(this.getSettings());
+  }
+
+  private syncControls(): void {
+    this.presetSelect.value = this.settings.preset;
+    this.playbookSelect.value = this.settings.playbookId;
+    this.qualityModeSelect.value = this.settings.qualityMode;
+    this.debugToolsInput.checked = this.settings.debugToolsEnabled;
+    this.cameraSelect.value = this.settings.gameplayCamera;
+    this.cinematicsSelect.value = this.settings.cinematics;
+    this.crowdVisualsInput.checked = this.settings.crowdVisualsEnabled;
+    this.crowdDensitySelect.value = this.settings.crowdDensity;
+    this.crowdReactionsInput.checked = this.settings.crowdReactionsEnabled;
+    this.audioEnabledInput.checked = this.settings.audioEnabled;
+    this.mutedInput.checked = this.settings.muted;
+    this.masterVolumeInput.value = String(this.settings.masterVolume);
+    this.crowdAudioInput.checked = this.settings.crowdAudioEnabled;
+    this.crowdVolumeInput.value = String(this.settings.crowdVolume);
+    this.announcerInput.checked = this.settings.announcerEnabled;
+    this.announcerVolumeInput.value = String(this.settings.announcerVolume);
+    this.captionsInput.checked = this.settings.captionsEnabled;
+    this.routeArtInput.checked = this.settings.routeArtEnabled;
+    this.playerMotionInput.checked = this.settings.playerMotionEnabled;
+    this.officialsInput.checked = this.settings.officialsEnabled;
+
+    const customEnabled = this.settings.preset === 'custom';
+    for (const control of this.customControls) {
+      if (
+        control === this.presetSelect ||
+        control === this.playbookSelect ||
+        control === this.qualityModeSelect
+      ) {
+        control.removeAttribute('disabled');
+      } else {
+        control.toggleAttribute('disabled', !customEnabled);
+      }
+    }
+    this.root.dataset.preset = this.settings.preset;
+  }
+}

@@ -125,6 +125,7 @@ export class FootballApplication {
       crowdPresentationDebugEnabled: this.isCrowdPresentationDebugEnabled() &&
         !!this.presentation.crowdPresentation,
       crowdPreviewEnabled: !!this.presentation.crowdPreviewController,
+      debugToolsEnabled: this.gameExperience.settings.debugToolsEnabled,
       debugApi: this.diagnostics.createDebugApi(),
       elevenAuditEnabled: searchParams.has('elevenAudit'),
       formationPreviewActive: !!this.gameplay.formationPreviewModel,
@@ -379,6 +380,7 @@ export class FootballApplication {
       searchParams: this.searchParams,
     });
     this.presentation.applyExperience(this.gameExperience);
+    this.developmentTools.setDebugToolsEnabled(this.gameExperience.settings.debugToolsEnabled);
     this.qualityController.setMode(
       this.gameExperience.settings.qualityMode,
       this.createQualityTransitionContext(),

@@ -58,6 +58,7 @@ export class TitleScreen {
       'R: Reset the current play',
       'C: Cycle development cameras',
       'Escape: Settings during pre-snap or dead-ball pauses',
+      'F1: Toggle developer debug tools',
       'M: Mute audio',
     ]) {
       const item = document.createElement('li');

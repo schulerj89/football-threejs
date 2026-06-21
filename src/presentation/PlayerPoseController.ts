@@ -157,7 +157,7 @@ const NEUTRAL_POSE: PlayerPoseValues = {
 };
 
 export class PlayerPoseController {
-  private readonly enabled: boolean;
+  private enabled: boolean;
   private readonly states = new Map<string, PlayerPoseState>();
 
   constructor(
@@ -165,6 +165,10 @@ export class PlayerPoseController {
     options: { enabled?: boolean } = {},
   ) {
     this.enabled = options.enabled ?? true;
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
   }
 
   update(

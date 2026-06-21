@@ -79,6 +79,11 @@ import {
   syncPerformanceDebugOverlay,
   type QualityDebugSnapshot,
 } from '../ui/PerformanceSettingsPanel';
+import { DebugPanel } from '../ui/DebugPanel';
+import {
+  DebugFeatureRegistry,
+  type DisposableDebugFeature,
+} from '../ui/DebugFeatureRegistry';
 import type {
   PerformanceScenarioName,
 } from '../performance/PerformanceBudget';
@@ -178,6 +183,7 @@ export interface DevelopmentToolsRuntimeOptions {
   commentaryDebugEnabled: boolean;
   crowdPresentationDebugEnabled: boolean;
   crowdPreviewEnabled: boolean;
+  debugToolsEnabled: boolean;
   elevenAuditEnabled: boolean;
   formationPreviewActive: boolean;
   passAuditEnabled: boolean;
@@ -221,63 +227,34 @@ export interface DevelopmentOverlayFrame {
 }
 
 export class DevelopmentToolsRuntime {
-  private readonly appearanceAuditOverlay: HTMLDivElement | null;
-  private readonly audioDebugOverlay: HTMLDivElement | null;
-  private readonly crowdPresentationOverlay: HTMLDivElement | null;
-  private readonly crowdPreviewOverlay: HTMLDivElement | null;
-  private readonly debugOverlay: DebugOverlay;
-  private readonly elevenAuditOverlay: HTMLDivElement | null;
-  private readonly formationAuditOverlay: HTMLDivElement | null;
-  private readonly passAuditOverlay: HTMLDivElement | null;
-  private readonly performanceDebugOverlay: HTMLDivElement | null;
-  private readonly poseDebugOverlay: HTMLDivElement | null;
-  private readonly presentationAuditOverlay: HTMLDivElement | null;
-  private readonly presentationHardeningAuditOverlay: HTMLDivElement | null;
-  private readonly routeAuditOverlay: HTMLDivElement | null;
-  private readonly sevenAuditOverlay: HTMLDivElement | null;
+  private appearanceAuditOverlay: HTMLDivElement | null = null;
+  private audioDebugOverlay: HTMLDivElement | null = null;
+  private crowdPresentationOverlay: HTMLDivElement | null = null;
+  private crowdPreviewOverlay: HTMLDivElement | null = null;
+  private debugOverlay: DebugOverlay | null = null;
+  private elevenAuditOverlay: HTMLDivElement | null = null;
+  private formationAuditOverlay: HTMLDivElement | null = null;
+  private passAuditOverlay: HTMLDivElement | null = null;
+  private performanceDebugOverlay: HTMLDivElement | null = null;
+  private poseDebugOverlay: HTMLDivElement | null = null;
+  private presentationAuditOverlay: HTMLDivElement | null = null;
+  private presentationHardeningAuditOverlay: HTMLDivElement | null = null;
+  private routeAuditOverlay: HTMLDivElement | null = null;
+  private sevenAuditOverlay: HTMLDivElement | null = null;
+  private readonly debugFeatureRegistry = new DebugFeatureRegistry();
+  private readonly debugPanel: DebugPanel;
   private readonly listeners: Array<[EventTarget, string, EventListener]> = [];
 
   constructor(private readonly options: DevelopmentToolsRuntimeOptions) {
-    this.debugOverlay = new DebugOverlay({
-      renderer: options.renderer,
-      player: options.activePlayer(),
-    });
-    this.poseDebugOverlay = options.searchParams.has('poseDebug')
-      ? createPlayerPoseDebugOverlay()
-      : null;
-    this.formationAuditOverlay = options.searchParams.has('formationAudit')
-      ? createFormationAuditOverlay()
-      : null;
-    this.presentationAuditOverlay = options.presentationAuditEnabled
-      ? createPresentationAuditOverlay()
-      : null;
-    this.routeAuditOverlay = options.routeAuditEnabled ? createRouteAuditOverlay() : null;
-    this.passAuditOverlay = options.passAuditEnabled ? createPassAuditOverlay() : null;
-    this.performanceDebugOverlay = options.performanceDebugEnabled
-      ? createPerformanceDebugOverlay()
-      : null;
-    this.sevenAuditOverlay = options.sevenAuditEnabled ? createSevenAuditOverlay() : null;
-    this.elevenAuditOverlay = options.elevenAuditEnabled ? createElevenAuditOverlay() : null;
-    this.appearanceAuditOverlay = options.appearanceAuditEnabled
-      ? createAppearanceAuditOverlay()
-      : null;
-    this.audioDebugOverlay = options.audioDebugEnabled || options.commentaryDebugEnabled
-      ? createAudioDebugOverlay()
-      : null;
-    this.crowdPreviewOverlay = options.crowdPreviewEnabled ? createCrowdPreviewOverlay() : null;
-    this.crowdPresentationOverlay =
-      options.crowdPresentationDebugEnabled && !options.crowdPreviewEnabled
-        ? createCrowdPresentationOverlay()
-        : null;
-    this.presentationHardeningAuditOverlay =
-      options.presentationAuditEnabled && !options.crowdPreviewEnabled
-        ? createPresentationHardeningAuditOverlay()
-        : null;
+    this.registerDebugFeatures(options);
+    this.debugPanel = new DebugPanel({ registry: this.debugFeatureRegistry });
+    this.debugPanel.setVisible(options.debugToolsEnabled);
 
     if (this.shouldInstallDebugApi(options)) {
       window.__footballDebug = options.debugApi;
       this.addListener(window, 'keydown', options.onDevelopmentCameraToggle);
     }
+    this.addListener(window, 'keydown', (event) => this.handleDebugPanelShortcut(event));
     if (options.formationPreviewActive) {
       this.addListener(window, 'keydown', options.onFormationPreviewLaneControls);
     }
@@ -297,11 +274,11 @@ export class DevelopmentToolsRuntime {
   }
 
   isDebugOverlayVisible(): boolean {
-    return this.debugOverlay.isVisible();
+    return this.debugOverlay?.isVisible() ?? false;
   }
 
   shouldCollectPresentationDiagnostics(): boolean {
-    return this.debugOverlay.isVisible() ||
+    return this.isDebugOverlayVisible() ||
       !!this.poseDebugOverlay ||
       !!this.presentationAuditOverlay ||
       !!this.routeAuditOverlay ||
@@ -380,20 +357,20 @@ export class DevelopmentToolsRuntime {
       );
     }
 
-    const renderMetrics = this.debugOverlay.isVisible()
+    const renderMetrics = this.isDebugOverlayVisible()
       ? frame.renderMetrics ?? undefined
       : undefined;
-    this.debugOverlay.update(
-      frame.deltaSeconds,
-      this.options.renderer,
-      frame.activePrimaryPlayer,
-      frame.cameraSnapshot,
-      frame.gameplaySnapshot,
-      this.debugOverlay.isVisible() && frame.playerBodyVisual
-        ? getPlayerBodyVisualSnapshot(frame.playerBodyVisual)
-        : undefined,
-      renderMetrics,
-    );
+    this.debugOverlay?.update(
+        frame.deltaSeconds,
+        this.options.renderer,
+        frame.activePrimaryPlayer,
+        frame.cameraSnapshot,
+        frame.gameplaySnapshot,
+        this.isDebugOverlayVisible() && frame.playerBodyVisual
+          ? getPlayerBodyVisualSnapshot(frame.playerBodyVisual)
+          : undefined,
+        renderMetrics,
+      );
   }
 
   dispose(): void {
@@ -404,23 +381,224 @@ export class DevelopmentToolsRuntime {
     if (window.__footballDebug === this.options.debugApi) {
       delete window.__footballDebug;
     }
-    for (const overlay of [
-      this.appearanceAuditOverlay,
-      this.audioDebugOverlay,
-      this.crowdPresentationOverlay,
-      this.crowdPreviewOverlay,
-      this.elevenAuditOverlay,
-      this.formationAuditOverlay,
-      this.passAuditOverlay,
-      this.performanceDebugOverlay,
-      this.poseDebugOverlay,
-      this.presentationAuditOverlay,
-      this.presentationHardeningAuditOverlay,
-      this.routeAuditOverlay,
-      this.sevenAuditOverlay,
-    ]) {
-      overlay?.remove();
+    this.debugPanel.dispose();
+    this.debugFeatureRegistry.dispose();
+  }
+
+  setDebugToolsEnabled(enabled: boolean): void {
+    this.debugPanel.setVisible(enabled);
+  }
+
+  private registerDebugFeatures(options: DevelopmentToolsRuntimeOptions): void {
+    const queryEnabled = (queryKey: string) => options.searchParams.has(queryKey);
+    const registerElementFeature = (
+      id: string,
+      label: string,
+      enabled: boolean,
+      createElement: () => HTMLDivElement,
+      setElement: (element: HTMLDivElement | null) => void,
+    ): void => {
+      this.debugFeatureRegistry.register({
+        create: () => {
+          const element = createElement();
+          setElement(element);
+          return {
+            dispose: () => {
+              element.remove();
+              setElement(null);
+            },
+          };
+        },
+        enabled,
+        id,
+        label,
+      });
+    };
+
+    this.debugFeatureRegistry.register({
+      create: () => this.createSharedMetricsFeature(),
+      enabled: queryEnabled('debug') || options.cameraDebugEnabled,
+      id: 'general',
+      label: 'General metrics',
+    });
+    this.debugFeatureRegistry.register({
+      create: () => this.createSharedMetricsFeature(),
+      enabled: options.cameraDebugEnabled,
+      id: 'camera',
+      label: 'Camera',
+    });
+    registerElementFeature(
+      'field',
+      'Field',
+      queryEnabled('fieldAudit'),
+      () => createStaticDebugNote('field-debug-note', 'Field audit helpers require ?fieldAudit=1 at scene creation.'),
+      () => {},
+    );
+    registerElementFeature(
+      'formation',
+      'Formation',
+      queryEnabled('formationAudit'),
+      createFormationAuditOverlay,
+      (element) => {
+        this.formationAuditOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'route',
+      'Route',
+      options.routeAuditEnabled,
+      createRouteAuditOverlay,
+      (element) => {
+        this.routeAuditOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'passing',
+      'Passing',
+      options.passAuditEnabled,
+      createPassAuditOverlay,
+      (element) => {
+        this.passAuditOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'appearance',
+      'Appearance',
+      options.appearanceAuditEnabled,
+      createAppearanceAuditOverlay,
+      (element) => {
+        this.appearanceAuditOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'audio',
+      'Audio',
+      options.audioDebugEnabled,
+      createAudioDebugOverlay,
+      (element) => {
+        this.audioDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'commentary',
+      'Commentary',
+      options.commentaryDebugEnabled,
+      createAudioDebugOverlay,
+      (element) => {
+        this.audioDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'crowd',
+      'Crowd',
+      options.crowdPreviewEnabled || options.crowdPresentationDebugEnabled,
+      options.crowdPreviewEnabled ? createCrowdPreviewOverlay : createCrowdPresentationOverlay,
+      (element) => {
+        if (options.crowdPreviewEnabled) {
+          this.crowdPreviewOverlay = element;
+        } else {
+          this.crowdPresentationOverlay = element;
+        }
+      },
+    );
+    registerElementFeature(
+      'presentation',
+      'Presentation',
+      options.presentationAuditEnabled,
+      createPresentationAuditOverlay,
+      (element) => {
+        this.presentationAuditOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'memory',
+      'Memory',
+      options.performanceDebugEnabled,
+      createPerformanceDebugOverlay,
+      (element) => {
+        this.performanceDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'motion',
+      'Player motion',
+      queryEnabled('poseDebug'),
+      createPlayerPoseDebugOverlay,
+      (element) => {
+        this.poseDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'sevenAudit',
+      '7v7 audit',
+      options.sevenAuditEnabled,
+      createSevenAuditOverlay,
+      (element) => {
+        this.sevenAuditOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'elevenAudit',
+      '11v11 audit',
+      options.elevenAuditEnabled,
+      createElevenAuditOverlay,
+      (element) => {
+        this.elevenAuditOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'presentationHardening',
+      'Presentation hardening',
+      options.presentationAuditEnabled && !options.crowdPreviewEnabled,
+      createPresentationHardeningAuditOverlay,
+      (element) => {
+        this.presentationHardeningAuditOverlay = element;
+      },
+    );
+  }
+
+  private createSharedMetricsFeature(): DisposableDebugFeature {
+    if (!this.debugOverlay) {
+      const overlay = new DebugOverlay({
+        initialVisible: true,
+        player: this.options.activePlayer(),
+        renderer: this.options.renderer,
+      });
+      this.debugOverlay = overlay;
+      return {
+        dispose: () => {
+          if (
+            !this.debugFeatureRegistry.isEnabled('general') &&
+            !this.debugFeatureRegistry.isEnabled('camera')
+          ) {
+            overlay.dispose();
+            this.debugOverlay = null;
+          }
+        },
+      };
     }
+
+    this.debugOverlay.setVisible(true);
+    return {
+      dispose: () => {
+        if (
+          !this.debugFeatureRegistry.isEnabled('general') &&
+          !this.debugFeatureRegistry.isEnabled('camera')
+        ) {
+          this.debugOverlay?.dispose();
+          this.debugOverlay = null;
+        }
+      },
+    };
+  }
+
+  private handleDebugPanelShortcut(event: KeyboardEvent): void {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.key !== 'F1') {
+      return;
+    }
+
+    event.preventDefault();
+    this.debugPanel.toggleVisible();
   }
 
   private addListener(
@@ -440,6 +618,7 @@ export class DevelopmentToolsRuntime {
       options.searchParams.has('debug') ||
       options.searchParams.has('readback') ||
       options.searchParams.has('perfProfile') ||
+      options.debugToolsEnabled ||
       options.cameraDebugEnabled ||
       options.presentationAuditEnabled ||
       options.appearanceAuditEnabled ||
@@ -451,4 +630,12 @@ export class DevelopmentToolsRuntime {
       options.crowdPresentationDebugEnabled ||
       options.crowdPreviewEnabled;
   }
+}
+
+function createStaticDebugNote(className: string, text: string): HTMLDivElement {
+  const element = document.createElement('div');
+  element.className = `${className} debug-note-overlay`;
+  element.textContent = text;
+  document.body.append(element);
+  return element;
 }

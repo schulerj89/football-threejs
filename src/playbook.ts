@@ -599,6 +599,34 @@ export const DEFAULT_PLAY_ID: PlayId = 'inside-run';
 export const DEFAULT_SEVEN_ON_SEVEN_PLAY_ID: PlayId = 'inside-zone-7';
 export const DEFAULT_ELEVEN_ON_ELEVEN_PLAY_ID: PlayId = 'inside-zone-11';
 
+export interface PlaybookOption {
+  description: string;
+  displayName: string;
+  id: PlaybookId;
+}
+
+export const PLAYBOOK_OPTIONS: readonly PlaybookOption[] = [
+  {
+    description: 'Normal low-poly 11v11 prototype',
+    displayName: '11v11 Prototype',
+    id: '11v11',
+  },
+  {
+    description: 'Development regression mode',
+    displayName: '7v7 Development Regression Mode',
+    id: '7v7',
+  },
+  {
+    description: 'Legacy regression mode',
+    displayName: '5v5 Legacy Regression Mode',
+    id: '5v5',
+  },
+] as const;
+
+export function getPlaybookOptions(): PlaybookOption[] {
+  return PLAYBOOK_OPTIONS.map((option) => ({ ...option }));
+}
+
 export function resolvePlaybookId(value: string | null): PlaybookId {
   if (value === '5v5' || value === '7v7' || value === '11v11') {
     return value;

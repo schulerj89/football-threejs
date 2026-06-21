@@ -7,6 +7,7 @@ import type { PlayerBodyVisualSnapshot } from './playerVisual';
 import type { PlayerModel } from './playerModel';
 
 interface DebugOverlayOptions {
+  initialVisible?: boolean;
   renderer: THREE.WebGLRenderer;
   player: PlayerModel;
 }
@@ -33,11 +34,10 @@ export class DebugOverlay {
   private elapsed = 0;
   private fps = 0;
 
-  constructor({ renderer, player }: DebugOverlayOptions) {
+  constructor({ initialVisible, renderer, player }: DebugOverlayOptions) {
     this.element = document.createElement('div');
     this.element.className = 'debug-overlay';
-    const searchParams = new URLSearchParams(window.location.search);
-    this.element.hidden = !(searchParams.has('debug') || searchParams.has('cameraDebug'));
+    this.element.hidden = !initialVisible;
     document.body.appendChild(this.element);
 
     this.update(0, renderer, player);
@@ -45,6 +45,14 @@ export class DebugOverlay {
 
   isVisible(): boolean {
     return !this.element.hidden;
+  }
+
+  setVisible(visible: boolean): void {
+    this.element.hidden = !visible;
+  }
+
+  dispose(): void {
+    this.element.remove();
   }
 
   update(

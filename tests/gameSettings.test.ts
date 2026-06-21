@@ -1,0 +1,125 @@
+import { describe, expect, it } from 'vitest';
+import type { StorageLike } from '../src/audio/AudioSettings';
+import {
+  BROADCAST_GAME_SETTINGS,
+  GAME_SETTINGS_COMPAT_STORAGE_KEY,
+  loadPersistedGameSettings,
+  resolveGameSettings,
+  saveGameSettings,
+} from '../src/config/GameSettings';
+import {
+  GAME_SETTINGS_SCHEMA_VERSION,
+  LEGACY_GAME_EXPERIENCE_SETTINGS_STORAGE_KEY,
+} from '../src/config/GameSettingsStore';
+
+describe('game settings facade', () => {
+  it('resolves plain launch to the broadcast player-facing profile', () => {
+    const resolved = resolveGameSettings({
+      searchParams: new URLSearchParams(),
+      storage: createMemoryStorage(),
+    });
+
+    expect(resolved.settings).toMatchObject({
+      audioEnabled: true,
+      cinematics: 'brief',
+      crowdDensity: 'low',
+      crowdVisualsEnabled: true,
+      debugToolsEnabled: false,
+      officialsEnabled: false,
+      playerMotionEnabled: true,
+      playbookId: '11v11',
+      preset: 'broadcast',
+      routeArtEnabled: true,
+    });
+  });
+
+  it('persists a versioned schema including volumes and debug preferences', () => {
+    const storage = createMemoryStorage();
+
+    saveGameSettings({
+      ...BROADCAST_GAME_SETTINGS,
+      crowdVolume: 0.31,
+      debugToolsEnabled: true,
+      masterVolume: 0.62,
+      muted: true,
+      officialsEnabled: true,
+      preset: 'custom',
+    }, storage);
+
+    const raw = storage.getItem(GAME_SETTINGS_COMPAT_STORAGE_KEY);
+    expect(raw).not.toBeNull();
+    expect(JSON.parse(raw ?? '{}')).toMatchObject({
+      version: GAME_SETTINGS_SCHEMA_VERSION,
+      settings: {
+        crowdVolume: 0.31,
+        debugToolsEnabled: true,
+        masterVolume: 0.62,
+        muted: true,
+        officialsEnabled: true,
+      },
+    });
+
+    const persisted = loadPersistedGameSettings(storage);
+    expect(persisted).toMatchObject({
+      version: GAME_SETTINGS_SCHEMA_VERSION,
+      settings: {
+        debugToolsEnabled: true,
+        officialsEnabled: true,
+      },
+    });
+  });
+
+  it('migrates the legacy experience-settings payload', () => {
+    const storage = createMemoryStorage();
+    storage.setItem(LEGACY_GAME_EXPERIENCE_SETTINGS_STORAGE_KEY, JSON.stringify({
+      preset: 'custom',
+      settings: {
+        ...BROADCAST_GAME_SETTINGS,
+        captionsEnabled: true,
+        debugToolsEnabled: true,
+        preset: 'custom',
+      },
+    }));
+
+    const resolved = resolveGameSettings({
+      searchParams: new URLSearchParams(),
+      storage,
+    });
+
+    expect(resolved.persistedSettings.version).toBe(GAME_SETTINGS_SCHEMA_VERSION);
+    expect(resolved.settings).toMatchObject({
+      captionsEnabled: true,
+      debugToolsEnabled: true,
+      preset: 'custom',
+    });
+  });
+
+  it('keeps query overrides out of persisted settings', () => {
+    const storage = createMemoryStorage();
+    saveGameSettings(BROADCAST_GAME_SETTINGS, storage);
+    const storedBefore = storage.getItem(GAME_SETTINGS_COMPAT_STORAGE_KEY);
+
+    const resolved = resolveGameSettings({
+      searchParams: new URLSearchParams('debugTools=1&officials=1&masterVolume=0.2'),
+      storage,
+    });
+
+    expect(resolved.settings).toMatchObject({
+      debugToolsEnabled: true,
+      masterVolume: 0.2,
+      officialsEnabled: true,
+    });
+    expect(storage.getItem(GAME_SETTINGS_COMPAT_STORAGE_KEY)).toBe(storedBefore);
+  });
+});
+
+function createMemoryStorage(): StorageLike {
+  const values = new Map<string, string>();
+
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+  };
+}

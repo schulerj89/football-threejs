@@ -667,14 +667,20 @@ interface PresentationHardeningAuditSnapshot {
 
 interface GameExperienceSettingsSnapshot {
   announcerEnabled: boolean;
+  announcerVolume: number;
   audioEnabled: boolean;
   captionsEnabled: boolean;
   cinematics: 'brief' | 'full' | 'off';
   crowdAudioEnabled: boolean;
   crowdDensity: 'high' | 'low' | 'medium';
   crowdReactionsEnabled: boolean;
+  crowdVolume: number;
   crowdVisualsEnabled: boolean;
+  debugToolsEnabled: boolean;
   gameplayCamera: 'cinematic' | 'offense' | 'tactical';
+  masterVolume: number;
+  muted: boolean;
+  officialsEnabled: boolean;
   playerMotionEnabled: boolean;
   playbookId: '11v11' | '5v5' | '7v7';
   preset: 'broadcast' | 'custom' | 'performance';
@@ -733,6 +739,7 @@ interface GameExperienceSnapshot {
     customSettings: GameExperienceSettingsSnapshot | null;
     preset: 'broadcast' | 'custom' | 'performance';
     settings: GameExperienceSettingsSnapshot | null;
+    version: number;
   };
   queryOverrides: Partial<GameExperienceSettingsSnapshot>;
 }
@@ -849,6 +856,31 @@ test('persists title-screen settings across reloads', async ({ page }) => {
   await expect(page.locator('.title-screen')).toBeVisible();
   await expect(page.locator('.title-screen').getByLabel('Presentation preset')).toHaveValue('performance');
   await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveValue('5v5');
+});
+
+test('toggles runtime debug tools with F1 and persists the title-screen debug setting', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.debug-panel')).toBeHidden();
+
+  await page.keyboard.press('F1');
+  await expect(page.locator('.debug-panel')).toBeVisible();
+  await expect(page.locator('.debug-feature-row')).toHaveCount(16);
+  await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').check();
+  await expect(page.locator('.debug-overlay')).toBeVisible();
+  await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.debug-overlay')).toBeHidden();
+
+  await page.locator('.title-screen').getByLabel('Debug tools').check();
+  let experience = await getGameExperienceSnapshot(page);
+  expect(experience.finalSettings.debugToolsEnabled).toBe(true);
+
+  await page.reload();
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.title-screen').getByLabel('Debug tools')).toBeChecked();
+  await expect(page.locator('.debug-panel')).toBeVisible();
+  experience = await getGameExperienceSnapshot(page);
+  expect(experience.finalSettings.debugToolsEnabled).toBe(true);
 });
 
 test('starts the Three.js graybox field scene', async ({ page }) => {
@@ -988,6 +1020,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     customSettings: null,
     preset: 'broadcast',
     settings: null,
+    version: 2,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({

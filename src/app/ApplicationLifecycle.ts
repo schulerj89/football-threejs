@@ -1,7 +1,7 @@
 import type { GameExperienceSettings } from '../config/GameExperienceSettings';
 import type { PlayState } from '../playState';
-import { GameSetupScreen } from '../ui/GameSetupScreen';
 import { PauseSettingsPanel } from '../ui/PauseSettingsPanel';
+import { SettingsPanel } from '../ui/SettingsPanel';
 import { TitleScreen, type TitleLoadingState } from '../ui/TitleScreen';
 
 export type AppPhase = 'gameplay' | 'title';
@@ -23,9 +23,9 @@ export class ApplicationLifecycle {
   private currentSettings: GameExperienceSettings;
   private phaseValue: AppPhase;
   private readonly pauseSettingsPanel: PauseSettingsPanel | null;
-  private readonly pauseSetupScreen: GameSetupScreen | null;
+  private readonly pauseSetupScreen: SettingsPanel | null;
   private readonly titleScreen: TitleScreen | null;
-  private readonly titleSetupScreen: GameSetupScreen | null;
+  private readonly titleSetupScreen: SettingsPanel | null;
 
   constructor(private readonly options: ApplicationLifecycleOptions) {
     this.currentSettings = options.initialSettings;
@@ -36,7 +36,7 @@ export class ApplicationLifecycle {
     this.phaseValue = normalLaunchShouldShowTitle ? 'title' : 'gameplay';
 
     this.titleSetupScreen = !options.crowdPreviewEnabled && !options.formationPreviewActive
-      ? new GameSetupScreen({
+      ? new SettingsPanel({
           initialSettings: options.initialSettings,
           onSettingsChange: options.onTitleSettingsChange,
         })
@@ -48,7 +48,7 @@ export class ApplicationLifecycle {
         })
       : null;
     this.pauseSetupScreen = !options.crowdPreviewEnabled && !options.formationPreviewActive
-      ? new GameSetupScreen({
+      ? new SettingsPanel({
           initialSettings: options.initialSettings,
           onSettingsChange: options.onPauseSettingsChange,
           showGameMode: false,

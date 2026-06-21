@@ -369,6 +369,8 @@ export class PresentationRuntime {
     );
     this.audioMixer.setFeatureFlags(gameExperience.audioFeatureFlags);
     this.audioMixer.setSettings(gameExperience.audioSettings);
+    this.routeArtRenderer.setEnabled(gameExperience.settings.routeArtEnabled);
+    this.playerPoseController.setEnabled(gameExperience.settings.playerMotionEnabled);
     this.broadcastCommentaryDirector.setAnnouncerEnabled(
       gameExperience.settings.announcerEnabled,
     );
