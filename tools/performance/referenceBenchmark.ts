@@ -42,11 +42,15 @@ export const REFERENCE_TIMING_MEASUREMENT_EPSILON_MS = 0.05;
 
 export const REFERENCE_STRUCTURAL_BUDGETS = {
   crowdSpectatorCount: 500,
+  maxCrowdDrawCalls: 8,
   maxDrawCalls: 450,
   maxGeometries: 180,
   maxMaterials: 90,
+  maxShadowCasters: 0,
+  maxStadiumDrawCalls: 4,
   maxTextures: 32,
   maxTriangles: 250_000,
+  maxVisiblePlayerMeshes: 390,
   playerCount: 22,
 } as const;
 

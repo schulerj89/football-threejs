@@ -46,6 +46,7 @@ import type {
   PerformanceScenarioRunner,
   PerformanceScenarioSnapshot,
 } from '../performance/PerformanceScenarioRunner';
+import type { QualityDebugSnapshot } from '../ui/PerformanceSettingsPanel';
 import type { PerformanceScenarioName } from '../performance/PerformanceBudget';
 import type {
   ElevenAuditResetCycleResult,
@@ -61,6 +62,7 @@ export interface ApplicationDiagnosticsOptions {
   getGameExperience: () => ResolvedGameExperienceSettings;
   isCrowdPresentationDebugEnabled: () => boolean;
   gameplay: GameplayRuntime;
+  getQualityDebugSnapshot: () => QualityDebugSnapshot;
   playerVisuals: PlayerVisualRegistry;
   performanceProfiler: FramePerformanceProfiler;
   performanceScenarioRunner: PerformanceScenarioRunner | null;
@@ -275,6 +277,7 @@ export class ApplicationDiagnostics {
         this.options.gameplay.getActivePresentationSnapshot(
           !!this.options.presentation.crowdPreviewController,
         ).passAudit,
+      getQualityDebugSnapshot: () => this.options.getQualityDebugSnapshot(),
       clearPerformanceSamples: () => this.options.performanceProfiler.clear(),
       getElevenAuditSnapshot: () => this.getElevenAuditSnapshot(),
       getPerformanceProfileReport: (environment) =>
@@ -354,6 +357,10 @@ export class ApplicationDiagnostics {
       scene,
       snapshot: this.options.performanceProfiler.getSnapshot(),
     });
+  }
+
+  createPerformanceProfileReportForDebug(): PerformanceReport {
+    return this.createPerformanceProfileReport();
   }
 
   private getPerformanceScenarioSnapshot(): PerformanceScenarioSnapshot | null {

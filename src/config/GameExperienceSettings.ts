@@ -16,6 +16,11 @@ import {
   type CrowdPresentationSettings,
 } from '../presentation/CrowdPresentationController';
 import type { PlaybookId } from '../roster';
+import {
+  DEFAULT_QUALITY_MODE,
+  normalizeQualityMode,
+  type QualityMode,
+} from '../performance/QualityProfile';
 
 export type ExperiencePreset =
   | 'broadcast'
@@ -37,6 +42,7 @@ export interface GameExperienceSettings {
   playerMotionEnabled: boolean;
   playbookId: PlaybookId;
   preset: ExperiencePreset;
+  qualityMode: QualityMode;
   routeArtEnabled: boolean;
 }
 
@@ -59,6 +65,7 @@ export interface GameExperienceQueryOverrides {
   playerMotionEnabled?: boolean;
   playbookId?: PlaybookId;
   preset?: ExperiencePreset;
+  qualityMode?: QualityMode;
   routeArtEnabled?: boolean;
 }
 
@@ -125,6 +132,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   playerMotionEnabled: true,
   playbookId: '11v11',
   preset: 'broadcast',
+  qualityMode: DEFAULT_QUALITY_MODE,
   routeArtEnabled: true,
 } as const;
 
@@ -134,6 +142,7 @@ export const PERFORMANCE_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   crowdReactionsEnabled: false,
   crowdVisualsEnabled: false,
   preset: 'performance',
+  qualityMode: DEFAULT_QUALITY_MODE,
 } as const;
 
 export function resolveGameExperienceSettings({
@@ -263,6 +272,9 @@ export function normalizeGameExperienceSettings(
       ? settings.playbookId
       : presetDefaults.playbookId,
     preset,
+    qualityMode: settings.qualityMode
+      ? normalizeQualityMode(settings.qualityMode)
+      : presetDefaults.qualityMode,
     routeArtEnabled: settings.routeArtEnabled ?? presetDefaults.routeArtEnabled,
   };
 }
@@ -276,6 +288,7 @@ export function resolveGameExperienceQueryOverrides(
   const cameraValue = searchParams.get('camera');
   const cinematicsValue = searchParams.get('cinematics');
   const crowdDensityValue = searchParams.get('crowdDensity');
+  const qualityValue = searchParams.get('quality') ?? searchParams.get('qualityMode');
 
   if (isExperiencePreset(presetValue)) {
     overrides.preset = presetValue;
@@ -299,6 +312,12 @@ export function resolveGameExperienceQueryOverrides(
 
   if (isCrowdDensity(crowdDensityValue)) {
     overrides.crowdDensity = crowdDensityValue;
+  }
+
+  if (qualityValue !== null) {
+    overrides.qualityMode = normalizeQualityMode(qualityValue);
+  } else if (searchParams.get('perfProfile') === '1') {
+    overrides.qualityMode = 'lockedBroadcast';
   }
 
   applyBooleanOverride(overrides, 'crowdVisualsEnabled', searchParams, 'crowdVisuals');

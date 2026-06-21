@@ -403,8 +403,12 @@ function createAudit(snapshot: ReturnType<typeof snapshotGameplayModel>, play = 
       playerCount: snapshot.players.length,
       sceneMaterialCount: 0,
       sceneMeshCount: 0,
+      shadowCastingObjectCount: 0,
+      stadiumDrawCallEstimate: 0,
+      stadiumMeshCount: 0,
       textures: 0,
       triangles: 0,
+      visibleMeshCount: 0,
     },
   });
 }

@@ -530,7 +530,11 @@ function createRenderMetrics(snapshot: GameplaySnapshot): RenderMetricsSnapshot 
     playerCount: snapshot.players.length,
     sceneMaterialCount: 12,
     sceneMeshCount: snapshot.players.length,
+    shadowCastingObjectCount: 0,
+    stadiumDrawCallEstimate: 0,
+    stadiumMeshCount: 0,
     textures: 0,
     triangles: 1000,
+    visibleMeshCount: snapshot.players.length,
   };
 }

@@ -27,12 +27,16 @@ interface BenchmarkRenderMetrics {
   calls: number;
   geometries: number;
   sceneMaterialCount: number;
+  shadowCastingObjectCount: number;
+  stadiumDrawCallEstimate: number;
   textures: number;
   triangles: number;
+  playerBodyMeshCount: number;
 }
 
 interface BenchmarkCrowdSnapshot {
   actualSpectatorCount: number;
+  crowdDrawCalls: number;
   density: string;
   visualsEnabled: boolean;
 }
@@ -87,6 +91,8 @@ interface BenchmarkReport {
 
 test.describe.configure({ mode: 'serial' });
 
+const STRICT_PERFORMANCE_GATE = process.env.PERF_STRICT === '1';
+
 test('reference production frame pacing and structural budgets', async ({ page }, testInfo) => {
   await page.goto([
     '/?readback=1',
@@ -101,6 +107,7 @@ test('reference production frame pacing and structural budgets', async ({ page }
     'routeArt=1',
     'stadium=1',
     'referees=1',
+    'quality=locked-broadcast',
   ].join('&'));
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await startGameIfTitleScreenIsVisible(page);
@@ -129,7 +136,7 @@ test('reference production frame pacing and structural budgets', async ({ page }
     },
     structural,
     timing,
-    timingGateEnforced: !renderer.softwareRendering,
+    timingGateEnforced: STRICT_PERFORMANCE_GATE && !renderer.softwareRendering,
     timingPrimaryTargetPassed: passesReferenceTiming(timing),
     timingSmokeTolerancePassed: passesSmokeTimingTolerance(timing),
   };
@@ -163,11 +170,18 @@ test('reference production frame pacing and structural budgets', async ({ page }
   expect(structural.renderMetrics.geometries).toBeLessThanOrEqual(REFERENCE_STRUCTURAL_BUDGETS.maxGeometries);
   expect(structural.renderMetrics.textures).toBeLessThanOrEqual(REFERENCE_STRUCTURAL_BUDGETS.maxTextures);
   expect(structural.renderMetrics.sceneMaterialCount).toBeLessThanOrEqual(REFERENCE_STRUCTURAL_BUDGETS.maxMaterials);
+  expect(structural.renderMetrics.playerBodyMeshCount).toBeLessThanOrEqual(REFERENCE_STRUCTURAL_BUDGETS.maxVisiblePlayerMeshes);
+  expect(structural.renderMetrics.shadowCastingObjectCount).toBeLessThanOrEqual(REFERENCE_STRUCTURAL_BUDGETS.maxShadowCasters);
+  expect(structural.renderMetrics.stadiumDrawCallEstimate).toBeLessThanOrEqual(REFERENCE_STRUCTURAL_BUDGETS.maxStadiumDrawCalls);
+  expect(structural.crowd?.crowdDrawCalls ?? 0).toBeLessThanOrEqual(REFERENCE_STRUCTURAL_BUDGETS.maxCrowdDrawCalls);
 
   if (!renderer.softwareRendering) {
     expect(timing.minRollingFps).toBeGreaterThanOrEqual(REFERENCE_TIMING_TARGETS.minRollingFps);
     expect(timing.belowTargetRollingWindowCount).toBe(0);
     expect(passesSmokeTimingTolerance(timing)).toBe(true);
+    if (STRICT_PERFORMANCE_GATE) {
+      expect(passesReferenceTiming(timing)).toBe(true);
+    }
   }
 });
 

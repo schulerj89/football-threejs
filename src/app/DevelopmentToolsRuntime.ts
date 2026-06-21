@@ -74,6 +74,11 @@ import type {
   PerformanceReport,
   PerformanceReportEnvironment,
 } from '../performance/PerformanceReport';
+import {
+  createPerformanceDebugOverlay,
+  syncPerformanceDebugOverlay,
+  type QualityDebugSnapshot,
+} from '../ui/PerformanceSettingsPanel';
 import type {
   PerformanceScenarioName,
 } from '../performance/PerformanceBudget';
@@ -137,6 +142,7 @@ export interface FootballDebugApi {
   getGamePresentationRuntimeSnapshot: () => GamePresentationRuntimeSnapshot;
   getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
   getPassAuditSnapshot: () => PassAuditSnapshot | null;
+  getQualityDebugSnapshot: () => QualityDebugSnapshot;
   getElevenAuditSnapshot: () => ElevenAuditSnapshot | null;
   getPerformanceProfileReport: (
     environment?: Partial<PerformanceReportEnvironment>,
@@ -175,6 +181,7 @@ export interface DevelopmentToolsRuntimeOptions {
   elevenAuditEnabled: boolean;
   formationPreviewActive: boolean;
   passAuditEnabled: boolean;
+  performanceDebugEnabled: boolean;
   presentationAuditEnabled: boolean;
   routeAuditEnabled: boolean;
   searchParams: URLSearchParams;
@@ -208,6 +215,7 @@ export interface DevelopmentOverlayFrame {
   renderMetrics: RenderMetricsSnapshot | null;
   routeArtSnapshot: RouteArtRendererSnapshot;
   runtimeAudioSnapshot: RuntimeAudioDebugSnapshot;
+  qualityDebugSnapshot: QualityDebugSnapshot;
   sevenAuditSnapshot: SevenAuditSnapshot | null;
   playerVisuals: Map<string, THREE.Group>;
 }
@@ -221,6 +229,7 @@ export class DevelopmentToolsRuntime {
   private readonly elevenAuditOverlay: HTMLDivElement | null;
   private readonly formationAuditOverlay: HTMLDivElement | null;
   private readonly passAuditOverlay: HTMLDivElement | null;
+  private readonly performanceDebugOverlay: HTMLDivElement | null;
   private readonly poseDebugOverlay: HTMLDivElement | null;
   private readonly presentationAuditOverlay: HTMLDivElement | null;
   private readonly presentationHardeningAuditOverlay: HTMLDivElement | null;
@@ -244,6 +253,9 @@ export class DevelopmentToolsRuntime {
       : null;
     this.routeAuditOverlay = options.routeAuditEnabled ? createRouteAuditOverlay() : null;
     this.passAuditOverlay = options.passAuditEnabled ? createPassAuditOverlay() : null;
+    this.performanceDebugOverlay = options.performanceDebugEnabled
+      ? createPerformanceDebugOverlay()
+      : null;
     this.sevenAuditOverlay = options.sevenAuditEnabled ? createSevenAuditOverlay() : null;
     this.elevenAuditOverlay = options.elevenAuditEnabled ? createElevenAuditOverlay() : null;
     this.appearanceAuditOverlay = options.appearanceAuditEnabled
@@ -294,6 +306,7 @@ export class DevelopmentToolsRuntime {
       !!this.presentationAuditOverlay ||
       !!this.routeAuditOverlay ||
       !!this.passAuditOverlay ||
+      !!this.performanceDebugOverlay ||
       !!this.sevenAuditOverlay ||
       !!this.elevenAuditOverlay ||
       !!this.appearanceAuditOverlay ||
@@ -335,6 +348,9 @@ export class DevelopmentToolsRuntime {
     }
     if (this.passAuditOverlay) {
       syncPassAuditOverlay(this.passAuditOverlay, frame.gameplaySnapshot.passAudit);
+    }
+    if (this.performanceDebugOverlay) {
+      syncPerformanceDebugOverlay(this.performanceDebugOverlay, frame.qualityDebugSnapshot);
     }
     if (this.sevenAuditOverlay && frame.sevenAuditSnapshot) {
       syncSevenAuditOverlay(this.sevenAuditOverlay, frame.sevenAuditSnapshot);
@@ -396,6 +412,7 @@ export class DevelopmentToolsRuntime {
       this.elevenAuditOverlay,
       this.formationAuditOverlay,
       this.passAuditOverlay,
+      this.performanceDebugOverlay,
       this.poseDebugOverlay,
       this.presentationAuditOverlay,
       this.presentationHardeningAuditOverlay,
@@ -429,6 +446,7 @@ export class DevelopmentToolsRuntime {
       options.sevenAuditEnabled ||
       options.elevenAuditEnabled ||
       options.audioDebugEnabled ||
+      options.performanceDebugEnabled ||
       options.commentaryDebugEnabled ||
       options.crowdPresentationDebugEnabled ||
       options.crowdPreviewEnabled;

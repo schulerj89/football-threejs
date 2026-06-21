@@ -145,6 +145,7 @@ describe('game experience settings', () => {
 
     expect(resolved.settings).toMatchObject({
       playbookId: '11v11',
+      qualityMode: 'adaptive60',
       preset: 'broadcast',
     });
     expect(resolved.queryOverrides).toEqual({});
@@ -163,6 +164,30 @@ describe('game experience settings', () => {
     });
     expect(resolved.queryOverrides).toEqual({
       playbookId: '7v7',
+    });
+  });
+
+  it('supports explicit quality-mode query overrides', () => {
+    const resolved = resolveGameExperienceSettings({
+      searchParams: new URLSearchParams('quality=locked-performance'),
+      storage: createMemoryStorage(),
+    });
+
+    expect(resolved.settings.qualityMode).toBe('lockedPerformance');
+    expect(resolved.queryOverrides).toEqual({
+      qualityMode: 'lockedPerformance',
+    });
+  });
+
+  it('locks benchmark profile quality when performance profiling is active', () => {
+    const resolved = resolveGameExperienceSettings({
+      searchParams: new URLSearchParams('perfProfile=1'),
+      storage: createMemoryStorage(),
+    });
+
+    expect(resolved.settings.qualityMode).toBe('lockedBroadcast');
+    expect(resolved.queryOverrides).toEqual({
+      qualityMode: 'lockedBroadcast',
     });
   });
 

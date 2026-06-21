@@ -8,6 +8,7 @@ import {
 } from '../config/GameExperienceSettings';
 import type { CinematicsSetting } from '../camera/PresentationCameraDirector';
 import type { CrowdDensity } from '../presentation/CrowdPresentationController';
+import type { QualityMode } from '../performance/QualityProfile';
 import type { PlaybookId } from '../roster';
 
 export interface GameSetupScreenOptions {
@@ -24,6 +25,7 @@ export class GameSetupScreen {
   private readonly showGameMode: boolean;
   private readonly presetSelect = document.createElement('select');
   private readonly playbookSelect = document.createElement('select');
+  private readonly qualityModeSelect = document.createElement('select');
   private readonly cameraSelect = document.createElement('select');
   private readonly cinematicsSelect = document.createElement('select');
   private readonly crowdVisualsInput = document.createElement('input');
@@ -64,6 +66,11 @@ export class GameSetupScreen {
         ['broadcast', 'Broadcast'],
         ['performance', 'Performance'],
         ['custom', 'Custom'],
+      ]),
+      this.createSelectRow('Quality mode', this.qualityModeSelect, [
+        ['adaptive60', 'Adaptive 60 FPS'],
+        ['lockedBroadcast', 'Broadcast Quality Locked'],
+        ['lockedPerformance', 'Performance Quality Locked'],
       ]),
     );
 
@@ -166,6 +173,12 @@ export class GameSetupScreen {
         playbookId: this.playbookSelect.value as PlaybookId,
       });
     });
+    this.qualityModeSelect.addEventListener('change', () => {
+      this.updateSettings({
+        ...this.settings,
+        qualityMode: this.qualityModeSelect.value as QualityMode,
+      });
+    });
 
     this.cameraSelect.addEventListener('change', () => {
       this.updateCustomSettings({ gameplayCamera: this.cameraSelect.value as ExperienceCameraMode });
@@ -213,6 +226,7 @@ export class GameSetupScreen {
   private syncControls(): void {
     this.presetSelect.value = this.settings.preset;
     this.playbookSelect.value = this.settings.playbookId;
+    this.qualityModeSelect.value = this.settings.qualityMode;
     this.cameraSelect.value = this.settings.gameplayCamera;
     this.cinematicsSelect.value = this.settings.cinematics;
     this.crowdVisualsInput.checked = this.settings.crowdVisualsEnabled;
@@ -225,7 +239,11 @@ export class GameSetupScreen {
 
     const customEnabled = this.settings.preset === 'custom';
     for (const control of this.customControls) {
-      if (control === this.presetSelect || control === this.playbookSelect) {
+      if (
+        control === this.presetSelect ||
+        control === this.playbookSelect ||
+        control === this.qualityModeSelect
+      ) {
         control.removeAttribute('disabled');
       } else {
         control.toggleAttribute('disabled', !customEnabled);

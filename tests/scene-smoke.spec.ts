@@ -678,7 +678,33 @@ interface GameExperienceSettingsSnapshot {
   playerMotionEnabled: boolean;
   playbookId: '11v11' | '5v5' | '7v7';
   preset: 'broadcast' | 'custom' | 'performance';
+  qualityMode: 'adaptive60' | 'lockedBroadcast' | 'lockedPerformance';
   routeArtEnabled: boolean;
+}
+
+interface QualityDebugSnapshot {
+  limitingSubsystem: string | null;
+  monitor: {
+    currentFps: number;
+    currentFrameTimeMs: number;
+    ignoredReason: string | null;
+    medianFrameTimeMs: number;
+    p95FrameTimeMs: number;
+    ready: boolean;
+    sampleCount: number;
+  };
+  pixelRatio: number;
+  quality: {
+    currentTier: 'balanced' | 'broadcastHigh' | 'performance';
+    mode: 'adaptive60' | 'lockedBroadcast' | 'lockedPerformance';
+    profile: {
+      displayName: string;
+      maxPixelRatio: number;
+      tier: 'balanced' | 'broadcastHigh' | 'performance';
+    };
+    recentDowngradeReason: string | null;
+    recentUpgradeReason: string | null;
+  };
 }
 
 interface GameExperienceSnapshot {
@@ -776,6 +802,26 @@ test('starts the performance preset without visual crowd or cinematics', async (
     preset: 'performance',
   });
   expect(await getOptionalCrowdPresentationSnapshot(page)).toBeNull();
+});
+
+test('exposes adaptive quality debug state without gameplay mutation', async ({ page }) => {
+  await page.goto('/?qualityDebug=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.performance-debug-overlay')).toBeVisible();
+
+  const before = await getGameplaySnapshot(page);
+  const quality = await getQualityDebugSnapshot(page);
+
+  expect(quality.quality.mode).toBe('adaptive60');
+  expect(quality.quality.currentTier).toBe('broadcastHigh');
+  expect(quality.quality.profile.maxPixelRatio).toBeGreaterThanOrEqual(1);
+  expect(quality.pixelRatio).toBeGreaterThan(0);
+
+  await page.waitForTimeout(120);
+  const after = await getGameplaySnapshot(page);
+  expect(after.players).toHaveLength(before.players.length);
+  expect(after.playState).toBe(before.playState);
+  expect(after.selectedPlay.id).toBe(before.selectedPlay.id);
 });
 
 test('selects the 5v5 legacy development mode from the title screen', async ({ page }) => {
@@ -2952,6 +2998,24 @@ async function getGameExperienceSnapshot(page: Page): Promise<GameExperienceSnap
     }
 
     return debugApi.getGameExperienceSnapshot();
+  });
+}
+
+async function getQualityDebugSnapshot(page: Page): Promise<QualityDebugSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getQualityDebugSnapshot: () => QualityDebugSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getQualityDebugSnapshot();
   });
 }
 

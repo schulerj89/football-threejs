@@ -56,7 +56,10 @@ Run `npm run benchmark:reference` to build production assets and run the referen
 - Scenario: 11v11 broadcast profile, offense camera, brief cinematics, procedural player motion, low-density measured crowd visuals and reactions, route art enabled, debug overlays disabled.
 - Sampling: `3` second warm-up, at least `12` seconds sampled, hidden-tab frames ignored.
 - Timing target on hardware rendering: median frame time `<= 16.67 ms`, p95 `<= 18.18 ms`, p99 `<= 33.33 ms`, and no rolling one-second window below `55 FPS`. Primary millisecond reporting uses a `0.05 ms` measurement epsilon for Chromium timestamp granularity.
-- The automated gate follows the smoke-test tolerance: `55-60 FPS` is acceptable, and hardware-rendered runs fail only when a rolling one-second window remains below `55 FPS`. Software rendering such as SwiftShader reports timing but does not fail timing gates; structural budgets still apply.
+- `PERF_STRICT=1 npm run test:perf` enforces the strict median/p95/p99 timing gate on hardware-accelerated Chromium. Normal smoke tolerance accepts `55-60 FPS` and fails hardware-rendered runs only when a rolling one-second window remains below `55 FPS`.
+- Software rendering such as SwiftShader reports timing but does not fail timing gates; structural budgets still apply.
+- Current structural budgets are measured from the passing optimized reference plus margin: `450` draw calls, `250000` triangles, `180` geometries, `90` materials, `32` textures, `390` visible player meshes, `0` shadow casters, `8` crowd draw calls, and `4` stadium draw-call estimate.
+- See `docs/PERFORMANCE_GOVERNOR.md` for the adaptive quality policy, strict gate instructions, and gameplay invariants that quality changes may not touch.
 - Report output: `test-results/reference-performance-report.json`.
 - The current prototype does not yet include referee visuals; the benchmark requests and records the referee dimension so it can become enforced when that feature lands.
 
@@ -93,7 +96,7 @@ The richer report can be printed with `npm run audio:report` and written with `n
 
 - A normal launch opens the title screen. Choose `Start Game` to enter the selected prototype and unlock browser audio from that user gesture.
 - The title screen supports `Broadcast`, `Performance`, and `Custom` presentation profiles plus `11v11 Prototype`, `7v7 Development Regression Mode`, and `5v5 Legacy Regression Mode` game modes.
-- Custom title settings expose gameplay camera, cinematics, visual crowd, crowd density, crowd reactions, master audio, crowd audio, announcer, and captions.
+- Custom title settings expose gameplay camera, cinematics, visual crowd, crowd density, crowd reactions, master audio, crowd audio, announcer, captions, and quality mode.
 - Move with `WASD` or the arrow keys.
 - In the default 11v11 prototype, press `1` during pre-snap to select `Inside Zone 11`.
 - In the default 11v11 prototype, press `2` during pre-snap to select `Spread Quick 11`.
@@ -109,6 +112,7 @@ The richer report can be printed with `npm run audio:report` and written with `n
 - Press `Escape` during pre-snap or dead-ball states to open the settings panel. Volume, captions, camera, cinematics, and crowd settings apply safely where practical; game mode changes require returning to the title screen.
 - A plain launch uses the `broadcast` experience preset: 11v11 playbook, offense camera, brief cinematics, low-density crowd visuals and reactions, runtime audio, announcer, pre-snap route art, and player motion.
 - Use `?experience=broadcast`, `?experience=performance`, or `?experience=custom` to choose the resolved normal-game profile. The `performance` preset keeps the offense camera and player motion but disables cinematics, visual crowd, and crowd reactions.
+- Quality mode defaults to `Adaptive 60 FPS`. Use `?quality=adaptive`, `?quality=locked-broadcast`, or `?quality=locked-performance` to override it for a session. Adaptive quality may reduce render pixel ratio immediately at a frame boundary and may reduce crowd presentation only at title, pre-snap, or dead-ball boundaries; it never changes roster size, gameplay simulation, collision, ball trajectory, route progress, drive state, input, or camera focus targets.
 - Query parameters such as `?camera=`, `?cinematics=`, `?crowdVisuals=`, `?audio=`, `?announcer=`, `?captions=`, `?routeArt=`, and `?playerMotion=` are explicit development overrides and do not rewrite persisted experience settings.
 - Use `?cinematics=off`, `?cinematics=brief`, or `?cinematics=full` to control optional orbit-shot presentation for a session. The broadcast preset defaults to `brief`; the performance preset defaults to `off`.
 - Use `?shotPreview=prePlayOrbit180`, `?shotPreview=touchdownOrbit360`, `?shotPreview=firstDownCrowdCutaway`, or `?shotPreview=touchdownCrowdCutaway` with `?cameraDebug=1` to inspect presentation shots without changing gameplay rules.
@@ -188,6 +192,8 @@ It also reports event history entries with event ID, selected asset, trigger tim
 Add `?crowdPreview=1` to show the development crowd preview overlay. It reports requested and actual spectator count, near/far LOD instance counts, crowd draw calls, crowd triangles, geometry/material/texture counts, explicit per-instance storage, estimated instance-buffer bytes, frame-time and FPS measurements, renderer memory counters, benchmark status, and preview camera controls.
 
 Add `?crowdDebug=1` with `?crowdVisuals=1` to show the normal-game crowd presentation overlay. It reports visual/reaction settings, crowd density, spectator count, reaction state, bounded update count, draw calls, triangles, frame time, and the latest crowd event sync.
+
+Add `?qualityDebug=1` to show adaptive-quality state: quality mode, current tier, pixel ratio, rolling median, rolling p95, current FPS, recent downgrade/upgrade reason, pending safe-boundary transition, and latest profiler limiting subsystem when profiling is active.
 
 Add `?presentationAudit=1` during normal gameplay to show the presentation hardening matrix. It reports audio, announcer, captions, crowd visuals, crowd reactions, cinematics, active camera shot, presentation holds, duplicate event suppression, render metrics, and audio memory counters.
 

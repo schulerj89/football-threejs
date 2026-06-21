@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.47.0] - 2026-06-21
+
+### Added
+
+- Added an Adaptive 60 FPS runtime quality governor with rolling frame-time monitoring, hysteresis, cooldowns, safe-boundary scheduling, and explicit Broadcast/Performance locked modes.
+- Added quality profiles for Broadcast High, Balanced, and Performance with render pixel-ratio caps and crowd-presentation reductions that do not alter gameplay state, roster size, collision, routes, ball trajectory, input, or camera focus targets.
+- Added quality mode persistence, title/pause settings controls, `?quality=` overrides, and `?qualityDebug=1` readout for quality mode, tier, pixel ratio, rolling median/p95, FPS, transition reasons, and pending safe-boundary transitions.
+- Added unit coverage for runtime performance monitoring, adaptive downgrade/upgrade policy, safe-boundary scheduling, locked quality modes, and quality-setting resolution.
+
+### Changed
+
+- Extended production performance gates with measured structural budgets for draw calls, triangles, geometries, materials, textures, visible player meshes, shadow casters, crowd draw calls, and stadium draw-call estimates.
+- Updated `npm run test:perf`/`perf:11v11` fixed-profile benchmark queries so adaptive quality is disabled during profiler runs.
+- Updated the reference benchmark so strict median/p95/p99 timing enforcement is gated by `PERF_STRICT=1`, while hardware smoke runs still reject sustained sub-55 FPS and software rendering remains timing-informational.
+
 ## [0.46.1] - 2026-06-21
 
 ### Added

@@ -69,6 +69,10 @@ import type { PlayDefinition } from '../playbook';
 import type { BallModel } from '../ballModel';
 import type { RuntimeAudioDebugSnapshot } from '../audio/AudioDebugOverlay';
 import type { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
+import {
+  getQualityProfile,
+  type QualityProfileSnapshot,
+} from '../performance/QualityProfile';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -109,6 +113,7 @@ export class PresentationRuntime {
   private crowdPresentationController: CrowdPresentationController | null;
   private crowdPresentationSettings: CrowdPresentationSettings;
   private gameExperience: ResolvedGameExperienceSettings;
+  private qualityProfile: QualityProfileSnapshot;
   private readonly gamePresentationRuntime: GamePresentationRuntime;
   private readonly holdCinematicPreSnapEstablish: boolean;
   private playCallUi: PlayCallUi | null;
@@ -128,7 +133,11 @@ export class PresentationRuntime {
     this.scene = scene;
     this.searchParams = searchParams;
     this.gameExperience = gameExperience;
-    this.crowdPresentationSettings = gameExperience.crowdPresentationSettings;
+    this.qualityProfile = getQualityProfile('broadcastHigh');
+    this.crowdPresentationSettings = resolveEffectiveCrowdSettings(
+      gameExperience.crowdPresentationSettings,
+      this.qualityProfile,
+    );
     this.holdCinematicPreSnapEstablish = searchParams.has('presentationAudit');
     this.shotPreview = resolvePresentationShotPreview(searchParams.get('shotPreview'));
 
@@ -354,7 +363,10 @@ export class PresentationRuntime {
     const previousCrowdSettings = this.crowdPresentationSettings;
 
     this.gameExperience = gameExperience;
-    this.crowdPresentationSettings = gameExperience.crowdPresentationSettings;
+    this.crowdPresentationSettings = resolveEffectiveCrowdSettings(
+      gameExperience.crowdPresentationSettings,
+      this.qualityProfile,
+    );
     this.audioMixer.setFeatureFlags(gameExperience.audioFeatureFlags);
     this.audioMixer.setSettings(gameExperience.audioSettings);
     this.broadcastCommentaryDirector.setAnnouncerEnabled(
@@ -371,6 +383,19 @@ export class PresentationRuntime {
     }
     this.presentationHoldDirector = new PresentationHoldDirector(
       gameExperience.settings.cinematics,
+    );
+
+    if (!areCrowdSettingsEqual(previousCrowdSettings, this.crowdPresentationSettings)) {
+      this.rebuildCrowdPresentationController();
+    }
+  }
+
+  applyQualityProfile(profile: QualityProfileSnapshot): void {
+    const previousCrowdSettings = this.crowdPresentationSettings;
+    this.qualityProfile = profile;
+    this.crowdPresentationSettings = resolveEffectiveCrowdSettings(
+      this.gameExperience.crowdPresentationSettings,
+      this.qualityProfile,
     );
 
     if (!areCrowdSettingsEqual(previousCrowdSettings, this.crowdPresentationSettings)) {
@@ -487,4 +512,28 @@ function areCrowdSettingsEqual(
   return a.crowdDensity === b.crowdDensity &&
     a.crowdReactionsEnabled === b.crowdReactionsEnabled &&
     a.crowdVisualsEnabled === b.crowdVisualsEnabled;
+}
+
+function resolveEffectiveCrowdSettings(
+  base: CrowdPresentationSettings,
+  quality: QualityProfileSnapshot,
+): CrowdPresentationSettings {
+  return {
+    crowdDensity: minCrowdDensity(base.crowdDensity, quality.crowdDensity),
+    crowdReactionsEnabled: base.crowdReactionsEnabled && quality.crowdReactionsEnabled,
+    crowdVisualsEnabled: base.crowdVisualsEnabled && quality.crowdVisualsEnabled,
+  };
+}
+
+function minCrowdDensity(
+  a: CrowdPresentationSettings['crowdDensity'],
+  b: CrowdPresentationSettings['crowdDensity'],
+): CrowdPresentationSettings['crowdDensity'] {
+  const order: Record<CrowdPresentationSettings['crowdDensity'], number> = {
+    high: 2,
+    low: 0,
+    medium: 1,
+  };
+
+  return order[a] <= order[b] ? a : b;
 }

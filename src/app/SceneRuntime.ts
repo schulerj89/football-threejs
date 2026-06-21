@@ -17,6 +17,7 @@ export class SceneRuntime {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
 
+  private maxPixelRatio = 2;
   private readonly resizeHandlers = new Set<(width: number, height: number) => void>();
 
   constructor({ mount, searchParams }: SceneRuntimeOptions) {
@@ -72,6 +73,20 @@ export class SceneRuntime {
     this.renderer.render(this.scene, camera);
   }
 
+  setMaxPixelRatio(maxPixelRatio: number): void {
+    const next = Math.min(2, Math.max(0.75, maxPixelRatio));
+    if (Math.abs(next - this.maxPixelRatio) < 0.001) {
+      return;
+    }
+
+    this.maxPixelRatio = next;
+    this.resize();
+  }
+
+  getPixelRatio(): number {
+    return this.renderer.getPixelRatio();
+  }
+
   syncDriveLines(
     lineOfScrimmage: { z: number },
     firstDownMarker: { z: number },
@@ -87,15 +102,31 @@ export class SceneRuntime {
     const sceneMaterials = new Set<string>();
     let sceneMeshCount = 0;
     let playerBodyMeshCount = 0;
+    let shadowCastingObjectCount = 0;
+    let stadiumDrawCallEstimate = 0;
+    let stadiumMeshCount = 0;
+    let visibleMeshCount = 0;
 
     this.scene.traverse((object) => {
+      if (object.castShadow) {
+        shadowCastingObjectCount += 1;
+      }
+
       if (!(object instanceof THREE.Mesh)) {
         return;
       }
 
       sceneMeshCount += 1;
-      for (const material of getMaterials(object.material)) {
+      if (object.visible) {
+        visibleMeshCount += 1;
+      }
+      const materials = getMaterials(object.material);
+      for (const material of materials) {
         sceneMaterials.add(material.uuid);
+      }
+      if (isStadiumObject(object)) {
+        stadiumMeshCount += 1;
+        stadiumDrawCallEstimate += materials.length;
       }
     });
 
@@ -115,8 +146,12 @@ export class SceneRuntime {
       playerCount,
       sceneMaterialCount: sceneMaterials.size,
       sceneMeshCount,
+      shadowCastingObjectCount,
+      stadiumDrawCallEstimate,
+      stadiumMeshCount,
       textures: this.renderer.info.memory.textures,
       triangles: this.renderer.info.render.triangles,
+      visibleMeshCount,
     };
   }
 
@@ -133,7 +168,7 @@ export class SceneRuntime {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.maxPixelRatio));
     this.renderer.setSize(width, height);
     for (const handler of this.resizeHandlers) {
       handler(width, height);
@@ -143,4 +178,8 @@ export class SceneRuntime {
 
 function getMaterials(material: THREE.Material | THREE.Material[]): THREE.Material[] {
   return Array.isArray(material) ? material : [material];
+}
+
+function isStadiumObject(object: THREE.Object3D): boolean {
+  return /stadium|stand|seating|crowd-seating-shell/i.test(object.name);
 }

@@ -19,8 +19,12 @@ export interface RenderMetricsSnapshot {
   playerCount: number;
   sceneMaterialCount: number;
   sceneMeshCount: number;
+  shadowCastingObjectCount: number;
+  stadiumDrawCallEstimate: number;
+  stadiumMeshCount: number;
   textures: number;
   triangles: number;
+  visibleMeshCount: number;
 }
 
 export class DebugOverlay {
@@ -128,6 +132,8 @@ export class DebugOverlay {
         `PLAYER_MESHES ${renderMetrics.playerBodyMeshCount}`,
         `SCENE_MESHES ${renderMetrics.sceneMeshCount}`,
         `MATERIALS ${renderMetrics.sceneMaterialCount}`,
+        `SHADOW_CASTERS ${renderMetrics.shadowCastingObjectCount}`,
+        `STADIUM_CALLS ${renderMetrics.stadiumDrawCallEstimate}`,
       );
     }
 

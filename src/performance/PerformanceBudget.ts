@@ -96,10 +96,14 @@ export const PERFORMANCE_RING_BUFFER_CAPACITY = 4_096;
 
 export const PERFORMANCE_STRUCTURAL_BUDGETS = {
   crowdSpectatorCount: 500,
+  maxCrowdDrawCalls: 8,
   maxDrawCalls: 450,
   maxGeometries: 180,
   maxMaterials: 90,
+  maxShadowCasters: 0,
+  maxStadiumDrawCalls: 4,
   maxTextures: 32,
   maxTriangles: 250_000,
+  maxVisiblePlayerMeshes: 390,
   playerCount: 22,
 } as const;

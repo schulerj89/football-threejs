@@ -16,6 +16,8 @@ import { PresentationRuntime } from './PresentationRuntime';
 import { SceneRuntime } from './SceneRuntime';
 import { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
 import { PerformanceScenarioRunner } from '../performance/PerformanceScenarioRunner';
+import { AdaptiveQualityController } from '../performance/AdaptiveQualityController';
+import { RuntimePerformanceMonitor } from '../performance/RuntimePerformanceMonitor';
 import {
   collectRendererMetrics,
   collectSceneStructureMetrics,
@@ -23,6 +25,7 @@ import {
   hasResourceChanged,
   type ResourceChangeSnapshot,
 } from '../performance/RendererMetricsCollector';
+import type { QualityDebugSnapshot } from '../ui/PerformanceSettingsPanel';
 
 export interface FootballApplicationOptions {
   mount: HTMLDivElement;
@@ -40,6 +43,8 @@ export class FootballApplication {
   private readonly developmentTools: DevelopmentToolsRuntime;
   private readonly performanceProfiler: FramePerformanceProfiler;
   private readonly performanceScenarioRunner: PerformanceScenarioRunner | null;
+  private readonly qualityController: AdaptiveQualityController;
+  private readonly runtimePerformanceMonitor = new RuntimePerformanceMonitor();
   private readonly loop: GameLoop;
   private readonly removeSceneResizeHandler: () => void;
   private gameExperience: ResolvedGameExperienceSettings;
@@ -50,6 +55,7 @@ export class FootballApplication {
     this.searchParams = searchParams;
     this.gameExperience = resolveGameExperienceSettings({ searchParams });
     this.performanceProfiler = FramePerformanceProfiler.createFromSearchParams(searchParams);
+    this.qualityController = new AdaptiveQualityController(this.gameExperience.settings.qualityMode);
     this.gameplay = new GameplayRuntime({
       consumeSelectedPlayId: () => this.presentation.consumeSelectedPlayId(),
       playbookId: this.gameExperience.settings.playbookId,
@@ -71,6 +77,7 @@ export class FootballApplication {
         }
       },
     });
+    this.applyCurrentQualityProfile();
     this.removeSceneResizeHandler = this.sceneRuntime.onResize((width, height) => {
       this.presentation.resize(width, height);
     });
@@ -92,6 +99,7 @@ export class FootballApplication {
       playerVisuals: this.playerVisuals,
       performanceProfiler: this.performanceProfiler,
       performanceScenarioRunner: this.performanceScenarioRunner,
+      getQualityDebugSnapshot: () => this.createQualityDebugSnapshot(),
       presentation: this.presentation,
       sceneRuntime: this.sceneRuntime,
       searchParams,
@@ -138,6 +146,8 @@ export class FootballApplication {
           () => this.presentation.resetCameraPresentation(),
         ),
       passAuditEnabled: searchParams.has('passAudit'),
+      performanceDebugEnabled: searchParams.has('qualityDebug') ||
+        searchParams.has('performanceDebug'),
       presentationAuditEnabled: searchParams.has('presentationAudit'),
       renderer: this.sceneRuntime.renderer,
       routeAuditEnabled: searchParams.has('routeAudit'),
@@ -205,6 +215,7 @@ export class FootballApplication {
       this.performanceScenarioRunner?.update(delta);
     }
     const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
+    this.updateAdaptiveQuality(delta, gameplaySnapshot);
     if (this.performanceProfiler.enabled) {
       this.performanceProfiler.measure('stadiumUpdate', () => {
         this.sceneRuntime.syncDriveLines(
@@ -332,6 +343,7 @@ export class FootballApplication {
       renderMetrics: this.diagnostics.latestRenderMetrics,
       routeArtSnapshot: this.presentation.getRouteArtSnapshot(),
       runtimeAudioSnapshot: this.presentation.getRuntimeAudioSnapshot(),
+      qualityDebugSnapshot: this.createQualityDebugSnapshot(),
       sevenAuditSnapshot: this.diagnostics.getSevenAuditSnapshot(),
     });
   }
@@ -367,6 +379,11 @@ export class FootballApplication {
       searchParams: this.searchParams,
     });
     this.presentation.applyExperience(this.gameExperience);
+    this.qualityController.setMode(
+      this.gameExperience.settings.qualityMode,
+      this.createQualityTransitionContext(),
+    );
+    this.applyCurrentQualityProfile();
     if (previousPlaybookId !== this.gameExperience.settings.playbookId) {
       this.gameplay.rebuildForPlaybook(this.gameExperience.settings.playbookId);
       this.syncAfterGameplayRebuild();
@@ -424,7 +441,61 @@ export class FootballApplication {
 
   private readonly syncAudioPageActivity = (): void => {
     this.presentation.setPageActive(!document.hidden && document.hasFocus());
+    if (document.hidden) {
+      this.runtimePerformanceMonitor.reset('hidden-tab');
+    }
   };
+
+  private updateAdaptiveQuality(
+    deltaSeconds: number,
+    gameplaySnapshot: ReturnType<GameplayRuntime['getActivePresentationSnapshot']>,
+  ): void {
+    const monitor = this.runtimePerformanceMonitor.update({
+      active: this.lifecycle.phase === 'gameplay' && !this.lifecycle.isPauseSettingsVisible(),
+      debugOverheadActive:
+        this.performanceProfiler.enabled ||
+        this.developmentTools.shouldCollectPresentationDiagnostics(),
+      deltaSeconds,
+      hidden: document.visibilityState !== 'visible',
+    });
+    const result = this.qualityController.update({
+      context: {
+        appPhase: this.lifecycle.phase,
+        playState: gameplaySnapshot.playState,
+      },
+      deltaSeconds,
+      monitor,
+    });
+
+    if (result.applied) {
+      this.applyCurrentQualityProfile();
+    }
+  }
+
+  private applyCurrentQualityProfile(): void {
+    const profile = this.qualityController.getProfile();
+    this.sceneRuntime.setMaxPixelRatio(profile.maxPixelRatio);
+    this.presentation.applyQualityProfile(profile);
+  }
+
+  private createQualityTransitionContext() {
+    return {
+      appPhase: this.lifecycle.phase,
+      playState: this.gameplay.gameplayModel.playState,
+    };
+  }
+
+  private createQualityDebugSnapshot(): QualityDebugSnapshot {
+    const report = this.performanceProfiler.enabled
+      ? this.diagnostics.createPerformanceProfileReportForDebug()
+      : null;
+    return {
+      limitingSubsystem: report?.bottlenecks[0]?.phase ?? null,
+      monitor: this.runtimePerformanceMonitor.getSnapshot(),
+      pixelRatio: this.sceneRuntime.getPixelRatio(),
+      quality: this.qualityController.getSnapshot(),
+    };
+  }
 
   private isCrowdPresentationDebugEnabled(): boolean {
     return this.searchParams.has('crowdDebug') ||

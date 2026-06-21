@@ -2,8 +2,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
+  PERFORMANCE_FRAME_THRESHOLDS_MS,
   PERFORMANCE_REFERENCE_PROFILE,
   PERFORMANCE_SCENARIOS,
+  PERFORMANCE_STRUCTURAL_BUDGETS,
   type PerformanceScenarioName,
 } from '../../src/performance/PerformanceBudget';
 import type {
@@ -44,6 +46,7 @@ const COMPARISON_SAMPLE_DURATION_MS = Number(
 const WARMUP_MS = Number(
   process.env.FOOTBALL_PERF_WARMUP_MS ?? PERFORMANCE_REFERENCE_PROFILE.warmupMs,
 );
+const STRICT_PERFORMANCE_GATE = process.env.PERF_STRICT === '1';
 
 const PROFILE_DESCRIPTIONS: Record<string, string> = {
   'crowd-off': '11v11 with visual crowd disabled.',
@@ -68,6 +71,7 @@ const FULL_BROADCAST_QUERY = {
   perfProfile: '1',
   playbook: '11v11',
   playerMotion: '1',
+  quality: 'locked-broadcast',
   readback: '1',
   routeArt: '1',
   stadium: '1',
@@ -91,6 +95,7 @@ const COMPARISON_PROFILES: Array<{
       perfProfile: '1',
       playbook: '11v11',
       playerMotion: '0',
+      quality: 'locked-performance',
       readback: '1',
       routeArt: '0',
       stadium: '0',
@@ -224,8 +229,33 @@ test('profiles deterministic 11v11 production scenarios', async ({ browser }, te
     expect(run.report.scene.crowdInstanceCount).toBeGreaterThanOrEqual(500);
     expect(run.report.renderer.calls).toBeGreaterThan(0);
     expect(run.report.bottlenecks).toHaveLength(5);
+    enforcePerformanceRunBudgets(run);
   }
 });
+
+function enforcePerformanceRunBudgets(run: ScenarioRun): void {
+  expect(run.report.renderer.calls).toBeLessThanOrEqual(PERFORMANCE_STRUCTURAL_BUDGETS.maxDrawCalls);
+  expect(run.report.renderer.triangles).toBeLessThanOrEqual(PERFORMANCE_STRUCTURAL_BUDGETS.maxTriangles);
+  expect(run.report.renderer.geometries).toBeLessThanOrEqual(PERFORMANCE_STRUCTURAL_BUDGETS.maxGeometries);
+  expect(run.report.renderer.textures).toBeLessThanOrEqual(PERFORMANCE_STRUCTURAL_BUDGETS.maxTextures);
+  expect(run.report.scene.materialCount).toBeLessThanOrEqual(PERFORMANCE_STRUCTURAL_BUDGETS.maxMaterials);
+  expect(run.report.scene.playerMeshCount).toBeLessThanOrEqual(PERFORMANCE_STRUCTURAL_BUDGETS.maxVisiblePlayerMeshes);
+  expect(run.report.scene.shadowCastingObjectCount).toBeLessThanOrEqual(PERFORMANCE_STRUCTURAL_BUDGETS.maxShadowCasters);
+  expect(run.report.scene.stadiumMeshCount).toBeLessThanOrEqual(PERFORMANCE_STRUCTURAL_BUDGETS.maxStadiumDrawCalls);
+
+  if (run.report.environment.softwareRendering) {
+    return;
+  }
+
+  if (run.sampleDurationMs >= 1_000) {
+    expect(run.report.frame.minimumRollingOneSecondFps).toBeGreaterThanOrEqual(55);
+  }
+  if (STRICT_PERFORMANCE_GATE) {
+    expect(run.report.frame.median).toBeLessThanOrEqual(PERFORMANCE_FRAME_THRESHOLDS_MS.target60Fps);
+    expect(run.report.frame.p95).toBeLessThanOrEqual(PERFORMANCE_FRAME_THRESHOLDS_MS.target55Fps);
+    expect(run.report.frame.p99).toBeLessThanOrEqual(PERFORMANCE_FRAME_THRESHOLDS_MS.longFrame);
+  }
+}
 
 async function preparePerformancePage(
   page: Page,
