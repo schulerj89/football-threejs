@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a three-on-three offensive drill with two data-defined rushing plays, two passing plays, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, two passing plays, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, final-score game over, and a fixed orthographic three-quarter gameplay camera.
 
 ## World Scale
 
@@ -37,8 +37,11 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Press `E` before throwing on a passing play to cycle eligible receivers.
 - Press `F` during a passing play to throw once toward the selected eligible receiver.
 - Press `R` to reset the play to pre-snap.
+- Press `Enter` from game over to restart the two-minute score attack.
 - Play selection is locked while a play is live; reset preserves the selected play.
 - The HUD shows the selected target for passing plays.
+- The score-attack clock starts on the first snap, runs continuously after that, and clamps at `0:00`.
+- If time expires during a live play, that play may finish before game over.
 - Passing plays start with the quarterback in possession; after a catch, possession and user control transfer to the receiver.
 - The quarterback may scramble before throwing.
 - Crossing the original line of scrimmage permanently disables forward passing for that play; pressing `F` after crossing shows `PAST LINE OF SCRIMMAGE` and does not throw.
@@ -52,6 +55,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Sack, tackle, completed pass, and out-of-bounds results display signed yards gained or lost, then reset the next play at the dead-ball spot.
 - Incomplete passes end the play at the original line of scrimmage and advance the down.
 - The drill tracks down, distance, ball position, and score.
+- The challenge tracks remaining time and final score.
 - Reaching the first-down line resets to first-and-10; a failed fourth down shows `TURNOVER ON DOWNS` and starts a new offensive drill.
 - Diagonal movement is normalized to the same max speed as cardinal movement.
 - End-line movement is clamped; sidelines are live-play boundaries.
@@ -96,7 +100,10 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No sprinting
 - No animation
 - No quarters
-- No game clock
+- No opponent score
+- No halftime
+- No timeouts
+- No NFL clock-stoppage rules
 - No play clock
 - No punts
 - No field goals

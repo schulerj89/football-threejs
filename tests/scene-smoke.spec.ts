@@ -80,8 +80,14 @@ interface GameplaySnapshot {
   passAttempted: boolean;
   forwardPassEligible: boolean;
   passFeedback: 'pastLineOfScrimmage' | null;
-  playState: 'preSnap' | 'live' | 'dead';
+  playState: 'preSnap' | 'live' | 'dead' | 'gameOver';
   score: number;
+  scoreAttack: {
+    durationSeconds: number;
+    finalScore: number | null;
+    remainingSeconds: number;
+    state: 'ready' | 'running' | 'expired' | 'gameOver';
+  };
 }
 
 test('starts the Three.js graybox field scene', async ({ page }) => {
@@ -101,12 +107,17 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?debug=1&readback=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.game-clock')).toHaveText('Time 2:00');
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
   await expect(page.locator('.drive-status')).toHaveText('1st & 10 | Ball -15');
   await expect(page.locator('.play-call')).toHaveText('Inside Run');
   await expect(page.locator('.target-label')).toBeHidden();
   const initial = await getGameplaySnapshot(page);
   expect(initial.selectedPlay.id).toBe('inside-run');
+  expect(initial.scoreAttack).toMatchObject({
+    remainingSeconds: 120,
+    state: 'ready',
+  });
   expect(initial.players).toHaveLength(6);
   expect(initial.players.filter((player) => player.team === 'offense')).toHaveLength(3);
   expect(initial.players.filter((player) => player.team === 'defense')).toHaveLength(3);

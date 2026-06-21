@@ -1,7 +1,9 @@
 import type { GameplaySnapshot } from './playState';
 
 export interface GameplayHud {
+  clock: HTMLDivElement;
   driveStatus: HTMLDivElement;
+  gameOverMessage: HTMLDivElement;
   incompleteMessage: HTMLDivElement;
   outOfBoundsMessage: HTMLDivElement;
   passWarningMessage: HTMLDivElement;
@@ -19,6 +21,10 @@ export interface GameplayHud {
 export function createGameplayHud(): GameplayHud {
   const root = document.createElement('div');
   root.className = 'gameplay-hud';
+
+  const clock = document.createElement('div');
+  clock.className = 'game-clock';
+  root.appendChild(clock);
 
   const score = document.createElement('div');
   score.className = 'score-counter';
@@ -75,10 +81,16 @@ export function createGameplayHud(): GameplayHud {
   turnoverMessage.textContent = 'TURNOVER ON DOWNS';
   root.appendChild(turnoverMessage);
 
+  const gameOverMessage = document.createElement('div');
+  gameOverMessage.className = 'game-over-message';
+  root.appendChild(gameOverMessage);
+
   document.body.appendChild(root);
 
   return {
+    clock,
     driveStatus,
+    gameOverMessage,
     incompleteMessage,
     outOfBoundsMessage,
     passWarningMessage,
@@ -97,7 +109,9 @@ export function createGameplayHud(): GameplayHud {
 export function syncGameplayHud(hud: GameplayHud, gameplay: GameplaySnapshot): void {
   const lastPlayResult = gameplay.lastPlayResult;
   const isTurnoverOnDowns = gameplay.drive.lastDriveResult?.type === 'turnoverOnDowns';
+  const isGameOver = gameplay.playState === 'gameOver';
 
+  hud.clock.textContent = `Time ${formatClock(gameplay.scoreAttack.remainingSeconds)}`;
   hud.score.textContent = `Score ${gameplay.score}`;
   hud.driveStatus.textContent = `${formatDown(gameplay.drive.currentDown)} & ${formatDistance(
     gameplay.drive.yardsToFirstDown,
@@ -107,16 +121,30 @@ export function syncGameplayHud(hud: GameplayHud, gameplay: GameplaySnapshot): v
   hud.targetLabel.textContent = gameplay.selectedReceiver
     ? `Target ${gameplay.selectedReceiver.displayName}`
     : '';
-  hud.tackleMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'tackle';
-  hud.sackMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'sack';
-  hud.touchdownMessage.hidden = lastPlayResult?.type !== 'touchdown';
-  hud.outOfBoundsMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'outOfBounds';
-  hud.incompleteMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'incomplete';
-  hud.passWarningMessage.hidden = gameplay.passFeedback !== 'pastLineOfScrimmage';
-  hud.turnoverMessage.hidden = !isTurnoverOnDowns;
+  hud.tackleMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'tackle';
+  hud.sackMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'sack';
+  hud.touchdownMessage.hidden = isGameOver || lastPlayResult?.type !== 'touchdown';
+  hud.outOfBoundsMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'outOfBounds';
+  hud.incompleteMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'incomplete';
+  hud.passWarningMessage.hidden = isGameOver || gameplay.passFeedback !== 'pastLineOfScrimmage';
+  hud.turnoverMessage.hidden = isGameOver || !isTurnoverOnDowns;
   hud.resultMessage.hidden =
-    !lastPlayResult || !['tackle', 'outOfBounds', 'incomplete', 'sack'].includes(lastPlayResult.type);
+    isGameOver ||
+    !lastPlayResult ||
+    !['tackle', 'outOfBounds', 'incomplete', 'sack'].includes(lastPlayResult.type);
   hud.resultMessage.textContent = lastPlayResult ? formatYards(lastPlayResult.yardsGained) : '';
+  hud.gameOverMessage.hidden = !isGameOver;
+  hud.gameOverMessage.textContent = isGameOver
+    ? `FINAL SCORE ${gameplay.scoreAttack.finalScore ?? gameplay.score} - PRESS ENTER`
+    : '';
+}
+
+function formatClock(totalSeconds: number): string {
+  const clampedSeconds = Math.max(0, Math.ceil(totalSeconds));
+  const minutes = Math.floor(clampedSeconds / 60);
+  const seconds = clampedSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 function formatDown(down: number): string {

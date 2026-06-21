@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.0] - 2026-06-21
+
+### Added
+
+- Added a two-minute offensive score-attack challenge model with a 120-second clock that starts on the first snap and ticks from supplied delta time.
+- Added continuous clock ticking across live plays, dead-play result delays, and pre-snap time between plays, with clamping at zero.
+- Added `gameOver` handling that lets a live play finish after time expires, prevents another snap, stores the final score, and restarts with `Enter`.
+- Added HUD display for remaining time plus a minimal final-score game-over message.
+- Added score-attack state to gameplay snapshots for deterministic tests.
+- Added unit coverage for clock startup, delta ticking, zero clamping, live-play finish at zero, snap lockout after expiry, and restart reset behavior.
+
 ## [0.13.1] - 2026-06-21
 
 ### Fixed

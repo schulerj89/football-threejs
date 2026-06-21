@@ -2,7 +2,7 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a three-on-three offensive drill with two data-defined rushing plays, Quick Pass, Slant Flat, a controllable primitive ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, and delayed reset.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, Quick Pass, Slant Flat, a controllable primitive ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, final-score game over, and delayed reset.
 
 ## Current Non-Goals
 
@@ -40,7 +40,10 @@ This repository is a low-poly 3D American football game prototype built with Thr
 - No sprinting
 - No animation
 - No quarters
-- No game clock
+- No opponent score
+- No halftime
+- No timeouts
+- No NFL clock-stoppage rules
 - No play clock
 - No punts
 - No field goals
@@ -80,6 +83,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - The gameplay model owns play state, ball possession, pass state, and pass flight data; the ball mesh is never authoritative.
 - The gameplay model owns play results, start spots, dead-ball spots, yards gained, and scoring team data; UI and meshes only display that state.
 - Drive and down rules belong in a dedicated model, not renderer or HUD code.
+- Score-attack clock rules belong in a dedicated model and must use supplied delta time rather than wall-clock reads.
 - Keep conversion between world units and football yards centralized.
 - Goal-line detection and scoring must use gameplay coordinates, not mesh positions.
 - Sideline and dead-ball spotting must use gameplay coordinates, not mesh positions.
@@ -106,6 +110,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Reset preserves the current selected play.
 - Rushing plays work with downs, yardage, tackles, touchdowns, and resets.
 - Passing plays work with quarterback possession, scrambling, line-of-scrimmage pass eligibility, pass rush, sacks before throws, route-running receivers, deterministic target selection, one pass attempt, catch transfer, incompletions, completed-pass yardage, tackles, touchdowns, and resets.
+- Score attack starts at 120 seconds, begins on the first snap, ticks continuously after that, allows a live play to finish at zero, prevents another snap after expiry, records final score, and restarts from game over with Enter.
 - Play lookup, formation placement, invalid IDs, selection restrictions, pass eligibility, rejected throws, pass transitions, catch eligibility, incomplete passes, sacks, selected-target cycling, control transfer, and duplicate throw prevention have deterministic tests.
 - Existing tests pass.
 - The browser smoke test proves play selection plus formation, movement, score, tackle, out-of-bounds, and turnover-on-downs outcomes work.

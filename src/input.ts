@@ -72,6 +72,7 @@ export interface PlayControlRequests {
   cycleReceiver: boolean;
   pass: boolean;
   resetPlay: boolean;
+  restartChallenge: boolean;
   selectedPlayId: string | null;
   startPlay: boolean;
 }
@@ -81,6 +82,7 @@ export class KeyboardPlayControls {
   private cycleReceiverRequested = false;
   private passRequested = false;
   private resetRequested = false;
+  private restartChallengeRequested = false;
   private selectedPlayId: string | null = null;
   private startRequested = false;
 
@@ -94,6 +96,7 @@ export class KeyboardPlayControls {
       cycleReceiver: this.cycleReceiverRequested,
       pass: this.passRequested,
       resetPlay: this.resetRequested,
+      restartChallenge: this.restartChallengeRequested,
       selectedPlayId: this.selectedPlayId,
       startPlay: this.startRequested,
     };
@@ -101,6 +104,7 @@ export class KeyboardPlayControls {
     this.cycleReceiverRequested = false;
     this.passRequested = false;
     this.resetRequested = false;
+    this.restartChallengeRequested = false;
     this.selectedPlayId = null;
     this.startRequested = false;
 
@@ -112,6 +116,7 @@ export class KeyboardPlayControls {
     this.cycleReceiverRequested = false;
     this.passRequested = false;
     this.resetRequested = false;
+    this.restartChallengeRequested = false;
     this.selectedPlayId = null;
     this.startRequested = false;
   }
@@ -119,6 +124,12 @@ export class KeyboardPlayControls {
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
     if (isSpaceKey(event)) {
       this.startRequested = true;
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      this.restartChallengeRequested = true;
       event.preventDefault();
       return;
     }

@@ -20,6 +20,7 @@ import {
   hasCrossedSideline,
   markPlayDead,
   resetPlay,
+  restartScoreAttack,
   selectPlay,
   snapshotGameplayModel,
   startPlay,
@@ -51,6 +52,16 @@ describe('play state transitions', () => {
     expect(getPrimaryDefender(gameplay.players).velocity).toEqual({ x: 0, z: 0 });
     expect(gameplay.ball.possession).toEqual({ kind: 'none' });
     expect(gameplay.lastPlayResult).toBeNull();
+    expect(gameplay.scoreAttack).toMatchObject({
+      finalScore: null,
+      remainingSeconds: 120,
+      state: 'ready',
+    });
+    expect(snapshotGameplayModel(gameplay).scoreAttack).toMatchObject({
+      finalScore: null,
+      remainingSeconds: 120,
+      state: 'ready',
+    });
   });
 
   it('starts a valid play from preSnap and gives the player possession', () => {
@@ -83,6 +94,139 @@ describe('play state transitions', () => {
     expect(gameplay.ball.position.x).toBeCloseTo(gameplay.player.position.x + BALL_CARRY_ATTACHMENT.x);
     expect(gameplay.ball.position.y).toBeCloseTo(BALL_CARRY_ATTACHMENT.y);
     expect(gameplay.ball.position.z).toBeCloseTo(gameplay.player.position.z + BALL_CARRY_ATTACHMENT.z);
+    expect(gameplay.scoreAttack).toMatchObject({
+      remainingSeconds: 120,
+      state: 'running',
+    });
+  });
+
+  it('keeps the score attack clock at 120 before the first snap', () => {
+    const gameplay = createGameplayModel();
+
+    updateGameplayModel(gameplay, 30);
+
+    expect(gameplay.scoreAttack.remainingSeconds).toBe(120);
+    expect(gameplay.scoreAttack.state).toBe('ready');
+  });
+
+  it('decreases the score attack clock from supplied delta after the first snap', () => {
+    const gameplay = createGameplayModel();
+
+    startPlay(gameplay);
+    updateGameplayModel(gameplay, 12.25);
+
+    expect(gameplay.scoreAttack.remainingSeconds).toBeCloseTo(107.75);
+    expect(snapshotGameplayModel(gameplay).scoreAttack.remainingSeconds).toBeCloseTo(107.75);
+  });
+
+  it('runs the clock during dead-play delays and preSnap between plays', () => {
+    const gameplay = createGameplayModel();
+    const defender = getPrimaryDefender(gameplay.players);
+
+    startPlay(gameplay);
+    defender.position.x = gameplay.player.position.x;
+    defender.position.z = gameplay.player.position.z;
+    updateGameplayModel(gameplay, 0);
+    const remainingAtResult = gameplay.scoreAttack.remainingSeconds;
+
+    updateGameplayModel(gameplay, 0.5);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.scoreAttack.remainingSeconds).toBeCloseTo(remainingAtResult - 0.5);
+
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.tackleResetDelaySeconds);
+    expect(gameplay.playState).toBe('preSnap');
+    const remainingAtPreSnap = gameplay.scoreAttack.remainingSeconds;
+
+    updateGameplayModel(gameplay, 1);
+
+    expect(gameplay.playState).toBe('preSnap');
+    expect(gameplay.scoreAttack.remainingSeconds).toBeCloseTo(remainingAtPreSnap - 1);
+  });
+
+  it('allows a live play to finish when the score attack clock reaches zero', () => {
+    const gameplay = createGameplayModel();
+
+    startPlay(gameplay);
+    updateGameplayModel(gameplay, 121);
+
+    expect(gameplay.scoreAttack).toMatchObject({
+      remainingSeconds: 0,
+      state: 'expired',
+    });
+    expect(gameplay.playState).toBe('live');
+
+    gameplay.player.position.z =
+      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult?.type).toBe('touchdown');
+    expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
+
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.touchdownResetDelaySeconds);
+
+    expect(gameplay.playState).toBe('gameOver');
+    expect(gameplay.scoreAttack).toMatchObject({
+      finalScore: GAMEPLAY_CONFIG.touchdownPoints,
+      remainingSeconds: 0,
+      state: 'gameOver',
+    });
+    expect(startPlay(gameplay)).toBe(false);
+  });
+
+  it('prevents another snap after the score attack clock reaches zero in preSnap', () => {
+    const gameplay = createGameplayModel();
+    const defender = getPrimaryDefender(gameplay.players);
+
+    startPlay(gameplay);
+    defender.position.x = gameplay.player.position.x;
+    defender.position.z = gameplay.player.position.z;
+    updateGameplayModel(gameplay, 0);
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.tackleResetDelaySeconds);
+
+    expect(gameplay.playState).toBe('preSnap');
+
+    updateGameplayModel(gameplay, 121);
+
+    expect(gameplay.playState).toBe('gameOver');
+    expect(gameplay.scoreAttack.remainingSeconds).toBe(0);
+    expect(startPlay(gameplay)).toBe(false);
+  });
+
+  it('restarts the score attack from gameOver with clock, drive, score, and default play reset', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'slant-flat');
+    startPlay(gameplay);
+    updateGameplayModel(gameplay, 121);
+    gameplay.player.position.z =
+      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+    updateGameplayModel(gameplay, 0);
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.touchdownResetDelaySeconds);
+
+    expect(gameplay.playState).toBe('gameOver');
+    expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
+    expect(gameplay.selectedPlay.id).toBe('slant-flat');
+
+    expect(restartScoreAttack(gameplay)).toBe(true);
+
+    expect(gameplay.playState).toBe('preSnap');
+    expect(gameplay.score).toBe(0);
+    expect(gameplay.scoreAttack).toMatchObject({
+      finalScore: null,
+      remainingSeconds: 120,
+      state: 'ready',
+    });
+    expect(gameplay.drive).toMatchObject({
+      currentDown: 1,
+      lineOfScrimmage: INITIAL_BALL_SPOT,
+      state: 'active',
+      yardsToFirstDown: 10,
+    });
+    expect(gameplay.selectedPlay.id).toBe('inside-run');
+    expect(gameplay.player.position).toEqual(INITIAL_BALL_SPOT);
+    expect(gameplay.ball.possession).toEqual({ kind: 'none' });
   });
 
   it('selects a rushing play during preSnap and resets players into that formation', () => {

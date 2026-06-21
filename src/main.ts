@@ -15,6 +15,7 @@ import {
   createGameplayModel,
   cycleSelectedReceiver,
   resetPlay,
+  restartScoreAttack,
   selectPlay,
   snapshotGameplayModel,
   startPlay,
@@ -146,6 +147,11 @@ function renderFrame(delta: number): void {
 
 function updatePlayControls(): void {
   const requests = playControls.consumeRequests();
+
+  if (requests.restartChallenge) {
+    restartScoreAttack(gameplayModel);
+    return;
+  }
 
   if (requests.resetPlay) {
     resetPlay(gameplayModel);

@@ -10,7 +10,7 @@ export interface SackEligibilityState {
   lineOfScrimmage: FootballSpot;
   passAttempted: boolean;
   play: PlayDefinition;
-  playState: 'preSnap' | 'live' | 'dead';
+  playState: 'preSnap' | 'live' | 'dead' | 'gameOver';
   quarterback: PlayerModel;
 }
 

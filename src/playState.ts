@@ -57,6 +57,18 @@ import {
   hasQuarterbackCrossedLineOfScrimmage,
 } from './sackRules';
 import {
+  canStartScoreAttackPlay,
+  createScoreAttackModel,
+  hasScoreAttackExpired,
+  markScoreAttackGameOver,
+  resetScoreAttack,
+  snapshotScoreAttack,
+  startScoreAttack,
+  updateScoreAttackClock,
+  type ScoreAttackModel,
+  type ScoreAttackSnapshot,
+} from './scoreAttackModel';
+import {
   createBlockingState,
   resetBlockingState,
   updateRushingDrillAi,
@@ -64,7 +76,7 @@ import {
   type BlockingState,
 } from './teamSimulation';
 
-export type PlayState = 'preSnap' | 'live' | 'dead';
+export type PlayState = 'preSnap' | 'live' | 'dead' | 'gameOver';
 export type PlayResultType = 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete' | 'sack';
 export type PlayEndReason = PlayResultType;
 export type ScoringTeam = 'offense' | null;
@@ -108,6 +120,7 @@ export interface GameplayModel {
   playState: PlayState;
   playResetTimerSeconds: number | null;
   score: number;
+  scoreAttack: ScoreAttackModel;
   selectedReceiverId: string | null;
 }
 
@@ -139,6 +152,7 @@ export interface GameplaySnapshot {
   } | null;
   playState: PlayState;
   score: number;
+  scoreAttack: ScoreAttackSnapshot;
   passAttempted: boolean;
   forwardPassEligible: boolean;
   passFeedback: 'pastLineOfScrimmage' | null;
@@ -168,6 +182,7 @@ export function createGameplayModel(): GameplayModel {
     playState: 'preSnap',
     playResetTimerSeconds: null,
     score: 0,
+    scoreAttack: createScoreAttackModel(),
     selectedReceiverId: getDefaultEligibleReceiverId(selectedPlay),
   };
 }
@@ -191,10 +206,15 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
 }
 
 export function startPlay(gameplay: GameplayModel): boolean {
-  if (gameplay.playState !== 'preSnap' || gameplay.drive.state !== 'active') {
+  if (
+    gameplay.playState !== 'preSnap' ||
+    gameplay.drive.state !== 'active' ||
+    !canStartScoreAttackPlay(gameplay.scoreAttack)
+  ) {
     return false;
   }
 
+  startScoreAttack(gameplay.scoreAttack);
   gameplay.currentBallSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
   gameplay.activePlayStartSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
   gameplay.lastPlayResult = null;
@@ -293,6 +313,10 @@ export function markPlayDead(gameplay: GameplayModel): boolean {
 }
 
 export function resetPlay(gameplay: GameplayModel): void {
+  if (gameplay.playState === 'gameOver') {
+    return;
+  }
+
   const shouldResetDrive = gameplay.drive.state === 'over';
 
   if (shouldResetDrive) {
@@ -319,8 +343,41 @@ export function resetPlay(gameplay: GameplayModel): void {
   resetBallModel(gameplay.ball, resetSpot);
 }
 
+export function restartScoreAttack(gameplay: GameplayModel): boolean {
+  if (gameplay.playState !== 'gameOver') {
+    return false;
+  }
+
+  const initialSpot = cloneFootballSpot(INITIAL_BALL_SPOT);
+  const defaultPlay = getPlay(DEFAULT_PLAY_ID);
+
+  resetScoreAttack(gameplay.scoreAttack);
+  resetDriveModel(gameplay.drive, initialSpot);
+  gameplay.score = 0;
+  gameplay.selectedPlay = defaultPlay;
+  gameplay.activePlayStartSpot = null;
+  gameplay.currentBallSpot = cloneFootballSpot(initialSpot);
+  gameplay.lastPlayResult = null;
+  gameplay.nextBallSpot = cloneFootballSpot(initialSpot);
+  gameplay.nextPlayResultId = 1;
+  gameplay.forwardPassEligible = true;
+  gameplay.passAttempted = false;
+  gameplay.passFeedbackTimerSeconds = 0;
+  gameplay.selectedReceiverId = getDefaultEligibleReceiverId(defaultPlay);
+  gameplay.playState = 'preSnap';
+  gameplay.playResetTimerSeconds = null;
+  resetBlockingState(gameplay.blocking);
+  resetFormationPlayers(gameplay.players, initialSpot, defaultPlay);
+  gameplay.player = getBallCarrier(gameplay.players, defaultPlay);
+  resetBallModel(gameplay.ball, initialSpot);
+  return true;
+}
+
 export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): void {
-  updatePassFeedback(gameplay, deltaSeconds);
+  const delta = Math.max(0, deltaSeconds);
+
+  updateScoreAttackClock(gameplay.scoreAttack, delta);
+  updatePassFeedback(gameplay, delta);
 
   if (gameplay.playState === 'live') {
     updateForwardPassEligibility(gameplay);
@@ -333,12 +390,12 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
     if (gameplay.playState === 'live') {
       updateRushingDrillAi(gameplay.players, gameplay.blocking, gameplay.player, {
         bounds: PLAYABLE_FIELD_BOUNDS,
-        deltaSeconds,
+        deltaSeconds: delta,
         lineOfScrimmage: gameplay.currentBallSpot,
         play: gameplay.selectedPlay,
       });
       updateForwardPassEligibility(gameplay);
-      updatePassFlight(gameplay, deltaSeconds);
+      updatePassFlight(gameplay, delta);
       detectSack(gameplay);
       if (gameplay.playState === 'live') {
         detectTackle(gameplay);
@@ -353,11 +410,27 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
       detectOutOfBounds(gameplay);
     }
   } else if (gameplay.playResetTimerSeconds !== null) {
-    gameplay.playResetTimerSeconds -= Math.max(0, deltaSeconds);
+    gameplay.playResetTimerSeconds -= delta;
 
     if (gameplay.playResetTimerSeconds <= 0) {
-      resetPlay(gameplay);
+      if (hasScoreAttackExpired(gameplay.scoreAttack)) {
+        enterScoreAttackGameOver(gameplay);
+      } else {
+        resetPlay(gameplay);
+      }
     }
+  }
+
+  if (gameplay.playState === 'preSnap' && hasScoreAttackExpired(gameplay.scoreAttack)) {
+    enterScoreAttackGameOver(gameplay);
+  }
+
+  if (
+    gameplay.playState === 'dead' &&
+    gameplay.playResetTimerSeconds === null &&
+    hasScoreAttackExpired(gameplay.scoreAttack)
+  ) {
+    enterScoreAttackGameOver(gameplay);
   }
 
   updateCarriedBallPosition(gameplay.ball, gameplay.player);
@@ -394,6 +467,7 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     selectedReceiver: snapshotSelectedReceiver(gameplay),
     playState: gameplay.playState,
     score: gameplay.score,
+    scoreAttack: snapshotScoreAttack(gameplay.scoreAttack),
   };
 }
 
@@ -643,6 +717,15 @@ function stopLiveActors(gameplay: GameplayModel): void {
     player.velocity.z = 0;
     player.currentState = 'idle';
   }
+}
+
+function enterScoreAttackGameOver(gameplay: GameplayModel): void {
+  markScoreAttackGameOver(gameplay.scoreAttack, gameplay.score);
+  gameplay.activePlayStartSpot = null;
+  gameplay.playResetTimerSeconds = null;
+  gameplay.playState = 'gameOver';
+  stopLiveActors(gameplay);
+  markBallDead(gameplay.ball);
 }
 
 function calculatePassTarget(gameplay: GameplayModel, receiver: PlayerModel): Vector3 {
