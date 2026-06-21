@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for two rushing plays and two passing plays, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
+The current milestone is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for two rushing plays and two passing plays, graphical pre-snap SVG play cards generated from gameplay data, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
 
 ## World Scale
 
@@ -37,6 +37,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Press `2` during pre-snap to select `Outside Run`.
 - Press `3` during pre-snap to select `Quick Pass`.
 - Press `4` during pre-snap to select `Slant Flat`.
+- Click or tap a pre-snap play card to select that play.
 - Press `Space` from pre-snap to start the play and give the player possession.
 - Press `E` before throwing on a passing play to cycle eligible receivers.
 - Press `F` during a passing play to throw once toward the selected eligible receiver.
@@ -44,6 +45,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Press `Enter` from game over to restart the two-minute score attack.
 - Press `C` in development or with `?debug=1` to toggle between the tactical orthographic camera and the behind-the-offense perspective camera.
 - Use `?camera=tactical` or `?camera=offense` to choose the starting camera mode.
+- The graphical play cards are visible only during pre-snap and are generated from the same play definitions, resolved formation positions, routes, and blocker assignments used by gameplay.
 - Play selection is locked while a play is live; reset preserves the selected play.
 - The HUD shows the selected target for passing plays.
 - The score-attack clock starts on the first snap, runs continuously after that, and clamps at `0:00`.
@@ -80,7 +82,7 @@ Add `?formationAudit=1` to show the resolved semantic formation: snap lane, fiel
 - Presentation: no stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, or stadium presentation.
 - Roster scope: no 7v7, 11v11, full special teams, additional offensive or defensive players beyond the current five-on-five drill, player switching, or formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data.
 - Assets and animation: no imported assets beyond the current reusable low-poly helmet, no full player models replacing primitive bodies, no imported animations, no quarterback animation, no scramble animation, no tackling animation, no celebration animation, and no center or snap animation.
-- Play calling: no large play-calling menu, audibles, defensive play selection, route editor, procedural play generation, hot routes, or menus beyond the current minimal HUD/debug displays.
+- Play calling: no large playbook menu, title screen, audibles, defensive play selection, route editor, procedural play generation, hot routes, or menus beyond the current pre-snap play cards and minimal HUD/debug displays.
 - Passing and ball outcomes: no interceptions, fumbles, loose-ball physics, manual aiming, pass-type selection, pump fake, illegal-forward-pass penalty, referee logic, user-controlled catch mechanic, contested-catch ratings, or quarterback ratings.
 - Blocking and tackling: no offensive linemen rules, holding penalties, pancake blocks, double-team blocks, pulling guards, diving tackles, advanced pursuit/pathfinding library, or physics-driven contact.
 - Game structure: no quarters, opponent score, halftime, timeouts, NFL clock-stoppage rules, play clock, punts, field goals, penalties, defensive possessions, full game rules, season modes, or franchise systems.

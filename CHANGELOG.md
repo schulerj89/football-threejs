@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.20.0] - 2026-06-21
+
+### Added
+
+- Added a graphical pre-snap play-call UI with one responsive SVG card for every available offensive play.
+- Generated play-card diagrams from existing play definitions, resolved formation positions, receiver route targets, blocker targets, and snap placement.
+- Added pure football-coordinate to SVG-coordinate transformation for play-card diagrams.
+- Added pointer/tap play selection through the same request path as keyboard number shortcuts.
+- Added unit and browser smoke coverage for play-card rendering, route counts, run arrows, selected-card highlighting, live-play hiding, pointer selection, and number-key selection.
+
+### Fixed
+
+- Mirrored play-card lateral presentation so pass-route arrows match the gameplay camera direction.
+
 ## [0.19.0] - 2026-06-21
 
 ### Added

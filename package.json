@@ -1,6 +1,6 @@
 {
   "name": "football-threejs",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "private": true,
   "type": "module",
   "description": "Low-poly 3D American football prototype built with Three.js.",
@@ -9,7 +9,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "npm run test:unit && npm run test:smoke",
-    "test:unit": "vitest run tests/playerSimulation.test.ts tests/playState.test.ts tests/driveModel.test.ts tests/scoreAttackModel.test.ts tests/fieldSpec.test.ts tests/fieldGeometry.test.ts tests/ballSpotting.test.ts tests/formationLayout.test.ts tests/gameplayCameraController.test.ts tests/helmetVisual.test.ts tests/teamSimulation.test.ts tests/playbook.test.ts",
+    "test:unit": "vitest run tests/playerSimulation.test.ts tests/playState.test.ts tests/driveModel.test.ts tests/scoreAttackModel.test.ts tests/fieldSpec.test.ts tests/fieldGeometry.test.ts tests/ballSpotting.test.ts tests/formationLayout.test.ts tests/playCallDiagram.test.ts tests/gameplayCameraController.test.ts tests/helmetVisual.test.ts tests/teamSimulation.test.ts tests/playbook.test.ts",
     "test:smoke": "playwright test"
   },
   "dependencies": {

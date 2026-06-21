@@ -208,6 +208,51 @@ test('starts field and formation audit modes without render errors', async ({ pa
   expect(pageErrors).toEqual([]);
 });
 
+test('renders graphical play cards and selects plays through the shared request path', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?debug=1&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  const cards = page.locator('.play-card');
+  await expect(page.locator('.play-call-ui')).toBeVisible();
+  await expect(cards).toHaveCount(4);
+  await expect(cards.locator('.play-card-title')).toHaveText([
+    'Inside Run',
+    'Outside Run',
+    'Quick Pass',
+    'Slant Flat',
+  ]);
+  await expect(page.locator('.play-card[data-play-id="inside-run"] .play-card-run-direction')).toHaveCount(1);
+  await expect(page.locator('.play-card[data-play-id="outside-run"] .play-card-run-direction')).toHaveCount(1);
+  await expect(page.locator('.play-card[data-play-id="quick-pass"] .play-card-receiver-route')).toHaveCount(1);
+  await expect(page.locator('.play-card[data-play-id="slant-flat"] .play-card-receiver-route')).toHaveCount(2);
+  await expect(page.locator('.play-card[data-play-id="inside-run"]')).toHaveAttribute('data-selected', 'true');
+
+  await page.locator('.play-card[data-play-id="outside-run"]').click();
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'outside-run', displayName: 'Outside Run' },
+  });
+  await expect(page.locator('.play-card[data-play-id="outside-run"]')).toHaveAttribute('data-selected', 'true');
+
+  await page.keyboard.press('3');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'quick-pass', displayName: 'Quick Pass' },
+  });
+  await expect(page.locator('.play-card[data-play-id="quick-pass"]')).toHaveAttribute('data-selected', 'true');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(cards).toHaveCount(4);
+  await expect(page.locator('.play-call-ui')).toBeVisible();
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await expect(page.locator('.play-call-ui')).toBeHidden();
+
+  await page.keyboard.press('1');
+  await page.waitForTimeout(100);
+  expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('quick-pass');
+});
+
 test('selects offense perspective camera and toggles modes without resetting gameplay', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?debug=1&readback=1&camera=offense');
