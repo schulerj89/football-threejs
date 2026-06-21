@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a three-on-three offensive drill with two data-defined rushing plays, one Quick Pass play, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, and Quick Pass play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, single-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a three-on-three offensive drill with two data-defined rushing plays, two passing plays, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
 
 ## World Scale
 
@@ -32,18 +32,21 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Press `1` during pre-snap to select `Inside Run`.
 - Press `2` during pre-snap to select `Outside Run`.
 - Press `3` during pre-snap to select `Quick Pass`.
+- Press `4` during pre-snap to select `Slant Flat`.
 - Press `Space` from pre-snap to start the play and give the player possession.
-- Press `F` during Quick Pass to throw once toward the eligible receiver.
+- Press `E` before throwing on a passing play to cycle eligible receivers.
+- Press `F` during a passing play to throw once toward the selected eligible receiver.
 - Press `R` to reset the play to pre-snap.
 - Play selection is locked while a play is live; reset preserves the selected play.
-- Quick Pass starts with the quarterback in possession; after a catch, possession and user control transfer to the receiver.
+- The HUD shows the selected target for passing plays.
+- Passing plays start with the quarterback in possession; after a catch, possession and user control transfer to the receiver.
 - The quarterback may scramble before throwing.
 - Crossing the original line of scrimmage permanently disables forward passing for that play; pressing `F` after crossing shows `PAST LINE OF SCRIMMAGE` and does not throw.
 - Before a throw, ordinary defenders rush the quarterback; contact behind the line of scrimmage ends the play as a sack.
 - Cross the opposing goal line during a live play to score a touchdown.
 - Avoid defenders to score; defender contact ends the play as a tackle.
 - AI blockers move toward lane targets and can engage one defender each to slow pursuit.
-- The Quick Pass coverage defender tracks the receiver while the other defenders use the existing simple pursuit behavior.
+- Coverage defenders track their assigned receivers while ordinary defenders use the existing simple pursuit or pass-rush behavior.
 - Crossing a sideline during a live play ends the play out of bounds.
 - Sack, tackle, completed pass, and out-of-bounds results display signed yards gained or lost, then reset the next play at the dead-ball spot.
 - Incomplete passes end the play at the original line of scrimmage and advance the down.
@@ -66,7 +69,9 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No audibles
 - No defensive play selection
 - No interceptions
-- No multiple receivers
+- No four-on-four
+- No manual aiming
+- No hot routes
 - No bullet/lob selection
 - No pump fake
 - No illegal-forward-pass penalty
@@ -78,7 +83,7 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No quarterback animations
 - No route editor
 - No procedural play generation
-- No additional formations beyond the current three plays
+- No additional formations beyond the current four plays
 - No offensive linemen rules
 - No holding penalties
 - No pancake blocks

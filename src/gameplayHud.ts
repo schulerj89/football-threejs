@@ -11,6 +11,7 @@ export interface GameplayHud {
   sackMessage: HTMLDivElement;
   score: HTMLDivElement;
   tackleMessage: HTMLDivElement;
+  targetLabel: HTMLDivElement;
   touchdownMessage: HTMLDivElement;
   turnoverMessage: HTMLDivElement;
 }
@@ -30,6 +31,10 @@ export function createGameplayHud(): GameplayHud {
   const playCall = document.createElement('div');
   playCall.className = 'play-call';
   root.appendChild(playCall);
+
+  const targetLabel = document.createElement('div');
+  targetLabel.className = 'target-label';
+  root.appendChild(targetLabel);
 
   const touchdownMessage = document.createElement('div');
   touchdownMessage.className = 'touchdown-message';
@@ -83,6 +88,7 @@ export function createGameplayHud(): GameplayHud {
     sackMessage,
     score,
     tackleMessage,
+    targetLabel,
     touchdownMessage,
     turnoverMessage,
   };
@@ -97,6 +103,10 @@ export function syncGameplayHud(hud: GameplayHud, gameplay: GameplaySnapshot): v
     gameplay.drive.yardsToFirstDown,
   )} | Ball ${formatNumber(gameplay.drive.lineOfScrimmage.z)}`;
   hud.playCall.textContent = gameplay.selectedPlay.displayName;
+  hud.targetLabel.hidden = !gameplay.selectedReceiver;
+  hud.targetLabel.textContent = gameplay.selectedReceiver
+    ? `Target ${gameplay.selectedReceiver.displayName}`
+    : '';
   hud.tackleMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'tackle';
   hud.sackMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'sack';
   hud.touchdownMessage.hidden = lastPlayResult?.type !== 'touchdown';

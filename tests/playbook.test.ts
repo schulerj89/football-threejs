@@ -3,14 +3,16 @@ import { INITIAL_BALL_SPOT } from '../src/field';
 import {
   createFormationPlayers,
   getBlockingLaneTarget,
+  getEligibleReceiverIds,
   getPlay,
+  getReceiverDisplayName,
   getReceiverRouteTarget,
   getRushingPlay,
   resetFormationPlayers,
 } from '../src/playbook';
 
 describe('playbook', () => {
-  it('looks up the two stable rushing plays and the Quick Pass play', () => {
+  it('looks up the stable rushing and passing plays', () => {
     expect(getRushingPlay('inside-run')).toMatchObject({
       ballCarrierRole: 'runner',
       displayName: 'Inside Run',
@@ -31,7 +33,15 @@ describe('playbook', () => {
       id: 'quick-pass',
       initialMovementDirection: { x: 0, z: 1 },
       kind: 'pass',
-      pass: { eligibleReceiverId: 'blocker-left' },
+      pass: { eligibleReceiverIds: ['blocker-left'] },
+    });
+    expect(getPlay('slant-flat')).toMatchObject({
+      ballCarrierRole: 'quarterback',
+      displayName: 'Slant Flat',
+      id: 'slant-flat',
+      initialMovementDirection: { x: 0, z: 1 },
+      kind: 'pass',
+      pass: { eligibleReceiverIds: ['blocker-left', 'blocker-right'] },
     });
   });
 
@@ -78,6 +88,37 @@ describe('playbook', () => {
       x: -1.5,
       z: INITIAL_BALL_SPOT.z + 11,
     });
+    expect(getEligibleReceiverIds(quickPass)).toEqual(['blocker-left']);
+    expect(getReceiverDisplayName(quickPass, 'blocker-left')).toBe('Receiver');
+  });
+
+  it('places Slant Flat roles and two data-defined receiver routes', () => {
+    const slantFlat = getPlay('slant-flat');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, slantFlat);
+    const quarterback = getPlayer(players, 'runner');
+    const leftReceiver = getPlayer(players, 'blocker-left');
+    const rightReceiver = getPlayer(players, 'blocker-right');
+    const leftCoverage = getPlayer(players, 'defender-left');
+    const passRusher = getPlayer(players, 'defender-middle');
+    const rightCoverage = getPlayer(players, 'defender-right');
+
+    expect(quarterback).toMatchObject({ role: 'quarterback', team: 'offense' });
+    expect(leftReceiver).toMatchObject({ role: 'receiver', team: 'offense' });
+    expect(rightReceiver).toMatchObject({ role: 'receiver', team: 'offense' });
+    expect(leftCoverage).toMatchObject({ role: 'coverageDefender', team: 'defense' });
+    expect(rightCoverage).toMatchObject({ role: 'coverageDefender', team: 'defense' });
+    expect(passRusher).toMatchObject({ role: 'defender', team: 'defense' });
+    expect(getEligibleReceiverIds(slantFlat)).toEqual(['blocker-left', 'blocker-right']);
+    expect(getReceiverRouteTarget(leftReceiver, INITIAL_BALL_SPOT, slantFlat)).toEqual({
+      x: -2,
+      z: INITIAL_BALL_SPOT.z + 11,
+    });
+    expect(getReceiverRouteTarget(rightReceiver, INITIAL_BALL_SPOT, slantFlat)).toEqual({
+      x: 15,
+      z: INITIAL_BALL_SPOT.z + 5,
+    });
+    expect(getReceiverDisplayName(slantFlat, 'blocker-left')).toBe('Slant');
+    expect(getReceiverDisplayName(slantFlat, 'blocker-right')).toBe('Flat');
   });
 
   it('resets stable player IDs into the newly selected play roles', () => {

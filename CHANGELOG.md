@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0] - 2026-06-21
+
+### Added
+
+- Added `Slant Flat` as a fourth data-defined selectable passing play with a quarterback, two receivers, two coverage defenders, and one pass rusher.
+- Evolved passing play data from a single receiver ID to an ordered eligible-receiver list while preserving Quick Pass as a one-receiver play.
+- Added data-defined short slant and flat/outside receiver routes that begin only after the snap.
+- Added gameplay-owned selected-receiver state with `E` target cycling before a throw, `F` throwing to the selected receiver, and reset restoration to the default target.
+- Added a compact HUD target label for passing plays without changing player visuals.
+- Added deterministic tests for Slant Flat play lookup, formation placement, route starts, receiver cycling, selected-target throws, selection lockout after a throw, reset defaulting, and browser keyboard controls.
+
 ## [0.12.0] - 2026-06-21
 
 ### Added

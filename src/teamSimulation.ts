@@ -1,6 +1,7 @@
 import type { PlayableFieldBounds } from './field';
 import {
   getBlockingLaneTarget,
+  getCoverageAssignmentReceiverId,
   getReceiverRouteSpeed,
   getReceiverRouteTarget,
   type PlayDefinition,
@@ -199,7 +200,6 @@ function updateDefenders(
   deltaSeconds: number,
 ): void {
   const engagedDefenderIds = getEngagedDefenderIds(blocking);
-  const coverageTarget = getCoverageTarget(players, play);
 
   for (const defender of players) {
     if (defender.team !== 'defense') {
@@ -208,9 +208,11 @@ function updateDefenders(
 
     const isEngaged = engagedDefenderIds.has(defender.id);
     defender.currentState = isEngaged ? 'engaged' : 'pursuing';
-    const target = defender.role === 'coverageDefender' && coverageTarget
-      ? coverageTarget
-      : runner;
+    const coverageTarget =
+      defender.role === 'coverageDefender'
+        ? getCoverageTarget(players, play, defender.id)
+        : null;
+    const target = coverageTarget ?? runner;
     updateDefenderPursuit(
       defender,
       target,
@@ -220,8 +222,12 @@ function updateDefenders(
   }
 }
 
-function getCoverageTarget(players: PlayerModel[], play: PlayDefinition): PlayerModel | null {
-  const receiverId = play.pass?.eligibleReceiverId;
+function getCoverageTarget(
+  players: PlayerModel[],
+  play: PlayDefinition,
+  defenderId: string,
+): PlayerModel | null {
+  const receiverId = getCoverageAssignmentReceiverId(play, defenderId);
 
   if (!receiverId) {
     return null;

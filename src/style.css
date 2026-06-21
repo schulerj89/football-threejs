@@ -77,6 +77,21 @@ canvas {
   text-align: center;
 }
 
+.target-label {
+  position: absolute;
+  top: 132px;
+  right: 12px;
+  min-width: 172px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(8, 12, 14, 0.72);
+  color: #f3f5f6;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .tackle-message,
 .incomplete-message,
 .out-of-bounds-message,
@@ -153,6 +168,7 @@ canvas {
 .pass-warning-message[hidden],
 .result-message[hidden],
 .sack-message[hidden],
+.target-label[hidden],
 .turnover-message[hidden],
 .touchdown-message[hidden] {
   display: none;

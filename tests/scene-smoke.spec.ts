@@ -72,10 +72,11 @@ interface GameplaySnapshot {
   players: PlayerSnapshot[];
   selectedPlay: {
     displayName: string;
-    id: 'inside-run' | 'outside-run' | 'quick-pass';
+    id: 'inside-run' | 'outside-run' | 'quick-pass' | 'slant-flat';
     kind: 'run' | 'pass';
     initialMovementDirection: FootballSpot;
   };
+  selectedReceiver: { displayName: string; id: string } | null;
   passAttempted: boolean;
   forwardPassEligible: boolean;
   passFeedback: 'pastLineOfScrimmage' | null;
@@ -103,6 +104,7 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
   await expect(page.locator('.drive-status')).toHaveText('1st & 10 | Ball -15');
   await expect(page.locator('.play-call')).toHaveText('Inside Run');
+  await expect(page.locator('.target-label')).toBeHidden();
   const initial = await getGameplaySnapshot(page);
   expect(initial.selectedPlay.id).toBe('inside-run');
   expect(initial.players).toHaveLength(6);
@@ -217,11 +219,39 @@ test('selects plays before snap and locks selection while live', async ({ page }
   expect(quickPass.players.find((player) => player.id === 'blocker-left')).toMatchObject({
     role: 'receiver',
   });
+  expect(quickPass.selectedReceiver).toEqual({
+    displayName: 'Receiver',
+    id: 'blocker-left',
+  });
+  await expect(page.locator('.target-label')).toHaveText('Target Receiver');
+
+  await page.keyboard.press('4');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'slant-flat', displayName: 'Slant Flat', kind: 'pass' },
+    selectedReceiver: { id: 'blocker-left', displayName: 'Slant' },
+  });
+  await expect(page.locator('.play-call')).toHaveText('Slant Flat');
+  await expect(page.locator('.target-label')).toHaveText('Target Slant');
+  const slantFlat = await getGameplaySnapshot(page);
+  expect(slantFlat.player).toMatchObject({ id: 'runner', role: 'quarterback' });
+  expect(getPlayer(slantFlat, 'blocker-left')).toMatchObject({ role: 'receiver' });
+  expect(getPlayer(slantFlat, 'blocker-right')).toMatchObject({ role: 'receiver' });
+  expect(getPlayer(slantFlat, 'defender-left')).toMatchObject({ role: 'coverageDefender' });
+  expect(getPlayer(slantFlat, 'defender-middle')).toMatchObject({ role: 'defender' });
+  expect(getPlayer(slantFlat, 'defender-right')).toMatchObject({ role: 'coverageDefender' });
+
+  await page.keyboard.press('e');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedReceiver: { id: 'blocker-right', displayName: 'Flat' },
+  });
+  await expect(page.locator('.target-label')).toHaveText('Target Flat');
 
   await page.keyboard.press('1');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     selectedPlay: { id: 'inside-run', displayName: 'Inside Run' },
+    selectedReceiver: null,
   });
+  await expect(page.locator('.target-label')).toBeHidden();
 
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
@@ -320,6 +350,59 @@ test('selects Quick Pass, starts the route after snap, and throws once', async (
   await page.keyboard.press('f');
   await page.waitForTimeout(100);
   expect((await getGameplaySnapshot(page)).passAttempted).toBe(true);
+});
+
+test('selects Slant Flat, cycles the target, and throws to the selected receiver', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  await page.keyboard.press('4');
+  await expect(page.locator('.play-call')).toHaveText('Slant Flat');
+  await expect(page.locator('.target-label')).toHaveText('Target Slant');
+  const preSnap = await getGameplaySnapshot(page);
+  const leftReceiverBeforeSnap = getPlayer(preSnap, 'blocker-left');
+  const rightReceiverBeforeSnap = getPlayer(preSnap, 'blocker-right');
+
+  expect(preSnap.selectedReceiver).toEqual({ displayName: 'Slant', id: 'blocker-left' });
+  expect(leftReceiverBeforeSnap).toMatchObject({ role: 'receiver', currentState: 'idle' });
+  expect(rightReceiverBeforeSnap).toMatchObject({ role: 'receiver', currentState: 'idle' });
+
+  await page.keyboard.press('e');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedReceiver: { displayName: 'Flat', id: 'blocker-right' },
+  });
+  await expect(page.locator('.target-label')).toHaveText('Target Flat');
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    ball: { state: { kind: 'possessed' } },
+    playState: 'live',
+    selectedReceiver: { id: 'blocker-right' },
+  });
+  const live = await getGameplaySnapshot(page);
+  expect(getPlayer(live, 'blocker-left').currentState).toBe('runningRoute');
+  expect(getPlayer(live, 'blocker-right').currentState).toBe('runningRoute');
+
+  await page.keyboard.press('f');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    passAttempted: true,
+    selectedReceiver: { id: 'blocker-right' },
+  });
+  await expect.poll(async () => (await getGameplaySnapshot(page)).ball.state.kind).toBe('inFlight');
+  const afterThrow = await getGameplaySnapshot(page);
+
+  if (afterThrow.ball.state.kind !== 'inFlight') {
+    throw new Error('Expected Slant Flat pass to be in flight');
+  }
+
+  expect(afterThrow.ball.state.target.x).toBeGreaterThan(8);
+
+  await page.keyboard.press('e');
+  await page.waitForTimeout(100);
+  expect((await getGameplaySnapshot(page)).selectedReceiver).toEqual({
+    displayName: 'Flat',
+    id: 'blocker-right',
+  });
 });
 
 test('rejects Quick Pass after the quarterback crosses the line of scrimmage', async ({ page }) => {

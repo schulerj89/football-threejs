@@ -9,7 +9,7 @@ import {
   type Vector2,
 } from './playerModel';
 
-export type PlayId = 'inside-run' | 'outside-run' | 'quick-pass';
+export type PlayId = 'inside-run' | 'outside-run' | 'quick-pass' | 'slant-flat';
 export type PlayKind = 'run' | 'pass';
 export type PreSnapFacingDefinition =
   | { kind: 'playDirection' }
@@ -37,7 +37,9 @@ export interface PlayDefinition {
   initialMovementDirection: Vector2;
   kind: PlayKind;
   pass?: {
-    eligibleReceiverId: string;
+    coverageAssignments?: Record<string, string>;
+    eligibleReceiverIds: string[];
+    receiverDisplayNames?: Record<string, string>;
   };
   receiverRoutes?: Record<string, ReceiverRouteDefinition>;
 }
@@ -217,12 +219,91 @@ export const PLAYS: PlayDefinition[] = [
     initialMovementDirection: { x: 0, z: 1 },
     kind: 'pass',
     pass: {
-      eligibleReceiverId: 'blocker-left',
+      coverageAssignments: {
+        'defender-left': 'blocker-left',
+      },
+      eligibleReceiverIds: ['blocker-left'],
+      receiverDisplayNames: {
+        'blocker-left': 'Receiver',
+      },
     },
     receiverRoutes: {
       'blocker-left': {
         speed: 9.5,
         targetOffset: { x: -1.5, z: 11 },
+      },
+    },
+  },
+  {
+    ballCarrierRole: 'quarterback',
+    blockerLaneOffsets: {},
+    displayName: 'Slant Flat',
+    formation: [
+      {
+        id: 'runner',
+        offset: { x: 0, z: 0 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
+        role: 'quarterback',
+        team: 'offense',
+      },
+      {
+        id: 'blocker-left',
+        offset: { x: -8, z: 1.5 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
+        role: 'receiver',
+        team: 'offense',
+      },
+      {
+        id: 'blocker-right',
+        offset: { x: 8, z: 1.5 },
+        preSnapFacing: OFFENSE_PRE_SNAP_FACING,
+        role: 'receiver',
+        team: 'offense',
+      },
+      {
+        id: 'defender-left',
+        offset: { x: -8, z: 9 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
+        role: 'coverageDefender',
+        team: 'defense',
+      },
+      {
+        id: 'defender-middle',
+        offset: { x: 0, z: 24 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
+        role: 'defender',
+        team: 'defense',
+      },
+      {
+        id: 'defender-right',
+        offset: { x: 8, z: 9 },
+        preSnapFacing: DEFENSE_PRE_SNAP_FACING,
+        role: 'coverageDefender',
+        team: 'defense',
+      },
+    ],
+    id: 'slant-flat',
+    initialMovementDirection: { x: 0, z: 1 },
+    kind: 'pass',
+    pass: {
+      coverageAssignments: {
+        'defender-left': 'blocker-left',
+        'defender-right': 'blocker-right',
+      },
+      eligibleReceiverIds: ['blocker-left', 'blocker-right'],
+      receiverDisplayNames: {
+        'blocker-left': 'Slant',
+        'blocker-right': 'Flat',
+      },
+    },
+    receiverRoutes: {
+      'blocker-left': {
+        speed: 9.5,
+        targetOffset: { x: -2, z: 11 },
+      },
+      'blocker-right': {
+        speed: 8.5,
+        targetOffset: { x: 15, z: 5 },
       },
     },
   },
@@ -327,6 +408,51 @@ export function getReceiverRouteTarget(
 
 export function getReceiverRouteSpeed(receiver: PlayerModel, play: PlayDefinition): number {
   return play.receiverRoutes?.[receiver.id]?.speed ?? 0;
+}
+
+export function getEligibleReceiverIds(play: PlayDefinition): string[] {
+  return play.pass?.eligibleReceiverIds ?? [];
+}
+
+export function getDefaultEligibleReceiverId(play: PlayDefinition): string | null {
+  return getEligibleReceiverIds(play)[0] ?? null;
+}
+
+export function getNextEligibleReceiverId(
+  play: PlayDefinition,
+  currentReceiverId: string | null,
+): string | null {
+  const receiverIds = getEligibleReceiverIds(play);
+
+  if (receiverIds.length === 0) {
+    return null;
+  }
+
+  const currentIndex = currentReceiverId ? receiverIds.indexOf(currentReceiverId) : -1;
+  const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % receiverIds.length;
+
+  return receiverIds[nextIndex];
+}
+
+export function isEligibleReceiverId(play: PlayDefinition, receiverId: string | null): boolean {
+  return !!receiverId && getEligibleReceiverIds(play).includes(receiverId);
+}
+
+export function getReceiverDisplayName(play: PlayDefinition, receiverId: string): string {
+  return play.pass?.receiverDisplayNames?.[receiverId] ?? receiverId;
+}
+
+export function getCoverageAssignmentReceiverId(
+  play: PlayDefinition,
+  defenderId: string,
+): string | null {
+  const receiverIds = getEligibleReceiverIds(play);
+
+  if (receiverIds.length === 0) {
+    return null;
+  }
+
+  return play.pass?.coverageAssignments?.[defenderId] ?? receiverIds[0];
 }
 
 function calculateFormationSpot(ballSpot: FootballSpot, offset: Vector2): FootballSpot {

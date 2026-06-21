@@ -99,6 +99,36 @@ describe('three-on-three rushing drill simulation', () => {
     expect(passRusher.velocity.z).toBeLessThan(0);
   });
 
+  it('runs both Slant Flat receiver routes and assigns coverage defenders deterministically', () => {
+    const play = getPlay('slant-flat');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+    const quarterback = getPlayer(players, 'runner');
+    const leftReceiver = getPlayer(players, 'blocker-left');
+    const rightReceiver = getPlayer(players, 'blocker-right');
+    const leftCoverage = getPlayer(players, 'defender-left');
+    const rightCoverage = getPlayer(players, 'defender-right');
+    const passRusher = getPlayer(players, 'defender-middle');
+    const leftReceiverStart = { ...leftReceiver.position };
+    const rightReceiverStart = { ...rightReceiver.position };
+
+    updateRushingDrillAi(players, createBlockingState(), quarterback, {
+      bounds: PLAYABLE_FIELD_BOUNDS,
+      deltaSeconds: 0.1,
+      lineOfScrimmage: INITIAL_BALL_SPOT,
+      play,
+    });
+
+    expect(leftReceiver.position.z).toBeGreaterThan(leftReceiverStart.z);
+    expect(rightReceiver.position.x).toBeGreaterThan(rightReceiverStart.x);
+    expect(leftCoverage.currentState).toBe('pursuing');
+    expect(rightCoverage.currentState).toBe('pursuing');
+    expect(leftCoverage.velocity.z).toBeLessThan(0);
+    expect(rightCoverage.velocity.z).toBeLessThan(0);
+    expect(rightCoverage.velocity.x).toBeGreaterThan(0);
+    expect(passRusher.currentState).toBe('pursuing');
+    expect(passRusher.velocity.z).toBeLessThan(0);
+  });
+
   it('disengages blockers and defenders after they separate', () => {
     const players = createFormationPlayers(INITIAL_BALL_SPOT);
     const blocker = getPlayer(players, 'blocker-left');

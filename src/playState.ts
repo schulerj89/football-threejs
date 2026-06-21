@@ -37,8 +37,12 @@ import {
 import {
   DEFAULT_PLAY_ID,
   createFormationPlayers,
+  getDefaultEligibleReceiverId,
   getPlay,
+  getNextEligibleReceiverId,
   getReceiverRouteTarget,
+  getReceiverDisplayName,
+  isEligibleReceiverId,
   resetFormationPlayers,
   type PlayId,
   type PlayDefinition,
@@ -104,6 +108,7 @@ export interface GameplayModel {
   playState: PlayState;
   playResetTimerSeconds: number | null;
   score: number;
+  selectedReceiverId: string | null;
 }
 
 export interface GameplaySnapshot {
@@ -128,6 +133,10 @@ export interface GameplaySnapshot {
     kind: PlayDefinition['kind'];
     initialMovementDirection: FootballSpot;
   };
+  selectedReceiver: {
+    displayName: string;
+    id: string;
+  } | null;
   playState: PlayState;
   score: number;
   passAttempted: boolean;
@@ -159,6 +168,7 @@ export function createGameplayModel(): GameplayModel {
     playState: 'preSnap',
     playResetTimerSeconds: null,
     score: 0,
+    selectedReceiverId: getDefaultEligibleReceiverId(selectedPlay),
   };
 }
 
@@ -172,6 +182,7 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
   gameplay.passAttempted = false;
   gameplay.forwardPassEligible = true;
   gameplay.passFeedbackTimerSeconds = 0;
+  gameplay.selectedReceiverId = getDefaultEligibleReceiverId(play);
   resetBlockingState(gameplay.blocking);
   resetFormationPlayers(gameplay.players, gameplay.currentBallSpot, play);
   gameplay.player = getBallCarrier(gameplay.players, play);
@@ -191,6 +202,7 @@ export function startPlay(gameplay: GameplayModel): boolean {
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
   gameplay.passFeedbackTimerSeconds = 0;
+  ensureSelectedReceiver(gameplay);
   gameplay.playResetTimerSeconds = null;
   gameplay.playState = 'live';
   resetBlockingState(gameplay.blocking);
@@ -248,6 +260,29 @@ export function attemptPass(gameplay: GameplayModel): boolean {
   return true;
 }
 
+export function cycleSelectedReceiver(gameplay: GameplayModel): boolean {
+  if (
+    gameplay.selectedPlay.kind !== 'pass' ||
+    (gameplay.playState !== 'preSnap' && gameplay.playState !== 'live') ||
+    gameplay.passAttempted ||
+    gameplay.ball.state.kind === 'inFlight'
+  ) {
+    return false;
+  }
+
+  const nextReceiverId = getNextEligibleReceiverId(
+    gameplay.selectedPlay,
+    gameplay.selectedReceiverId,
+  );
+
+  if (!nextReceiverId || nextReceiverId === gameplay.selectedReceiverId) {
+    return false;
+  }
+
+  gameplay.selectedReceiverId = nextReceiverId;
+  return true;
+}
+
 export function markPlayDead(gameplay: GameplayModel): boolean {
   if (gameplay.playState !== 'live') {
     return false;
@@ -275,6 +310,7 @@ export function resetPlay(gameplay: GameplayModel): void {
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
   gameplay.passFeedbackTimerSeconds = 0;
+  gameplay.selectedReceiverId = getDefaultEligibleReceiverId(gameplay.selectedPlay);
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
   resetBlockingState(gameplay.blocking);
@@ -355,6 +391,7 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
       kind: gameplay.selectedPlay.kind,
       initialMovementDirection: { ...gameplay.selectedPlay.initialMovementDirection },
     },
+    selectedReceiver: snapshotSelectedReceiver(gameplay),
     playState: gameplay.playState,
     score: gameplay.score,
   };
@@ -639,13 +676,39 @@ function calculatePassTarget(gameplay: GameplayModel, receiver: PlayerModel): Ve
 }
 
 function getEligibleReceiver(gameplay: GameplayModel): PlayerModel | null {
-  const receiverId = gameplay.selectedPlay.pass?.eligibleReceiverId;
+  ensureSelectedReceiver(gameplay);
+  const receiverId = gameplay.selectedReceiverId;
 
   if (!receiverId) {
     return null;
   }
 
   return gameplay.players.find((player) => player.id === receiverId) ?? null;
+}
+
+function ensureSelectedReceiver(gameplay: GameplayModel): void {
+  if (isEligibleReceiverId(gameplay.selectedPlay, gameplay.selectedReceiverId)) {
+    return;
+  }
+
+  gameplay.selectedReceiverId = getDefaultEligibleReceiverId(gameplay.selectedPlay);
+}
+
+function snapshotSelectedReceiver(
+  gameplay: GameplayModel,
+): GameplaySnapshot['selectedReceiver'] {
+  if (!gameplay.selectedReceiverId) {
+    return null;
+  }
+
+  if (!isEligibleReceiverId(gameplay.selectedPlay, gameplay.selectedReceiverId)) {
+    return null;
+  }
+
+  return {
+    displayName: getReceiverDisplayName(gameplay.selectedPlay, gameplay.selectedReceiverId),
+    id: gameplay.selectedReceiverId,
+  };
 }
 
 function isBallOutsidePlayableField(position: Vector3): boolean {

@@ -15,6 +15,7 @@ import {
   GAMEPLAY_CONFIG,
   attemptPass,
   createGameplayModel,
+  cycleSelectedReceiver,
   hasCrossedOpposingGoalLine,
   hasCrossedSideline,
   markPlayDead,
@@ -222,6 +223,114 @@ describe('play state transitions', () => {
     updateGameplayModel(gameplay, 0.1);
 
     expect(receiver.position.z).toBeGreaterThan(initialReceiverPosition.z);
+  });
+
+  it('selects Slant Flat with two receivers and starts both routes only after the snap', () => {
+    const gameplay = createGameplayModel();
+
+    expect(selectPlay(gameplay, 'slant-flat')).toBe(true);
+    const leftReceiver = getPlayer(gameplay.players, 'blocker-left');
+    const rightReceiver = getPlayer(gameplay.players, 'blocker-right');
+    const initialLeftPosition = { ...leftReceiver.position };
+    const initialRightPosition = { ...rightReceiver.position };
+
+    expect(gameplay.selectedPlay).toMatchObject({
+      displayName: 'Slant Flat',
+      id: 'slant-flat',
+      kind: 'pass',
+    });
+    expect(gameplay.selectedReceiverId).toBe('blocker-left');
+    expect(snapshotGameplayModel(gameplay).selectedReceiver).toEqual({
+      displayName: 'Slant',
+      id: 'blocker-left',
+    });
+    expect(leftReceiver).toMatchObject({ role: 'receiver', currentState: 'idle' });
+    expect(rightReceiver).toMatchObject({ role: 'receiver', currentState: 'idle' });
+
+    updateGameplayModel(gameplay, 0.3);
+
+    expect(leftReceiver.position).toEqual(initialLeftPosition);
+    expect(rightReceiver.position).toEqual(initialRightPosition);
+    expect(leftReceiver.currentState).toBe('idle');
+    expect(rightReceiver.currentState).toBe('idle');
+
+    expect(startPlay(gameplay)).toBe(true);
+    expect(leftReceiver.currentState).toBe('runningRoute');
+    expect(rightReceiver.currentState).toBe('runningRoute');
+
+    updateGameplayModel(gameplay, 0.1);
+
+    expect(leftReceiver.position.z).toBeGreaterThan(initialLeftPosition.z);
+    expect(rightReceiver.position.x).toBeGreaterThan(initialRightPosition.x);
+  });
+
+  it('cycles Slant Flat receivers deterministically before and after the snap', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'slant-flat');
+
+    expect(gameplay.selectedReceiverId).toBe('blocker-left');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('blocker-right');
+    expect(snapshotGameplayModel(gameplay).selectedReceiver).toEqual({
+      displayName: 'Flat',
+      id: 'blocker-right',
+    });
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('blocker-left');
+
+    startPlay(gameplay);
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('blocker-right');
+  });
+
+  it('throws Slant Flat toward the selected receiver and locks selection after the throw', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'slant-flat');
+    cycleSelectedReceiver(gameplay);
+    startPlay(gameplay);
+
+    expect(gameplay.selectedReceiverId).toBe('blocker-right');
+    expect(attemptPass(gameplay)).toBe(true);
+
+    expect(gameplay.passAttempted).toBe(true);
+    expect(gameplay.ball.state).toMatchObject({
+      kind: 'inFlight',
+      target: expect.objectContaining({
+        x: expect.any(Number),
+      }),
+    });
+    if (gameplay.ball.state.kind !== 'inFlight') {
+      throw new Error('Expected Slant Flat pass to be in flight');
+    }
+    expect(gameplay.ball.state.target.x).toBeGreaterThan(8);
+    expect(cycleSelectedReceiver(gameplay)).toBe(false);
+    expect(gameplay.selectedReceiverId).toBe('blocker-right');
+  });
+
+  it('restores the Slant Flat default target on reset', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'slant-flat');
+    cycleSelectedReceiver(gameplay);
+    startPlay(gameplay);
+
+    expect(gameplay.selectedReceiverId).toBe('blocker-right');
+
+    resetPlay(gameplay);
+
+    expect(gameplay.playState).toBe('preSnap');
+    expect(gameplay.selectedPlay.id).toBe('slant-flat');
+    expect(gameplay.selectedReceiverId).toBe('blocker-left');
+    expect(getPlayer(gameplay.players, 'blocker-left').position).toEqual({
+      x: -8,
+      z: LINE_OF_SCRIMMAGE_Z + 1.5,
+    });
+    expect(getPlayer(gameplay.players, 'blocker-right').position).toEqual({
+      x: 8,
+      z: LINE_OF_SCRIMMAGE_Z + 1.5,
+    });
   });
 
   it('throws Quick Pass once and transitions the ball to inFlight state', () => {
