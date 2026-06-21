@@ -24,7 +24,6 @@ export interface FootballField {
   lineOfScrimmageMarker: THREE.Mesh;
   lineOfScrimmageZ: number;
   playDirection: THREE.Vector3;
-  playDirectionMarker: THREE.Group;
 }
 
 export interface CreateFootballFieldOptions {

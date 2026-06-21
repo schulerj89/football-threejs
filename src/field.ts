@@ -84,7 +84,6 @@ export function createFootballField(options: CreateFootballFieldOptions = {}): F
     lineOfScrimmageMarker: dynamicMarkers.lineOfScrimmageMarker,
     lineOfScrimmageZ: LINE_OF_SCRIMMAGE_Z,
     playDirection: new THREE.Vector3(0, 0, 1),
-    playDirectionMarker: dynamicMarkers.playDirectionMarker,
   };
 
   dynamicMarkerControllers.set(field, dynamicMarkers);

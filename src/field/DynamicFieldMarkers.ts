@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import {
   FIELD_BOUNDS,
-  LINE_OF_SCRIMMAGE_Z,
   createDriveLineLayout,
   isBoundsContained,
   type FieldMarkingLayout,
@@ -12,7 +11,6 @@ import { LINE_HEIGHT, LINE_Y } from './FieldMarkingLayout';
 export class DynamicFieldMarkers {
   readonly firstDownLineMarker: THREE.Mesh;
   readonly lineOfScrimmageMarker: THREE.Mesh;
-  readonly playDirectionMarker: THREE.Group;
 
   constructor(
     private readonly materials: FieldMaterialLibrary,
@@ -31,7 +29,6 @@ export class DynamicFieldMarkers {
       auditInvalid: options.firstDownLineInvalid,
     });
     options.group.add(this.lineOfScrimmageMarker, this.firstDownLineMarker);
-    this.playDirectionMarker = this.addPlayDirectionMarker(options.group);
   }
 
   sync(
@@ -44,7 +41,6 @@ export class DynamicFieldMarkers {
 
     this.applyMarkingLayout(this.lineOfScrimmageMarker, lineOfScrimmageLayout, auditEnabled);
     this.applyMarkingLayout(this.firstDownLineMarker, firstDownLayout, auditEnabled);
-    this.playDirectionMarker.position.z = lineOfScrimmage.z + 7;
   }
 
   private createFieldMarkingMesh(
@@ -89,23 +85,5 @@ export class DynamicFieldMarkers {
     mesh.userData.fieldMarkingLayout = layout;
     mesh.userData.fieldMarkingId = layout.id;
     mesh.userData.fieldMarkingKind = layout.kind;
-  }
-
-  private addPlayDirectionMarker(group: THREE.Group): THREE.Group {
-    const marker = new THREE.Group();
-    marker.name = 'play-direction-marker';
-    marker.position.set(0, 0.12, LINE_OF_SCRIMMAGE_Z + 7);
-
-    const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.1, 5), this.materials.direction);
-    shaft.position.set(0, 0, 0);
-    marker.add(shaft);
-
-    const head = new THREE.Mesh(new THREE.ConeGeometry(1.1, 2.2, 4), this.materials.direction);
-    head.rotation.x = Math.PI / 2;
-    head.position.set(0, 0, 3.4);
-    marker.add(head);
-
-    group.add(marker);
-    return marker;
   }
 }
