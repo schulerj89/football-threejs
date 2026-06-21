@@ -111,6 +111,7 @@ interface GameplaySnapshot {
       | 'quick-pass'
       | 'quick-pass-7'
       | 'slant-flat'
+      | 'spread-quick-11'
       | 'twin-slants-flat';
     kind: 'run' | 'pass';
     initialMovementDirection: FootballSpot;
@@ -688,16 +689,16 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   const experience = await getGameExperienceSnapshot(page);
   expect(started).toMatchObject({
     playState: 'preSnap',
-    playbookId: '7v7',
+    playbookId: '11v11',
     scoreAttack: {
       remainingSeconds: 120,
       state: 'ready',
     },
   });
-  expect(started.players).toHaveLength(14);
+  expect(started.players).toHaveLength(22);
   expect(started.selectedPlay).toMatchObject({
-    displayName: 'Inside Zone 7',
-    id: 'inside-zone-7',
+    displayName: 'Inside Zone 11',
+    id: 'inside-zone-11',
   });
   expect(experience.finalSettings).toMatchObject({
     cinematics: 'brief',
@@ -911,7 +912,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     crowdVisualsEnabled: true,
     gameplayCamera: 'offense',
     playerMotionEnabled: true,
-    playbookId: '7v7',
+    playbookId: '11v11',
     preset: 'broadcast',
     routeArtEnabled: true,
   });
@@ -1015,7 +1016,7 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
 });
 
 test('runs seven-on-seven audit and reset-cycle resource stability checks', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance&sevenAudit=1&audio=0&crowdVisuals=0&cinematics=off');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=7v7&sevenAudit=1&audio=0&crowdVisuals=0&cinematics=off');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.seven-audit-overlay')).toContainText('SEVEN AUDIT');
   await expect(page.locator('.seven-audit-overlay')).toContainText('ROSTER 14');
@@ -1056,7 +1057,7 @@ test('supports the box player body comparison URL option', async ({ page }) => {
 
   const bodySnapshots = await getPlayerBodyVisualSnapshots(page);
 
-  expect(bodySnapshots).toHaveLength(14);
+  expect(bodySnapshots).toHaveLength(22);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'box')).toBe(true);
   await expect(page.locator('.debug-overlay')).toContainText('BODY box');
   await expectNonBlankCanvas(page);
@@ -1178,7 +1179,7 @@ test('supports football visual and appearance audit presentation options', async
   expect(football.meshCount).toBeGreaterThan(1);
 
   const appearanceAudit = await getAppearanceAuditSnapshot(page);
-  expect(appearanceAudit.playerCount).toBe(14);
+  expect(appearanceAudit.playerCount).toBe(22);
   expect(appearanceAudit.skinToneCount).toBeGreaterThanOrEqual(3);
   expect(
     appearanceAudit.entries.every(
@@ -1251,7 +1252,7 @@ test('starts field and formation audit modes without render errors', async ({ pa
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toContainText('FPS');
   await expect(page.locator('.formation-audit-overlay')).toContainText('FORMATION AUDIT');
-  await expect(page.locator('.formation-audit-overlay')).toContainText('PLAY Inside Zone 7');
+  await expect(page.locator('.formation-audit-overlay')).toContainText('PLAY Inside Zone 11');
   await expect(page.locator('.formation-audit-overlay')).toContainText('ISSUES none');
   await expectNonBlankCanvas(page);
 
@@ -1823,7 +1824,7 @@ test('starts playable 7v7 Twin Slants Flat and throws to the selected target', a
   await expectNonBlankCanvas(page);
 });
 
-test('starts optional playable 11v11 Inside Zone with running back possession', async ({ page }) => {
+test('starts playable 11v11 plays and throws Spread Quick to the selected target', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical&playbook=11v11&audio=0&crowdVisuals=0&cinematics=off');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -1846,11 +1847,56 @@ test('starts optional playable 11v11 Inside Zone with running back possession', 
     currentState: 'idle',
     role: 'quarterback',
   });
-  await expect(page.locator('.play-card')).toHaveCount(1);
-  await expect(page.locator('.play-card-title')).toHaveText(['Inside Zone 11']);
+  await expect(page.locator('.play-card')).toHaveCount(2);
+  await expect(page.locator('.play-card-title')).toHaveText(['Inside Zone 11', 'Spread Quick 11']);
   await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-run-direction')).toHaveCount(1);
   await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-blocker-assignment')).toHaveCount(9);
+  await expect(page.locator('.play-card[data-play-id="spread-quick-11"] .play-card-receiver-route')).toHaveCount(5);
+  await expect(page.locator('.play-card[data-play-id="spread-quick-11"] .play-card-blocker-assignment')).toHaveCount(5);
   await expectNonBlankCanvas(page);
+
+  await page.locator('.play-card[data-play-id="spread-quick-11"]').click();
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'spread-quick-11', displayName: 'Spread Quick 11' },
+    selectedReceiver: { id: 'offense-wr-left', displayName: 'Receiver Left' },
+  });
+  await page.keyboard.press('e');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedReceiver: { id: 'offense-wr-right', displayName: 'Receiver Right' },
+  });
+  await page.keyboard.press('e');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedReceiver: { id: 'offense-slot', displayName: 'Slot' },
+  });
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    ball: { state: { kind: 'possessed', playerId: 'offense-qb' } },
+    playState: 'live',
+  });
+  await expect(page.locator('.play-call-ui')).toBeHidden();
+
+  await page.keyboard.press('f');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    passAttempted: true,
+    selectedReceiver: { id: 'offense-slot' },
+  });
+  expect(['inFlight', 'caught', 'incomplete', 'dead']).toContain(
+    (await getGameplaySnapshot(page)).ball.state.kind,
+  );
+  await expectNonBlankCanvas(page);
+
+  await page.keyboard.press('r');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    playState: 'preSnap',
+    selectedPlay: { id: 'spread-quick-11' },
+  });
+  await expect(page.locator('.play-call-ui')).toBeVisible();
+
+  await page.locator('.play-card[data-play-id="inside-zone-11"]').click();
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'inside-zone-11', displayName: 'Inside Zone 11' },
+  });
 
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({

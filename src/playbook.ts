@@ -51,6 +51,7 @@ export type PlayId =
   | 'quick-pass'
   | 'quick-pass-7'
   | 'slant-flat'
+  | 'spread-quick-11'
   | 'twin-slants-flat';
 export type PlayKind = 'run' | 'pass';
 export type FormationPlayer = FormationSlot;
@@ -106,6 +107,13 @@ const {
 const SEVEN = SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS;
 const ELEVEN = ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS;
 const PLAY_SIDE: PreferredFormationSide = 'right';
+const SPREAD_QUICK_ELEVEN_RECEIVER_IDS = [
+  'offense-wr-left',
+  'offense-wr-right',
+  'offense-slot',
+  'offense-tight-end',
+  'offense-rb',
+] as const;
 
 export const FIVE_ON_FIVE_PLAYS: PlayDefinition[] = [
   {
@@ -509,6 +517,74 @@ export const ELEVEN_ON_ELEVEN_PLAYS: PlayDefinition[] = [
     roster: ELEVEN_ON_ELEVEN_ROSTER,
     validation: elevenOnElevenValidation(),
   },
+  {
+    ballCarrierRole: 'quarterback',
+    blockerLaneTargets: {
+      'offense-center': point(alignedTo('defense-line-middle'), defenseDepth(passProtectDepth)),
+      'offense-line-left': point(alignedTo('defense-line-left'), defenseDepth(passProtectDepth)),
+      'offense-line-right': point(alignedTo('defense-line-right'), defenseDepth(passProtectDepth)),
+      'offense-tackle-left': point(alignedTo('defense-linebacker-left'), defenseDepth(ELEVEN.linebackerDepth)),
+      'offense-tackle-right': point(alignedTo('defense-linebacker-right'), defenseDepth(ELEVEN.linebackerDepth)),
+    },
+    displayName: 'Spread Quick 11',
+    formation: createElevenOnElevenPassFormation(),
+    id: 'spread-quick-11',
+    initialMovementDirection: { x: 0, z: 1 },
+    kind: 'pass',
+    pass: {
+      coverageAssignments: {
+        'defense-corner-left': 'offense-wr-left',
+        'defense-corner-right': 'offense-wr-right',
+        'defense-linebacker': 'offense-rb',
+        'defense-linebacker-inside': 'offense-tight-end',
+        'defense-safety-strong': 'offense-slot',
+      },
+      deepHelpAssignments: {
+        'defense-safety': [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
+      },
+      eligibleReceiverIds: [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
+      receiverDisplayNames: {
+        'offense-rb': 'Running Back',
+        'offense-slot': 'Slot',
+        'offense-tight-end': 'Tight End',
+        'offense-wr-left': 'Receiver Left',
+        'offense-wr-right': 'Receiver Right',
+      },
+    },
+    playbookId: '11v11',
+    preferredSide: PLAY_SIDE,
+    protectionAssignments: {
+      'offense-center': 'defense-line-middle',
+      'offense-line-left': 'defense-line-left',
+      'offense-line-right': 'defense-line-right',
+      'offense-tackle-left': 'defense-linebacker-left',
+      'offense-tackle-right': 'defense-linebacker-right',
+    },
+    receiverRoutes: {
+      'offense-rb': route('spread-quick-11-rb-check-flat', 8, [
+        waypoint('check-release', point(snapSide('boundary', 3.5), offenseDepth(1.5))),
+        waypoint('opposite-flat', point(sidelineInset('boundary', ELEVEN.receiverSidelineInset + 5), defenseDepth(3.5))),
+      ]),
+      'offense-slot': route('spread-quick-11-slot-seam-settle', 9.25, [
+        waypoint('seam', point(alignedTo('offense-slot'), defenseDepth(7))),
+        waypoint('settle', point(snapSide('field', ELEVEN.slotAlignment - 2), defenseDepth(9.5))),
+      ]),
+      'offense-tight-end': route('spread-quick-11-tight-end-flat', 8.5, [
+        waypoint('flat-release', point(snapSide('field', ELEVEN.tightEndSpacing + 2), defenseDepth(2.5))),
+        waypoint('field-flat', point(sidelineInset('field', ELEVEN.receiverSidelineInset + 6), defenseDepth(4.5))),
+      ]),
+      'offense-wr-left': route('spread-quick-11-left-slant', 9.5, [
+        waypoint('stem', point(alignedTo('offense-wr-left'), defenseDepth(4.5))),
+        waypoint('slant', point(snapSide('field', 4), defenseDepth(10.5))),
+      ]),
+      'offense-wr-right': route('spread-quick-11-right-hitch', 8.75, [
+        waypoint('stem', point(alignedTo('offense-wr-right'), defenseDepth(5.5))),
+        waypoint('hitch', point(alignedTo('offense-wr-right'), defenseDepth(7.5))),
+      ]),
+    },
+    roster: ELEVEN_ON_ELEVEN_ROSTER,
+    validation: elevenOnElevenValidation(),
+  },
 ];
 
 export const PLAYS = SEVEN_ON_SEVEN_PLAYS;
@@ -524,14 +600,14 @@ export const DEFAULT_SEVEN_ON_SEVEN_PLAY_ID: PlayId = 'inside-zone-7';
 export const DEFAULT_ELEVEN_ON_ELEVEN_PLAY_ID: PlayId = 'inside-zone-11';
 
 export function resolvePlaybookId(value: string | null): PlaybookId {
-  if (value === '11v11') {
-    return '11v11';
+  if (value === '5v5' || value === '7v7' || value === '11v11') {
+    return value;
   }
 
-  return value === '5v5' ? '5v5' : '7v7';
+  return '11v11';
 }
 
-export function getAvailablePlays(playbookId: PlaybookId = '7v7'): PlayDefinition[] {
+export function getAvailablePlays(playbookId: PlaybookId = '11v11'): PlayDefinition[] {
   if (playbookId === '11v11') {
     return [...ELEVEN_ON_ELEVEN_PLAYS];
   }
@@ -539,7 +615,7 @@ export function getAvailablePlays(playbookId: PlaybookId = '7v7'): PlayDefinitio
   return playbookId === '7v7' ? [...SEVEN_ON_SEVEN_PLAYS] : [...FIVE_ON_FIVE_PLAYS];
 }
 
-export function getDefaultPlayId(playbookId: PlaybookId = '7v7'): PlayId {
+export function getDefaultPlayId(playbookId: PlaybookId = '11v11'): PlayId {
   if (playbookId === '11v11') {
     return DEFAULT_ELEVEN_ON_ELEVEN_PLAY_ID;
   }
@@ -563,7 +639,7 @@ export function getRushingPlay(playId: string): RushingPlayDefinition {
 
 export function createFormationPlayers(
   ballSpot: FootballSpot,
-  play: PlayDefinition = getPlay(DEFAULT_SEVEN_ON_SEVEN_PLAY_ID),
+  play: PlayDefinition = getPlay(DEFAULT_ELEVEN_ON_ELEVEN_PLAY_ID),
 ): PlayerModel[] {
   const formation = resolvePlayFormation(ballSpot, play);
 
@@ -855,6 +931,73 @@ function createElevenOnElevenRunFormation(): FormationSlot[] {
 
     if (slot.team === 'defense') {
       return { ...slot, role: 'defender' };
+    }
+
+    return slot;
+  });
+}
+
+function createElevenOnElevenPassFormation(): FormationSlot[] {
+  const baseFormation = createElevenOnElevenPreviewFormation(PLAY_SIDE);
+  const passProtectorIds = new Set<string>([
+    'offense-center',
+    'offense-line-left',
+    'offense-line-right',
+    'offense-tackle-left',
+    'offense-tackle-right',
+  ]);
+  const receiverIds = new Set<string>(SPREAD_QUICK_ELEVEN_RECEIVER_IDS);
+  const passRusherIds = new Set<string>([
+    'defense-line-left',
+    'defense-line-middle',
+    'defense-line-right',
+    'defense-linebacker-left',
+    'defense-linebacker-right',
+  ]);
+
+  return baseFormation.formation.map((slot) => {
+    if (slot.id === 'offense-qb') {
+      return { ...slot, role: 'quarterback' };
+    }
+
+    if (slot.team === 'offense' && passProtectorIds.has(slot.id)) {
+      return { ...slot, role: 'blocker' };
+    }
+
+    if (slot.team === 'offense' && receiverIds.has(slot.id)) {
+      return { ...slot, role: 'receiver' };
+    }
+
+    if (slot.team === 'defense' && passRusherIds.has(slot.id)) {
+      return { ...slot, role: 'defender' };
+    }
+
+    if (slot.id === 'defense-linebacker') {
+      return {
+        ...slot,
+        ...point(alignedTo('offense-rb'), defenseDepth(ELEVEN.linebackerDepth)),
+        role: 'coverageDefender',
+      };
+    }
+
+    if (slot.id === 'defense-linebacker-inside') {
+      return {
+        ...slot,
+        ...point(alignedTo('offense-tight-end'), defenseDepth(ELEVEN.linebackerDepth)),
+        role: 'coverageDefender',
+      };
+    }
+
+    if (slot.id === 'defense-safety-strong') {
+      return {
+        ...slot,
+        ...point(alignedTo('offense-slot'), defenseDepth(ELEVEN.strongSafetyDepth)),
+        role: 'coverageDefender',
+      };
+    }
+
+    if (slot.team === 'defense') {
+      return { ...slot, role: 'coverageDefender' };
     }
 
     return slot;

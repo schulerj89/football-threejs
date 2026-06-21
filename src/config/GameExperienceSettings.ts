@@ -123,7 +123,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   crowdVisualsEnabled: true,
   gameplayCamera: 'offense',
   playerMotionEnabled: true,
-  playbookId: '7v7',
+  playbookId: '11v11',
   preset: 'broadcast',
   routeArtEnabled: true,
 } as const;

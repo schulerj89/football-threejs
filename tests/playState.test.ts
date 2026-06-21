@@ -30,29 +30,36 @@ import {
 } from '../src/playState';
 
 describe('play state transitions', () => {
-  it('defaults to the 7v7 playbook and Inside Zone 7', () => {
+  it('defaults to the 11v11 playbook and Inside Zone 11', () => {
     const gameplay = createGameplayModel();
 
-    expect(gameplay.playbookId).toBe('7v7');
+    expect(gameplay.playbookId).toBe('11v11');
     expect(gameplay.selectedPlay).toMatchObject({
-      displayName: 'Inside Zone 7',
-      id: 'inside-zone-7',
+      displayName: 'Inside Zone 11',
+      id: 'inside-zone-11',
       kind: 'run',
     });
-    expect(gameplay.players).toHaveLength(14);
-    expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(7);
-    expect(gameplay.players.filter((player) => player.team === 'defense')).toHaveLength(7);
+    expect(gameplay.availablePlays.map((play) => play.id)).toEqual([
+      'inside-zone-11',
+      'spread-quick-11',
+    ]);
+    expect(gameplay.players).toHaveLength(22);
+    expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(11);
+    expect(gameplay.players.filter((player) => player.team === 'defense')).toHaveLength(11);
     expect(gameplay.player).toMatchObject({
       id: 'offense-rb',
       role: 'runner',
     });
   });
 
-  it('creates the optional 11v11 Inside Zone play with twenty-two active players', () => {
+  it('creates the 11v11 Inside Zone play with twenty-two active players', () => {
     const gameplay = createGameplayModel({ playbookId: '11v11' });
 
     expect(gameplay.playbookId).toBe('11v11');
-    expect(gameplay.availablePlays.map((play) => play.id)).toEqual(['inside-zone-11']);
+    expect(gameplay.availablePlays.map((play) => play.id)).toEqual([
+      'inside-zone-11',
+      'spread-quick-11',
+    ]);
     expect(gameplay.selectedPlay).toMatchObject({
       displayName: 'Inside Zone 11',
       id: 'inside-zone-11',
@@ -174,6 +181,178 @@ describe('play state transitions', () => {
       type: 'outOfBounds',
     });
     expect(outOfBounds.nextSnapSpot.x).toBeLessThanOrEqual(PLAYABLE_FIELD_BOUNDS.maxX);
+  });
+
+  it('starts Spread Quick 11 with five stable receiver targets', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+
+    expect(selectPlay(gameplay, 'spread-quick-11')).toBe(true);
+    expect(gameplay.selectedPlay).toMatchObject({
+      displayName: 'Spread Quick 11',
+      id: 'spread-quick-11',
+      kind: 'pass',
+    });
+    expect(gameplay.players).toHaveLength(22);
+    expect(gameplay.player).toMatchObject({ id: 'offense-qb', role: 'quarterback' });
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-left');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-right');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-slot');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-tight-end');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-rb');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-left');
+    expect(snapshotGameplayModel(gameplay).selectedReceiver).toEqual({
+      displayName: 'Receiver Left',
+      id: 'offense-wr-left',
+    });
+  });
+
+  it('starts Spread Quick 11 routes only after snap and throws to each receiver', () => {
+    const targetIds = [
+      'offense-wr-left',
+      'offense-wr-right',
+      'offense-slot',
+      'offense-tight-end',
+      'offense-rb',
+    ];
+
+    for (const receiverId of targetIds) {
+      const gameplay = createGameplayModel({ playbookId: '11v11' });
+      selectPlay(gameplay, 'spread-quick-11');
+      selectReceiver(gameplay, receiverId);
+      const receiver = getPlayer(gameplay.players, receiverId);
+      const receiverStart = { ...receiver.position };
+
+      updateGameplayModel(gameplay, 0.25);
+
+      expect(receiver.position).toEqual(receiverStart);
+
+      startPlay(gameplay);
+      updateGameplayModel(gameplay, 0.15);
+
+      expect(receiver.position).not.toEqual(receiverStart);
+      expect(attemptPass(gameplay)).toBe(true);
+      expect(gameplay.passAudit).toMatchObject({
+        selectedReceiverId: receiverId,
+        resultReason: 'inFlight',
+      });
+      expect(cycleSelectedReceiver(gameplay)).toBe(false);
+
+      for (let step = 0; step < 120 && gameplay.ball.state.kind === 'inFlight'; step += 1) {
+        updateGameplayModel(gameplay, 1 / 60);
+      }
+
+      expect(gameplay.ball.state.kind).not.toBe('inFlight');
+    }
+  });
+
+  it('catches Spread Quick 11, transfers control, and turns defenders into pursuit', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+
+    selectPlay(gameplay, 'spread-quick-11');
+    selectReceiver(gameplay, 'offense-slot');
+    startPlay(gameplay);
+    expect(attemptPass(gameplay)).toBe(true);
+    updateGameplayModel(gameplay, 0.2);
+    const receiver = getPlayer(gameplay.players, 'offense-slot');
+    receiver.position.x = gameplay.ball.position.x;
+    receiver.position.z = gameplay.ball.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.ball.state).toEqual({ kind: 'caught', playerId: receiver.id });
+    expect(gameplay.ball.possession).toEqual({ kind: 'player', playerId: receiver.id });
+    expect(gameplay.player.id).toBe(receiver.id);
+    expect(receiver.currentState).toBe('userControlled');
+
+    const linebacker = getPlayer(gameplay.players, 'defense-linebacker');
+    linebacker.position = { x: receiver.position.x + 10, z: receiver.position.z };
+    linebacker.velocity = { x: 0, z: 0 };
+    updateGameplayModel(gameplay, 0.1);
+
+    expect(linebacker.currentState).toBe('pursuing');
+    expect(linebacker.velocity.x).toBeLessThan(0);
+  });
+
+  it('keeps Spread Quick 11 incompletions at the original line of scrimmage', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+
+    selectPlay(gameplay, 'spread-quick-11');
+    startPlay(gameplay);
+    expect(attemptPass(gameplay)).toBe(true);
+    for (const receiver of gameplay.players.filter((player) => player.role === 'receiver')) {
+      receiver.position.x = PLAYABLE_FIELD_BOUNDS.minX + receiver.collisionRadius;
+      receiver.position.z = PLAYABLE_FIELD_BOUNDS.minZ + receiver.collisionRadius;
+    }
+    updateGameplayModel(gameplay, 2);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.ball.state).toEqual({ kind: 'incomplete' });
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: INITIAL_BALL_SPOT,
+      startingBallSpot: INITIAL_BALL_SPOT,
+      type: 'incomplete',
+      yardsGained: 0,
+    });
+    expect(gameplay.drive.lineOfScrimmage).toEqual(INITIAL_BALL_SPOT);
+  });
+
+  it('classifies Spread Quick 11 pre-release contact as a sack but ignores post-release quarterback contact', () => {
+    const sack = createGameplayModel({ playbookId: '11v11' });
+
+    selectPlay(sack, 'spread-quick-11');
+    startPlay(sack);
+    const middleRusher = getPlayer(sack.players, 'defense-line-middle');
+    middleRusher.position = { ...sack.player.position };
+    updateGameplayModel(sack, 0);
+
+    expect(sack.playState).toBe('dead');
+    expect(sack.lastPlayResult?.type).toBe('sack');
+    expect(sack.lastPlayResult?.yardsGained).toBeLessThan(0);
+
+    const postRelease = createGameplayModel({ playbookId: '11v11' });
+    selectPlay(postRelease, 'spread-quick-11');
+    startPlay(postRelease);
+    expect(attemptPass(postRelease)).toBe(true);
+    const lateRusher = getPlayer(postRelease.players, 'defense-line-middle');
+    lateRusher.position = { ...postRelease.player.position };
+    updateGameplayModel(postRelease, 0);
+
+    expect(postRelease.playState).toBe('live');
+    expect(postRelease.lastPlayResult).toBeNull();
+    expect(postRelease.ball.state.kind).toBe('inFlight');
+  });
+
+  it('resets Spread Quick 11 routes, engagements, target, and pass state', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+
+    selectPlay(gameplay, 'spread-quick-11');
+    selectReceiver(gameplay, 'offense-rb');
+    startPlay(gameplay);
+    updateGameplayModel(gameplay, 0.2);
+    gameplay.blocking.engagements.push({
+      blockerId: 'offense-center',
+      defenderId: 'defense-line-middle',
+    });
+    expect(attemptPass(gameplay)).toBe(true);
+
+    resetPlay(gameplay);
+
+    expect(gameplay.playState).toBe('preSnap');
+    expect(gameplay.selectedPlay.id).toBe('spread-quick-11');
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-left');
+    expect(gameplay.blocking.engagements).toEqual([]);
+    expect(gameplay.passAttempted).toBe(false);
+    expect(gameplay.passAudit).toBeNull();
+    expect(gameplay.forwardPassEligible).toBe(true);
+    expect(gameplay.ball.state).toEqual({ kind: 'dead' });
+    expect(Object.values(gameplay.receiverRouteStates).every((state) => state.distanceAlongRoute === 0)).toBe(true);
+    expect(gameplay.players).toHaveLength(22);
+    expect(gameplay.players.every((player) => player.currentState === 'idle')).toBe(true);
   });
 
   it('starts in preSnap at the line of scrimmage without ball possession', () => {
@@ -1618,7 +1797,7 @@ function getPlayer(players: PlayerModel[], playerId: string): PlayerModel {
 }
 
 function selectReceiver(gameplay: ReturnType<typeof createGameplayModel>, receiverId: string): void {
-  for (let index = 0; index < 4 && gameplay.selectedReceiverId !== receiverId; index += 1) {
+  for (let index = 0; index < 8 && gameplay.selectedReceiverId !== receiverId; index += 1) {
     cycleSelectedReceiver(gameplay);
   }
 

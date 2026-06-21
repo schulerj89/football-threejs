@@ -8,7 +8,9 @@ import {
   getBlockingLaneTarget,
   getCoverageAssignmentReceiverId,
   getDefaultPlayId,
+  getDeepHelpReceiverIds,
   getEligibleReceiverIds,
+  getNextEligibleReceiverId,
   getPlay,
   getProtectionAssignmentDefenderId,
   getReceiverDisplayName,
@@ -182,16 +184,10 @@ describe('playbook', () => {
     expect(getPlayer(players, 'defense-cover-wr').role).toBe('coverageDefender');
   });
 
-  it('defines a four-play 7v7 playbook as the default active mode', () => {
+  it('defines a four-play 7v7 playbook as an explicit regression mode', () => {
     const plays = getAvailablePlays('7v7');
 
     expect(getDefaultPlayId('7v7')).toBe('inside-zone-7');
-    expect(getAvailablePlays().map((candidate) => candidate.id)).toEqual([
-      'inside-zone-7',
-      'outside-zone-7',
-      'quick-pass-7',
-      'twin-slants-flat',
-    ]);
     expect(plays.map((candidate) => candidate.displayName)).toEqual([
       'Inside Zone 7',
       'Outside Zone 7',
@@ -355,12 +351,19 @@ describe('playbook', () => {
     }
   });
 
-  it('defines Inside Zone 11 as the only optional 11v11 playbook play', () => {
+  it('defines 11v11 as the default two-play normal playbook', () => {
     const plays = getAvailablePlays('11v11');
     const play = getPlay('inside-zone-11');
 
     expect(getDefaultPlayId('11v11')).toBe('inside-zone-11');
-    expect(plays.map((candidate) => candidate.id)).toEqual(['inside-zone-11']);
+    expect(getAvailablePlays().map((candidate) => candidate.id)).toEqual([
+      'inside-zone-11',
+      'spread-quick-11',
+    ]);
+    expect(plays.map((candidate) => candidate.id)).toEqual([
+      'inside-zone-11',
+      'spread-quick-11',
+    ]);
     expect(play).toMatchObject({
       ballCarrierRole: 'runner',
       displayName: 'Inside Zone 11',
@@ -369,6 +372,106 @@ describe('playbook', () => {
       playbookId: '11v11',
       roster: { id: '11v11' },
     });
+  });
+
+  it('defines Spread Quick 11 with five ordered receivers, protection, and coverage', () => {
+    const play = getPlay('spread-quick-11');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+    const assignedRushers = Object.values(play.protectionAssignments ?? {});
+
+    expect(play).toMatchObject({
+      ballCarrierRole: 'quarterback',
+      displayName: 'Spread Quick 11',
+      id: 'spread-quick-11',
+      kind: 'pass',
+      playbookId: '11v11',
+      roster: { id: '11v11' },
+    });
+    expect(players).toHaveLength(22);
+    expect(players.filter((player) => player.team === 'offense')).toHaveLength(11);
+    expect(players.filter((player) => player.team === 'defense')).toHaveLength(11);
+    expect(getEligibleReceiverIds(play)).toEqual([
+      'offense-wr-left',
+      'offense-wr-right',
+      'offense-slot',
+      'offense-tight-end',
+      'offense-rb',
+    ]);
+    expect(getNextEligibleReceiverId(play, 'offense-wr-left')).toBe('offense-wr-right');
+    expect(getNextEligibleReceiverId(play, 'offense-wr-right')).toBe('offense-slot');
+    expect(getNextEligibleReceiverId(play, 'offense-slot')).toBe('offense-tight-end');
+    expect(getNextEligibleReceiverId(play, 'offense-tight-end')).toBe('offense-rb');
+    expect(getNextEligibleReceiverId(play, 'offense-rb')).toBe('offense-wr-left');
+    expect(Object.keys(play.protectionAssignments ?? {}).sort()).toEqual([
+      'offense-center',
+      'offense-line-left',
+      'offense-line-right',
+      'offense-tackle-left',
+      'offense-tackle-right',
+    ]);
+    expect(assignedRushers).toHaveLength(5);
+    expect(new Set(assignedRushers).size).toBe(5);
+    expect(getProtectionAssignmentDefenderId(play, 'offense-center')).toBe('defense-line-middle');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-left')).toBe('defense-linebacker-left');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-right')).toBe('defense-linebacker-right');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-corner-left')).toBe('offense-wr-left');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-corner-right')).toBe('offense-wr-right');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-rb');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-inside')).toBe('offense-tight-end');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-safety-strong')).toBe('offense-slot');
+    expect(getDeepHelpReceiverIds(play, 'defense-safety')).toEqual([
+      'offense-wr-left',
+      'offense-wr-right',
+      'offense-slot',
+      'offense-tight-end',
+      'offense-rb',
+    ]);
+    expect(getReceiverDisplayName(play, 'offense-tight-end')).toBe('Tight End');
+  });
+
+  it('resolves Spread Quick 11 routes semantically at every snap lane', () => {
+    const play = getPlay('spread-quick-11');
+
+    for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+      const snapPlacement = createSnapPlacementForLane(lane);
+      const formation = resolveFormation(play, snapPlacement);
+      const players = createFormationPlayers(snapPlacement.spot, play);
+      const leftReceiverSlot = getPlayer(formation.slots, 'offense-wr-left');
+      const rightReceiverSlot = getPlayer(formation.slots, 'offense-wr-right');
+      const slotSlot = getPlayer(formation.slots, 'offense-slot');
+      const tightEndSlot = getPlayer(formation.slots, 'offense-tight-end');
+      const runningBackSlot = getPlayer(formation.slots, 'offense-rb');
+      const freeSafety = getPlayer(formation.slots, 'defense-safety');
+      const leftReceiver = getPlayer(players, 'offense-wr-left');
+      const rightReceiver = getPlayer(players, 'offense-wr-right');
+      const slot = getPlayer(players, 'offense-slot');
+      const tightEnd = getPlayer(players, 'offense-tight-end');
+      const runningBack = getPlayer(players, 'offense-rb');
+      const expectedSafetyX =
+        (leftReceiverSlot.position.x +
+          rightReceiverSlot.position.x +
+          slotSlot.position.x +
+          tightEndSlot.position.x +
+          runningBackSlot.position.x) / 5;
+      const leftRoute = getReceiverRouteTarget(leftReceiver, snapPlacement.spot, play);
+      const tightEndRoute = getReceiverRouteTarget(tightEnd, snapPlacement.spot, play);
+      const runningBackRoute = getReceiverRouteTarget(runningBack, snapPlacement.spot, play);
+
+      expect(formation.issues).toEqual([]);
+      expect(freeSafety.position.x).toBeCloseTo(expectedSafetyX);
+      expect(leftRoute?.z).toBeGreaterThan(leftReceiver.position.z);
+      expect(leftRoute?.x).toBeCloseTo(
+        lane === 'rightHash' ? snapPlacement.spot.x - 4 : snapPlacement.spot.x + 4,
+      );
+      expect(getReceiverRouteTarget(rightReceiver, snapPlacement.spot, play)?.x).toBeCloseTo(
+        rightReceiver.position.x,
+      );
+      expect(getReceiverRouteTarget(slot, snapPlacement.spot, play)?.z).toBeGreaterThan(slot.position.z);
+      expect(tightEndRoute?.x).toBeGreaterThanOrEqual(PLAYABLE_FIELD_BOUNDS.minX);
+      expect(tightEndRoute?.x).toBeLessThanOrEqual(PLAYABLE_FIELD_BOUNDS.maxX);
+      expect(runningBackRoute?.x).toBeGreaterThanOrEqual(PLAYABLE_FIELD_BOUNDS.minX);
+      expect(runningBackRoute?.x).toBeLessThanOrEqual(PLAYABLE_FIELD_BOUNDS.maxX);
+    }
   });
 
   it('places Inside Zone 11 with twenty-two players and running back possession role', () => {

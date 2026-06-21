@@ -32,6 +32,10 @@ import {
 const SNAP_LANES: readonly SnapLane[] = ['leftHash', 'middle', 'rightHash'];
 const UPDATE_RATES = [30, 60, 120] as const;
 
+function createSevenGameplay(): GameplayModel {
+  return createGameplayModel({ playbookId: '7v7' });
+}
+
 describe('seven-on-seven hardening matrix', () => {
   it('covers every requested gameplay, camera, presentation, crowd, and update-rate dimension', () => {
     const matrix = createSevenOnSevenScenarioMatrix();
@@ -69,7 +73,7 @@ describe('seven-on-seven hardening matrix', () => {
 
   it('keeps pre-snap state stable across repeated updates', () => {
     for (const play of getAvailablePlays('7v7')) {
-      const gameplay = createGameplayModel();
+      const gameplay = createSevenGameplay();
       selectPlay(gameplay, play.id);
       const before = snapshotGameplayModel(gameplay);
 
@@ -91,7 +95,7 @@ describe('seven-on-seven hardening matrix', () => {
   it('validates run-play possession, deterministic blocking, unblocked pursuit, and field-side mirroring', () => {
     for (const playId of ['inside-zone-7', 'outside-zone-7'] as const) {
       const play = getPlay(playId);
-      const gameplay = createGameplayModel();
+      const gameplay = createSevenGameplay();
       selectPlay(gameplay, playId);
 
       expect(startPlay(gameplay)).toBe(true);
@@ -137,7 +141,7 @@ describe('seven-on-seven hardening matrix', () => {
   it('validates passing assignments, ordered routes, and route start timing', () => {
     for (const playId of ['quick-pass-7', 'twin-slants-flat'] as const) {
       const play = getPlay(playId);
-      const gameplay = createGameplayModel();
+      const gameplay = createSevenGameplay();
       selectPlay(gameplay, playId);
       const beforeSnap = snapshotGameplayModel(gameplay);
       const eligibleReceivers = getEligibleReceiverIds(play);
@@ -190,7 +194,7 @@ describe('seven-on-seven hardening matrix', () => {
   });
 
   it('detects clean reset state after repeated seven-on-seven snap/reset cycles', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createSevenGameplay();
     selectPlay(gameplay, 'twin-slants-flat');
 
     for (let cycle = 0; cycle < 100; cycle += 1) {
@@ -222,7 +226,7 @@ describe('seven-on-seven hardening matrix', () => {
 });
 
 function runPassingScenario(updateRateHz: 30 | 60 | 120, playId: 'quick-pass-7' | 'twin-slants-flat') {
-  const gameplay = createGameplayModel();
+  const gameplay = createSevenGameplay();
   selectPlay(gameplay, playId);
   startPlay(gameplay);
 
@@ -244,7 +248,7 @@ function runPassingScenario(updateRateHz: 30 | 60 | 120, playId: 'quick-pass-7' 
 }
 
 function forceTackleResult(): PlayResult {
-  const gameplay = createGameplayModel();
+  const gameplay = createSevenGameplay();
   startPlay(gameplay);
   const defender = gameplay.players.find((player) => player.team === 'defense')!;
   defender.position.x = gameplay.player.position.x;
@@ -254,7 +258,7 @@ function forceTackleResult(): PlayResult {
 }
 
 function forceSackResult(): PlayResult {
-  const gameplay = createGameplayModel();
+  const gameplay = createSevenGameplay();
   selectPlay(gameplay, 'quick-pass-7');
   startPlay(gameplay);
   const rusher = gameplay.players.find((player) => player.id === 'defense-line-middle')!;
@@ -265,7 +269,7 @@ function forceSackResult(): PlayResult {
 }
 
 function forceIncompleteResult(): PlayResult {
-  const gameplay = createGameplayModel();
+  const gameplay = createSevenGameplay();
   selectPlay(gameplay, 'quick-pass-7');
   startPlay(gameplay);
   attemptPass(gameplay);
@@ -278,7 +282,7 @@ function forceIncompleteResult(): PlayResult {
 }
 
 function forceOutOfBoundsResult(): PlayResult {
-  const gameplay = createGameplayModel();
+  const gameplay = createSevenGameplay();
   startPlay(gameplay);
   gameplay.player.position.x = PLAYABLE_FIELD_BOUNDS.maxX + gameplay.player.collisionRadius + 0.1;
   updateGameplayModel(gameplay, 0);
@@ -286,7 +290,7 @@ function forceOutOfBoundsResult(): PlayResult {
 }
 
 function forceFirstDownResult(): PlayResult {
-  const gameplay = createGameplayModel();
+  const gameplay = createSevenGameplay();
   startPlay(gameplay);
   gameplay.player.position.z = gameplay.drive.firstDownMarker.z + 0.5;
   const defender = gameplay.players.find((player) => player.team === 'defense')!;
@@ -300,7 +304,7 @@ function forceFirstDownResult(): PlayResult {
 }
 
 function forceTouchdownResult(): PlayResult {
-  const gameplay = createGameplayModel();
+  const gameplay = createSevenGameplay();
   startPlay(gameplay);
   gameplay.player.position.z = OPPOSING_GOAL_LINE_Z - PLAYER_MOVEMENT_CONFIG.collisionRadius * 0.5;
   updateGameplayModel(gameplay, 0);
@@ -308,7 +312,7 @@ function forceTouchdownResult(): PlayResult {
 }
 
 function forceTurnoverResult(): PlayResult {
-  const gameplay = createGameplayModel();
+  const gameplay = createSevenGameplay();
   const appliedResultIds = new Set<number>();
 
   for (let down = 1; down <= 4; down += 1) {

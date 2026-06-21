@@ -70,8 +70,9 @@ export class GameSetupScreen {
     if (this.showGameMode) {
       primary.append(
         this.createSelectRow('Game mode', this.playbookSelect, [
-          ['7v7', '7v7 Prototype'],
-          ['5v5', '5v5 Legacy Development Mode'],
+          ['11v11', '11v11 Prototype'],
+          ['7v7', '7v7 Development Regression Mode'],
+          ['5v5', '5v5 Legacy Regression Mode'],
         ]),
       );
     } else {

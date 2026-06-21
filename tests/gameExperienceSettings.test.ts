@@ -28,7 +28,7 @@ describe('game experience settings', () => {
       crowdReactionsEnabled: true,
       crowdVisualsEnabled: true,
     });
-    expect(resolved.settings.playbookId).toBe('7v7');
+    expect(resolved.settings.playbookId).toBe('11v11');
     expect(toGameplayCameraMode(resolved.settings.gameplayCamera)).toBe('offensePerspective');
   });
 
@@ -46,7 +46,7 @@ describe('game experience settings', () => {
       crowdVisualsEnabled: false,
       gameplayCamera: 'offense',
       playerMotionEnabled: true,
-      playbookId: '7v7',
+      playbookId: '11v11',
     });
   });
 
@@ -135,11 +135,11 @@ describe('game experience settings', () => {
     expect(storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY)).toBe(storedBefore);
   });
 
-  it('allows the optional 11v11 playbook as a query-only development override', () => {
+  it('keeps 11v11 as the normal broadcast playbook without requiring a query override', () => {
     const storage = createMemoryStorage();
 
     const resolved = resolveGameExperienceSettings({
-      searchParams: new URLSearchParams('playbook=11v11'),
+      searchParams: new URLSearchParams(),
       storage,
     });
 
@@ -147,10 +147,23 @@ describe('game experience settings', () => {
       playbookId: '11v11',
       preset: 'broadcast',
     });
-    expect(resolved.queryOverrides).toEqual({
-      playbookId: '11v11',
-    });
+    expect(resolved.queryOverrides).toEqual({});
     expect(storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY)).toBeNull();
+  });
+
+  it('keeps 7v7 available as an explicit query override', () => {
+    const resolved = resolveGameExperienceSettings({
+      searchParams: new URLSearchParams('playbook=7v7'),
+      storage: createMemoryStorage(),
+    });
+
+    expect(resolved.settings).toMatchObject({
+      playbookId: '7v7',
+      preset: 'broadcast',
+    });
+    expect(resolved.queryOverrides).toEqual({
+      playbookId: '7v7',
+    });
   });
 
   it('keeps preview and audit modes opt-in development flags', () => {

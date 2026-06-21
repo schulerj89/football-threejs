@@ -35,6 +35,22 @@ describe('receiver routes', () => {
     });
   });
 
+  it('starts every declared route at the receiver resolved formation position', () => {
+    for (const play of ALL_PLAYS) {
+      for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+        const snapPlacement = createSnapPlacementForLane(lane);
+        const formation = resolveFormation(play, snapPlacement);
+
+        for (const receiverId of Object.keys(play.receiverRoutes ?? {})) {
+          const receiver = getSlot(formation, receiverId);
+          const route = expectResolvedRoute(resolveReceiverRoute(play, receiverId, snapPlacement));
+
+          expect(route.points[0]).toEqual(receiver.position);
+        }
+      }
+    }
+  });
+
   it('calculates segment lengths and total route length in football yards', () => {
     const route = makeRoute([
       { x: 0, z: 0 },

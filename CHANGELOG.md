@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.45.0] - 2026-06-21
+
+### Added
+
+- Added the 11v11 `Spread Quick 11` passing play with five ordered eligible receivers, semantic multi-segment routes, explicit pass-protection assignments, explicit coverage assignments, deep safety help, route-aware target prediction, and generated play-card/field-route data.
+- Added unit and browser smoke coverage for 22-player creation, five-receiver cycling, route starts, unique protection, valid coverage, deep-help alignment, throws to selected receivers, catch/control transfer, incompletion spotting, sack classification, post-release quarterback contact, reset cleanup, and explicit 7v7/5v5 regression access.
+
+### Changed
+
+- Promoted 11v11 to the normal default playbook for plain launch, broadcast/performance settings, fallback playbook resolution, and the title/setup flow, with Inside Zone 11 as the default selected play.
+- Reclassified 7v7 as a maintained development regression mode and 5v5 as the legacy regression mode in README and AGENTS guidance.
+
 ## [0.44.0] - 2026-06-21
 
 ### Added

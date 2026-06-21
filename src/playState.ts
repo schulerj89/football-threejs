@@ -212,7 +212,7 @@ export interface CreateGameplayModelOptions {
 }
 
 export function createGameplayModel(options: CreateGameplayModelOptions = {}): GameplayModel {
-  const playbookId = options.playbookId ?? '7v7';
+  const playbookId = options.playbookId ?? '11v11';
   const availablePlays = getAvailablePlays(playbookId);
   const initialSpot = cloneFootballSpot(INITIAL_BALL_SPOT);
   const selectedPlay = getPlay(getDefaultPlayId(playbookId));
