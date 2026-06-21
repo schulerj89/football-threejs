@@ -405,6 +405,7 @@ export class DevelopmentToolsRuntime {
   private shouldInstallDebugApi(options: DevelopmentToolsRuntimeOptions): boolean {
     return import.meta.env.DEV ||
       options.searchParams.has('debug') ||
+      options.searchParams.has('readback') ||
       options.cameraDebugEnabled ||
       options.presentationAuditEnabled ||
       options.appearanceAuditEnabled ||

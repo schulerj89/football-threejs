@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.45.3] - 2026-06-21
+
+### Added
+
+- Added a production-only reference performance benchmark through `npm run benchmark:reference`, backed by `playwright.performance.config.ts` and `tools/performance/referenceBenchmark.spec.ts`.
+- Added pure benchmark helpers for frame-time percentiles, rolling one-second FPS windows, timing gate evaluation, and software-renderer detection, with unit coverage in `tests/referenceBenchmark.test.ts`.
+- Added benchmark reporting to `test-results/reference-performance-report.json` for the 11v11 broadcast scenario with low-density crowd visuals, procedural player motion, brief cinematics, and debug overlays disabled.
+
+### Changed
+
+- Extended `?readback=1` so production preview benchmark runs can expose the read-only debug API without showing development overlays.
+
 ## [0.45.2] - 2026-06-21
 
 ### Changed

@@ -41,9 +41,22 @@ npm run audio:verify
 npm run test:unit
 npm run test:smoke
 npm test
+npm run benchmark:reference
 ```
 
 Open the dev server at `http://127.0.0.1:5173`.
+
+## Reference Performance Benchmark
+
+Run `npm run benchmark:reference` to build production assets and run the reference Chromium benchmark through `vite preview`, not Vite development mode.
+
+- Viewport: `1920 x 1080`, device scale factor `1`.
+- Scenario: 11v11 broadcast profile, offense camera, brief cinematics, procedural player motion, low-density measured crowd visuals and reactions, route art enabled, debug overlays disabled.
+- Sampling: `3` second warm-up, at least `12` seconds sampled, hidden-tab frames ignored.
+- Timing target on hardware rendering: median frame time `<= 16.67 ms`, p95 `<= 18.18 ms`, p99 `<= 33.33 ms`, and no rolling one-second window below `55 FPS`. Primary millisecond reporting uses a `0.05 ms` measurement epsilon for Chromium timestamp granularity.
+- The automated gate follows the smoke-test tolerance: `55-60 FPS` is acceptable, and hardware-rendered runs fail only when a rolling one-second window remains below `55 FPS`. Software rendering such as SwiftShader reports timing but does not fail timing gates; structural budgets still apply.
+- Report output: `test-results/reference-performance-report.json`.
+- The current prototype does not yet include referee visuals; the benchmark requests and records the referee dimension so it can become enforced when that feature lands.
 
 ## Audio Production
 
