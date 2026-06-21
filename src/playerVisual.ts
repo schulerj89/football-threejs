@@ -14,15 +14,29 @@ export interface PlayerBodyDimensions {
   torsoHeight: number;
   torsoTopRadius: number;
   torsoBottomRadius: number;
+  torsoCenterY: number;
   shoulderWidth: number;
   shoulderDepth: number;
   shoulderHeight: number;
+  shoulderCenterY: number;
   armLength: number;
   armRadius: number;
+  armPivotY: number;
+  armInsetX: number;
   legLength: number;
   legRadius: number;
+  legPivotY: number;
+  legOffsetX: number;
   footLength: number;
+  footWidth: number;
+  footHeight: number;
+  footForwardOffset: number;
   helmetOffsetY: number;
+  helmetOffsetZ: number;
+  helmetScale: number;
+  radialSegments: number;
+  limbHeightSegments: number;
+  torsoHeightSegments: number;
 }
 
 export interface PlayerVisualOptions {
@@ -30,34 +44,57 @@ export interface PlayerVisualOptions {
   debugRoleColors?: boolean;
 }
 
+export interface PlayerVisualBoundsSnapshot {
+  center: { x: number; y: number; z: number };
+  max: { x: number; y: number; z: number };
+  min: { x: number; y: number; z: number };
+  size: { x: number; y: number; z: number };
+}
+
 export interface PlayerBodyVisualSnapshot {
-  bodyBounds: {
-    max: { x: number; y: number; z: number };
-    min: { x: number; y: number; z: number };
-    size: { x: number; y: number; z: number };
-  };
+  bodyBounds: PlayerVisualBoundsSnapshot;
   bodyStyle: PlayerBodyVisualStyle;
   bodyTriangleCount: number;
+  combinedBounds: PlayerVisualBoundsSnapshot;
+  helmetBounds: PlayerVisualBoundsSnapshot | null;
+  helmetShoulderVerticalGap: number | null;
   meshesPerPlayer: number;
+  minimumBodyY: number;
   playerId: string;
   shoulderWidth: number;
   totalHeight: number;
+  uniqueBodyGeometryCount: number;
+  uniqueBodyMaterialCount: number;
 }
 
 export const PLAYER_BODY_DIMENSIONS: PlayerBodyDimensions = {
   totalHeight: 2,
-  torsoHeight: 0.92,
-  torsoTopRadius: 0.42,
-  torsoBottomRadius: 0.32,
-  shoulderWidth: 1.38,
-  shoulderDepth: 0.58,
-  shoulderHeight: 0.28,
-  armLength: 0.72,
-  armRadius: 0.12,
-  legLength: 0.74,
-  legRadius: 0.14,
-  footLength: 0.42,
-  helmetOffsetY: 0.9,
+  torsoHeight: 0.82,
+  torsoTopRadius: 0.38,
+  torsoBottomRadius: 0.3,
+  torsoCenterY: -0.02,
+  shoulderWidth: 1.28,
+  shoulderDepth: 0.52,
+  shoulderHeight: 0.24,
+  shoulderCenterY: 0.36,
+  armLength: 0.62,
+  armRadius: 0.11,
+  armPivotY: 0.32,
+  armInsetX: 0.08,
+  legLength: 0.78,
+  legRadius: 0.13,
+  legPivotY: -0.22,
+  legOffsetX: 0.22,
+  footLength: 0.38,
+  footWidth: 0.22,
+  footHeight: 0.12,
+  footForwardOffset: 0.06,
+  helmetOffsetY: 0.8,
+  helmetOffsetZ: 0,
+  helmetScale: 0.38,
+  radialSegments: 8,
+  limbHeightSegments: 3,
+  torsoHeightSegments: 2,
 };
 
 const BODY_PART_NAMES = {
@@ -104,38 +141,35 @@ const PLAYER_UNIFORM_COLORS = {
 
 type UniformPart = 'jersey' | 'limbs' | 'pants' | 'shoes' | 'trim';
 
-const ARM_X = PLAYER_BODY_DIMENSIONS.shoulderWidth / 2 - PLAYER_BODY_DIMENSIONS.armRadius * 0.65;
-const ARM_PIVOT_Y = 0.48;
-const LEG_X = 0.23;
-const LEG_PIVOT_Y = -0.28;
-const FOOT_HEIGHT = 0.12;
-const FOOT_WIDTH = 0.24;
+const ARM_X = PLAYER_BODY_DIMENSIONS.shoulderWidth / 2 - PLAYER_BODY_DIMENSIONS.armInsetX;
 const FOOT_DEPTH = PLAYER_BODY_DIMENSIONS.footLength;
 const FOOT_BOTTOM_Y = -PLAYER_CENTER_Y;
-const FOOT_CENTER_Y = FOOT_BOTTOM_Y + FOOT_HEIGHT / 2;
+const FOOT_CENTER_Y = FOOT_BOTTOM_Y + PLAYER_BODY_DIMENSIONS.footHeight / 2;
 const LEG_CENTER_Y = -PLAYER_BODY_DIMENSIONS.legLength / 2;
-const TORSO_CENTER_Y = 0.19;
-const SHOULDER_CENTER_Y = 0.68;
 
 const sharedGeometry = {
   arm: new THREE.CylinderGeometry(
     PLAYER_BODY_DIMENSIONS.armRadius * 0.82,
     PLAYER_BODY_DIMENSIONS.armRadius,
     PLAYER_BODY_DIMENSIONS.armLength,
-    8,
-    3,
+    PLAYER_BODY_DIMENSIONS.radialSegments,
+    PLAYER_BODY_DIMENSIONS.limbHeightSegments,
   ),
   boxBody: new THREE.BoxGeometry(1.4, 2.2, 1.4),
   boxDefenderBody: new THREE.BoxGeometry(1.5, 2.2, 1.4),
   boxFacingStripe: new THREE.BoxGeometry(0.72, 0.12, 0.08),
   boxScaleReference: new THREE.BoxGeometry(0.24, 0.08, 1.9),
-  foot: new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
+  foot: new THREE.BoxGeometry(
+    PLAYER_BODY_DIMENSIONS.footWidth,
+    PLAYER_BODY_DIMENSIONS.footHeight,
+    FOOT_DEPTH,
+  ),
   leg: new THREE.CylinderGeometry(
     PLAYER_BODY_DIMENSIONS.legRadius * 0.85,
     PLAYER_BODY_DIMENSIONS.legRadius,
     PLAYER_BODY_DIMENSIONS.legLength,
-    8,
-    3,
+    PLAYER_BODY_DIMENSIONS.radialSegments,
+    PLAYER_BODY_DIMENSIONS.limbHeightSegments,
   ),
   shoulderPads: new THREE.BoxGeometry(
     PLAYER_BODY_DIMENSIONS.shoulderWidth,
@@ -146,8 +180,8 @@ const sharedGeometry = {
     PLAYER_BODY_DIMENSIONS.torsoTopRadius,
     PLAYER_BODY_DIMENSIONS.torsoBottomRadius,
     PLAYER_BODY_DIMENSIONS.torsoHeight,
-    8,
-    2,
+    PLAYER_BODY_DIMENSIONS.radialSegments,
+    PLAYER_BODY_DIMENSIONS.torsoHeightSegments,
   ),
 };
 
@@ -191,8 +225,11 @@ export function syncPlayerVisual(
 export function getPlayerBodyVisualSnapshot(playerVisual: THREE.Object3D): PlayerBodyVisualSnapshot {
   const bodyRoot = playerVisual.getObjectByName(PLAYER_BODY_ROOT_NAME) ?? playerVisual;
   const bounds = new THREE.Box3();
+  const geometryIds = new Set<string>();
+  const materialIds = new Set<string>();
   let bodyTriangleCount = 0;
   let meshesPerPlayer = 0;
+  let minimumBodyY = Number.POSITIVE_INFINITY;
 
   bodyRoot.updateWorldMatrix(true, true);
   bodyRoot.traverse((object) => {
@@ -201,28 +238,44 @@ export function getPlayerBodyVisualSnapshot(playerVisual: THREE.Object3D): Playe
     }
 
     meshesPerPlayer += 1;
+    geometryIds.add(object.geometry.uuid);
+    for (const material of getMaterials(object.material)) {
+      materialIds.add(material.uuid);
+    }
     bodyTriangleCount += countGeometryTriangles(object.geometry);
     unionMeshBounds(bounds, object);
+    minimumBodyY = Math.min(minimumBodyY, new THREE.Box3().setFromObject(object).min.y);
   });
 
   if (bounds.isEmpty()) {
     bounds.set(new THREE.Vector3(), new THREE.Vector3());
   }
 
-  const size = bounds.getSize(new THREE.Vector3());
+  if (!Number.isFinite(minimumBodyY)) {
+    minimumBodyY = 0;
+  }
+
+  const combinedBounds = new THREE.Box3().setFromObject(playerVisual);
+  const helmet = playerVisual.getObjectByName('low-poly-helmet');
+  const helmetBounds = helmet ? new THREE.Box3().setFromObject(helmet) : null;
+  const shoulderPads = playerVisual.getObjectByName(BODY_PART_NAMES.shoulderPads);
+  const shoulderBounds = shoulderPads ? new THREE.Box3().setFromObject(shoulderPads) : null;
 
   return {
-    bodyBounds: {
-      max: vectorToPlain(bounds.max),
-      min: vectorToPlain(bounds.min),
-      size: vectorToPlain(size),
-    },
+    bodyBounds: boundsToPlain(bounds),
     bodyStyle: readBodyStyle(playerVisual),
     bodyTriangleCount,
+    combinedBounds: boundsToPlain(combinedBounds),
+    helmetBounds: helmetBounds ? boundsToPlain(helmetBounds) : null,
+    helmetShoulderVerticalGap:
+      helmetBounds && shoulderBounds ? helmetBounds.min.y - shoulderBounds.max.y : null,
     meshesPerPlayer,
+    minimumBodyY,
     playerId: String(playerVisual.userData.testId ?? playerVisual.name),
     shoulderWidth: PLAYER_BODY_DIMENSIONS.shoulderWidth,
     totalHeight: PLAYER_BODY_DIMENSIONS.totalHeight,
+    uniqueBodyGeometryCount: geometryIds.size,
+    uniqueBodyMaterialCount: materialIds.size,
   };
 }
 
@@ -239,7 +292,7 @@ function createMannequinBodyRoot(
     player,
     debugRoleColors,
   );
-  torso.position.set(0, TORSO_CENTER_Y, 0);
+  torso.position.set(0, PLAYER_BODY_DIMENSIONS.torsoCenterY, 0);
   bodyRoot.add(torso);
 
   const shoulderPads = createBodyMesh(
@@ -249,7 +302,7 @@ function createMannequinBodyRoot(
     player,
     debugRoleColors,
   );
-  shoulderPads.position.set(0, SHOULDER_CENTER_Y, 0);
+  shoulderPads.position.set(0, PLAYER_BODY_DIMENSIONS.shoulderCenterY, 0);
   bodyRoot.add(shoulderPads);
 
   bodyRoot.add(
@@ -259,7 +312,7 @@ function createMannequinBodyRoot(
       BODY_PART_NAMES.leftLegPivot,
       BODY_PART_NAMES.leftLeg,
       BODY_PART_NAMES.leftFoot,
-      -LEG_X,
+      -PLAYER_BODY_DIMENSIONS.legOffsetX,
       player,
       debugRoleColors,
     ),
@@ -267,7 +320,7 @@ function createMannequinBodyRoot(
       BODY_PART_NAMES.rightLegPivot,
       BODY_PART_NAMES.rightLeg,
       BODY_PART_NAMES.rightFoot,
-      LEG_X,
+      PLAYER_BODY_DIMENSIONS.legOffsetX,
       player,
       debugRoleColors,
     ),
@@ -312,7 +365,7 @@ function createArmPivot(
 ): THREE.Group {
   const pivot = new THREE.Group();
   pivot.name = pivotName;
-  pivot.position.set(x, ARM_PIVOT_Y, 0);
+  pivot.position.set(x, PLAYER_BODY_DIMENSIONS.armPivotY, 0);
 
   const arm = createBodyMesh(meshName, sharedGeometry.arm, 'limbs', player, debugRoleColors);
   arm.position.set(0, -PLAYER_BODY_DIMENSIONS.armLength / 2, 0);
@@ -330,14 +383,18 @@ function createLegPivot(
 ): THREE.Group {
   const pivot = new THREE.Group();
   pivot.name = pivotName;
-  pivot.position.set(x, LEG_PIVOT_Y, 0);
+  pivot.position.set(x, PLAYER_BODY_DIMENSIONS.legPivotY, 0);
 
   const leg = createBodyMesh(legName, sharedGeometry.leg, 'pants', player, debugRoleColors);
   leg.position.set(0, LEG_CENTER_Y, 0);
   pivot.add(leg);
 
   const foot = createBodyMesh(footName, sharedGeometry.foot, 'shoes', player, debugRoleColors);
-  foot.position.set(0, FOOT_CENTER_Y - LEG_PIVOT_Y, FOOT_DEPTH * 0.16 * PLAYER_FORWARD_Z);
+  foot.position.set(
+    0,
+    FOOT_CENTER_Y - PLAYER_BODY_DIMENSIONS.legPivotY,
+    PLAYER_BODY_DIMENSIONS.footForwardOffset * PLAYER_FORWARD_Z,
+  );
   pivot.add(foot);
   return pivot;
 }
@@ -345,7 +402,11 @@ function createLegPivot(
 function createHeadAnchor(): THREE.Group {
   const headAnchor = new THREE.Group();
   headAnchor.name = PLAYER_HEAD_ANCHOR_NAME;
-  headAnchor.position.set(0, PLAYER_BODY_DIMENSIONS.helmetOffsetY, 0.08 * PLAYER_FORWARD_Z);
+  headAnchor.position.set(
+    0,
+    PLAYER_BODY_DIMENSIONS.helmetOffsetY,
+    PLAYER_BODY_DIMENSIONS.helmetOffsetZ * PLAYER_FORWARD_Z,
+  );
   return headAnchor;
 }
 
@@ -464,6 +525,10 @@ function countGeometryTriangles(geometry: THREE.BufferGeometry): number {
   return position ? position.count / 3 : 0;
 }
 
+function getMaterials(material: THREE.Material | THREE.Material[]): THREE.Material[] {
+  return Array.isArray(material) ? material : [material];
+}
+
 function unionMeshBounds(bounds: THREE.Box3, mesh: THREE.Mesh): void {
   if (!mesh.geometry.boundingBox) {
     mesh.geometry.computeBoundingBox();
@@ -482,5 +547,14 @@ function vectorToPlain(vector: THREE.Vector3): { x: number; y: number; z: number
     x: vector.x,
     y: vector.y,
     z: vector.z,
+  };
+}
+
+function boundsToPlain(bounds: THREE.Box3): PlayerVisualBoundsSnapshot {
+  return {
+    center: vectorToPlain(bounds.getCenter(new THREE.Vector3())),
+    max: vectorToPlain(bounds.max),
+    min: vectorToPlain(bounds.min),
+    size: vectorToPlain(bounds.getSize(new THREE.Vector3())),
   };
 }

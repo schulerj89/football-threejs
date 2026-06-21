@@ -26,6 +26,10 @@ export class DebugOverlay {
     this.update(0, renderer, player);
   }
 
+  isVisible(): boolean {
+    return !this.element.hidden;
+  }
+
   update(
     deltaSeconds: number,
     renderer: THREE.WebGLRenderer,
@@ -76,8 +80,10 @@ export class DebugOverlay {
         `BODY_H ${playerBody.totalHeight.toFixed(2)}`,
         `SHOULDER_W ${playerBody.shoulderWidth.toFixed(2)}`,
         `BODY_BOUNDS ${formatVector(playerBody.bodyBounds.size)}`,
+        `PLAYER_BOUNDS ${formatVector(playerBody.combinedBounds.size)}`,
         `BODY_TRIS ${playerBody.bodyTriangleCount}`,
         `BODY_MESHES ${playerBody.meshesPerPlayer}`,
+        `BODY_MATS ${playerBody.uniqueBodyMaterialCount}`,
       );
     }
 

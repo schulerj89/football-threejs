@@ -116,16 +116,33 @@ interface CameraSnapshot {
 
 interface PlayerBodyVisualSnapshot {
   bodyBounds: {
+    center: { x: number; y: number; z: number };
     max: { x: number; y: number; z: number };
     min: { x: number; y: number; z: number };
     size: { x: number; y: number; z: number };
   };
   bodyStyle: 'box' | 'mannequin';
   bodyTriangleCount: number;
+  combinedBounds: {
+    center: { x: number; y: number; z: number };
+    max: { x: number; y: number; z: number };
+    min: { x: number; y: number; z: number };
+    size: { x: number; y: number; z: number };
+  };
+  helmetBounds: null | {
+    center: { x: number; y: number; z: number };
+    max: { x: number; y: number; z: number };
+    min: { x: number; y: number; z: number };
+    size: { x: number; y: number; z: number };
+  };
+  helmetShoulderVerticalGap: number | null;
   meshesPerPlayer: number;
+  minimumBodyY: number;
   playerId: string;
   shoulderWidth: number;
   totalHeight: number;
+  uniqueBodyGeometryCount: number;
+  uniqueBodyMaterialCount: number;
 }
 
 test('starts the Three.js graybox field scene', async ({ page }) => {
@@ -182,10 +199,31 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   expect(bodySnapshots).toHaveLength(10);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'mannequin')).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.meshesPerPlayer === 8)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyGeometryCount === 5)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyMaterialCount === 4)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyTriangleCount >= 300)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyTriangleCount <= 700)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyBounds.min.y >= -0.001)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.minimumBodyY >= -0.001)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.helmetBounds !== null)).toBe(true);
+  expect(
+    bodySnapshots.every(
+      (snapshot) =>
+        snapshot.helmetShoulderVerticalGap !== null &&
+        snapshot.helmetShoulderVerticalGap >= -0.03,
+    ),
+  ).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.combinedBounds.size.y <= 2.25)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.totalHeight === 2)).toBe(true);
+  const firstBodyBounds = bodySnapshots[0].bodyBounds.size;
+  expect(
+    bodySnapshots.every(
+      (snapshot) =>
+        Math.abs(snapshot.bodyBounds.size.x - firstBodyBounds.x) < 0.001 &&
+        Math.abs(snapshot.bodyBounds.size.y - firstBodyBounds.y) < 0.001 &&
+        Math.abs(snapshot.bodyBounds.size.z - firstBodyBounds.z) < 0.001,
+    ),
+  ).toBe(true);
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   await expect(page.locator('.debug-overlay')).toContainText('FPS');

@@ -193,7 +193,7 @@ function renderFrame(delta: number): void {
     gameplayModel.player,
     cameraController.getDebugSnapshot(),
     gameplaySnapshot,
-    playerVisuals.has(gameplayModel.player.id)
+    debugOverlay.isVisible() && playerVisuals.has(gameplayModel.player.id)
       ? getPlayerBodyVisualSnapshot(playerVisuals.get(gameplayModel.player.id)!)
       : undefined,
   );

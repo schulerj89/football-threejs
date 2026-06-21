@@ -55,8 +55,72 @@ describe('player visual', () => {
     expect(snapshot.bodyTriangleCount).toBeGreaterThanOrEqual(300);
     expect(snapshot.bodyTriangleCount).toBeLessThanOrEqual(700);
     expect(snapshot.bodyBounds.min.y).toBeGreaterThanOrEqual(-0.001);
-    expect(snapshot.bodyBounds.size.y).toBeGreaterThan(1.8);
+    expect(snapshot.minimumBodyY).toBeGreaterThanOrEqual(-0.001);
+    expect(snapshot.bodyBounds.size.y).toBeGreaterThan(1.45);
     expect(snapshot.bodyBounds.size.y).toBeLessThanOrEqual(PLAYER_BODY_DIMENSIONS.totalHeight);
+    expect(snapshot.uniqueBodyGeometryCount).toBe(5);
+    expect(snapshot.uniqueBodyMaterialCount).toBe(4);
+  });
+
+  it('mirrors left and right limbs and keeps both feet on the field surface', () => {
+    const player = createPlayerModel(undefined, {
+      id: 'symmetry-player',
+      role: 'runner',
+      team: 'offense',
+    });
+    const playerVisual = createPlaceholderPlayerVisual(player);
+
+    syncPlayerVisual(playerVisual, player);
+
+    const leftArmPivot = getGroup(playerVisual, 'leftArmPivot');
+    const rightArmPivot = getGroup(playerVisual, 'rightArmPivot');
+    const leftLegPivot = getGroup(playerVisual, 'leftLegPivot');
+    const rightLegPivot = getGroup(playerVisual, 'rightLegPivot');
+    const leftArmBounds = getObjectBounds(playerVisual, 'leftArm');
+    const rightArmBounds = getObjectBounds(playerVisual, 'rightArm');
+    const leftLegBounds = getObjectBounds(playerVisual, 'leftLeg');
+    const rightLegBounds = getObjectBounds(playerVisual, 'rightLeg');
+    const leftFootBounds = getObjectBounds(playerVisual, 'leftFoot');
+    const rightFootBounds = getObjectBounds(playerVisual, 'rightFoot');
+
+    expect(leftArmPivot.position.x).toBeCloseTo(-rightArmPivot.position.x);
+    expect(leftLegPivot.position.x).toBeCloseTo(-rightLegPivot.position.x);
+    expect(leftArmBounds.size.x).toBeCloseTo(rightArmBounds.size.x);
+    expect(leftArmBounds.size.y).toBeCloseTo(rightArmBounds.size.y);
+    expect(leftArmBounds.size.z).toBeCloseTo(rightArmBounds.size.z);
+    expect(leftLegBounds.size.x).toBeCloseTo(rightLegBounds.size.x);
+    expect(leftLegBounds.size.y).toBeCloseTo(rightLegBounds.size.y);
+    expect(leftLegBounds.size.z).toBeCloseTo(rightLegBounds.size.z);
+    expect(leftFootBounds.min.y).toBeCloseTo(0);
+    expect(rightFootBounds.min.y).toBeCloseTo(0);
+  });
+
+  it('keeps every mannequin role at the same measured dimensions', () => {
+    const players = [
+      createPlayerModel(undefined, { id: 'runner-a', role: 'runner', team: 'offense' }),
+      createPlayerModel(undefined, { id: 'blocker-a', role: 'blocker', team: 'offense' }),
+      createPlayerModel(undefined, { id: 'receiver-a', role: 'receiver', team: 'offense' }),
+      createPlayerModel(undefined, { id: 'defender-a', role: 'defender', team: 'defense' }),
+      createPlayerModel(undefined, {
+        id: 'coverage-a',
+        role: 'coverageDefender',
+        team: 'defense',
+      }),
+    ];
+    const snapshots = players.map((player) => {
+      const playerVisual = createPlaceholderPlayerVisual(player);
+      syncPlayerVisual(playerVisual, player);
+      return getPlayerBodyVisualSnapshot(playerVisual);
+    });
+    const first = snapshots[0];
+
+    for (const snapshot of snapshots) {
+      expect(snapshot.bodyBounds.size.x).toBeCloseTo(first.bodyBounds.size.x);
+      expect(snapshot.bodyBounds.size.y).toBeCloseTo(first.bodyBounds.size.y);
+      expect(snapshot.bodyBounds.size.z).toBeCloseTo(first.bodyBounds.size.z);
+      expect(snapshot.meshesPerPlayer).toBe(first.meshesPerPlayer);
+      expect(snapshot.bodyTriangleCount).toBe(first.bodyTriangleCount);
+    }
   });
 
   it('shares primitive body geometry across players', () => {
@@ -141,4 +205,32 @@ function getMeshColorHex(playerVisual: THREE.Object3D, meshName: string): number
   }
 
   return mesh.material.color.getHex();
+}
+
+function getGroup(playerVisual: THREE.Object3D, groupName: string): THREE.Group {
+  const group = playerVisual.getObjectByName(groupName);
+
+  if (!(group instanceof THREE.Group)) {
+    throw new Error(`Missing group ${groupName}`);
+  }
+
+  return group;
+}
+
+function getObjectBounds(playerVisual: THREE.Object3D, objectName: string): {
+  min: THREE.Vector3;
+  size: THREE.Vector3;
+} {
+  const object = playerVisual.getObjectByName(objectName);
+
+  if (!object) {
+    throw new Error(`Missing object ${objectName}`);
+  }
+
+  playerVisual.updateWorldMatrix(true, true);
+  const box = new THREE.Box3().setFromObject(object);
+  return {
+    min: box.min,
+    size: box.getSize(new THREE.Vector3()),
+  };
 }

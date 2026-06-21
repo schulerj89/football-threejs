@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.1] - 2026-06-21
+
+### Fixed
+
+- Calibrated the procedural low-poly player mannequin proportions by lowering and narrowing the shoulder/body stack, centering the head anchor, and reducing helmet scale through shared visual configuration.
+- Fixed helmet placement so the helmet no longer intersects the shoulder pads while preserving the existing GLB load-once, clone, and team-material tinting path.
+- Kept mannequin feet at field level and expanded validation for equal player bounds, mirrored limbs, body ground clearance, helmet bounds, body materials, and body geometry sharing.
+- Avoided per-frame body `Box3` measurement work when the debug overlay is hidden.
+
+### Changed
+
+- Expanded player-body debug measurements to include combined helmet/body bounds, helmet bounds, helmet-to-shoulder gap, minimum body Y, unique body geometry count, and unique body material count.
+
 ## [0.21.0] - 2026-06-21
 
 ### Added

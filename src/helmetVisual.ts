@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import helmetUrl from '../low_poly_helmet.glb?url';
 import type { PlayerModel, PlayerTeam } from './playerModel';
-import { PLAYER_HEAD_ANCHOR_NAME } from './playerVisual';
+import { PLAYER_BODY_DIMENSIONS, PLAYER_HEAD_ANCHOR_NAME } from './playerVisual';
 
 type HelmetAssetStatus = 'idle' | 'loading' | 'loaded' | 'error';
 type HelmetPart = 'faceguard' | 'shell';
@@ -34,7 +34,11 @@ export const HELMET_VISUAL_CONFIG = {
   helmetOffset: {
     position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
-    scale: { x: 0.62, y: 0.62, z: 0.62 },
+    scale: {
+      x: PLAYER_BODY_DIMENSIONS.helmetScale,
+      y: PLAYER_BODY_DIMENSIONS.helmetScale,
+      z: PLAYER_BODY_DIMENSIONS.helmetScale,
+    },
   },
   shellMeshNames: ['helmet_shell', 'helmet-shell', 'shell', 'helmet', 'mesh1.0'],
   teamColors: {
