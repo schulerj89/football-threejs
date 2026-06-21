@@ -122,6 +122,7 @@ describe('game experience settings', () => {
       crowdDensity: 'high',
       crowdVisualsEnabled: true,
       gameplayCamera: 'cinematic',
+      gameMode: 'scoreAttack',
       playbookId: '5v5',
       preset: 'performance',
       stadiumEnabled: false,
@@ -133,6 +134,7 @@ describe('game experience settings', () => {
       crowdDensity: 'high',
       crowdVisualsEnabled: true,
       gameplayCamera: 'cinematic',
+      gameMode: 'scoreAttack',
       playbookId: '5v5',
       stadiumEnabled: false,
     });
@@ -163,10 +165,12 @@ describe('game experience settings', () => {
     });
 
     expect(resolved.settings).toMatchObject({
+      gameMode: 'scoreAttack',
       playbookId: '7v7',
       preset: 'broadcast',
     });
     expect(resolved.queryOverrides).toEqual({
+      gameMode: 'scoreAttack',
       playbookId: '7v7',
     });
   });

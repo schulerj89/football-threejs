@@ -747,17 +747,61 @@ interface GameExperienceSettingsSnapshot {
   crowdVisualsEnabled: boolean;
   debugToolsEnabled: boolean;
   gameplayCamera: 'cinematic' | 'offense' | 'tactical';
+  gameMode: 'exhibition' | 'scoreAttack';
   masterVolume: number;
+  matchDifficulty: 'allPro' | 'pro' | 'rookie';
   muted: boolean;
   officialsDebugLabels: boolean;
   officialsEnabled: boolean;
   playerMotionEnabled: boolean;
   playbookId: '11v11' | '5v5' | '7v7';
   preset: 'broadcast' | 'custom' | 'performance';
+  quarterLengthSeconds: number;
   qualityMode: 'adaptive60' | 'lockedBroadcast' | 'lockedPerformance';
   routeArtEnabled: boolean;
   selectedReceiverLabelEnabled: boolean;
   stadiumEnabled: boolean;
+}
+
+interface MatchSnapshot {
+  canContinue: boolean;
+  canPunt: boolean;
+  canRematch: boolean;
+  clock: {
+    quarterDurationSeconds: number;
+    remainingSeconds: number;
+    running: boolean;
+  };
+  currentFieldPosition: FootballSpot;
+  deterministicSeed: number;
+  driveNumber: number;
+  gameOverReason: 'clockExpired' | null;
+  openingPossession: 'opponent' | 'user';
+  opponentScore: number;
+  phase:
+    | 'gameOver'
+    | 'halftime'
+    | 'opponentDriveSimulation'
+    | 'pregame'
+    | 'quarterBreak'
+    | 'userPossession';
+  possession: 'opponent' | 'user';
+  previousDriveSummary: null | {
+    id: string;
+    possession: 'opponent' | 'user';
+    result:
+      | 'endOfGame'
+      | 'endOfHalf'
+      | 'fieldGoal'
+      | 'punt'
+      | 'touchdown'
+      | 'turnover'
+      | 'turnoverOnDowns';
+  };
+  quarter: number;
+  secondHalfPossession: 'opponent' | 'user';
+  userScore: number;
+  winner: 'opponent' | 'tie' | 'user' | null;
 }
 
 interface StadiumSnapshot {
@@ -844,14 +888,26 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   await page.setViewportSize({ width: 1440, height: 900 });
 
   const initial = await getGameplaySnapshot(page);
+  const initialMatch = await getMatchSnapshot(page);
+  expect(initialMatch).toMatchObject({
+    clock: {
+      remainingSeconds: 180,
+      running: false,
+    },
+    phase: 'pregame',
+    userScore: 0,
+    opponentScore: 0,
+  });
   await page.waitForTimeout(500);
   const afterDelay = await getGameplaySnapshot(page);
+  const matchAfterDelay = await getMatchSnapshot(page);
   expect(afterDelay.playState).toBe('preSnap');
   expect(afterDelay.scoreAttack).toMatchObject({
     remainingSeconds: 120,
     state: 'ready',
   });
   expect(afterDelay.player.position).toEqual(initial.player.position);
+  expect(matchAfterDelay?.phase).toBe('pregame');
 
   await page.getByRole('button', { name: 'Start Game' }).focus();
   await page.keyboard.press('Enter');
@@ -871,6 +927,15 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
     },
   });
   expect(started.players).toHaveLength(22);
+  await expect.poll(() => getMatchSnapshot(page)).toMatchObject({
+    clock: {
+      remainingSeconds: 180,
+      running: false,
+    },
+    phase: 'userPossession',
+    possession: 'user',
+    quarter: 1,
+  });
   expect(started.selectedPlay).toMatchObject({
     displayName: 'Inside Zone 11',
     id: 'inside-zone-11',
@@ -879,8 +944,11 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
     cinematics: 'brief',
     crowdVisualsEnabled: true,
     gameplayCamera: 'offense',
+    gameMode: 'exhibition',
+    matchDifficulty: 'pro',
     officialsEnabled: true,
     preset: 'broadcast',
+    quarterLengthSeconds: 180,
     stadiumEnabled: true,
   });
   const stadium = await getStadiumSnapshot(page);
@@ -987,11 +1055,14 @@ test('exposes adaptive quality debug state without gameplay mutation', async ({ 
 test('selects the 5v5 legacy development mode from the title screen', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
-  await page.getByLabel('Game mode').selectOption('5v5');
+  await page.locator('.title-screen').getByLabel('Game mode').selectOption('scoreAttack');
+  await page.locator('.title-screen').getByLabel('Regression playbook').selectOption('5v5');
   await page.getByRole('button', { name: 'Start Game' }).click();
 
   await expect(page.locator('.title-screen')).toBeHidden();
   const gameplay = await getGameplaySnapshot(page);
+  const experience = await getGameExperienceSnapshot(page);
+  expect(experience.finalSettings.gameMode).toBe('scoreAttack');
   expect(gameplay.playbookId).toBe('5v5');
   expect(gameplay.players).toHaveLength(10);
   expect(gameplay.selectedPlay.displayName).toBe('Inside Run');
@@ -1002,13 +1073,15 @@ test('persists title-screen settings across reloads', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.locator('.title-screen').getByLabel('Presentation preset').selectOption('performance');
-  await page.locator('.title-screen').getByLabel('Game mode').selectOption('5v5');
+  await page.locator('.title-screen').getByLabel('Game mode').selectOption('scoreAttack');
+  await page.locator('.title-screen').getByLabel('Regression playbook').selectOption('5v5');
 
   await page.reload();
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.title-screen')).toBeVisible();
   await expect(page.locator('.title-screen').getByLabel('Presentation preset')).toHaveValue('performance');
-  await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveValue('5v5');
+  await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveValue('scoreAttack');
+  await expect(page.locator('.title-screen').getByLabel('Regression playbook')).toHaveValue('5v5');
 });
 
 test('toggles runtime debug tools with F1 and persists the title-screen debug setting', async ({ page }) => {
@@ -1245,7 +1318,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     customSettings: null,
     preset: 'broadcast',
     settings: null,
-    version: 5,
+    version: 6,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({
@@ -1268,11 +1341,14 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     crowdReactionsEnabled: true,
     crowdVisualsEnabled: true,
     gameplayCamera: 'offense',
+    gameMode: 'exhibition',
     officialsDebugLabels: false,
     officialsEnabled: true,
+    matchDifficulty: 'pro',
     playerMotionEnabled: true,
     playbookId: '11v11',
     preset: 'broadcast',
+    quarterLengthSeconds: 180,
     routeArtEnabled: true,
     selectedReceiverLabelEnabled: false,
     stadiumEnabled: true,
@@ -3308,6 +3384,24 @@ async function getGameExperienceSnapshot(page: Page): Promise<GameExperienceSnap
     }
 
     return debugApi.getGameExperienceSnapshot();
+  });
+}
+
+async function getMatchSnapshot(page: Page): Promise<MatchSnapshot | null> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getMatchSnapshot: () => MatchSnapshot | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getMatchSnapshot();
   });
 }
 

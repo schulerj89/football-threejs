@@ -4,6 +4,7 @@ import { getHelmetAssetSnapshot } from '../helmetVisual';
 import { snapshotFormationPreviewModel } from '../formationPreview';
 import type { FormationPreviewSnapshot } from '../formationPreview';
 import type { ResolvedGameExperienceSettings } from '../config/GameExperienceSettings';
+import type { MatchSnapshot } from '../match/MatchTypes';
 import {
   resetPlay,
   snapshotGameplayModel,
@@ -65,6 +66,7 @@ import type { SceneRuntime } from './SceneRuntime';
 
 export interface ApplicationDiagnosticsOptions {
   getGameExperience: () => ResolvedGameExperienceSettings;
+  getMatchSnapshot: () => MatchSnapshot | null;
   getCrowdCapacityBenchmarkSnapshot: () => CrowdCapacityBenchmarkSnapshot;
   isCrowdPresentationDebugEnabled: () => boolean;
   getMemoryProfileSnapshot: () => SceneResourceProfileSnapshot;
@@ -279,6 +281,7 @@ export class ApplicationDiagnostics {
           ? snapshotFormationPreviewModel(this.options.gameplay.formationPreviewModel)
           : null,
       getGameExperienceSnapshot: () => this.options.presentation.getGameExperienceSnapshot(),
+      getMatchSnapshot: () => this.options.getMatchSnapshot(),
       getGameplaySnapshot: () =>
         this.options.gameplay.getActivePresentationSnapshot(
           !!this.options.presentation.crowdPreviewController,

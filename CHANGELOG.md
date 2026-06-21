@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] - 2026-06-21
+
+### Added
+
+- Added the offense-only Exhibition game shell with teams, four configurable quarters, deterministic opening and second-half possession, match clock, score, drive number, current field position, previous drive summary, halftime, final score, rematch, and return-to-title flow.
+- Added a deterministic opponent-drive simulator that resolves opponent possessions into broadcast-style summaries for punts, field goals, touchdowns, turnovers, turnover on downs, end of half, and end of game without running real-time defensive gameplay.
+- Added user-drive match handling for touchdowns with separate automatic extra-point events, turnover on downs, abstract pre-snap punts, quarter-expiration handling, and score/clock updates.
+- Added Exhibition UI surfaces: compact match scorebug, pre-snap Punt button, opponent-drive summary panel, quarter/halftime transition panel, and game-over summary panel.
+
+### Changed
+
+- Made `Exhibition - Offense Only` the normal title-screen game mode and preserved the previous two-minute score attack as `Development Score Attack`.
+- Extended the persisted settings schema to version 6 with game mode, match difficulty, and quarter length settings.
+- Kept direct 5v5 and 7v7 regression playbook links in score-attack mode unless Exhibition is explicitly requested.
+- Hid the legacy score-attack score/clock chrome during Exhibition so the match scorebug is authoritative.
+- Updated README and AGENTS to describe the offense-only Exhibition shell, simulated opponent possessions, and Score Attack as a regression harness.
+
+### Tests
+
+- Added deterministic match-model and match-flow coverage for pregame startup, possession selection, quarter progression, opponent-drive determinism, opponent scoring, user touchdowns, turnover on downs, punt flow, live-play clock expiration, rematch reset, and score-attack regression mode.
+- Updated browser smoke coverage for title/start match flow, Exhibition settings readback, regression playbook setup, schema migration, and match debug readback.
+
 ## [0.53.0] - 2026-06-21
 
 ### Added

@@ -41,6 +41,12 @@ import {
 import type { QualityDebugSnapshot } from '../ui/PerformanceSettingsPanel';
 import type { CrowdDensity } from '../presentation/CrowdPresentationController';
 import { resolveTeamPresentationTheme } from '../teams/TeamThemeApplier';
+import type { GameplayModel, GameplaySnapshot } from '../playState';
+import { MatchFlowController } from '../match/MatchFlowController';
+import type { MatchSnapshot } from '../match/MatchTypes';
+import { MatchScorebug } from '../ui/MatchScorebug';
+import { OpponentDriveSummaryPanel } from '../ui/OpponentDriveSummary';
+import { QuarterTransitionPanel } from '../ui/QuarterTransition';
 
 export interface FootballApplicationOptions {
   mount: HTMLDivElement;
@@ -58,6 +64,10 @@ export class FootballApplication {
   private readonly developmentTools: DevelopmentToolsRuntime;
   private readonly performanceProfiler: FramePerformanceProfiler;
   private readonly performanceScenarioRunner: PerformanceScenarioRunner | null;
+  private matchController: MatchFlowController;
+  private readonly matchScorebug: MatchScorebug;
+  private readonly opponentDriveSummary: OpponentDriveSummaryPanel;
+  private readonly quarterTransitionPanel: QuarterTransitionPanel;
   private readonly qualityController: AdaptiveQualityController;
   private readonly runtimePerformanceMonitor = new RuntimePerformanceMonitor();
   private readonly sceneResourceProfiler: SceneResourceProfiler;
@@ -72,10 +82,15 @@ export class FootballApplication {
   constructor({ mount, searchParams = new URLSearchParams(window.location.search) }: FootballApplicationOptions) {
     this.searchParams = searchParams;
     this.gameExperience = resolveGameExperienceSettings({ searchParams });
+    this.matchController = this.createMatchController();
     this.performanceProfiler = FramePerformanceProfiler.createFromSearchParams(searchParams);
     this.qualityController = new AdaptiveQualityController(this.gameExperience.settings.qualityMode);
     this.gameplay = new GameplayRuntime({
+      canPunt: (snapshot) => this.canPunt(snapshot),
+      canStartPlay: (snapshot) => this.canStartPlay(snapshot),
       consumeSelectedPlayId: () => this.presentation.consumeSelectedPlayId(),
+      gameMode: this.gameExperience.settings.gameMode,
+      onPunt: (gameplay, snapshot) => this.handlePunt(gameplay, snapshot),
       playbookId: this.gameExperience.settings.playbookId,
       searchParams,
       shouldHoldDeadPlayReset: () => this.presentation.shouldHoldDeadPlayReset(),
@@ -130,6 +145,7 @@ export class FootballApplication {
       gameplay: this.gameplay,
       getCrowdCapacityBenchmarkSnapshot: () => this.crowdCapacityBenchmark.getSnapshot(),
       getGameExperience: () => this.gameExperience,
+      getMatchSnapshot: () => this.getMatchSnapshot(),
       getMemoryProfileSnapshot: () => this.createMemoryProfileSnapshot(),
       isCrowdPresentationDebugEnabled: () => this.isCrowdPresentationDebugEnabled(),
       playerVisuals: this.playerVisuals,
@@ -149,11 +165,29 @@ export class FootballApplication {
       searchParams,
       createTitleLoadingState: () => this.diagnostics.createTitleLoadingState(),
       onPauseSettingsChange: (settings) => this.handlePauseSettingsChange(settings),
-      onReturnToTitle: () => this.lifecycle.returnToTitleScreen(),
+      onReturnToTitle: () => this.returnToTitleScreen(),
       onStart: () => this.startGameFromTitle(),
       onTitleSettingsChange: (settings) => this.applyExperienceSettings(settings, { persist: true }),
       syncChrome: (phase) => this.presentation.syncApplicationChrome(phase),
     });
+    this.matchScorebug = new MatchScorebug({
+      onPunt: () =>
+        this.handlePunt(
+          this.gameplay.gameplayModel,
+          this.gameplay.getActiveGameplaySnapshot(false),
+        ),
+    });
+    this.opponentDriveSummary = new OpponentDriveSummaryPanel({
+      onContinue: () => this.continueMatchTransition(),
+    });
+    this.quarterTransitionPanel = new QuarterTransitionPanel({
+      onContinue: () => this.continueMatchTransition(),
+      onRematch: () => this.rematch(),
+      onReturnToTitle: () => this.returnToTitleScreen(),
+    });
+    if (this.lifecycle.phase === 'gameplay' && this.isExhibitionMatchActive()) {
+      this.matchController.start(this.gameplay.gameplayModel);
+    }
     this.developmentTools = new DevelopmentToolsRuntime({
       activePlayer: () => this.gameplay.getActivePrimaryPlayer(),
       appearanceAuditEnabled: searchParams.has('appearanceAudit'),
@@ -197,6 +231,7 @@ export class FootballApplication {
       sevenAuditEnabled: searchParams.has('sevenAudit'),
     });
     document.addEventListener('visibilitychange', this.syncAudioPageActivity);
+    window.addEventListener('keydown', this.handleMatchTransitionKeyDown);
     window.addEventListener('blur', this.syncAudioPageActivity);
     window.addEventListener('focus', this.syncAudioPageActivity);
     this.loop = new GameLoop({
@@ -215,12 +250,16 @@ export class FootballApplication {
   dispose(): void {
     this.loop.dispose();
     document.removeEventListener('visibilitychange', this.syncAudioPageActivity);
+    window.removeEventListener('keydown', this.handleMatchTransitionKeyDown);
     window.removeEventListener('blur', this.syncAudioPageActivity);
     window.removeEventListener('focus', this.syncAudioPageActivity);
     this.removeSceneResizeHandler();
     this.crowdCapacityBenchmark.dispose();
     this.developmentTools.dispose();
     this.lifecycle.dispose();
+    this.matchScorebug.dispose();
+    this.opponentDriveSummary.dispose();
+    this.quarterTransitionPanel.dispose();
     this.gameplay.dispose();
     this.playerVisuals.dispose();
     this.presentation.dispose();
@@ -252,14 +291,22 @@ export class FootballApplication {
     }
 
     const pauseSettingsVisible = this.lifecycle.isPauseSettingsVisible();
+    const matchActive = this.isExhibitionMatchActive();
+    const matchSnapshotBefore = this.getMatchSnapshot();
     const gameplayActive =
-      this.lifecycle.phase === 'gameplay' && !pauseSettingsVisible;
+      this.lifecycle.phase === 'gameplay' &&
+      !pauseSettingsVisible &&
+      (!matchActive || matchSnapshotBefore?.phase === 'userPossession');
     const presentationDelta = pauseSettingsVisible ? 0 : delta;
     this.gameplay.update(delta, gameplayActive, this.performanceProfiler);
     if (gameplayActive) {
       this.performanceScenarioRunner?.update(delta);
     }
     const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
+    if (matchActive && this.lifecycle.phase === 'gameplay' && !pauseSettingsVisible) {
+      this.matchController.update(delta, this.gameplay.gameplayModel, gameplaySnapshot);
+    }
+    const matchSnapshot = this.getMatchSnapshot();
     this.updateAdaptiveQuality(delta, gameplaySnapshot);
     if (this.performanceProfiler.enabled) {
       this.performanceProfiler.measure('stadiumUpdate', () => {
@@ -318,6 +365,7 @@ export class FootballApplication {
       this.lifecycle.syncTitleLoadingState();
       this.lifecycle.syncChrome();
     }
+    this.syncMatchUi(gameplaySnapshot, matchSnapshot);
     this.markFirstFrameReady();
   }
 
@@ -406,7 +454,14 @@ export class FootballApplication {
   private startGameFromTitle(): void {
     const selectedSettings = this.lifecycle.getTitleSettings(this.gameExperience.settings);
     this.applyExperienceSettings(selectedSettings, { persist: true });
-    this.gameplay.startFromTitle(this.gameExperience.settings.playbookId);
+    this.gameplay.startFromTitle(
+      this.gameExperience.settings.playbookId,
+      this.gameExperience.settings.gameMode,
+    );
+    this.matchController = this.createMatchController();
+    if (this.gameExperience.settings.gameMode === 'exhibition') {
+      this.matchController.start(this.gameplay.gameplayModel);
+    }
     this.syncAfterGameplayRebuild();
     this.lifecycle.startGameplay();
     void this.presentation.audioMixer.unlockFromUserGesture();
@@ -425,6 +480,7 @@ export class FootballApplication {
     options: { persist?: boolean } = {},
   ): void {
     const previousPlaybookId = this.gameExperience.settings.playbookId;
+    const previousGameMode = this.gameExperience.settings.gameMode;
     if (options.persist ?? true) {
       saveGameExperienceSettings(settings);
     }
@@ -437,14 +493,27 @@ export class FootballApplication {
     this.sceneRuntime.applyTeamTheme(teamTheme);
     this.playerVisuals.setTeamUniforms(teamTheme.uniforms);
     this.presentation.applyExperience(this.gameExperience);
+    if (
+      previousGameMode !== this.gameExperience.settings.gameMode ||
+      previousPlaybookId !== this.gameExperience.settings.playbookId
+    ) {
+      this.matchController = this.createMatchController();
+    }
     this.developmentTools.setDebugToolsEnabled(this.gameExperience.settings.debugToolsEnabled);
     this.qualityController.setMode(
       this.gameExperience.settings.qualityMode,
       this.createQualityTransitionContext(),
     );
     this.applyCurrentQualityProfile();
-    if (previousPlaybookId !== this.gameExperience.settings.playbookId) {
-      this.gameplay.rebuildForPlaybook(this.gameExperience.settings.playbookId);
+    if (
+      previousPlaybookId !== this.gameExperience.settings.playbookId ||
+      previousGameMode !== this.gameExperience.settings.gameMode
+    ) {
+      this.gameplay.rebuildForPlaybook(
+        this.gameExperience.settings.playbookId,
+        previousGameMode !== this.gameExperience.settings.gameMode,
+        this.gameExperience.settings.gameMode,
+      );
       this.syncAfterGameplayRebuild();
     }
     this.lifecycle.setSettings(this.gameExperience.settings);
@@ -457,6 +526,84 @@ export class FootballApplication {
     this.playerVisuals.reconcile(this.getActivePlayers());
     this.presentation.syncBall(this.gameplay.gameplayModel.ball);
     this.presentation.resetCameraPresentation();
+  }
+
+  private createMatchController(): MatchFlowController {
+    const settings = this.gameExperience.settings;
+    return new MatchFlowController({
+      difficulty: settings.matchDifficulty,
+      opponentTeamId: settings.teamProfiles.opponentTeamId,
+      quarterDurationSeconds: settings.quarterLengthSeconds,
+      userTeamId: settings.teamProfiles.userTeamId,
+    });
+  }
+
+  private isExhibitionMatchActive(): boolean {
+    return this.gameExperience.settings.gameMode === 'exhibition' &&
+      !this.presentation.crowdPreviewController &&
+      !this.gameplay.formationPreviewModel;
+  }
+
+  private getMatchSnapshot(): MatchSnapshot | null {
+    return this.isExhibitionMatchActive() ? this.matchController.getSnapshot() : null;
+  }
+
+  private canStartPlay(snapshot: GameplaySnapshot): boolean {
+    if (!this.isExhibitionMatchActive()) {
+      return true;
+    }
+
+    return this.matchController.canStartPlay(snapshot);
+  }
+
+  private canPunt(snapshot: GameplaySnapshot): boolean {
+    return this.isExhibitionMatchActive() && this.matchController.canPunt(snapshot);
+  }
+
+  private handlePunt(gameplay: GameplayModel, snapshot: GameplaySnapshot): boolean {
+    if (!this.isExhibitionMatchActive()) {
+      return false;
+    }
+
+    this.presentation.skipPresentation();
+    return this.matchController.punt(gameplay, snapshot);
+  }
+
+  private continueMatchTransition(): void {
+    if (!this.isExhibitionMatchActive()) {
+      return;
+    }
+
+    this.matchController.continue(this.gameplay.gameplayModel);
+    this.syncAfterGameplayRebuild();
+  }
+
+  private rematch(): void {
+    if (!this.isExhibitionMatchActive()) {
+      return;
+    }
+
+    this.matchController.rematch(this.gameplay.gameplayModel);
+    this.syncAfterGameplayRebuild();
+    this.lifecycle.startGameplay();
+  }
+
+  private returnToTitleScreen(): void {
+    this.matchScorebug.sync(null, null, false);
+    this.opponentDriveSummary.sync(null, false);
+    this.quarterTransitionPanel.sync(null, false);
+    this.lifecycle.returnToTitleScreen();
+  }
+
+  private syncMatchUi(
+    gameplaySnapshot: GameplaySnapshot,
+    matchSnapshot: MatchSnapshot | null,
+  ): void {
+    const visible = this.lifecycle.phase === 'gameplay' && this.isExhibitionMatchActive();
+    this.matchScorebug.sync(matchSnapshot, gameplaySnapshot, visible);
+    this.opponentDriveSummary.sync(matchSnapshot, visible);
+    this.quarterTransitionPanel.sync(matchSnapshot, visible);
+    document.body.dataset.gameMode = this.gameExperience.settings.gameMode;
   }
 
   private getActivePlayers() {
@@ -502,6 +649,31 @@ export class FootballApplication {
     this.presentation.setPageActive(!document.hidden && document.hasFocus());
     if (document.hidden) {
       this.runtimePerformanceMonitor.reset('hidden-tab');
+    }
+  };
+
+  private readonly handleMatchTransitionKeyDown = (event: KeyboardEvent): void => {
+    if (
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.key !== 'Enter' ||
+      !this.isExhibitionMatchActive() ||
+      this.lifecycle.phase !== 'gameplay'
+    ) {
+      return;
+    }
+
+    const phase = this.matchController.getSnapshot().phase;
+    if (phase === 'gameOver') {
+      this.rematch();
+      event.preventDefault();
+      return;
+    }
+
+    if (phase === 'opponentDriveSimulation' || phase === 'quarterBreak' || phase === 'halftime') {
+      this.continueMatchTransition();
+      event.preventDefault();
     }
   };
 

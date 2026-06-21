@@ -28,7 +28,11 @@ import type { PlayerModel } from '../playerModel';
 import type { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
 
 export interface GameplayRuntimeOptions {
+  canPunt?: (snapshot: GameplaySnapshot) => boolean;
+  canStartPlay?: (snapshot: GameplaySnapshot) => boolean;
   consumeSelectedPlayId: () => string | null;
+  gameMode?: GameExperienceSettings['gameMode'];
+  onPunt?: (gameplay: GameplayModel, snapshot: GameplaySnapshot) => boolean;
   playbookId: GameExperienceSettings['playbookId'];
   searchParams: URLSearchParams;
   shouldHoldDeadPlayReset: () => boolean;
@@ -39,6 +43,7 @@ export class GameplayRuntime {
   readonly formationPreviewModel: FormationPreviewModel | null;
   private readonly keyboardInput = new KeyboardMovementInput(window);
   private readonly searchParams: URLSearchParams;
+  private gameMode: GameExperienceSettings['gameMode'];
   private playControls: KeyboardPlayControls;
   private presentationAuditState: PresentationAuditState;
 
@@ -46,10 +51,14 @@ export class GameplayRuntime {
 
   constructor(private readonly options: GameplayRuntimeOptions) {
     this.searchParams = options.searchParams;
+    this.gameMode = options.gameMode ?? 'scoreAttack';
     this.presentationAuditState = resolvePresentationAuditState(
       options.searchParams.get('presentationState'),
     );
-    this.gameplayModel = createGameplayModel({ playbookId: options.playbookId });
+    this.gameplayModel = createGameplayModel({
+      challengeMode: options.gameMode === 'exhibition' ? 'exhibition' : 'scoreAttack',
+      playbookId: options.playbookId,
+    });
     const formationPreviewMode = resolveFormationPreviewMode(
       options.searchParams.get('formationPreview'),
     );
@@ -137,12 +146,22 @@ export class GameplayRuntime {
   rebuildForPlaybook(
     nextPlaybookId: GameExperienceSettings['playbookId'],
     force = false,
+    gameMode: GameExperienceSettings['gameMode'] = this.gameMode,
   ): boolean {
-    if (!force && this.gameplayModel.playbookId === nextPlaybookId) {
+    const nextChallengeMode = gameMode === 'exhibition' ? 'exhibition' : 'scoreAttack';
+    if (
+      !force &&
+      this.gameplayModel.playbookId === nextPlaybookId &&
+      this.gameplayModel.challengeMode === nextChallengeMode
+    ) {
       return false;
     }
 
-    this.gameplayModel = createGameplayModel({ playbookId: nextPlaybookId });
+    this.gameMode = gameMode;
+    this.gameplayModel = createGameplayModel({
+      challengeMode: nextChallengeMode,
+      playbookId: nextPlaybookId,
+    });
     this.playControls.dispose();
     this.playControls = this.createPlayControls();
     return true;
@@ -180,8 +199,11 @@ export class GameplayRuntime {
     return createPresentationAuditGameplaySnapshot(snapshot, this.presentationAuditState);
   }
 
-  startFromTitle(playbookId: GameExperienceSettings['playbookId']): void {
-    this.rebuildForPlaybook(playbookId, true);
+  startFromTitle(
+    playbookId: GameExperienceSettings['playbookId'],
+    gameMode: GameExperienceSettings['gameMode'],
+  ): void {
+    this.rebuildForPlaybook(playbookId, true, gameMode);
   }
 
   handleFormationPreviewLaneControls(event: KeyboardEvent, resetCamera: () => void): void {
@@ -234,8 +256,14 @@ export class GameplayRuntime {
     if (requests.startPlay || requests.resetPlay || requests.restartChallenge) {
       this.options.skipPresentation();
     }
+    const snapshot = snapshotGameplayModel(this.gameplayModel);
+
     if (requests.restartChallenge) {
       restartScoreAttack(this.gameplayModel);
+      return;
+    }
+    if (requests.punt && this.options.canPunt?.(snapshot)) {
+      this.options.onPunt?.(this.gameplayModel, snapshot);
       return;
     }
     if (requests.resetPlay) {
@@ -259,7 +287,7 @@ export class GameplayRuntime {
         attemptPass(this.gameplayModel);
       }
     }
-    if (requests.startPlay) {
+    if (requests.startPlay && (this.options.canStartPlay?.(snapshot) ?? true)) {
       startPlay(this.gameplayModel);
     }
   }

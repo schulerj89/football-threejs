@@ -32,6 +32,63 @@ canvas {
   pointer-events: none;
 }
 
+.match-scorebug {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  z-index: 13;
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  gap: 8px;
+  align-items: center;
+  max-width: calc(100vw - 24px);
+  transform: translateX(-50%);
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(5, 9, 12, 0.86);
+  color: #f5f8f4;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  pointer-events: auto;
+}
+
+.match-scorebug[hidden] {
+  display: none;
+}
+
+.match-scorebug-teams,
+.match-scorebug-clock,
+.match-scorebug-context {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.match-scorebug-clock {
+  color: #f2d94b;
+}
+
+.match-punt-button {
+  min-width: 54px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 5px;
+  background: #edf3ea;
+  color: #101512;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.match-punt-button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
 .play-call-ui {
   position: fixed;
   left: 12px;
@@ -189,6 +246,11 @@ canvas {
   border-color: color-mix(in srgb, var(--scorebug-accent, #f2d94b) 55%, transparent);
   background: var(--scorebug-user-bg, rgba(8, 12, 14, 0.72));
   color: var(--scorebug-user-text, #f3f5f6);
+}
+
+body[data-game-mode="exhibition"] .game-clock,
+body[data-game-mode="exhibition"] .score-counter {
+  display: none;
 }
 
 .drive-status {
@@ -726,10 +788,60 @@ canvas {
 }
 
 .gameplay-hud[hidden],
+.match-transition-panel[hidden],
 .title-screen[hidden],
 .pause-settings-panel[hidden],
 .title-development-details[hidden] {
   display: none;
+}
+
+.match-transition-panel {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 45;
+  width: min(520px, calc(100vw - 28px));
+  transform: translate(-50%, -50%);
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(8, 13, 15, 0.92);
+  color: #f5f8f4;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.46);
+}
+
+.match-transition-panel h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.match-transition-panel p {
+  margin: 0 0 10px;
+  color: #d6e0da;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.match-transition-panel ul {
+  max-height: 150px;
+  margin: 0 0 12px;
+  padding-left: 18px;
+  overflow: auto;
+  color: #d6e0da;
+  font-size: 13px;
+}
+
+.match-transition-panel button {
+  margin-right: 8px;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  background: #edf3ea;
+  color: #101512;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
 }
 
 .title-screen {

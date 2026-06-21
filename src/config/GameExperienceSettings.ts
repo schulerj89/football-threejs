@@ -17,6 +17,10 @@ import {
   type CrowdPresentationSettings,
 } from '../presentation/CrowdPresentationController';
 import type { PlaybookId } from '../roster';
+import type {
+  ExhibitionGameMode,
+  MatchDifficulty,
+} from '../match/MatchTypes';
 import {
   DEFAULT_QUALITY_MODE,
   normalizeQualityMode,
@@ -62,13 +66,16 @@ export interface GameExperienceSettings {
   crowdVisualsEnabled: boolean;
   debugToolsEnabled: boolean;
   gameplayCamera: ExperienceCameraMode;
+  gameMode: ExhibitionGameMode;
   masterVolume: number;
+  matchDifficulty: MatchDifficulty;
   muted: boolean;
   officialsDebugLabels: boolean;
   officialsEnabled: boolean;
   playerMotionEnabled: boolean;
   playbookId: PlaybookId;
   preset: ExperiencePreset;
+  quarterLengthSeconds: number;
   qualityMode: QualityMode;
   routeArtEnabled: boolean;
   selectedReceiverLabelEnabled: boolean;
@@ -97,13 +104,16 @@ export interface GameExperienceQueryOverrides {
   crowdVisualsEnabled?: boolean;
   debugToolsEnabled?: boolean;
   gameplayCamera?: ExperienceCameraMode;
+  gameMode?: ExhibitionGameMode;
   masterVolume?: number;
+  matchDifficulty?: MatchDifficulty;
   muted?: boolean;
   officialsDebugLabels?: boolean;
   officialsEnabled?: boolean;
   playerMotionEnabled?: boolean;
   playbookId?: PlaybookId;
   preset?: ExperiencePreset;
+  quarterLengthSeconds?: number;
   qualityMode?: QualityMode;
   routeArtEnabled?: boolean;
   selectedReceiverLabelEnabled?: boolean;
@@ -175,13 +185,16 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   crowdVisualsEnabled: true,
   debugToolsEnabled: false,
   gameplayCamera: 'offense',
+  gameMode: 'exhibition',
   masterVolume: DEFAULT_AUDIO_SETTINGS.masterVolume,
+  matchDifficulty: 'pro',
   muted: DEFAULT_AUDIO_SETTINGS.muted,
   officialsDebugLabels: false,
   officialsEnabled: true,
   playerMotionEnabled: true,
   playbookId: '11v11',
   preset: 'broadcast',
+  quarterLengthSeconds: 180,
   qualityMode: DEFAULT_QUALITY_MODE,
   routeArtEnabled: true,
   selectedReceiverLabelEnabled: false,
@@ -325,7 +338,13 @@ export function normalizeGameExperienceSettings(
     gameplayCamera: isExperienceCameraMode(settings.gameplayCamera)
       ? settings.gameplayCamera
       : presetDefaults.gameplayCamera,
+    gameMode: isExhibitionGameMode(settings.gameMode)
+      ? settings.gameMode
+      : presetDefaults.gameMode,
     masterVolume: clampVolume(settings.masterVolume ?? presetDefaults.masterVolume),
+    matchDifficulty: isMatchDifficulty(settings.matchDifficulty)
+      ? settings.matchDifficulty
+      : presetDefaults.matchDifficulty,
     muted: settings.muted ?? presetDefaults.muted,
     officialsDebugLabels:
       settings.officialsDebugLabels ?? presetDefaults.officialsDebugLabels,
@@ -335,6 +354,9 @@ export function normalizeGameExperienceSettings(
       ? settings.playbookId
       : presetDefaults.playbookId,
     preset,
+    quarterLengthSeconds: normalizeQuarterLengthSeconds(
+      settings.quarterLengthSeconds ?? presetDefaults.quarterLengthSeconds,
+    ),
     qualityMode: settings.qualityMode
       ? normalizeQualityMode(settings.qualityMode)
       : presetDefaults.qualityMode,
@@ -353,6 +375,7 @@ export function resolveGameExperienceQueryOverrides(
 ): GameExperienceQueryOverrides {
   const overrides: GameExperienceQueryOverrides = {};
   const presetValue = searchParams.get('experience') ?? searchParams.get('preset');
+  const gameModeValue = searchParams.get('gameMode') ?? searchParams.get('mode');
   const playbookValue = searchParams.get('playbook') ?? searchParams.get('roster');
   const cameraValue = searchParams.get('camera');
   const cinematicsValue = searchParams.get('cinematics');
@@ -363,8 +386,28 @@ export function resolveGameExperienceQueryOverrides(
     overrides.preset = presetValue;
   }
 
+  if (isExhibitionGameMode(gameModeValue)) {
+    overrides.gameMode = gameModeValue;
+  } else if (searchParams.get('scoreAttack') === '1') {
+    overrides.gameMode = 'scoreAttack';
+  }
+
   if (playbookValue === '5v5' || playbookValue === '7v7' || playbookValue === '11v11') {
     overrides.playbookId = playbookValue;
+    if (!overrides.gameMode && playbookValue !== '11v11') {
+      overrides.gameMode = 'scoreAttack';
+    }
+  }
+
+  const quarterLengthValue = searchParams.get('quarterLength') ??
+    searchParams.get('quarterLengthSeconds');
+  if (quarterLengthValue !== null) {
+    overrides.quarterLengthSeconds = normalizeQuarterLengthSeconds(Number(quarterLengthValue));
+  }
+
+  const difficultyValue = searchParams.get('difficulty');
+  if (isMatchDifficulty(difficultyValue)) {
+    overrides.matchDifficulty = difficultyValue;
   }
 
   if (cameraValue === 'tactical' || cameraValue === 'tacticalOrthographic') {
@@ -647,6 +690,14 @@ function isExperienceCameraMode(value: unknown): value is ExperienceCameraMode {
   return value === 'cinematic' || value === 'offense' || value === 'tactical';
 }
 
+function isExhibitionGameMode(value: unknown): value is ExhibitionGameMode {
+  return value === 'exhibition' || value === 'scoreAttack';
+}
+
+function isMatchDifficulty(value: unknown): value is MatchDifficulty {
+  return value === 'allPro' || value === 'pro' || value === 'rookie';
+}
+
 function isCinematicsSetting(value: unknown): value is CinematicsSetting {
   return value === 'brief' || value === 'full' || value === 'off';
 }
@@ -669,6 +720,14 @@ function clampVolume(value: number): number {
   }
 
   return Math.min(1, Math.max(0, value));
+}
+
+function normalizeQuarterLengthSeconds(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 180;
+  }
+
+  return Math.max(30, Math.min(900, Math.round(value)));
 }
 
 function getLocalStorage(): StorageLike | null {

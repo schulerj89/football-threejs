@@ -34,7 +34,7 @@ export class TitleScreen {
     title.textContent = 'Gridiron Prototype';
     const subtitle = document.createElement('p');
     subtitle.className = 'title-subtitle';
-    subtitle.textContent = 'Choose a presentation profile, pick a prototype mode, then take the field.';
+    subtitle.textContent = 'Choose teams, set the presentation, then play offense through a full exhibition.';
     header.append(eyebrow, title, subtitle);
 
     this.startButton.className = 'title-start-button';
@@ -56,6 +56,7 @@ export class TitleScreen {
       'F: Throw on passing plays',
       'E: Cycle eligible receivers',
       'R: Reset the current play',
+      'P: Abstract punt before the snap in Exhibition',
       'C: Cycle development cameras',
       'Escape: Settings during pre-snap or dead-ball pauses',
       'F1: Toggle developer debug tools',

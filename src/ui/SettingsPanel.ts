@@ -7,6 +7,10 @@ import {
   type GameExperienceSettings,
 } from '../config/GameExperienceSettings';
 import type { CinematicsSetting } from '../camera/PresentationCameraDirector';
+import type {
+  ExhibitionGameMode,
+  MatchDifficulty,
+} from '../match/MatchTypes';
 import type { CrowdDensity } from '../presentation/CrowdPresentationController';
 import type { QualityMode } from '../performance/QualityProfile';
 import { getPlaybookOptions } from '../playbook';
@@ -31,7 +35,10 @@ export class SettingsPanel {
   private readonly teamCustomizationPanel: TeamCustomizationPanel | null;
   private readonly rosterPreviewPanel: RosterPreviewPanel | null;
   private readonly presetSelect = document.createElement('select');
+  private readonly gameModeSelect = document.createElement('select');
   private readonly playbookSelect = document.createElement('select');
+  private readonly quarterLengthSelect = document.createElement('select');
+  private readonly difficultySelect = document.createElement('select');
   private readonly qualityModeSelect = document.createElement('select');
   private readonly debugToolsInput = document.createElement('input');
   private readonly cameraSelect = document.createElement('select');
@@ -112,8 +119,23 @@ export class SettingsPanel {
 
     if (this.showGameMode) {
       primary.append(
+        this.createSelectRow('Game mode', this.gameModeSelect, [
+          ['exhibition', 'Exhibition - Offense Only'],
+          ['scoreAttack', 'Development Score Attack'],
+        ]),
+        this.createSelectRow('Quarter length', this.quarterLengthSelect, [
+          ['60', '1 minute'],
+          ['180', '3 minutes'],
+          ['300', '5 minutes'],
+          ['600', '10 minutes'],
+        ]),
+        this.createSelectRow('Difficulty', this.difficultySelect, [
+          ['rookie', 'Rookie'],
+          ['pro', 'Pro'],
+          ['allPro', 'All-Pro'],
+        ]),
         this.createSelectRow(
-          'Game mode',
+          'Regression playbook',
           this.playbookSelect,
           getPlaybookOptions().map((option) => [option.id, option.displayName]),
         ),
@@ -238,20 +260,59 @@ export class SettingsPanel {
       const preset = this.presetSelect.value as ExperiencePreset;
       const playbookId = this.settings.playbookId;
       const debugToolsEnabled = this.settings.debugToolsEnabled;
+      const gameMode = this.settings.gameMode;
+      const matchDifficulty = this.settings.matchDifficulty;
+      const quarterLengthSeconds = this.settings.quarterLengthSeconds;
       const teamProfiles = this.settings.teamProfiles;
       const next =
         preset === 'broadcast'
-          ? { ...BROADCAST_EXPERIENCE_SETTINGS, debugToolsEnabled, playbookId, teamProfiles }
+          ? {
+              ...BROADCAST_EXPERIENCE_SETTINGS,
+              debugToolsEnabled,
+              gameMode,
+              matchDifficulty,
+              playbookId,
+              quarterLengthSeconds,
+              teamProfiles,
+            }
           : preset === 'performance'
-            ? { ...PERFORMANCE_EXPERIENCE_SETTINGS, debugToolsEnabled, playbookId, teamProfiles }
+            ? {
+                ...PERFORMANCE_EXPERIENCE_SETTINGS,
+                debugToolsEnabled,
+                gameMode,
+                matchDifficulty,
+                playbookId,
+                quarterLengthSeconds,
+                teamProfiles,
+              }
             : { ...this.settings, preset: 'custom' as const };
       this.updateSettings(next);
     });
 
+    this.gameModeSelect.addEventListener('change', () => {
+      const gameMode = this.gameModeSelect.value as ExhibitionGameMode;
+      this.updateSettings({
+        ...this.settings,
+        gameMode,
+        playbookId: gameMode === 'exhibition' ? '11v11' : this.settings.playbookId,
+      });
+    });
     this.playbookSelect.addEventListener('change', () => {
       this.updateSettings({
         ...this.settings,
         playbookId: this.playbookSelect.value as PlaybookId,
+      });
+    });
+    this.quarterLengthSelect.addEventListener('change', () => {
+      this.updateSettings({
+        ...this.settings,
+        quarterLengthSeconds: Number(this.quarterLengthSelect.value),
+      });
+    });
+    this.difficultySelect.addEventListener('change', () => {
+      this.updateSettings({
+        ...this.settings,
+        matchDifficulty: this.difficultySelect.value as MatchDifficulty,
       });
     });
     this.qualityModeSelect.addEventListener('change', () => {
@@ -350,7 +411,10 @@ export class SettingsPanel {
 
   private syncControls(): void {
     this.presetSelect.value = this.settings.preset;
+    this.gameModeSelect.value = this.settings.gameMode;
     this.playbookSelect.value = this.settings.playbookId;
+    this.quarterLengthSelect.value = getQuarterLengthOptionValue(this.settings.quarterLengthSeconds);
+    this.difficultySelect.value = this.settings.matchDifficulty;
     this.qualityModeSelect.value = this.settings.qualityMode;
     this.debugToolsInput.checked = this.settings.debugToolsEnabled;
     this.cameraSelect.value = this.settings.gameplayCamera;
@@ -381,7 +445,10 @@ export class SettingsPanel {
     for (const control of this.customControls) {
       if (
         control === this.presetSelect ||
+        control === this.gameModeSelect ||
         control === this.playbookSelect ||
+        control === this.quarterLengthSelect ||
+        control === this.difficultySelect ||
         control === this.qualityModeSelect
       ) {
         control.removeAttribute('disabled');
@@ -389,8 +456,18 @@ export class SettingsPanel {
         control.toggleAttribute('disabled', !customEnabled);
       }
     }
+    this.playbookSelect.toggleAttribute('disabled', this.settings.gameMode === 'exhibition');
     this.root.dataset.preset = this.settings.preset;
+    this.root.dataset.gameMode = this.settings.gameMode;
   }
+}
+
+function getQuarterLengthOptionValue(value: number): string {
+  if ([60, 180, 300, 600].includes(value)) {
+    return String(value);
+  }
+
+  return '180';
 }
 
 function getGameplayCameraDescription(mode: ExperienceCameraMode): string {

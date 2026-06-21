@@ -12,6 +12,7 @@ import {
 } from '../appearanceAuditOverlay';
 import type { GameplayCameraDebugSnapshot } from '../camera/GameplayCameraController';
 import type { GameExperienceDebugSnapshot } from '../config/GameExperienceSettings';
+import type { MatchSnapshot } from '../match/MatchTypes';
 import {
   createCrowdPreviewOverlay,
   syncCrowdPreviewOverlay,
@@ -173,6 +174,7 @@ export interface FootballDebugApi {
   getCrowdPreviewSnapshot: () => CrowdPreviewSnapshot | null;
   getFormationPreviewSnapshot: () => FormationPreviewSnapshot | null;
   getGameExperienceSnapshot: () => GameExperienceDebugSnapshot;
+  getMatchSnapshot: () => MatchSnapshot | null;
   getGameplaySnapshot: () => GameplaySnapshot;
   getGamePresentationRuntimeSnapshot: () => GamePresentationRuntimeSnapshot;
   getHelmetAssetSnapshot: () => HelmetAssetSnapshot;

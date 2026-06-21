@@ -79,6 +79,7 @@ export class KeyboardMovementInput {
 export interface PlayControlRequests {
   cycleReceiver: boolean;
   pass: boolean;
+  punt: boolean;
   resetPlay: boolean;
   restartChallenge: boolean;
   selectedPlayId: string | null;
@@ -90,6 +91,7 @@ export class KeyboardPlayControls {
   private readonly target: Window;
   private cycleReceiverRequested = false;
   private passRequested = false;
+  private puntRequested = false;
   private resetRequested = false;
   private restartChallengeRequested = false;
   private selectedPlayId: string | null = null;
@@ -105,6 +107,7 @@ export class KeyboardPlayControls {
     const requests = {
       cycleReceiver: this.cycleReceiverRequested,
       pass: this.passRequested,
+      punt: this.puntRequested,
       resetPlay: this.resetRequested,
       restartChallenge: this.restartChallengeRequested,
       selectedPlayId: this.selectedPlayId,
@@ -113,6 +116,7 @@ export class KeyboardPlayControls {
 
     this.cycleReceiverRequested = false;
     this.passRequested = false;
+    this.puntRequested = false;
     this.resetRequested = false;
     this.restartChallengeRequested = false;
     this.selectedPlayId = null;
@@ -125,6 +129,7 @@ export class KeyboardPlayControls {
     this.target.removeEventListener('keydown', this.handleKeyDown);
     this.cycleReceiverRequested = false;
     this.passRequested = false;
+    this.puntRequested = false;
     this.resetRequested = false;
     this.restartChallengeRequested = false;
     this.selectedPlayId = null;
@@ -156,6 +161,12 @@ export class KeyboardPlayControls {
 
     if (normalizeKey(event.key) === 'f') {
       this.passRequested = true;
+      event.preventDefault();
+      return;
+    }
+
+    if (normalizeKey(event.key) === 'p') {
+      this.puntRequested = true;
       event.preventDefault();
       return;
     }

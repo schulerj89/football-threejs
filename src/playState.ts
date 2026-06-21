@@ -141,6 +141,7 @@ export interface GameplayModel {
   availablePlays: PlayDefinition[];
   ball: BallModel;
   blocking: BlockingState;
+  challengeMode: 'exhibition' | 'scoreAttack';
   currentBallSpot: FootballSpot;
   drive: DriveModel;
   formationOrigin: FootballSpot;
@@ -213,11 +214,13 @@ export interface GameplayUpdateOptions {
 }
 
 export interface CreateGameplayModelOptions {
+  challengeMode?: 'exhibition' | 'scoreAttack';
   playbookId?: PlaybookId;
 }
 
 export function createGameplayModel(options: CreateGameplayModelOptions = {}): GameplayModel {
   const playbookId = options.playbookId ?? '11v11';
+  const challengeMode = options.challengeMode ?? 'scoreAttack';
   const availablePlays = getAvailablePlays(playbookId);
   const initialSpot = cloneFootballSpot(INITIAL_BALL_SPOT);
   const selectedPlay = getPlay(getDefaultPlayId(playbookId));
@@ -232,6 +235,7 @@ export function createGameplayModel(options: CreateGameplayModelOptions = {}): G
     availablePlays,
     ball: createBallModel(initialSnapSpot),
     blocking: createBlockingState(),
+    challengeMode,
     currentBallSpot: cloneFootballSpot(initialSnapSpot),
     drive,
     formationOrigin: cloneFootballSpot(initialSnapSpot),
@@ -286,12 +290,14 @@ export function startPlay(gameplay: GameplayModel): boolean {
   if (
     gameplay.playState !== 'preSnap' ||
     gameplay.drive.state !== 'active' ||
-    !canStartScoreAttackPlay(gameplay.scoreAttack)
+    (gameplay.challengeMode === 'scoreAttack' && !canStartScoreAttackPlay(gameplay.scoreAttack))
   ) {
     return false;
   }
 
-  startScoreAttack(gameplay.scoreAttack);
+  if (gameplay.challengeMode === 'scoreAttack') {
+    startScoreAttack(gameplay.scoreAttack);
+  }
   gameplay.currentBallSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
   gameplay.activePlayStartSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
   gameplay.lastPlayResult = null;
@@ -462,6 +468,34 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
   return true;
 }
 
+export function resetOffensePossession(
+  gameplay: GameplayModel,
+  startingSpot: FootballSpot = INITIAL_BALL_SPOT,
+): void {
+  const resetSpot = cloneFootballSpot(startingSpot);
+  const defaultPlay = getPlay(getDefaultPlayId(gameplay.playbookId));
+
+  resetDriveModel(gameplay.drive, resetSpot);
+  gameplay.selectedPlay = defaultPlay;
+  gameplay.activePlayStartSpot = null;
+  gameplay.currentBallSpot = cloneFootballSpot(resetSpot);
+  gameplay.lastPlayResult = null;
+  setNextSnapSpot(gameplay, resetSpot);
+  gameplay.forwardPassEligible = true;
+  gameplay.passAttempted = false;
+  gameplay.passAudit = null;
+  gameplay.passFeedbackTimerSeconds = 0;
+  gameplay.selectedReceiverId = getDefaultEligibleReceiverId(defaultPlay);
+  resetReceiverRoutesForSpot(gameplay, defaultPlay, resetSpot);
+  gameplay.previousPlayerPositions = {};
+  gameplay.playState = 'preSnap';
+  gameplay.playResetTimerSeconds = null;
+  resetBlockingState(gameplay.blocking);
+  resetFormationAt(gameplay, resetSpot, defaultPlay);
+  gameplay.player = getBallCarrier(gameplay.players, defaultPlay);
+  resetBallModel(gameplay.ball, resetSpot);
+}
+
 export function updateGameplayModel(
   gameplay: GameplayModel,
   deltaSeconds = 0,
@@ -470,7 +504,9 @@ export function updateGameplayModel(
   const delta = Math.max(0, deltaSeconds);
   gameplay.previousPlayerPositions = capturePlayerPositions(gameplay.players);
 
-  updateScoreAttackClock(gameplay.scoreAttack, delta);
+  if (gameplay.challengeMode === 'scoreAttack') {
+    updateScoreAttackClock(gameplay.scoreAttack, delta);
+  }
   updatePassFeedback(gameplay, delta);
 
   if (gameplay.playState === 'live') {
@@ -516,7 +552,10 @@ export function updateGameplayModel(
     gameplay.playResetTimerSeconds -= delta;
 
     if (gameplay.playResetTimerSeconds <= 0) {
-      if (hasScoreAttackExpired(gameplay.scoreAttack)) {
+      if (
+        gameplay.challengeMode === 'scoreAttack' &&
+        hasScoreAttackExpired(gameplay.scoreAttack)
+      ) {
         enterScoreAttackGameOver(gameplay);
       } else {
         resetPlay(gameplay);
@@ -524,11 +563,16 @@ export function updateGameplayModel(
     }
   }
 
-  if (gameplay.playState === 'preSnap' && hasScoreAttackExpired(gameplay.scoreAttack)) {
+  if (
+    gameplay.challengeMode === 'scoreAttack' &&
+    gameplay.playState === 'preSnap' &&
+    hasScoreAttackExpired(gameplay.scoreAttack)
+  ) {
     enterScoreAttackGameOver(gameplay);
   }
 
   if (
+    gameplay.challengeMode === 'scoreAttack' &&
     gameplay.playState === 'dead' &&
     gameplay.playResetTimerSeconds === null &&
     hasScoreAttackExpired(gameplay.scoreAttack)
