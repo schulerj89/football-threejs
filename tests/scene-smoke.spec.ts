@@ -510,6 +510,17 @@ interface PresentationHoldSnapshot {
   skippedCount: number;
 }
 
+interface GamePresentationRuntimeSnapshot {
+  history: Array<{
+    cameraShot: string | null;
+    crowdReaction: string | null;
+    emittedEventTypes: string[];
+    gameplayResultId: string | null;
+    resetCompleted: boolean;
+  }>;
+  recentEvents: Array<{ type: string }>;
+}
+
 interface PresentationHardeningAuditSnapshot {
   activeCameraShot: CameraSnapshot['activeShotName'];
   audio: {
@@ -924,6 +935,16 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
   await expect.poll(() => getCrowdPresentationSnapshot(page)).toMatchObject({
     reactionState: 'anticipation',
   });
+  await expect.poll(async () => {
+    const runtime = await getGamePresentationRuntimeSnapshot(page);
+    return runtime.history.some(
+      (entry) =>
+        entry.crowdReaction === 'anticipation' &&
+        entry.emittedEventTypes.includes('playStarted') &&
+        entry.emittedEventTypes.includes('ballSnapped') &&
+        !entry.resetCompleted,
+    );
+  }).toBe(true);
 
   await page.keyboard.press('R');
   await waitForPreSnap(page);
@@ -2764,6 +2785,24 @@ async function getPresentationHoldSnapshot(page: Page): Promise<PresentationHold
     }
 
     return debugApi.getPresentationHoldSnapshot();
+  });
+}
+
+async function getGamePresentationRuntimeSnapshot(page: Page): Promise<GamePresentationRuntimeSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getGamePresentationRuntimeSnapshot: () => GamePresentationRuntimeSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getGamePresentationRuntimeSnapshot();
   });
 }
 

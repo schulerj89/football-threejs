@@ -100,6 +100,15 @@ export class GameAudioDirector {
 
   update(snapshot: GameplaySnapshot, deltaSeconds = 0): void {
     const events = derivePresentationAudioEvents(this.previousSnapshot, snapshot);
+    this.processEvents(snapshot, events, deltaSeconds);
+    this.previousSnapshot = snapshot;
+  }
+
+  processEvents(
+    snapshot: GameplaySnapshot,
+    events: readonly PresentationAudioEvent[],
+    deltaSeconds = 0,
+  ): void {
     this.recentEvents.length = 0;
     this.recentEvents.push(...events);
     this.updateAmbience(snapshot, deltaSeconds);
@@ -107,8 +116,6 @@ export class GameAudioDirector {
     for (const event of events) {
       this.processPresentationEvent(event);
     }
-
-    this.previousSnapshot = snapshot;
   }
 
   setPageActive(active: boolean): void {

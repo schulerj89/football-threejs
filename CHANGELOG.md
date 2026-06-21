@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.42.0] - 2026-06-21
+
+### Added
+
+- Added `GamePresentationRuntime` to own the authoritative immutable presentation-event stream and feed the same events to gameplay audio, commentary, crowd visuals, presentation holds, and camera presentation.
+- Added explicit presentation event precedence so touchdown, turnover, sack, first-down, incomplete/out-of-bounds, and ordinary tackle outcomes coordinate consistently.
+- Added development integration history reporting emitted events, gameplay result identity, camera shot, crowd reaction/audio, announcer clip/caption, hold state, and reset completion.
+- Added unit and browser smoke coverage for shared event delivery, precedence filtering, inactive presentation gating, and normal-game runtime event history.
+
+### Changed
+
+- `GameAudioDirector` can now consume pre-derived presentation events without making audio the owner of the presentation event stream.
+- `main.ts` now routes page activity, skip behavior, crowd reactions, presentation holds, commentary, and camera event input through the shared runtime path.
+
 ## [0.41.0] - 2026-06-21
 
 ### Added

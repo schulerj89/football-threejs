@@ -132,6 +132,10 @@ import {
   PresentationHoldDirector,
   type PresentationHoldSnapshot,
 } from './presentation/PresentationHoldDirector';
+import {
+  GamePresentationRuntime,
+  type GamePresentationRuntimeSnapshot,
+} from './presentation/GamePresentationRuntime';
 import { snapshotPlayerModel, type PlayerSnapshot } from './playerModel';
 import { updatePlayerSimulation } from './playerSimulation';
 import {
@@ -163,6 +167,7 @@ declare global {
       getFormationPreviewSnapshot: () => FormationPreviewSnapshot | null;
       getGameExperienceSnapshot: () => GameExperienceDebugSnapshot;
       getGameplaySnapshot: () => GameplaySnapshot;
+      getGamePresentationRuntimeSnapshot: () => GamePresentationRuntimeSnapshot;
       getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
       getPassAuditSnapshot: () => PassAuditSnapshot | null;
       getPresentationHardeningAuditSnapshot: () => PresentationHardeningAuditSnapshot | null;
@@ -325,9 +330,14 @@ const broadcastCommentaryDirector = new BroadcastCommentaryDirector(audioMixer, 
   enabled: true,
 });
 let presentationHoldDirector = new PresentationHoldDirector(cinematicsSetting);
+const gamePresentationRuntime = new GamePresentationRuntime({
+  commentaryDirector: broadcastCommentaryDirector,
+  gameAudioDirector,
+  getCrowdController: () => crowdPresentationController,
+  getHoldDirector: () => presentationHoldDirector,
+});
 gameAudioDirector.installControls(window);
-gameAudioDirector.setPageActive(!document.hidden);
-broadcastCommentaryDirector.setPageActive(!document.hidden);
+gamePresentationRuntime.setPageActive(!document.hidden && document.hasFocus());
 const debugOverlay = new DebugOverlay({ renderer, player: getActivePrimaryPlayer() });
 const gameplayHud = createGameplayHud();
 const broadcastCaptions = createBroadcastCaptions();
@@ -433,6 +443,7 @@ if (
       formationPreviewModel ? snapshotFormationPreviewModel(formationPreviewModel) : null,
     getGameExperienceSnapshot: () => getGameExperienceSnapshot(),
     getGameplaySnapshot: () => getActivePresentationSnapshot(),
+    getGamePresentationRuntimeSnapshot: () => gamePresentationRuntime.getSnapshot(),
     getHelmetAssetSnapshot,
     getPassAuditSnapshot: () => getActivePresentationSnapshot().passAudit,
     getPresentationHardeningAuditSnapshot: () => getPresentationHardeningAuditSnapshot(),
@@ -455,8 +466,7 @@ if (
       broadcastCommentaryDirector.setAnnouncerVolume(volume);
     },
     setAudioPageActiveForTest: (active: boolean) => {
-      gameAudioDirector.setPageActive(active);
-      broadcastCommentaryDirector.setPageActive(active);
+      gamePresentationRuntime.setPageActive(active);
     },
     setAudioMuted: (muted: boolean) => {
       gameAudioDirector.setMuted(muted);
@@ -553,19 +563,10 @@ function renderFrame(delta: number): void {
 
   const gameplaySnapshot = getActivePresentationSnapshot();
   const gameplayPresentationActive = appPhase === 'gameplay' && !pauseSettingsPanel?.isVisible();
-  if (gameplayPresentationActive) {
-    gameAudioDirector.update(gameplaySnapshot, delta);
-  }
-  const presentationEvents = gameplayPresentationActive
-    ? gameAudioDirector.getSnapshot().recentEvents
-    : [];
-  if (gameplayPresentationActive) {
-    presentationHoldDirector.update(presentationEvents, delta);
-    crowdPresentationController?.update(gameplaySnapshot, presentationEvents, delta);
-  }
-  if (!formationPreviewModel && gameplayPresentationActive) {
-    broadcastCommentaryDirector.update(gameplaySnapshot, delta);
-  }
+  const presentationEvents = gamePresentationRuntime.update(gameplaySnapshot, delta, {
+    active: gameplayPresentationActive,
+    commentaryActive: !formationPreviewModel,
+  });
   syncFootballFieldDriveLines(
     field,
     gameplaySnapshot.drive.lineOfScrimmage,
@@ -587,6 +588,7 @@ function renderFrame(delta: number): void {
       crowdPresentationSettings.crowdReactionsEnabled,
     presentationEvents,
   });
+  gamePresentationRuntime.recordCameraSnapshot(cameraController.getDebugSnapshot());
   syncGameplayHud(gameplayHud, gameplaySnapshot);
   syncBroadcastCaptions(broadcastCaptions, broadcastCommentaryDirector.getSnapshot());
   if (playCallUi && appPhase === 'gameplay' && !pauseSettingsPanel?.isVisible()) {
@@ -661,8 +663,7 @@ function updatePlayControls(): void {
 
   if (requests.startPlay || requests.resetPlay || requests.restartChallenge) {
     cameraController.skipPresentationShot();
-    presentationHoldDirector.skip();
-    crowdPresentationController?.skipReactionHold();
+    gamePresentationRuntime.skipPresentation();
   }
 
   if (requests.restartChallenge) {
@@ -1048,9 +1049,7 @@ function resize(): void {
 
 function syncAudioPageActivity(): void {
   const pageActive = !document.hidden && document.hasFocus();
-  gameAudioDirector.setPageActive(pageActive);
-  broadcastCommentaryDirector.setPageActive(pageActive);
-  crowdPresentationController?.setPageActive(pageActive);
+  gamePresentationRuntime.setPageActive(pageActive);
 }
 
 function getActivePlayers() {
