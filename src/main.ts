@@ -9,6 +9,12 @@ import {
   syncFootballFieldDriveLines,
 } from './field';
 import { createGameplayHud, syncGameplayHud } from './gameplayHud';
+import {
+  attachHelmetsToPlayerVisuals,
+  getHelmetAssetSnapshot,
+  syncHelmetTeamMaterials,
+  type HelmetAssetSnapshot,
+} from './helmetVisual';
 import { KeyboardMovementInput, KeyboardPlayControls } from './input';
 import {
   attemptPass,
@@ -30,6 +36,7 @@ declare global {
   interface Window {
     __footballDebug?: {
       getGameplaySnapshot: () => GameplaySnapshot;
+      getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
       getPlayerSnapshot: () => PlayerSnapshot;
     };
   }
@@ -55,6 +62,7 @@ for (const gamePlayer of gameplayModel.players) {
   playerVisuals.set(gamePlayer.id, playerVisual);
   scene.add(playerVisual);
 }
+attachHelmetsToPlayerVisuals(playerVisuals, gameplayModel.players);
 
 const ballVisual = createBallVisual();
 syncBallVisual(ballVisual, gameplayModel.ball);
@@ -90,6 +98,7 @@ let hasRenderedFirstFrame = false;
 if (import.meta.env.DEV || searchParams.has('debug')) {
   window.__footballDebug = {
     getGameplaySnapshot: () => snapshotGameplayModel(gameplayModel),
+    getHelmetAssetSnapshot,
     getPlayerSnapshot: () => snapshotPlayerModel(gameplayModel.player),
   };
 }
@@ -132,6 +141,7 @@ function renderFrame(delta: number): void {
     const playerVisual = playerVisuals.get(gamePlayer.id);
     if (playerVisual) {
       syncPlayerVisual(playerVisual, gamePlayer);
+      syncHelmetTeamMaterials(playerVisual, gamePlayer);
     }
   }
   syncBallVisual(ballVisual, gameplayModel.ball);

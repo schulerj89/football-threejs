@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, two passing plays, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, final-score game over, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, two passing plays, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, final-score game over, and a fixed orthographic three-quarter gameplay camera.
 
 ## World Scale
 
@@ -52,6 +52,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Coverage defenders track their assigned receivers while ordinary defenders use the existing simple pursuit or pass-rush behavior.
 - Crossing a sideline during a live play ends the play out of bounds.
 - AI-controlled non-carriers stay inside the playable field while the active ball carrier may cross a sideline to end the play.
+- Each primitive player body keeps its gameplay-driven collision and movement while displaying a cloned `low_poly_helmet.glb` helmet attached to a head anchor.
 - Sack, tackle, completed pass, and out-of-bounds results display signed yards gained or lost, then reset the next play at the dead-ball spot.
 - Incomplete passes end the play at the original line of scrimmage and advance the down.
 - The drill tracks down, distance, ball position, and score.
@@ -68,7 +69,7 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 
 - No stadium
 - No crowd
-- No imported assets
+- No imported assets beyond the current reusable low-poly helmet
 - No loose-ball physics
 - No large play-calling menu
 - No audibles

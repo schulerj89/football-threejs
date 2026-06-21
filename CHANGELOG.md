@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.0] - 2026-06-21
+
+### Added
+
+- Integrated `low_poly_helmet.glb` into the existing primitive player visual without replacing the primitive body.
+- Added a reusable helmet loader that loads the GLB once, clones it for each player, and attaches clones to the player head anchor.
+- Added name-based shell and faceguard mesh/material lookup with per-team cloned materials before tinting.
+- Added configurable helmet position, rotation, and scale offsets plus independent shell and faceguard colors.
+- Added helmet asset debug snapshot coverage and browser smoke validation that the asset loads and attaches to all players.
+- Added focused tests for player head anchors, helmet part lookup, and per-team material cloning.
+
 ## [0.14.0] - 2026-06-21
 
 ### Added

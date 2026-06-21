@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { PlayerModel } from './playerModel';
 
 const PLAYER_CENTER_Y = 1.1;
+export const PLAYER_HEAD_ANCHOR_NAME = 'placeholder-player-head-anchor';
 
 const PLAYER_COLORS = {
   blocker: 0x285fb8,
@@ -38,6 +39,11 @@ export function createPlaceholderPlayerVisual(player?: PlayerModel): THREE.Group
   scaleReference.position.set(0, -1.14, 0);
   scaleReference.name = 'placeholder-player-scale-reference';
   group.add(scaleReference);
+
+  const headAnchor = new THREE.Group();
+  headAnchor.name = PLAYER_HEAD_ANCHOR_NAME;
+  headAnchor.position.set(0, 1.18, 0.08);
+  group.add(headAnchor);
 
   return group;
 }

@@ -90,6 +90,15 @@ interface GameplaySnapshot {
   };
 }
 
+interface HelmetAssetSnapshot {
+  assetId: string;
+  attachedPlayerIds: string[];
+  errorMessage: string | null;
+  faceguardMeshNames: string[];
+  shellMeshNames: string[];
+  status: 'idle' | 'loading' | 'loaded' | 'error';
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -122,6 +131,20 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   expect(initial.players.filter((player) => player.team === 'offense')).toHaveLength(3);
   expect(initial.players.filter((player) => player.team === 'defense')).toHaveLength(3);
   expect(initial.players.every((player) => player.currentState === 'idle')).toBe(true);
+  await expect.poll(() => getHelmetAssetSnapshot(page), { timeout: 5000 }).toMatchObject({
+    assetId: 'low_poly_helmet',
+    attachedPlayerIds: expect.arrayContaining([
+      'blocker-left',
+      'blocker-right',
+      'defender-left',
+      'defender-middle',
+      'defender-right',
+      'runner',
+    ]),
+    errorMessage: null,
+    shellMeshNames: expect.arrayContaining(['Mesh10']),
+    status: 'loaded',
+  });
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   await expect(page.locator('.debug-overlay')).toContainText('FPS');
@@ -754,5 +777,23 @@ async function getGameplaySnapshot(page: Page): Promise<GameplaySnapshot> {
     }
 
     return debugApi.getGameplaySnapshot();
+  });
+}
+
+async function getHelmetAssetSnapshot(page: Page): Promise<HelmetAssetSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getHelmetAssetSnapshot();
   });
 }
