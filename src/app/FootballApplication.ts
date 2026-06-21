@@ -183,6 +183,9 @@ export class FootballApplication {
       performanceDebugEnabled: searchParams.has('qualityDebug') ||
         searchParams.has('performanceDebug'),
       presentationAuditEnabled: searchParams.has('presentationAudit'),
+      officialsDebugEnabled: this.gameExperience.settings.officialsDebugLabels ||
+        searchParams.has('officialsDebug') ||
+        searchParams.has('officialsDebugLabels'),
       renderer: this.sceneRuntime.renderer,
       routeAuditEnabled: searchParams.has('routeAudit'),
       searchParams,
@@ -387,6 +390,7 @@ export class FootballApplication {
             profile: this.createMemoryProfileSnapshot(),
           }
         : null,
+      officialsSnapshot: this.presentation.getOfficialsSnapshot(),
       sevenAuditSnapshot: this.diagnostics.getSevenAuditSnapshot(),
     });
   }

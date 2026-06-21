@@ -51,6 +51,7 @@ export interface GameExperienceSettings {
   gameplayCamera: ExperienceCameraMode;
   masterVolume: number;
   muted: boolean;
+  officialsDebugLabels: boolean;
   officialsEnabled: boolean;
   playerMotionEnabled: boolean;
   playbookId: PlaybookId;
@@ -82,6 +83,7 @@ export interface GameExperienceQueryOverrides {
   gameplayCamera?: ExperienceCameraMode;
   masterVolume?: number;
   muted?: boolean;
+  officialsDebugLabels?: boolean;
   officialsEnabled?: boolean;
   playerMotionEnabled?: boolean;
   playbookId?: PlaybookId;
@@ -156,7 +158,8 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   gameplayCamera: 'offense',
   masterVolume: DEFAULT_AUDIO_SETTINGS.masterVolume,
   muted: DEFAULT_AUDIO_SETTINGS.muted,
-  officialsEnabled: false,
+  officialsDebugLabels: false,
+  officialsEnabled: true,
   playerMotionEnabled: true,
   playbookId: '11v11',
   preset: 'broadcast',
@@ -170,6 +173,7 @@ export const PERFORMANCE_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   cinematics: 'off',
   crowdReactionsEnabled: false,
   crowdVisualsEnabled: false,
+  officialsEnabled: false,
   preset: 'performance',
   qualityMode: DEFAULT_QUALITY_MODE,
   stadiumEnabled: true,
@@ -300,6 +304,8 @@ export function normalizeGameExperienceSettings(
       : presetDefaults.gameplayCamera,
     masterVolume: clampVolume(settings.masterVolume ?? presetDefaults.masterVolume),
     muted: settings.muted ?? presetDefaults.muted,
+    officialsDebugLabels:
+      settings.officialsDebugLabels ?? presetDefaults.officialsDebugLabels,
     officialsEnabled: settings.officialsEnabled ?? presetDefaults.officialsEnabled,
     playerMotionEnabled: settings.playerMotionEnabled ?? presetDefaults.playerMotionEnabled,
     playbookId: isPlaybookId(settings.playbookId)
@@ -363,6 +369,13 @@ export function resolveGameExperienceQueryOverrides(
   applyBooleanOverride(overrides, 'captionsEnabled', searchParams, 'captions');
   applyBooleanOverride(overrides, 'debugToolsEnabled', searchParams, 'debugTools');
   applyBooleanOverride(overrides, 'muted', searchParams, 'muted');
+  applyBooleanOverride(overrides, 'officialsDebugLabels', searchParams, 'officialsDebug');
+  applyBooleanOverride(
+    overrides,
+    'officialsDebugLabels',
+    searchParams,
+    'officialsDebugLabels',
+  );
   applyBooleanOverride(overrides, 'officialsEnabled', searchParams, 'officials');
   applyBooleanOverride(overrides, 'routeArtEnabled', searchParams, 'routeArt');
   applyBooleanOverride(overrides, 'playerMotionEnabled', searchParams, 'playerMotion');
@@ -509,6 +522,7 @@ function applyBooleanOverride(
     | 'crowdVisualsEnabled'
     | 'debugToolsEnabled'
     | 'muted'
+    | 'officialsDebugLabels'
     | 'officialsEnabled'
     | 'playerMotionEnabled'
     | 'routeArtEnabled'

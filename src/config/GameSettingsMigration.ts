@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 2;
+export const GAME_SETTINGS_SCHEMA_VERSION = 3;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -22,13 +22,41 @@ export function migrateGameSettingsPayload(payload: unknown): VersionedGameSetti
   }
 
   return {
-    customSettings: payload.customSettings,
+    customSettings: migrateOfficialSettings(payload.customSettings),
     preset: payload.preset,
-    settings: payload.settings,
+    settings: migrateOfficialSettings(payload.settings),
     version: GAME_SETTINGS_SCHEMA_VERSION,
   };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function migrateOfficialSettings(value: unknown): unknown {
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  const preset = value.preset;
+  if (preset === 'broadcast') {
+    return {
+      ...value,
+      officialsDebugLabels: value.officialsDebugLabels ?? false,
+      officialsEnabled: true,
+    };
+  }
+
+  if (preset === 'performance') {
+    return {
+      ...value,
+      officialsDebugLabels: value.officialsDebugLabels ?? false,
+      officialsEnabled: false,
+    };
+  }
+
+  return {
+    ...value,
+    officialsDebugLabels: value.officialsDebugLabels ?? false,
+  };
 }

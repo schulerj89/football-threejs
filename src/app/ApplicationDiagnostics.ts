@@ -284,6 +284,7 @@ export class ApplicationDiagnostics {
       getGamePresentationRuntimeSnapshot: () =>
         this.options.presentation.getGamePresentationRuntimeSnapshot(),
       getHelmetAssetSnapshot,
+      getOfficialsSnapshot: () => this.options.presentation.getOfficialsSnapshot(),
       getCrowdCapacityBenchmarkSnapshot: () =>
         this.options.getCrowdCapacityBenchmarkSnapshot(),
       getMemoryProfileSnapshot: () => this.options.getMemoryProfileSnapshot(),

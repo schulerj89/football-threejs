@@ -52,7 +52,7 @@ const PROFILE_DESCRIPTIONS: Record<string, string> = {
   'crowd-off': '11v11 with visual crowd disabled.',
   'full-broadcast': '11v11 broadcast profile with low-density crowd, brief cinematics, audio permitted.',
   'motion-off': '11v11 with procedural player motion disabled.',
-  'officials-off': '11v11 with officials disabled; current prototype has no official visuals.',
+  'officials-off': '11v11 with presentation-only officials disabled.',
   'players-only': '11v11 players and field with presentation, crowd, route art, and audio disabled.',
   'presentation-off': '11v11 with cinematics, announcer, captions, crowd reactions, and audio disabled.',
   'stadium-off': '11v11 with stadium/crowd seating presentation disabled.',

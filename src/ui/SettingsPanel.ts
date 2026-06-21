@@ -45,6 +45,7 @@ export class SettingsPanel {
   private readonly routeArtInput = document.createElement('input');
   private readonly playerMotionInput = document.createElement('input');
   private readonly officialsInput = document.createElement('input');
+  private readonly officialsDebugLabelsInput = document.createElement('input');
   private readonly customControls: HTMLElement[] = [];
 
   constructor(options: SettingsPanelOptions) {
@@ -135,6 +136,7 @@ export class SettingsPanel {
       this.createCheckboxRow('Route art', this.routeArtInput),
       this.createCheckboxRow('Player motion', this.playerMotionInput),
       this.createCheckboxRow('Officials', this.officialsInput),
+      this.createCheckboxRow('Officials debug labels', this.officialsDebugLabelsInput),
     );
 
     content.append(primary, custom);
@@ -276,6 +278,11 @@ export class SettingsPanel {
     this.officialsInput.addEventListener('change', () => {
       this.updateCustomSettings({ officialsEnabled: this.officialsInput.checked });
     });
+    this.officialsDebugLabelsInput.addEventListener('change', () => {
+      this.updateCustomSettings({
+        officialsDebugLabels: this.officialsDebugLabelsInput.checked,
+      });
+    });
   }
 
   private updateCustomSettings(patch: Partial<GameExperienceSettings>): void {
@@ -313,6 +320,7 @@ export class SettingsPanel {
     this.captionsInput.checked = this.settings.captionsEnabled;
     this.routeArtInput.checked = this.settings.routeArtEnabled;
     this.playerMotionInput.checked = this.settings.playerMotionEnabled;
+    this.officialsDebugLabelsInput.checked = this.settings.officialsDebugLabels;
     this.officialsInput.checked = this.settings.officialsEnabled;
 
     const customEnabled = this.settings.preset === 'custom';

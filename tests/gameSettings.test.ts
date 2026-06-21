@@ -25,7 +25,8 @@ describe('game settings facade', () => {
       crowdDensity: 'low',
       crowdVisualsEnabled: true,
       debugToolsEnabled: false,
-      officialsEnabled: false,
+      officialsDebugLabels: false,
+      officialsEnabled: true,
       playerMotionEnabled: true,
       playbookId: '11v11',
       preset: 'broadcast',
@@ -43,6 +44,7 @@ describe('game settings facade', () => {
       debugToolsEnabled: true,
       masterVolume: 0.62,
       muted: true,
+      officialsDebugLabels: true,
       officialsEnabled: true,
       stadiumEnabled: false,
       preset: 'custom',
@@ -57,6 +59,7 @@ describe('game settings facade', () => {
         debugToolsEnabled: true,
         masterVolume: 0.62,
         muted: true,
+        officialsDebugLabels: true,
         officialsEnabled: true,
         stadiumEnabled: false,
       },
@@ -67,6 +70,7 @@ describe('game settings facade', () => {
       version: GAME_SETTINGS_SCHEMA_VERSION,
       settings: {
         debugToolsEnabled: true,
+        officialsDebugLabels: true,
         officialsEnabled: true,
         stadiumEnabled: false,
       },
@@ -104,13 +108,14 @@ describe('game settings facade', () => {
     const storedBefore = storage.getItem(GAME_SETTINGS_COMPAT_STORAGE_KEY);
 
     const resolved = resolveGameSettings({
-      searchParams: new URLSearchParams('debugTools=1&officials=1&masterVolume=0.2'),
+      searchParams: new URLSearchParams('debugTools=1&officials=1&officialsDebug=1&masterVolume=0.2'),
       storage,
     });
 
     expect(resolved.settings).toMatchObject({
       debugToolsEnabled: true,
       masterVolume: 0.2,
+      officialsDebugLabels: true,
       officialsEnabled: true,
     });
     expect(storage.getItem(GAME_SETTINGS_COMPAT_STORAGE_KEY)).toBe(storedBefore);

@@ -23,6 +23,11 @@ import {
   syncCrowdPresentationOverlay,
   type CrowdPresentationSnapshot,
 } from '../presentation/CrowdPresentationController';
+import {
+  createOfficialsDebugOverlay,
+  syncOfficialsDebugOverlay,
+} from '../officials/OfficialsPresentationController';
+import type { OfficialsPresentationSnapshot } from '../officials/OfficialTypes';
 import { DebugOverlay, type RenderMetricsSnapshot } from '../debugOverlay';
 import {
   createElevenAuditOverlay,
@@ -156,6 +161,7 @@ export interface FootballDebugApi {
   getGameplaySnapshot: () => GameplaySnapshot;
   getGamePresentationRuntimeSnapshot: () => GamePresentationRuntimeSnapshot;
   getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
+  getOfficialsSnapshot: () => OfficialsPresentationSnapshot;
   getCrowdCapacityBenchmarkSnapshot: () => CrowdCapacityBenchmarkSnapshot;
   getMemoryProfileSnapshot: () => SceneResourceProfileSnapshot;
   getPassAuditSnapshot: () => PassAuditSnapshot | null;
@@ -206,6 +212,7 @@ export interface DevelopmentToolsRuntimeOptions {
   passAuditEnabled: boolean;
   performanceDebugEnabled: boolean;
   presentationAuditEnabled: boolean;
+  officialsDebugEnabled: boolean;
   routeAuditEnabled: boolean;
   searchParams: URLSearchParams;
   sevenAuditEnabled: boolean;
@@ -240,6 +247,7 @@ export interface DevelopmentOverlayFrame {
   runtimeAudioSnapshot: RuntimeAudioDebugSnapshot;
   qualityDebugSnapshot: QualityDebugSnapshot;
   memoryDebugSnapshot: MemoryDebugSnapshot | null;
+  officialsSnapshot: OfficialsPresentationSnapshot;
   sevenAuditSnapshot: SevenAuditSnapshot | null;
   playerVisuals: Map<string, THREE.Group>;
 }
@@ -254,6 +262,7 @@ export class DevelopmentToolsRuntime {
   private formationAuditOverlay: HTMLDivElement | null = null;
   private passAuditOverlay: HTMLDivElement | null = null;
   private memoryDebugPanel: MemoryDebugPanel | null = null;
+  private officialsDebugOverlay: HTMLDivElement | null = null;
   private performanceDebugOverlay: HTMLDivElement | null = null;
   private poseDebugOverlay: HTMLDivElement | null = null;
   private presentationAuditOverlay: HTMLDivElement | null = null;
@@ -303,6 +312,7 @@ export class DevelopmentToolsRuntime {
       !!this.routeAuditOverlay ||
       !!this.passAuditOverlay ||
       !!this.memoryDebugPanel ||
+      !!this.officialsDebugOverlay ||
       !!this.performanceDebugOverlay ||
       !!this.sevenAuditOverlay ||
       !!this.elevenAuditOverlay ||
@@ -352,6 +362,9 @@ export class DevelopmentToolsRuntime {
     }
     if (this.memoryDebugPanel && frame.memoryDebugSnapshot) {
       this.memoryDebugPanel.sync(frame.memoryDebugSnapshot);
+    }
+    if (this.officialsDebugOverlay) {
+      syncOfficialsDebugOverlay(this.officialsDebugOverlay, frame.officialsSnapshot);
     }
     if (this.performanceDebugOverlay) {
       syncPerformanceDebugOverlay(this.performanceDebugOverlay, frame.qualityDebugSnapshot);
@@ -495,6 +508,15 @@ export class DevelopmentToolsRuntime {
       createAppearanceAuditOverlay,
       (element) => {
         this.appearanceAuditOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'officials',
+      'Officials',
+      options.officialsDebugEnabled,
+      createOfficialsDebugOverlay,
+      (element) => {
+        this.officialsDebugOverlay = element;
       },
     );
     registerElementFeature(
@@ -674,6 +696,7 @@ export class DevelopmentToolsRuntime {
       options.cameraDebugEnabled ||
       options.presentationAuditEnabled ||
       options.appearanceAuditEnabled ||
+      options.officialsDebugEnabled ||
       options.sevenAuditEnabled ||
       options.elevenAuditEnabled ||
       options.audioDebugEnabled ||

@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.0] - 2026-06-21
+
+### Added
+
+- Added a presentation-only seven-official crew with stable official IDs, ball/line/sideline-derived positioning, bounded live tracking, dead-ball settling, touchdown signal poses, and exact pre-snap reset restoration.
+- Added low-poly procedural official visuals using shared instanced geometry/materials, deterministic skin tones, striped torsos, black pants/shoes/caps, and clean presentation-owned disposal.
+- Added an Officials debug feature in the F1 panel plus debug readback snapshots for official role, current position, target position, distance from the ball, update state, and visual resource metrics.
+
+### Changed
+
+- Broadcast settings now enable presentation officials by default, while Performance disables them as an optional visual cost.
+- Extended settings persistence/migration, setup controls, README, and AGENTS guidance for presentation-only officials and no officiating authority.
+
+### Tests
+
+- Added focused officials coverage for stable IDs, snap-lane positioning, direction mirroring, sideline placement, pre-snap stability, live tracking, touchdown signals, reset restoration, visual disposal, gameplay-roster separation, and camera ball-focus preservation.
+- Updated browser smoke readbacks for the officials settings/defaults and normal-game crew visibility.
+
 ## [0.50.0] - 2026-06-21
 
 ### Added

@@ -77,6 +77,10 @@ import {
   StadiumController,
   type StadiumControllerSnapshot,
 } from '../stadium/StadiumController';
+import {
+  OfficialsPresentationController,
+  type OfficialsPresentationSnapshot,
+} from '../officials/OfficialsPresentationController';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -113,6 +117,7 @@ export class PresentationRuntime {
   readonly playerPoseController: PlayerPoseController;
   readonly routeArtRenderer: RouteArtRenderer;
   readonly stadiumController: StadiumController;
+  readonly officialsController: OfficialsPresentationController;
 
   private readonly scene: THREE.Scene;
   private cameraController: GameplayCameraController;
@@ -178,6 +183,14 @@ export class PresentationRuntime {
     });
     if (!this.crowdPreviewController) {
       this.scene.add(this.stadiumController.group);
+    }
+
+    this.officialsController = new OfficialsPresentationController({
+      debugLabelsEnabled: gameExperience.settings.officialsDebugLabels,
+      enabled: !this.crowdPreviewController && gameExperience.settings.officialsEnabled,
+    });
+    if (!this.crowdPreviewController) {
+      this.scene.add(this.officialsController.group);
     }
 
     this.crowdPresentationController =
@@ -338,6 +351,9 @@ export class PresentationRuntime {
       profiler.measure('proceduralPlayerPosing', () => {
         this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
       });
+      profiler.measure('officialsUpdate', () => {
+        this.officialsController.update(gameplaySnapshot, deltaSeconds, active);
+      });
       profiler.measure('cameraUpdate', () => {
         this.cameraController.update(gameplaySnapshot, deltaSeconds, {
           crowdCutawaysEnabled,
@@ -346,6 +362,7 @@ export class PresentationRuntime {
       });
     } else {
       this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+      this.officialsController.update(gameplaySnapshot, deltaSeconds, active);
       this.cameraController.update(gameplaySnapshot, deltaSeconds, {
         crowdCutawaysEnabled,
         presentationEvents,
@@ -401,6 +418,10 @@ export class PresentationRuntime {
     this.audioMixer.setSettings(gameExperience.audioSettings);
     this.routeArtRenderer.setEnabled(gameExperience.settings.routeArtEnabled);
     this.playerPoseController.setEnabled(gameExperience.settings.playerMotionEnabled);
+    this.officialsController.applySettings({
+      debugLabelsEnabled: gameExperience.settings.officialsDebugLabels,
+      enabled: !this.crowdPreviewController && gameExperience.settings.officialsEnabled,
+    });
     this.applyStadiumSettings();
     this.broadcastCommentaryDirector.setAnnouncerEnabled(
       gameExperience.settings.announcerEnabled,
@@ -476,6 +497,10 @@ export class PresentationRuntime {
     return this.stadiumController.getSnapshot();
   }
 
+  getOfficialsSnapshot(): OfficialsPresentationSnapshot {
+    return this.officialsController.getSnapshot();
+  }
+
   getGamePresentationRuntimeSnapshot(): GamePresentationRuntimeSnapshot {
     return this.gamePresentationRuntime.getSnapshot();
   }
@@ -510,6 +535,8 @@ export class PresentationRuntime {
     }
     this.scene.remove(this.stadiumController.group);
     this.stadiumController.dispose();
+    this.scene.remove(this.officialsController.group);
+    this.officialsController.dispose();
     this.playCallUi?.dispose();
     this.gameplayHud.root.remove();
     this.broadcastCaptions.remove();

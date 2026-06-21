@@ -665,6 +665,28 @@ interface PresentationHardeningAuditSnapshot {
   resultEventCounts: Record<'firstDown' | 'incomplete' | 'sack' | 'touchdown' | 'turnoverOnDowns', number>;
 }
 
+interface OfficialsPresentationSnapshot {
+  debugLabelsEnabled: boolean;
+  enabled: boolean;
+  officials: Array<{
+    currentPosition: FootballSpot;
+    distanceFromBall: number;
+    id: string;
+    poseIntent: 'neutral' | 'touchdown' | 'tracking';
+    role: string;
+    targetPosition: FootballSpot;
+    updateState: 'deadBall' | 'formation' | 'tracking';
+  }>;
+  targetUpdateHz: number;
+  visibleOfficialCount: number;
+  visualMetrics: {
+    geometryCount: number;
+    materialCount: number;
+    meshCount: number;
+    triangleCount: number;
+  };
+}
+
 interface GameExperienceSettingsSnapshot {
   announcerEnabled: boolean;
   announcerVolume: number;
@@ -680,6 +702,7 @@ interface GameExperienceSettingsSnapshot {
   gameplayCamera: 'cinematic' | 'offense' | 'tactical';
   masterVolume: number;
   muted: boolean;
+  officialsDebugLabels: boolean;
   officialsEnabled: boolean;
   playerMotionEnabled: boolean;
   playbookId: '11v11' | '5v5' | '7v7';
@@ -803,6 +826,7 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
     cinematics: 'brief',
     crowdVisualsEnabled: true,
     gameplayCamera: 'offense',
+    officialsEnabled: true,
     preset: 'broadcast',
   });
 });
@@ -820,6 +844,7 @@ test('starts the performance preset without visual crowd or cinematics', async (
     crowdReactionsEnabled: false,
     crowdVisualsEnabled: false,
     gameplayCamera: 'offense',
+    officialsEnabled: false,
     preset: 'performance',
   });
   expect(await getOptionalCrowdPresentationSnapshot(page)).toBeNull();
@@ -879,7 +904,7 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
 
   await page.keyboard.press('F1');
   await expect(page.locator('.debug-panel')).toBeVisible();
-  await expect(page.locator('.debug-feature-row')).toHaveCount(17);
+  await expect(page.locator('.debug-feature-row')).toHaveCount(18);
   await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').check();
   await expect(page.locator('.debug-overlay')).toBeVisible();
   await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').uncheck();
@@ -1041,7 +1066,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     customSettings: null,
     preset: 'broadcast',
     settings: null,
-    version: 2,
+    version: 3,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({
@@ -1063,6 +1088,8 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     crowdReactionsEnabled: true,
     crowdVisualsEnabled: true,
     gameplayCamera: 'offense',
+    officialsDebugLabels: false,
+    officialsEnabled: true,
     playerMotionEnabled: true,
     playbookId: '11v11',
     preset: 'broadcast',
@@ -1081,6 +1108,20 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
   });
   expect(stadium.drawCalls).toBeGreaterThan(0);
   expect(stadium.seatCount).toBeGreaterThanOrEqual(500);
+  const officials = await getOfficialsSnapshot(page);
+  expect(officials).toMatchObject({
+    enabled: true,
+    visibleOfficialCount: 7,
+  });
+  expect(officials.officials.map((official) => official.id)).toEqual([
+    'official-referee',
+    'official-umpire',
+    'official-down-judge',
+    'official-line-judge',
+    'official-field-judge',
+    'official-side-judge',
+    'official-back-judge',
+  ]);
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
   });
@@ -3372,6 +3413,24 @@ async function getCrowdPresentationSnapshot(page: Page): Promise<CrowdPresentati
     }
 
     return snapshot;
+  });
+}
+
+async function getOfficialsSnapshot(page: Page): Promise<OfficialsPresentationSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getOfficialsSnapshot: () => OfficialsPresentationSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getOfficialsSnapshot();
   });
 }
 
