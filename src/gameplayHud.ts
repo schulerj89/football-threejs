@@ -7,6 +7,7 @@ export interface GameplayHud {
   playCall: HTMLDivElement;
   resultMessage: HTMLDivElement;
   root: HTMLDivElement;
+  sackMessage: HTMLDivElement;
   score: HTMLDivElement;
   tackleMessage: HTMLDivElement;
   touchdownMessage: HTMLDivElement;
@@ -39,6 +40,11 @@ export function createGameplayHud(): GameplayHud {
   tackleMessage.textContent = 'TACKLED';
   root.appendChild(tackleMessage);
 
+  const sackMessage = document.createElement('div');
+  sackMessage.className = 'sack-message';
+  sackMessage.textContent = 'SACK';
+  root.appendChild(sackMessage);
+
   const outOfBoundsMessage = document.createElement('div');
   outOfBoundsMessage.className = 'out-of-bounds-message';
   outOfBoundsMessage.textContent = 'OUT OF BOUNDS';
@@ -67,6 +73,7 @@ export function createGameplayHud(): GameplayHud {
     playCall,
     resultMessage,
     root,
+    sackMessage,
     score,
     tackleMessage,
     touchdownMessage,
@@ -84,12 +91,13 @@ export function syncGameplayHud(hud: GameplayHud, gameplay: GameplaySnapshot): v
   )} | Ball ${formatNumber(gameplay.drive.lineOfScrimmage.z)}`;
   hud.playCall.textContent = gameplay.selectedPlay.displayName;
   hud.tackleMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'tackle';
+  hud.sackMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'sack';
   hud.touchdownMessage.hidden = lastPlayResult?.type !== 'touchdown';
   hud.outOfBoundsMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'outOfBounds';
   hud.incompleteMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'incomplete';
   hud.turnoverMessage.hidden = !isTurnoverOnDowns;
   hud.resultMessage.hidden =
-    !lastPlayResult || !['tackle', 'outOfBounds', 'incomplete'].includes(lastPlayResult.type);
+    !lastPlayResult || !['tackle', 'outOfBounds', 'incomplete', 'sack'].includes(lastPlayResult.type);
   hud.resultMessage.textContent = lastPlayResult ? formatYards(lastPlayResult.yardsGained) : '';
 }
 

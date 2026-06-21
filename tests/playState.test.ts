@@ -237,6 +237,71 @@ describe('play state transitions', () => {
     expect(attemptPass(gameplay)).toBe(false);
   });
 
+  it('records a sack when an ordinary defender contacts the quarterback before a pass', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z - 4;
+    const passRusher = getPrimaryDefender(gameplay.players);
+    passRusher.position.x = gameplay.player.position.x;
+    passRusher.position.z = gameplay.player.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: { x: 0, z: LINE_OF_SCRIMMAGE_Z - 4 },
+      reason: 'sack',
+      scoringTeam: null,
+      startingBallSpot: INITIAL_BALL_SPOT,
+      type: 'sack',
+    });
+    expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(-4);
+    expect(gameplay.drive.currentDown).toBe(2);
+    expect(gameplay.drive.lineOfScrimmage).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z - 4 });
+    expect(gameplay.nextBallSpot).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z - 4 });
+    expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.sackResetDelaySeconds);
+  });
+
+  it('does not end the play when the quarterback is contacted after throwing', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    expect(attemptPass(gameplay)).toBe(true);
+    const passRusher = getPrimaryDefender(gameplay.players);
+    passRusher.position.x = gameplay.player.position.x;
+    passRusher.position.z = gameplay.player.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('live');
+    expect(gameplay.lastPlayResult).toBeNull();
+    expect(gameplay.ball.state).toMatchObject({ kind: 'inFlight' });
+  });
+
+  it('classifies quarterback contact beyond the line of scrimmage as a tackle, not a sack', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z + 2;
+    const passRusher = getPrimaryDefender(gameplay.players);
+    passRusher.position.x = gameplay.player.position.x;
+    passRusher.position.z = gameplay.player.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: { x: 0, z: LINE_OF_SCRIMMAGE_Z + 2 },
+      reason: 'tackle',
+      type: 'tackle',
+    });
+    expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(2);
+  });
+
   it('catches a pass, transfers possession and control to the receiver, and records completed-pass yardage', () => {
     const gameplay = createGameplayModel();
 
@@ -271,6 +336,7 @@ describe('play state transitions', () => {
       startingBallSpot: INITIAL_BALL_SPOT,
       type: 'tackle',
     });
+    expect(gameplay.lastPlayResult?.type).not.toBe('sack');
     expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(8);
     expect(gameplay.drive.currentDown).toBe(2);
     expect(gameplay.drive.yardsToFirstDown).toBeCloseTo(2);
@@ -630,6 +696,7 @@ describe('play state transitions', () => {
       type: 'tackle',
       yardsGained: 0,
     });
+    expect(gameplay.lastPlayResult?.type).not.toBe('sack');
     expect(gameplay.drive.currentDown).toBe(2);
     expect(gameplay.drive.yardsToFirstDown).toBe(10);
     expect(gameplay.score).toBe(0);

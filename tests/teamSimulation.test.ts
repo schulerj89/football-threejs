@@ -81,6 +81,7 @@ describe('three-on-three rushing drill simulation', () => {
     const quarterback = getPlayer(players, 'runner');
     const receiver = getPlayer(players, 'blocker-left');
     const coverageDefender = getPlayer(players, 'defender-left');
+    const passRusher = getPlayer(players, 'defender-middle');
     const receiverStart = { ...receiver.position };
 
     updateRushingDrillAi(players, createBlockingState(), quarterback, {
@@ -94,6 +95,8 @@ describe('three-on-three rushing drill simulation', () => {
     expect(receiver.position.z).toBeGreaterThan(receiverStart.z);
     expect(coverageDefender.currentState).toBe('pursuing');
     expect(coverageDefender.velocity.z).toBeLessThan(0);
+    expect(passRusher.currentState).toBe('pursuing');
+    expect(passRusher.velocity.z).toBeLessThan(0);
   });
 
   it('disengages blockers and defenders after they separate', () => {

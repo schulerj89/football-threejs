@@ -45,6 +45,10 @@ import {
   type PlayerSnapshot,
 } from './playerModel';
 import {
+  findSackingDefender,
+  hasQuarterbackCrossedLineOfScrimmage,
+} from './sackRules';
+import {
   createBlockingState,
   resetBlockingState,
   updateRushingDrillAi,
@@ -53,7 +57,7 @@ import {
 } from './teamSimulation';
 
 export type PlayState = 'preSnap' | 'live' | 'dead';
-export type PlayResultType = 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete';
+export type PlayResultType = 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete' | 'sack';
 export type PlayEndReason = PlayResultType;
 export type ScoringTeam = 'offense' | null;
 
@@ -73,6 +77,7 @@ export const GAMEPLAY_CONFIG = {
   opposingGoalLineZ: OPPOSING_GOAL_LINE_Z,
   outOfBoundsResetDelaySeconds: 1.25,
   incompleteResetDelaySeconds: 1.25,
+  sackResetDelaySeconds: 1.25,
   tackleResetDelaySeconds: 1.25,
   turnoverResetDelaySeconds: 1.25,
 } as const;
@@ -257,7 +262,11 @@ export function resetPlay(gameplay: GameplayModel): void {
 
 export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): void {
   if (gameplay.playState === 'live') {
-    detectTackle(gameplay);
+    detectSack(gameplay);
+
+    if (gameplay.playState === 'live') {
+      detectTackle(gameplay);
+    }
 
     if (gameplay.playState === 'live') {
       updateRushingDrillAi(gameplay.players, gameplay.blocking, gameplay.player, {
@@ -267,7 +276,10 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
         play: gameplay.selectedPlay,
       });
       updatePassFlight(gameplay, deltaSeconds);
-      detectTackle(gameplay);
+      detectSack(gameplay);
+      if (gameplay.playState === 'live') {
+        detectTackle(gameplay);
+      }
     }
 
     if (gameplay.playState === 'live') {
@@ -381,12 +393,46 @@ function detectTackle(gameplay: GameplayModel): void {
   );
 }
 
+function detectSack(gameplay: GameplayModel): void {
+  const lineOfScrimmage = gameplay.activePlayStartSpot ?? gameplay.currentBallSpot;
+  const sacker = findSackingDefender(gameplay.players, {
+    ball: gameplay.ball,
+    lineOfScrimmage,
+    passAttempted: gameplay.passAttempted,
+    play: gameplay.selectedPlay,
+    playState: gameplay.playState,
+    quarterback: gameplay.player,
+  });
+
+  if (!sacker) {
+    return;
+  }
+
+  const endingSpot = getCarrierBallSpot(gameplay.player);
+
+  recordPlayResult(
+    gameplay,
+    'sack',
+    endingSpot,
+    endingSpot,
+    GAMEPLAY_CONFIG.sackResetDelaySeconds,
+    null,
+  );
+}
+
 function canCarrierBeTackled(gameplay: GameplayModel): boolean {
-  return !(
+  if (!(
     gameplay.selectedPlay.kind === 'pass' &&
     gameplay.ball.state.kind === 'possessed' &&
-    gameplay.player.role === 'quarterback'
-  );
+    gameplay.player.role === 'quarterback' &&
+    !gameplay.passAttempted
+  )) {
+    return true;
+  }
+
+  const lineOfScrimmage = gameplay.activePlayStartSpot ?? gameplay.currentBallSpot;
+
+  return hasQuarterbackCrossedLineOfScrimmage(gameplay.player, lineOfScrimmage);
 }
 
 function detectOutOfBounds(gameplay: GameplayModel): void {

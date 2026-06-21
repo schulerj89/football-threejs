@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0] - 2026-06-21
+
+### Added
+
+- Added formal pass-rush behavior for Quick Pass: coverage defenders keep covering receivers while ordinary defenders rush the quarterback.
+- Added sack classification for live passing plays when the quarterback still has possession, has not thrown, and has not crossed the line of scrimmage.
+- Added `sack` as a gameplay play-result type with dead-ball spotting, signed yardage, down advancement, and `SACK` HUD messaging.
+- Added dedicated sack-rule classification in gameplay code without adding animation-only player states.
+- Added deterministic tests for pre-throw sacks, negative sack yardage, post-throw quarterback contact, completed-pass tackle continuation, rushing-play tackle classification, and sack drive advancement.
+
 ## [0.10.1] - 2026-06-21
 
 ### Fixed

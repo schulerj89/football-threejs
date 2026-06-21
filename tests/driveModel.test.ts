@@ -60,6 +60,24 @@ describe('drive and down model', () => {
     expect(drive.yardsToFirstDown).toBeCloseTo(10);
   });
 
+  it('advances the down and spots the ball after a sack', () => {
+    const drive = createDriveModel();
+    const sackSpot = { x: 0, z: LINE_OF_SCRIMMAGE_Z - 5 };
+
+    const update = applyPlayResultToDrive(drive, createPlayResult(1, 'sack', sackSpot));
+
+    expect(update).toMatchObject({
+      applied: true,
+      driveEnded: false,
+      newFirstDown: false,
+      nextBallSpot: sackSpot,
+    });
+    expect(drive.currentDown).toBe(2);
+    expect(drive.lineOfScrimmage).toEqual(sackSpot);
+    expect(drive.yardsToFirstDown).toBeCloseTo(15);
+  });
+
+
   it('awards first-and-10 when the line to gain is reached', () => {
     const drive = createDriveModel();
     const endingSpot = {
