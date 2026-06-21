@@ -43,6 +43,32 @@ describe('presentation camera director', () => {
     expect(gameplay.playState).toBe('live');
   });
 
+  it('starts a pre-play orbit shot for a new pre-snap formation', () => {
+    const gameplay = createGameplayModel();
+    const director = new PresentationCameraDirector({ cinematics: 'full' });
+    const debug = director.update(snapshotGameplayModel(gameplay), new THREE.PerspectiveCamera(), 0);
+
+    expect(debug.activeShotName).toBe('prePlayOrbit180');
+    expect(debug.phase).toBe('preSnapEstablish');
+    expect(debug.orbitRadius).toBeGreaterThan(0);
+    expect(debug.shotProgress).toBe(0);
+  });
+
+  it('skips the active orbit shot without mutating gameplay state', () => {
+    const gameplay = createGameplayModel();
+    const snapshot = snapshotGameplayModel(gameplay);
+    const before = JSON.stringify(snapshot);
+    const director = new PresentationCameraDirector({ cinematics: 'full' });
+    const camera = new THREE.PerspectiveCamera();
+
+    director.update(snapshot, camera, 0);
+    expect(director.skipActiveShot()).toBe(true);
+    const debug = director.update(snapshot, camera, 0.016);
+
+    expect(debug.activeShotName).toBeNull();
+    expect(JSON.stringify(snapshot)).toBe(before);
+  });
+
   it('does not mutate gameplay snapshots while calculating camera shots', () => {
     const gameplay = createGameplayModel();
     const snapshot = snapshotGameplayModel(gameplay);
@@ -107,6 +133,41 @@ describe('presentation camera director', () => {
     expect(debug.phase).toBe('touchdownResult');
     expect(debug.focusTarget.x).toBeCloseTo(touchdownSpot.x);
     expect(debug.focusTarget.z).toBeCloseTo(touchdownSpot.z);
+  });
+
+  it('starts a touchdown orbit only after an authoritative touchdown result', () => {
+    const tackleSnapshot = createDeadSnapshot('tackle', { x: 0, z: 12 });
+    const touchdownSpot = { x: 3, z: 50 };
+    const touchdownSnapshot = createDeadSnapshot('touchdown', touchdownSpot);
+    const director = new PresentationCameraDirector({ cinematics: 'full' });
+    const camera = new THREE.PerspectiveCamera();
+    const tackleDebug = director.update(tackleSnapshot, camera, 0);
+    const touchdownDebug = director.update(touchdownSnapshot, camera, 0.016);
+
+    expect(tackleDebug.activeShotName).toBeNull();
+    expect(touchdownDebug.activeShotName).toBe('touchdownOrbit360');
+    expect(touchdownDebug.phase).toBe('touchdownResult');
+    expect(touchdownDebug.focusTarget.x).toBeCloseTo(touchdownSpot.x);
+    expect(touchdownDebug.focusTarget.z).toBeCloseTo(touchdownSpot.z);
+  });
+
+  it('skips a touchdown orbit without restarting it for the same result', () => {
+    const snapshot = createDeadSnapshot('touchdown', { x: 1, z: 50 });
+    const director = new PresentationCameraDirector({ cinematics: 'full' });
+    const camera = new THREE.PerspectiveCamera();
+
+    expect(director.update(snapshot, camera, 0).activeShotName).toBe('touchdownOrbit360');
+    expect(director.skipActiveShot()).toBe(true);
+    expect(director.update(snapshot, camera, 0.016).activeShotName).toBeNull();
+  });
+
+  it('respects the off cinematics setting while preserving normal cinematic phases', () => {
+    const gameplay = createGameplayModel();
+    const director = new PresentationCameraDirector({ cinematics: 'off' });
+    const debug = director.update(snapshotGameplayModel(gameplay), new THREE.PerspectiveCamera(), 0);
+
+    expect(debug.activeShotName).toBeNull();
+    expect(debug.phase).toBe('preSnapEstablish');
   });
 
   it('returns focus to the newly resolved snap spot after reset', () => {

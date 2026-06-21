@@ -32,7 +32,9 @@ import {
 } from './appearanceAuditOverlay';
 import {
   GameplayCameraController,
+  resolveCinematicsSetting,
   resolveGameplayCameraMode,
+  resolvePresentationShotPreview,
   type GameplayCameraDebugSnapshot,
 } from './camera/GameplayCameraController';
 import { DebugOverlay, type RenderMetricsSnapshot } from './debugOverlay';
@@ -177,6 +179,9 @@ const crowdBenchmarkDurationSeconds = resolveCrowdBenchmarkDurationSeconds(
 );
 const crowdPreviewCount = resolveCrowdPreviewCount(searchParams);
 const crowdPreviewCameraView = resolveCrowdPreviewCameraView(searchParams.get('crowdCamera'));
+const cameraDebugEnabled = searchParams.has('cameraDebug');
+const cinematicsSetting = resolveCinematicsSetting(searchParams.get('cinematics'));
+const shotPreview = resolvePresentationShotPreview(searchParams.get('shotPreview'));
 const playerVisualOptions = {
   bodyStyle: resolvePlayerBodyVisualStyle(searchParams.get('playerBody')),
   debugRoleColors: searchParams.has('debugRoleColors'),
@@ -225,9 +230,11 @@ const routeArtRenderer = new RouteArtRenderer({
 scene.add(routeArtRenderer.group);
 
 const cameraController = new GameplayCameraController({
+  cinematics: cinematicsSetting,
   height: window.innerHeight,
   holdCinematicPreSnapEstablish: presentationAuditEnabled,
   initialMode: resolveGameplayCameraMode(searchParams.get('camera')),
+  shotPreview,
   width: window.innerWidth,
 });
 const renderer = new THREE.WebGLRenderer({
@@ -312,6 +319,7 @@ let latestRenderMetrics: RenderMetricsSnapshot | null = null;
 if (
   import.meta.env.DEV ||
   searchParams.has('debug') ||
+  cameraDebugEnabled ||
   presentationAuditEnabled ||
   appearanceAuditEnabled ||
   audioFeatureFlags.audioDebug ||
@@ -525,6 +533,10 @@ function renderFrame(delta: number): void {
 
 function updatePlayControls(): void {
   const requests = playControls.consumeRequests();
+
+  if (requests.startPlay || requests.resetPlay || requests.restartChallenge) {
+    cameraController.skipPresentationShot();
+  }
 
   if (requests.restartChallenge) {
     restartScoreAttack(gameplayModel);

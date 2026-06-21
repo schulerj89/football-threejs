@@ -131,6 +131,7 @@ interface HelmetAssetSnapshot {
 }
 
 interface CameraSnapshot {
+  activeShotName?: 'prePlayOrbit180' | 'touchdownOrbit360' | null;
   cameraPosition: { x: number; y: number; z: number };
   formationBounds?: {
     center: { x: number; z: number };
@@ -142,6 +143,8 @@ interface CameraSnapshot {
   focusPosition: { x: number; y: number; z: number };
   lookTargetPosition?: { x: number; y: number; z: number };
   mode: 'cinematicBroadcast' | 'offensePerspective' | 'tacticalOrthographic';
+  orbitCenter?: { x: number; y: number; z: number } | null;
+  orbitRadius?: number | null;
   presentationPhase?:
     | 'deadBallResult'
     | 'liveCarrier'
@@ -150,6 +153,8 @@ interface CameraSnapshot {
     | 'returnToPreSnap'
     | 'touchdownResult'
     | 'transitionToGameplay';
+  restoreCamera?: string | null;
+  shotProgress?: number | null;
   state:
     | 'carrierFollow'
     | 'cinematicBroadcast'
@@ -1287,6 +1292,45 @@ test('runs cinematic broadcast camera without delaying gameplay snap', async ({ 
   await page.keyboard.down('w');
   await page.waitForTimeout(150);
   await page.keyboard.up('w');
+  await expectNonBlankCanvas(page);
+});
+
+test('supports cinematic orbit shot settings without blocking gameplay input', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?cameraDebug=1&readback=1&camera=offense&cinematics=off');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.debug-overlay')).toContainText('CAM offensePerspective');
+  expect((await getCameraSnapshot(page)).activeShotName).toBeUndefined();
+
+  await page.goto('/?cameraDebug=1&readback=1&camera=offense&cinematics=brief&audioDebug=1&captions=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.debug-overlay')).toContainText('SHOT prePlayOrbit180');
+  await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO');
+  expect((await getAudioSnapshot(page)).captionsEnabled).toBe(true);
+  const briefShot = await getCameraSnapshot(page);
+  expect(briefShot).toMatchObject({
+    activeShotName: 'prePlayOrbit180',
+    mode: 'offensePerspective',
+    restoreCamera: 'offensePerspective',
+    state: 'cinematicBroadcast',
+  });
+  expect(briefShot.orbitRadius).toBeGreaterThan(0);
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'offensePerspective',
+  });
+  await expectNonBlankCanvas(page);
+
+  await page.goto('/?cameraDebug=1&readback=1&cinematics=full&shotPreview=touchdownOrbit360');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.debug-overlay')).toContainText('SHOT touchdownOrbit360');
+  const fullShot = await getCameraSnapshot(page);
+  expect(fullShot.activeShotName).toBe('touchdownOrbit360');
+  expect(fullShot.shotProgress).not.toBeNull();
+  expect(fullShot.orbitCenter).not.toBeNull();
+  expect(fullShot.orbitRadius).toBeGreaterThan(0);
   await expectNonBlankCanvas(page);
 });
 

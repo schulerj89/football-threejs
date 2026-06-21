@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 import { PLAYABLE_FIELD_BOUNDS } from '../field';
+import { FIELD_BOUNDS } from '../fieldSpec';
 import type { GameplaySnapshot, PlayState } from '../playState';
 import type { PlayerSnapshot, Vector2 } from '../playerModel';
+
+export type CinematicsSetting = 'brief' | 'full' | 'off';
+
+export type PresentationOrbitShotName =
+  | 'prePlayOrbit180'
+  | 'touchdownOrbit360';
 
 export type PresentationCameraPhase =
   | 'deadBallResult'
@@ -21,14 +28,25 @@ export interface FieldPlaneBounds {
 }
 
 export interface PresentationCameraDebugSnapshot {
+  activeShotName: PresentationOrbitShotName | null;
   cameraPosition: { x: number; y: number; z: number };
   focusTarget: { x: number; y: number; z: number };
   formationBounds: FieldPlaneBounds;
   lookTarget: { x: number; y: number; z: number };
+  orbitCenter: { x: number; y: number; z: number } | null;
+  orbitRadius: number | null;
   phase: PresentationCameraPhase;
+  restoreCamera: string | null;
+  shotProgress: number | null;
 }
 
 export interface PresentationCameraConfig {
+  cinematics: {
+    fieldPadding: number;
+    minimumCameraHeight: number;
+    prePlayOrbit180: PresentationOrbitShotConfig;
+    touchdownOrbit360: PresentationOrbitShotConfig;
+  };
   fieldOfView: number;
   holdPreSnapEstablish?: boolean;
   maximumTransitionSpeed: number;
@@ -51,14 +69,82 @@ export interface PresentationCameraShotConfig {
   targetSmoothing?: number;
 }
 
+export interface PresentationOrbitShotConfig {
+  briefDuration: number;
+  briefSweepDegrees: number;
+  distance: number;
+  fieldOfView: number;
+  fullDuration: number;
+  fullSweepDegrees: number;
+  height: number;
+  lookAhead: number;
+  maximumRadius: number;
+  minimumRadius: number;
+  sidelineOffset?: number;
+}
+
 interface PresentationCameraShot {
+  activeShotName: PresentationOrbitShotName | null;
+  fieldOfView: number;
   focus: THREE.Vector3;
   lookTarget: THREE.Vector3;
+  orbitCenter: THREE.Vector3 | null;
+  orbitRadius: number | null;
   phase: PresentationCameraPhase;
   position: THREE.Vector3;
+  restoreCamera: string | null;
+  shotProgress: number | null;
+}
+
+interface PresentationCameraDirectorOptions {
+  cinematics?: CinematicsSetting;
+  config?: PresentationCameraConfig;
+  shotPreview?: PresentationOrbitShotName | null;
+}
+
+interface PresentationCameraUpdateOptions {
+  aspectRatio?: number;
+  restoreCameraMode?: string;
+}
+
+interface ActiveOrbitShot {
+  elapsedSeconds: number;
+  key: string;
+  name: PresentationOrbitShotName;
+  preview: boolean;
 }
 
 export const PRESENTATION_CAMERA_CONFIG: PresentationCameraConfig = {
+  cinematics: {
+    fieldPadding: 10,
+    minimumCameraHeight: 5.5,
+    prePlayOrbit180: {
+      briefDuration: 1.05,
+      briefSweepDegrees: 145,
+      distance: 32,
+      fieldOfView: 42,
+      fullDuration: 1.55,
+      fullSweepDegrees: 180,
+      height: 30,
+      lookAhead: 4,
+      maximumRadius: 58,
+      minimumRadius: 28,
+      sidelineOffset: 0,
+    },
+    touchdownOrbit360: {
+      briefDuration: 0.8,
+      briefSweepDegrees: 270,
+      distance: 20,
+      fieldOfView: 40,
+      fullDuration: 1.05,
+      fullSweepDegrees: 350,
+      height: 9,
+      lookAhead: -4,
+      maximumRadius: 34,
+      minimumRadius: 16,
+      sidelineOffset: 0,
+    },
+  },
   fieldOfView: 44,
   holdPreSnapEstablish: false,
   maximumFieldPosition: {
@@ -136,24 +222,39 @@ export const PRESENTATION_CAMERA_CONFIG: PresentationCameraConfig = {
 } as const;
 
 export class PresentationCameraDirector {
+  private activeOrbitShot: ActiveOrbitShot | null = null;
+  private readonly cinematics: CinematicsSetting;
   private debugSnapshot: PresentationCameraDebugSnapshot = createEmptyDebugSnapshot();
   private readonly playDirection: Vector2;
+  private lastCompletedPrePlayKey: string | null = null;
+  private lastCompletedTouchdownResultId: number | null = null;
   private readonly sidelineDirection: Vector2;
   private phase: PresentationCameraPhase = 'preSnapEstablish';
   private phaseElapsedSeconds = 0;
   private previousPlayState: PlayState | null = null;
   private returnToPreSnapSeconds = 0;
+  private readonly shotPreview: PresentationOrbitShotName | null;
   private smoothedPosition = new THREE.Vector3();
   private smoothedTarget = new THREE.Vector3();
   private transitionToGameplaySeconds = 0;
   private initialized = false;
 
-  constructor(private readonly config: PresentationCameraConfig = PRESENTATION_CAMERA_CONFIG) {
-    this.playDirection = normalizeDirection(config.playDirection);
+  constructor(options: PresentationCameraConfig | PresentationCameraDirectorOptions = {}) {
+    const normalizedOptions = isPresentationCameraConfig(options)
+      ? { config: options }
+      : options;
+
+    this.config = normalizedOptions.config ?? PRESENTATION_CAMERA_CONFIG;
+    this.cinematics = normalizedOptions.cinematics ?? 'off';
+    this.shotPreview = normalizedOptions.shotPreview ?? null;
+    this.playDirection = normalizeDirection(this.config.playDirection);
     this.sidelineDirection = { x: this.playDirection.z, z: -this.playDirection.x };
   }
 
+  private readonly config: PresentationCameraConfig;
+
   reset(): void {
+    this.activeOrbitShot = null;
     this.phase = 'preSnapEstablish';
     this.phaseElapsedSeconds = 0;
     this.previousPlayState = null;
@@ -162,14 +263,62 @@ export class PresentationCameraDirector {
     this.initialized = false;
   }
 
+  hasActiveOrbitShot(): boolean {
+    return this.activeOrbitShot !== null;
+  }
+
+  skipActiveShot(): boolean {
+    if (!this.activeOrbitShot) {
+      return false;
+    }
+
+    this.markOrbitShotCompleted(this.activeOrbitShot);
+    this.activeOrbitShot = null;
+    return true;
+  }
+
   update(
     snapshot: GameplaySnapshot,
     camera: THREE.PerspectiveCamera,
     deltaSeconds: number,
+    options: PresentationCameraUpdateOptions = {},
   ): PresentationCameraDebugSnapshot {
     const delta = clamp(deltaSeconds, 0, this.config.maxDeltaSeconds);
 
     this.updateTransitionTimers(snapshot, delta);
+    const formationBounds = calculateFormationBounds(snapshot.players);
+    const orbitShot = this.updateOrbitShot(snapshot, formationBounds, delta, options);
+
+    if (orbitShot) {
+      this.phase = orbitShot.phase;
+      camera.fov = smoothNumber(
+        camera.fov || this.config.fieldOfView,
+        orbitShot.fieldOfView,
+        this.config.positionSmoothing,
+        delta,
+      );
+      camera.updateProjectionMatrix();
+      this.applyShot(camera, orbitShot, delta);
+      this.previousPlayState = snapshot.playState;
+
+      this.debugSnapshot = {
+        activeShotName: orbitShot.activeShotName,
+        cameraPosition: toPlainVector(camera.position),
+        focusTarget: toPlainVector(orbitShot.focus),
+        formationBounds,
+        lookTarget: toPlainVector(this.smoothedTarget),
+        orbitCenter: orbitShot.orbitCenter ? toPlainVector(orbitShot.orbitCenter) : null,
+        orbitRadius: orbitShot.orbitRadius,
+        phase: this.phase,
+        restoreCamera: orbitShot.restoreCamera,
+        shotProgress: orbitShot.shotProgress,
+      };
+
+      this.completeOrbitShotIfFinished(orbitShot);
+
+      return this.getDebugSnapshot();
+    }
+
     const nextPhase = this.selectPhase(snapshot);
 
     if (nextPhase !== this.phase) {
@@ -179,20 +328,29 @@ export class PresentationCameraDirector {
       this.phaseElapsedSeconds += delta;
     }
 
-    const formationBounds = calculateFormationBounds(snapshot.players);
     const shot = this.createShot(snapshot, formationBounds, this.phase);
 
-    camera.fov = this.config.fieldOfView;
+    camera.fov = smoothNumber(
+      camera.fov || this.config.fieldOfView,
+      shot.fieldOfView,
+      this.config.positionSmoothing,
+      delta,
+    );
     camera.updateProjectionMatrix();
     this.applyShot(camera, shot, delta);
     this.previousPlayState = snapshot.playState;
 
     this.debugSnapshot = {
+      activeShotName: shot.activeShotName,
       cameraPosition: toPlainVector(camera.position),
       focusTarget: toPlainVector(shot.focus),
       formationBounds,
       lookTarget: toPlainVector(this.smoothedTarget),
+      orbitCenter: shot.orbitCenter ? toPlainVector(shot.orbitCenter) : null,
+      orbitRadius: shot.orbitRadius,
       phase: this.phase,
+      restoreCamera: shot.restoreCamera,
+      shotProgress: shot.shotProgress,
     };
 
     return this.getDebugSnapshot();
@@ -200,11 +358,16 @@ export class PresentationCameraDirector {
 
   getDebugSnapshot(): PresentationCameraDebugSnapshot {
     return {
+      activeShotName: this.debugSnapshot.activeShotName,
       cameraPosition: { ...this.debugSnapshot.cameraPosition },
       focusTarget: { ...this.debugSnapshot.focusTarget },
       formationBounds: cloneFieldPlaneBounds(this.debugSnapshot.formationBounds),
       lookTarget: { ...this.debugSnapshot.lookTarget },
+      orbitCenter: this.debugSnapshot.orbitCenter ? { ...this.debugSnapshot.orbitCenter } : null,
+      orbitRadius: this.debugSnapshot.orbitRadius,
       phase: this.debugSnapshot.phase,
+      restoreCamera: this.debugSnapshot.restoreCamera,
+      shotProgress: this.debugSnapshot.shotProgress,
     };
   }
 
@@ -314,12 +477,12 @@ export class PresentationCameraDirector {
       sidelineOffset,
     });
 
-    return {
+    return this.createStaticShot({
       focus,
       lookTarget: this.createForwardTarget(focus, config.lookAhead),
       phase,
       position,
-    };
+    });
   }
 
   private createTransitionShot(
@@ -333,7 +496,7 @@ export class PresentationCameraDirector {
       : this.createFieldFocus(formationBounds.center.x, snapshot.drive.lineOfScrimmage.z, 1.2);
     const config = this.config.phases[phase];
 
-    return {
+    return this.createStaticShot({
       focus,
       lookTarget: this.createForwardTarget(focus, config.lookAhead),
       phase,
@@ -341,7 +504,7 @@ export class PresentationCameraDirector {
         distanceBehind: config.distance,
         height: config.height,
       }),
-    };
+    });
   }
 
   private createCarrierShot(
@@ -352,7 +515,7 @@ export class PresentationCameraDirector {
     const config = this.config.phases[phase];
     const focus = this.createFieldFocus(carrier.position.x, carrier.position.z, 1.3);
 
-    return {
+    return this.createStaticShot({
       focus,
       lookTarget: this.createForwardTarget(focus, config.lookAhead),
       phase,
@@ -360,7 +523,7 @@ export class PresentationCameraDirector {
         distanceBehind: config.distance,
         height: config.height,
       }),
-    };
+    });
   }
 
   private createPassFlightShot(
@@ -382,7 +545,7 @@ export class PresentationCameraDirector {
     );
     const lookTarget = this.createFieldFocus(target.x, target.z, Math.max(1.1, target.y + 1));
 
-    return {
+    return this.createStaticShot({
       focus,
       lookTarget,
       phase,
@@ -390,7 +553,7 @@ export class PresentationCameraDirector {
         distanceBehind: config.distance,
         height: config.height,
       }),
-    };
+    });
   }
 
   private createDeadBallShot(
@@ -401,7 +564,7 @@ export class PresentationCameraDirector {
     const spot = snapshot.lastPlayResult?.endingBallSpot ?? snapshot.nextSnapSpot;
     const focus = this.createFieldFocus(spot.x, spot.z, 1.2);
 
-    return {
+    return this.createStaticShot({
       focus,
       lookTarget: this.createForwardTarget(focus, config.lookAhead),
       phase,
@@ -409,7 +572,7 @@ export class PresentationCameraDirector {
         distanceBehind: config.distance,
         height: config.height,
       }),
-    };
+    });
   }
 
   private createTouchdownShot(
@@ -425,12 +588,12 @@ export class PresentationCameraDirector {
       sidelineOffset: config.sidelineOffset ?? 0,
     });
 
-    return {
+    return this.createStaticShot({
       focus,
       lookTarget: this.createForwardTarget(focus, config.lookAhead),
       phase,
       position,
-    };
+    });
   }
 
   private createReturnToPreSnapShot(
@@ -442,7 +605,7 @@ export class PresentationCameraDirector {
     const snap = snapshot.nextSnapSpot ?? snapshot.drive.lineOfScrimmage;
     const focus = this.createFieldFocus(snap.x, snap.z, 1.2);
 
-    return {
+    return this.createStaticShot({
       focus,
       lookTarget: this.createForwardTarget(focus, config.lookAhead),
       phase,
@@ -450,7 +613,245 @@ export class PresentationCameraDirector {
         distanceBehind: config.distance,
         height: config.height,
       }),
+    });
+  }
+
+  private createStaticShot(options: {
+    focus: THREE.Vector3;
+    lookTarget: THREE.Vector3;
+    phase: PresentationCameraPhase;
+    position: THREE.Vector3;
+  }): PresentationCameraShot {
+    return {
+      activeShotName: null,
+      fieldOfView: this.config.fieldOfView,
+      focus: options.focus,
+      lookTarget: options.lookTarget,
+      orbitCenter: null,
+      orbitRadius: null,
+      phase: options.phase,
+      position: this.preventCameraClipping(options.position),
+      restoreCamera: null,
+      shotProgress: null,
     };
+  }
+
+  private updateOrbitShot(
+    snapshot: GameplaySnapshot,
+    formationBounds: FieldPlaneBounds,
+    deltaSeconds: number,
+    options: PresentationCameraUpdateOptions,
+  ): PresentationCameraShot | null {
+    if (this.activeOrbitShot?.name === 'prePlayOrbit180' && snapshot.playState !== 'preSnap') {
+      this.markOrbitShotCompleted(this.activeOrbitShot);
+      this.activeOrbitShot = null;
+    }
+
+    if (!this.activeOrbitShot) {
+      this.maybeStartOrbitShot(snapshot, formationBounds);
+    }
+
+    if (!this.activeOrbitShot) {
+      return null;
+    }
+
+    this.activeOrbitShot.elapsedSeconds += deltaSeconds;
+    return this.createOrbitShot(
+      snapshot,
+      formationBounds,
+      this.activeOrbitShot,
+      options.aspectRatio ?? 16 / 9,
+      options.restoreCameraMode ?? null,
+    );
+  }
+
+  private maybeStartOrbitShot(
+    snapshot: GameplaySnapshot,
+    formationBounds: FieldPlaneBounds,
+  ): void {
+    if (this.shotPreview) {
+      this.activeOrbitShot = {
+        elapsedSeconds: 0,
+        key: `preview:${this.shotPreview}`,
+        name: this.shotPreview,
+        preview: true,
+      };
+      return;
+    }
+
+    if (this.cinematics === 'off') {
+      return;
+    }
+
+    if (snapshot.playState === 'preSnap') {
+      const prePlayKey = createPrePlayShotKey(snapshot, formationBounds);
+      if (prePlayKey !== this.lastCompletedPrePlayKey) {
+        this.activeOrbitShot = {
+          elapsedSeconds: 0,
+          key: prePlayKey,
+          name: 'prePlayOrbit180',
+          preview: false,
+        };
+      }
+      return;
+    }
+
+    const touchdownResultId = snapshot.lastPlayResult?.type === 'touchdown'
+      ? snapshot.lastPlayResult.id
+      : null;
+    if (
+      snapshot.playState === 'dead' &&
+      touchdownResultId !== null &&
+      touchdownResultId !== this.lastCompletedTouchdownResultId
+    ) {
+      this.activeOrbitShot = {
+        elapsedSeconds: 0,
+        key: String(touchdownResultId),
+        name: 'touchdownOrbit360',
+        preview: false,
+      };
+    }
+  }
+
+  private createOrbitShot(
+    snapshot: GameplaySnapshot,
+    formationBounds: FieldPlaneBounds,
+    activeShot: ActiveOrbitShot,
+    aspectRatio: number,
+    restoreCameraMode: string | null,
+  ): PresentationCameraShot {
+    const config = this.config.cinematics[activeShot.name];
+    const duration = this.cinematics === 'full'
+      ? config.fullDuration
+      : config.briefDuration;
+    const rawProgress = clamp(activeShot.elapsedSeconds / Math.max(0.001, duration), 0, 1);
+    const progress = easeInOutCubic(rawProgress);
+    const sweepRadians = THREE.MathUtils.degToRad(
+      this.cinematics === 'full'
+        ? config.fullSweepDegrees
+        : config.briefSweepDegrees,
+    );
+    const center = activeShot.name === 'prePlayOrbit180'
+      ? this.createPrePlayOrbitCenter(formationBounds)
+      : this.createTouchdownOrbitCenter(snapshot);
+    const phase: PresentationCameraPhase = activeShot.name === 'prePlayOrbit180'
+      ? 'preSnapEstablish'
+      : 'touchdownResult';
+    const focus = this.createFieldFocus(center.x, center.z, center.y);
+    const radius = this.calculateOrbitRadius(activeShot.name, formationBounds, aspectRatio);
+    const startAngle = activeShot.name === 'prePlayOrbit180' ? -sweepRadians : 0;
+    const angle = startAngle + sweepRadians * progress;
+    const position = this.createOrbitPosition(center, radius, angle, config.height);
+    const lookTarget = activeShot.name === 'prePlayOrbit180'
+      ? this.createForwardTarget(focus, config.lookAhead * (1 - progress))
+      : this.createForwardTarget(focus, config.lookAhead);
+
+    return {
+      activeShotName: activeShot.name,
+      fieldOfView: config.fieldOfView,
+      focus,
+      lookTarget,
+      orbitCenter: center.clone(),
+      orbitRadius: radius,
+      phase,
+      position: this.preventCameraClipping(position),
+      restoreCamera: restoreCameraMode,
+      shotProgress: rawProgress,
+    };
+  }
+
+  private completeOrbitShotIfFinished(shot: PresentationCameraShot): void {
+    if (!this.activeOrbitShot || shot.shotProgress === null || shot.shotProgress < 1) {
+      return;
+    }
+
+    this.markOrbitShotCompleted(this.activeOrbitShot);
+
+    if (!this.activeOrbitShot.preview) {
+      this.activeOrbitShot = null;
+    }
+  }
+
+  private markOrbitShotCompleted(activeShot: ActiveOrbitShot): void {
+    if (activeShot.preview) {
+      return;
+    }
+
+    if (activeShot.name === 'prePlayOrbit180') {
+      this.lastCompletedPrePlayKey = activeShot.key;
+      return;
+    }
+
+    this.lastCompletedTouchdownResultId = Number(activeShot.key);
+  }
+
+  private createPrePlayOrbitCenter(formationBounds: FieldPlaneBounds): THREE.Vector3 {
+    return new THREE.Vector3(
+      formationBounds.center.x,
+      1.45,
+      formationBounds.center.z,
+    );
+  }
+
+  private createTouchdownOrbitCenter(snapshot: GameplaySnapshot): THREE.Vector3 {
+    const spot = snapshot.lastPlayResult?.endingBallSpot ?? snapshot.player.position;
+    const scorer = getBallCarrier(snapshot) ?? snapshot.player;
+    const x = snapshot.lastPlayResult?.type === 'touchdown'
+      ? spot.x
+      : scorer.position.x;
+    const z = snapshot.lastPlayResult?.type === 'touchdown'
+      ? spot.z
+      : scorer.position.z;
+
+    return new THREE.Vector3(x, 1.55, z);
+  }
+
+  private calculateOrbitRadius(
+    shotName: PresentationOrbitShotName,
+    formationBounds: FieldPlaneBounds,
+    aspectRatio: number,
+  ): number {
+    const config = this.config.cinematics[shotName];
+    const aspectScale = aspectRatio < 0.75 ? 1.22 : 1;
+    const boundsRadius = shotName === 'prePlayOrbit180'
+      ? Math.max(formationBounds.size.x * 0.62, formationBounds.size.z * 0.92)
+      : 0;
+
+    return clamp(
+      Math.max(config.minimumRadius, config.distance, boundsRadius) * aspectScale,
+      config.minimumRadius,
+      config.maximumRadius,
+    );
+  }
+
+  private createOrbitPosition(
+    center: THREE.Vector3,
+    radius: number,
+    angleRadians: number,
+    height: number,
+  ): THREE.Vector3 {
+    const sidelineWeight = Math.sin(angleRadians) * radius;
+    const playDirectionWeight = -Math.cos(angleRadians) * radius;
+
+    return new THREE.Vector3(
+      center.x +
+        this.sidelineDirection.x * sidelineWeight +
+        this.playDirection.x * playDirectionWeight,
+      height,
+      center.z +
+        this.sidelineDirection.z * sidelineWeight +
+        this.playDirection.z * playDirectionWeight,
+    );
+  }
+
+  private preventCameraClipping(position: THREE.Vector3): THREE.Vector3 {
+    const padding = this.config.cinematics.fieldPadding;
+
+    return new THREE.Vector3(
+      clamp(position.x, FIELD_BOUNDS.minX - padding, FIELD_BOUNDS.maxX + padding),
+      Math.max(this.config.cinematics.minimumCameraHeight, position.y),
+      clamp(position.z, FIELD_BOUNDS.minZ - padding, FIELD_BOUNDS.maxZ + padding),
+    );
   }
 
   private applyShot(
@@ -594,8 +995,41 @@ function smoothVectorWithSpeedLimit(
   return current.clone().add(delta.multiplyScalar(maxDistance / distance));
 }
 
+function smoothNumber(
+  current: number,
+  target: number,
+  smoothing: number,
+  deltaSeconds: number,
+): number {
+  return current + (target - current) * calculateSmoothingAlpha(smoothing, deltaSeconds);
+}
+
 function calculateSmoothingAlpha(smoothing: number, deltaSeconds: number): number {
   return 1 - Math.exp(-smoothing * Math.max(0, deltaSeconds));
+}
+
+function easeInOutCubic(value: number): number {
+  const t = clamp(value, 0, 1);
+
+  return t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function createPrePlayShotKey(
+  snapshot: GameplaySnapshot,
+  formationBounds: FieldPlaneBounds,
+): string {
+  return [
+    snapshot.selectedPlay.id,
+    snapshot.nextSnapSpot.x.toFixed(2),
+    snapshot.nextSnapSpot.z.toFixed(2),
+    formationBounds.center.x.toFixed(2),
+    formationBounds.center.z.toFixed(2),
+    formationBounds.size.x.toFixed(2),
+    formationBounds.size.z.toFixed(2),
+    formationBounds.playerIds.join(','),
+  ].join('|');
 }
 
 function normalizeDirection(direction: Vector2): Vector2 {
@@ -615,11 +1049,16 @@ function createEmptyDebugSnapshot(): PresentationCameraDebugSnapshot {
   const emptyBounds = calculateFormationBounds([]);
 
   return {
+    activeShotName: null,
     cameraPosition: { x: 0, y: 0, z: 0 },
     focusTarget: { x: 0, y: 0, z: 0 },
     formationBounds: emptyBounds,
     lookTarget: { x: 0, y: 0, z: 0 },
+    orbitCenter: null,
+    orbitRadius: null,
     phase: 'preSnapEstablish',
+    restoreCamera: null,
+    shotProgress: null,
   };
 }
 
@@ -643,4 +1082,10 @@ function toPlainVector(vector: THREE.Vector3): { x: number; y: number; z: number
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function isPresentationCameraConfig(
+  value: PresentationCameraConfig | PresentationCameraDirectorOptions,
+): value is PresentationCameraConfig {
+  return 'phases' in value && 'playDirection' in value;
 }

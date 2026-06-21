@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   GameplayCameraController,
+  resolveCinematicsSetting,
   resolveGameplayCameraMode,
+  resolvePresentationShotPreview,
 } from '../src/camera/GameplayCameraController';
 import {
   attemptPass,
@@ -25,6 +27,14 @@ describe('gameplay camera controller', () => {
     expect(resolveGameplayCameraMode('offensePerspective')).toBe('offensePerspective');
     expect(resolveGameplayCameraMode('cinematic')).toBe('cinematicBroadcast');
     expect(resolveGameplayCameraMode('cinematicBroadcast')).toBe('cinematicBroadcast');
+    expect(resolveCinematicsSetting(null)).toBe('off');
+    expect(resolveCinematicsSetting('off')).toBe('off');
+    expect(resolveCinematicsSetting('brief')).toBe('brief');
+    expect(resolveCinematicsSetting('full')).toBe('full');
+    expect(resolveCinematicsSetting('bad')).toBe('off');
+    expect(resolvePresentationShotPreview('prePlayOrbit180')).toBe('prePlayOrbit180');
+    expect(resolvePresentationShotPreview('touchdownOrbit360')).toBe('touchdownOrbit360');
+    expect(resolvePresentationShotPreview('bad')).toBeNull();
   });
 
   it('uses the tactical orthographic camera by default', () => {
@@ -44,6 +54,7 @@ describe('gameplay camera controller', () => {
     const gameplay = createGameplayModel();
     const snapshot = snapshotGameplayModel(gameplay);
     const controller = new GameplayCameraController({
+      cinematics: 'off',
       height: 900,
       initialMode: 'offensePerspective',
       width: 1440,
@@ -69,6 +80,7 @@ describe('gameplay camera controller', () => {
     attemptPass(gameplay);
     const snapshot = snapshotGameplayModel(gameplay);
     const controller = new GameplayCameraController({
+      cinematics: 'off',
       height: 900,
       initialMode: 'offensePerspective',
       width: 1440,
@@ -93,11 +105,13 @@ describe('gameplay camera controller', () => {
     const preview = createFormationPreviewModel('7v7', 'middle');
     const snapshot = snapshotFormationPreviewAsGameplay(preview);
     const tactical = new GameplayCameraController({
+      cinematics: 'off',
       height: 900,
       initialMode: 'tacticalOrthographic',
       width: 1440,
     });
     const offense = new GameplayCameraController({
+      cinematics: 'off',
       height: 900,
       initialMode: 'offensePerspective',
       width: 1440,
@@ -141,6 +155,92 @@ describe('gameplay camera controller', () => {
     expect(controller.toggleMode(snapshot)).toBe('offensePerspective');
     expect(controller.toggleMode(snapshot)).toBe('cinematicBroadcast');
     expect(controller.toggleMode(snapshot)).toBe('tacticalOrthographic');
+  });
+
+  it('uses a transient orbit camera without changing the selected gameplay mode', () => {
+    const gameplay = createGameplayModel();
+    const snapshot = snapshotGameplayModel(gameplay);
+    const controller = new GameplayCameraController({
+      cinematics: 'brief',
+      height: 900,
+      initialMode: 'tacticalOrthographic',
+      width: 1440,
+    });
+
+    controller.update(snapshot, 0);
+
+    const debug = controller.getDebugSnapshot();
+    expect(controller.camera).toBeInstanceOf(THREE.PerspectiveCamera);
+    expect(controller.getMode()).toBe('tacticalOrthographic');
+    expect(debug).toMatchObject({
+      activeShotName: 'prePlayOrbit180',
+      mode: 'tacticalOrthographic',
+      restoreCamera: 'tacticalOrthographic',
+      state: 'cinematicBroadcast',
+    });
+  });
+
+  it('can skip a transient orbit shot and restore the selected camera', () => {
+    const gameplay = createGameplayModel();
+    const snapshot = snapshotGameplayModel(gameplay);
+    const controller = new GameplayCameraController({
+      cinematics: 'brief',
+      height: 900,
+      initialMode: 'offensePerspective',
+      width: 1440,
+    });
+
+    controller.update(snapshot, 0);
+    expect(controller.skipPresentationShot()).toBe(true);
+    controller.update(snapshot, 0.016);
+
+    expect(controller.camera).toBeInstanceOf(THREE.PerspectiveCamera);
+    const debug = controller.getDebugSnapshot();
+    expect(debug.activeShotName).toBeUndefined();
+    expect(debug).toMatchObject({
+      mode: 'offensePerspective',
+      state: 'preSnapFormation',
+    });
+  });
+
+  it('calculates pre-play orbit paths for every snap lane', () => {
+    for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+      const preview = createFormationPreviewModel('7v7', lane);
+      const snapshot = snapshotFormationPreviewAsGameplay(preview);
+      const controller = new GameplayCameraController({
+        cinematics: 'full',
+        height: 900,
+        initialMode: 'offensePerspective',
+        width: 1440,
+      });
+
+      controller.update(snapshot, 0);
+      const debug = controller.getDebugSnapshot();
+
+      expect(debug.activeShotName).toBe('prePlayOrbit180');
+      expect(debug.orbitCenter?.x).toBeCloseTo(debug.formationBounds?.center.x ?? 0);
+      expect(debug.orbitCenter?.z).toBeCloseTo(debug.formationBounds?.center.z ?? 0);
+      expect(debug.orbitRadius).toBeGreaterThan(0);
+    }
+  });
+
+  it('updates orbit framing when resized', () => {
+    const gameplay = createGameplayModel();
+    const snapshot = snapshotGameplayModel(gameplay);
+    const controller = new GameplayCameraController({
+      cinematics: 'full',
+      height: 900,
+      initialMode: 'offensePerspective',
+      width: 1440,
+    });
+
+    controller.update(snapshot, 0);
+    const wideRadius = controller.getDebugSnapshot().orbitRadius;
+    controller.resize(390, 844);
+    controller.update(snapshot, 0.016);
+    const narrowRadius = controller.getDebugSnapshot().orbitRadius;
+
+    expect(narrowRadius).toBeGreaterThan(wideRadius ?? 0);
   });
 
   it('resizes every camera mode without invalid projection data', () => {

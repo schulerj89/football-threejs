@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.36.0] - 2026-06-21
+
+### Added
+
+- Added optional cinematic orbit-shot presentation with `?cinematics=off`, `?cinematics=brief`, and `?cinematics=full`, defaulting to `off` to preserve existing camera behavior.
+- Added `prePlayOrbit180` formation setup shots that compute paths from play direction, formation bounds, field bounds, and aspect ratio without blocking snap input.
+- Added `touchdownOrbit360` touchdown-result shots that start only after authoritative touchdown results, focus the scorer/dead-ball context, and remain skippable.
+- Added `?shotPreview=prePlayOrbit180`, `?shotPreview=touchdownOrbit360`, and `?cameraDebug=1` diagnostics with shot name, progress, orbit center, radius, camera position, look target, and restore camera.
+- Added unit and browser smoke coverage for shot triggering, skipping, camera restore, all snap lanes, resize-aware orbit paths, gameplay snapshot immutability, audio/caption continuity, and `off`/`brief`/`full` query modes.
+
 ## [0.35.0] - 2026-06-21
 
 ### Added

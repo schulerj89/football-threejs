@@ -32,7 +32,8 @@ export class DebugOverlay {
   constructor({ renderer, player }: DebugOverlayOptions) {
     this.element = document.createElement('div');
     this.element.className = 'debug-overlay';
-    this.element.hidden = !new URLSearchParams(window.location.search).has('debug');
+    const searchParams = new URLSearchParams(window.location.search);
+    this.element.hidden = !(searchParams.has('debug') || searchParams.has('cameraDebug'));
     document.body.appendChild(this.element);
 
     this.update(0, renderer, player);
@@ -83,6 +84,16 @@ export class DebugOverlay {
           `FORM_BOUNDS ${formatPlaneBounds(camera.formationBounds)}`,
         );
       }
+
+      if (camera.activeShotName) {
+        lines.push(
+          `SHOT ${camera.activeShotName}`,
+          `SHOT_PROGRESS ${((camera.shotProgress ?? 0) * 100).toFixed(0)}%`,
+          `ORBIT_CENTER ${formatNullableVector(camera.orbitCenter)}`,
+          `ORBIT_RADIUS ${camera.orbitRadius?.toFixed(1) ?? 'none'}`,
+          `RESTORE_CAM ${camera.restoreCamera ?? 'none'}`,
+        );
+      }
     }
 
     if (gameplay) {
@@ -126,6 +137,14 @@ export class DebugOverlay {
 
 function formatVector(vector: { x: number; y: number; z: number }): string {
   return `${vector.x.toFixed(1)}, ${vector.y.toFixed(1)}, ${vector.z.toFixed(1)}`;
+}
+
+function formatNullableVector(vector: { x: number; y: number; z: number } | null | undefined): string {
+  if (!vector) {
+    return 'none';
+  }
+
+  return formatVector(vector);
 }
 
 function formatSpot(spot: FootballSpot | null): string {
