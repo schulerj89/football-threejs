@@ -55,7 +55,13 @@ describe('GamePresentationRuntime', () => {
 
     expect(events.map((event) => event.type)).toEqual(['playPrepared']);
     expect(audio.processEvents).toHaveBeenCalledWith(snapshot, events, 1 / 60);
-    expect(hold.update).toHaveBeenCalledWith(events, 1 / 60);
+    expect(hold.update).toHaveBeenCalledWith(events, 1 / 60, {
+      commentary: expect.objectContaining({
+        playback: expect.objectContaining({
+          playing: false,
+        }),
+      }),
+    });
     expect(crowd.update).toHaveBeenCalledWith(snapshot, events, 1 / 60);
     expect(commentary.processEvents).toHaveBeenCalledWith(events, 1 / 60);
 
@@ -152,6 +158,18 @@ function createCommentaryStub() {
       eventHistory: [],
       lastEventSource: null,
       lastPriority: null,
+      playback: {
+        activeClipId: null,
+        completed: false,
+        completedEventIds: [],
+        elapsedDuration: 0,
+        eventId: null,
+        expectedDuration: 0,
+        failed: false,
+        failedEventIds: [],
+        playing: false,
+        remainingDuration: 0,
+      },
       queue: [],
       remainingCooldowns: [],
     } satisfies BroadcastCommentarySnapshot)),
@@ -169,6 +187,7 @@ function createHoldStub() {
       reason: null,
       remainingSeconds: 0,
       skippedCount: 0,
+      touchdown: null,
     } satisfies PresentationHoldSnapshot)),
     skip: vi.fn(() => false),
     update: vi.fn(),

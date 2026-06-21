@@ -139,7 +139,9 @@ export class GamePresentationRuntime {
           this.commentaryDirector.processEvents(this.recentEvents, deltaSeconds);
         }
       });
-      this.getHoldDirector().update(this.recentEvents, deltaSeconds);
+      this.getHoldDirector().update(this.recentEvents, deltaSeconds, {
+        commentary: options.commentaryActive ? this.commentaryDirector.getSnapshot() : null,
+      });
       options.profiler.measure('crowdBehaviorUpdate', () => {
         this.getCrowdController()?.update(
           snapshot,
@@ -152,12 +154,13 @@ export class GamePresentationRuntime {
     }
 
     this.gameAudioDirector.processEvents(snapshot, this.recentEvents, deltaSeconds);
-    this.getHoldDirector().update(this.recentEvents, deltaSeconds);
-    this.getCrowdController()?.update(snapshot, this.recentEvents, deltaSeconds);
-
     if (options.commentaryActive) {
       this.commentaryDirector.processEvents(this.recentEvents, deltaSeconds);
     }
+    this.getHoldDirector().update(this.recentEvents, deltaSeconds, {
+      commentary: options.commentaryActive ? this.commentaryDirector.getSnapshot() : null,
+    });
+    this.getCrowdController()?.update(snapshot, this.recentEvents, deltaSeconds);
   }
 
   skipPresentation(): boolean {

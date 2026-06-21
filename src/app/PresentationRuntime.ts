@@ -368,7 +368,9 @@ export class PresentationRuntime {
         presentationEvents,
       });
     }
-    this.gamePresentationRuntime.recordCameraSnapshot(this.cameraController.getDebugSnapshot());
+    const cameraSnapshot = this.cameraController.getDebugSnapshot();
+    this.presentationHoldDirector.updateCameraState(cameraSnapshot);
+    this.gamePresentationRuntime.recordCameraSnapshot(cameraSnapshot);
     if (profiler?.enabled) {
       profiler.measure('hudDomUpdate', () => {
         syncGameplayHud(this.gameplayHud, gameplaySnapshot);

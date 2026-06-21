@@ -71,6 +71,19 @@ export interface BroadcastCommentaryActiveClip extends BroadcastCommentaryQueueE
   startedAtSeconds: number;
 }
 
+export interface BroadcastCommentaryPlaybackState {
+  activeClipId: string | null;
+  completed: boolean;
+  completedEventIds: string[];
+  elapsedDuration: number;
+  eventId: string | null;
+  expectedDuration: number;
+  failed: boolean;
+  failedEventIds: string[];
+  playing: boolean;
+  remainingDuration: number;
+}
+
 export interface BroadcastCommentaryCooldownEntry {
   category: CommentaryCategory;
   remainingSeconds: number;
@@ -88,6 +101,7 @@ export interface BroadcastCommentarySnapshot {
   eventHistory: BroadcastCommentaryHistoryEntry[];
   lastEventSource: string | null;
   lastPriority: number | null;
+  playback: BroadcastCommentaryPlaybackState;
   queue: BroadcastCommentaryQueueEntry[];
   remainingCooldowns: BroadcastCommentaryCooldownEntry[];
 }
@@ -113,8 +127,12 @@ export class BroadcastCommentaryDirector {
   private readonly lastVariantByCategory = new Map<CommentaryCategory, string>();
   private readonly pendingAudioTasks: Promise<void>[] = [];
   private readonly processedEventIds = new Set<string>();
+  private readonly completedPlaybackEventIds = new Set<string>();
+  private readonly failedPlaybackEventIds = new Set<string>();
   private currentClip: BroadcastCommentaryActiveClip | null = null;
   private hasPlayedOpeningLine = false;
+  private lastCompletedEventId: string | null = null;
+  private lastFailedEventId: string | null = null;
   private lastEventSource: string | null = null;
   private lastPriority: number | null = null;
   private pageActive = true;
@@ -201,6 +219,7 @@ export class BroadcastCommentaryDirector {
       eventHistory: this.eventHistory.map((entry) => ({ ...entry })),
       lastEventSource: this.lastEventSource,
       lastPriority: this.lastPriority,
+      playback: this.createPlaybackState(now),
       queue: this.queue.map((item) => serializeQueueItem(item)),
       remainingCooldowns: [...this.lastCategoryStartTime.entries()]
         .map(([category, startedAt]) => ({
@@ -225,6 +244,7 @@ export class BroadcastCommentaryDirector {
 
     if (!candidate) {
       this.recordHistory(event, null, 'suppressed', 'noCandidate', null);
+      this.markPlaybackFailed(event.id);
       return;
     }
 
@@ -243,6 +263,7 @@ export class BroadcastCommentaryDirector {
     const suppressionReason = this.getPlaybackSuppressionReason();
     if (suppressionReason) {
       this.recordHistory(event, candidate.clip.assetId, 'suppressed', suppressionReason, candidate.category);
+      this.markPlaybackFailed(event.id);
       return;
     }
 
@@ -412,6 +433,7 @@ export class BroadcastCommentaryDirector {
             'missingAsset',
             item.category,
           );
+          this.markPlaybackFailed(item.eventId);
           this.currentClip = null;
           this.restoreCrowd();
           return;
@@ -444,6 +466,7 @@ export class BroadcastCommentaryDirector {
       return;
     }
 
+    this.markPlaybackCompleted(this.currentClip.eventId);
     this.currentClip = null;
     this.restoreCrowd();
   }
@@ -461,6 +484,7 @@ export class BroadcastCommentaryDirector {
     this.mixer.stopOneShotsByCategory('announcer');
     this.currentClip = null;
     this.restoreCrowd();
+    this.markPlaybackFailed(stoppedClip.eventId);
     this.recordHistory(
       event ?? {
         id: stoppedClip.eventId,
@@ -477,6 +501,57 @@ export class BroadcastCommentaryDirector {
 
   private restoreCrowd(): void {
     this.mixer.setCrowdDuckingGain(1);
+  }
+
+  private createPlaybackState(now: number): BroadcastCommentaryPlaybackState {
+    if (!this.currentClip) {
+      return {
+        activeClipId: null,
+        completed: this.lastCompletedEventId !== null,
+        completedEventIds: [...this.completedPlaybackEventIds],
+        elapsedDuration: 0,
+        eventId: this.lastCompletedEventId ?? this.lastFailedEventId,
+        expectedDuration: 0,
+        failed: this.lastFailedEventId !== null,
+        failedEventIds: [...this.failedPlaybackEventIds],
+        playing: false,
+        remainingDuration: 0,
+      };
+    }
+
+    const expectedDuration = Math.max(0, this.currentClip.endsAtSeconds - this.currentClip.startedAtSeconds);
+    const elapsedDuration = Math.min(expectedDuration, Math.max(0, now - this.currentClip.startedAtSeconds));
+
+    return {
+      activeClipId: this.currentClip.assetId,
+      completed: false,
+      completedEventIds: [...this.completedPlaybackEventIds],
+      elapsedDuration,
+      eventId: this.currentClip.eventId,
+      expectedDuration,
+      failed: false,
+      failedEventIds: [...this.failedPlaybackEventIds],
+      playing: true,
+      remainingDuration: Math.max(0, expectedDuration - elapsedDuration),
+    };
+  }
+
+  private markPlaybackCompleted(eventId: string): void {
+    this.completedPlaybackEventIds.add(eventId);
+    this.failedPlaybackEventIds.delete(eventId);
+    this.lastCompletedEventId = eventId;
+    if (this.lastFailedEventId === eventId) {
+      this.lastFailedEventId = null;
+    }
+  }
+
+  private markPlaybackFailed(eventId: string): void {
+    if (this.completedPlaybackEventIds.has(eventId)) {
+      return;
+    }
+
+    this.failedPlaybackEventIds.add(eventId);
+    this.lastFailedEventId = eventId;
   }
 
   private getCooldownRemaining(category: CommentaryCategory): number {

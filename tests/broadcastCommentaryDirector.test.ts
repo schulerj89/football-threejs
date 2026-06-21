@@ -103,6 +103,45 @@ describe('broadcast commentary director', () => {
     expect(director.getSnapshot().crowdDuckState.ducked).toBe(false);
   });
 
+  it('exposes presentation-safe playback state through completion', async () => {
+    const mixer = new FakeCommentaryAudioPort();
+    const director = new BroadcastCommentaryDirector(mixer);
+    const touchdown = event('touchdown', 'score');
+
+    director.processEvents([touchdown]);
+    await director.flushPendingAudioForTests();
+
+    expect(director.getSnapshot().playback).toMatchObject({
+      activeClipId: expect.stringMatching(/^ann_touchdown/),
+      eventId: touchdown.id,
+      playing: true,
+    });
+
+    mixer.currentTime = 8;
+    director.processEvents([]);
+
+    expect(director.getSnapshot().playback).toMatchObject({
+      completed: true,
+      playing: false,
+    });
+    expect(director.getSnapshot().playback.completedEventIds).toContain(touchdown.id);
+    expect(mixer.crowdDuckingGain).toBe(1);
+  });
+
+  it('marks failed commentary playback as unavailable for presentation holds', async () => {
+    const mixer = new FakeCommentaryAudioPort();
+    mixer.playOneShotResult = false;
+    const director = new BroadcastCommentaryDirector(mixer);
+    const touchdown = event('touchdown', 'missing');
+
+    director.processEvents([touchdown]);
+    await director.flushPendingAudioForTests();
+
+    expect(director.getSnapshot().playback.failedEventIds).toContain(touchdown.id);
+    expect(director.getSnapshot().currentClip).toBeNull();
+    expect(mixer.crowdDuckingGain).toBe(1);
+  });
+
   it('restores a safe mixer state when muted during speech', async () => {
     const mixer = new FakeCommentaryAudioPort();
     const director = new BroadcastCommentaryDirector(mixer);
@@ -184,6 +223,7 @@ class FakeCommentaryAudioPort implements BroadcastCommentaryAudioPort {
   readonly stoppedCategories: AudioPlaybackCategory[] = [];
   crowdDuckingGain = 1;
   currentTime = 0;
+  playOneShotResult = true;
   settings: AudioSettings = { ...DEFAULT_AUDIO_SETTINGS };
   snapshot: AudioMixerSnapshot = {
     activeAudioNodeCount: 5,
@@ -236,7 +276,7 @@ class FakeCommentaryAudioPort implements BroadcastCommentaryAudioPort {
 
   async playOneShot(assetId: string): Promise<boolean> {
     this.playedOneShots.push(assetId);
-    return true;
+    return this.playOneShotResult;
   }
 
   setCrowdDuckingGain(gain: number): void {

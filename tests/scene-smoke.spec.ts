@@ -534,11 +534,29 @@ interface PresentationHoldSnapshot {
     eventId: string;
     eventType: string;
     reason: string | null;
-    status: 'started' | 'suppressed';
+    status: 'released' | 'started' | 'suppressed';
   }>;
   reason: 'firstDown' | 'touchdown' | null;
   remainingSeconds: number;
   skippedCount: number;
+  touchdown: {
+    blockedReason: string | null;
+    cameraComplete: boolean;
+    commentaryClip: string | null;
+    commentaryComplete: boolean;
+    commentaryExpected: boolean;
+    commentaryRemainingSeconds: number;
+    commentaryStarted: boolean;
+    commentaryUnavailable: boolean;
+    crowdMinimumComplete: boolean;
+    currentShot: string | null;
+    elapsedSeconds: number;
+    maximumTimeReached: boolean;
+    minimumHoldSeconds: number;
+    minimumTimeComplete: boolean;
+    releaseReason: string | null;
+    resultId: string;
+  } | null;
 }
 
 interface GamePresentationRuntimeSnapshot {
@@ -2820,7 +2838,7 @@ test('scores touchdown by avoiding the defender and auto-resets', async ({ page 
   }
   expect(whileDead.score).toBe(6);
 
-  await expect.poll(() => getGameplaySnapshot(page), { timeout: 3000 }).toMatchObject({
+  await expect.poll(() => getGameplaySnapshot(page), { timeout: 7000 }).toMatchObject({
     ball: { possession: { kind: 'none' } },
     currentBallSpot: { x: 0, z: -15 },
     drive: {

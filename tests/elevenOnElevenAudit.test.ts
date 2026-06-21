@@ -518,6 +518,7 @@ function createPresentationHoldSnapshot(): PresentationHoldSnapshot {
     reason: null,
     remainingSeconds: 0,
     skippedCount: 0,
+    touchdown: null,
   };
 }
 

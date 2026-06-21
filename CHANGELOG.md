@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.6] - 2026-06-21
+
+### Fixed
+
+- Coordinated touchdown reset through a single presentation hold contract that waits for visual minimum time, touchdown camera completion, crowd minimum time, and announcer commentary completion or failure.
+- Exposed presentation-safe commentary playback state, including active clip, event ID, expected/elapsed/remaining duration, completed event IDs, and failed event IDs.
+- Prevented touchdown reset from interrupting active announcer lines and captions; reset now occurs after the line finishes plus a short configured tail, unless audio is disabled, failed, or unavailable.
+- Kept cinematics-off touchdown results briefly framed long enough for enabled commentary to finish instead of resetting immediately after the gameplay delay.
+- Added touchdown-hold debug status for result ID, elapsed time, minimum hold, current shot, camera completion, commentary clip/remaining time, crowd minimum, block reason, and release reason.
+
+### Tests
+
+- Added deterministic hold coverage for short and long touchdown commentary, failed commentary fallback, announcer-disabled mode, cinematics-off commentary completion, camera-only completion, commentary-only completion, safety maximum release, and camera-skip behavior.
+- Added commentary playback-state tests for completion and failed playback reporting.
+- Updated presentation runtime and browser smoke coverage for the commentary-aware hold contract.
+
 ## [0.51.5] - 2026-06-21
 
 ### Fixed
