@@ -27,4 +27,44 @@ describe('field geometry integration', () => {
       expect(bounds.max.z, mesh.name).toBeLessThanOrEqual(FIELD_BOUNDS.maxZ + BOUNDS_EPSILON);
     }
   });
+
+  it('batches static painted field markings into a small set of meshes', () => {
+    const field = createFootballField();
+    const staticBatches: THREE.Mesh[] = [];
+    const independentStaticHashesOrYardLines: string[] = [];
+
+    field.group.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) {
+        return;
+      }
+
+      if (object.userData.staticFieldMarkingBatch === true) {
+        staticBatches.push(object);
+      }
+
+      if (/^(left-hash|right-hash|yard-line)-/.test(object.name)) {
+        independentStaticHashesOrYardLines.push(object.name);
+      }
+    });
+
+    expect(staticBatches.length).toBeGreaterThan(0);
+    expect(staticBatches.length).toBeLessThanOrEqual(5);
+    expect(independentStaticHashesOrYardLines).toEqual([]);
+    expect(field.group.getObjectByName('line-of-scrimmage')).toBeInstanceOf(THREE.Mesh);
+    expect(field.group.getObjectByName('first-down-line')).toBeInstanceOf(THREE.Mesh);
+    expect(field.group.getObjectByName('play-direction-marker')).toBeInstanceOf(THREE.Group);
+  });
+
+  it('adds presentation-only field elements without changing gameplay bounds', () => {
+    const field = createFootballField();
+
+    expect(field.group.getObjectByName('surrounding-ground-plane')).toBeInstanceOf(THREE.Mesh);
+    expect(field.group.getObjectByName('sideline-apron')).toBeInstanceOf(THREE.Mesh);
+    expect(field.group.getObjectByName('yard-numbers')).toBeInstanceOf(THREE.Mesh);
+    expect(field.group.getObjectByName('team-box-boundaries')).toBeInstanceOf(THREE.Mesh);
+
+    const goalposts = field.group.getObjectByName('goalposts');
+    expect(goalposts).toBeInstanceOf(THREE.Mesh);
+    expect(goalposts?.userData.endLineZs).toEqual([FIELD_BOUNDS.minZ, FIELD_BOUNDS.maxZ]);
+  });
 });

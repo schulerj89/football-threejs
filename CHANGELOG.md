@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.0] - 2026-06-21
+
+### Added
+
+- Added presentation-only alternating five-yard turf bands, yard numbers, goalposts, sideline apron, team-box boundaries, and surrounding ground plane.
+- Added batched static field-marking meshes grouped by material while keeping line of scrimmage, first-down line, and play-direction marker dynamic.
+- Added shared batched geometry helpers for static field presentation primitives.
+- Added browser smoke coverage for the reduced renderer draw-call budget.
+
+### Changed
+
+- Reduced baseline tactical debug-overlay renderer calls from `284` to `72` while preserving gameplay field coordinates and drive-line logic.
+- Kept static hashes and yard lines out of independent per-marking mesh draw calls.
+- Moved goalposts to the end lines at the back of each end zone, corrected sideline-facing yard number orientation, and increased two-digit yard-number spacing.
+
 ## [0.17.0] - 2026-06-21
 
 ### Added

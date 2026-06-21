@@ -164,6 +164,7 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   await expect(canvas).toBeVisible();
   await expect(page.locator('.debug-overlay')).toContainText('FPS');
   await expect(page.locator('.debug-overlay')).toContainText('CAM tacticalOrthographic');
+  await expect.poll(() => getDebugOverlayNumber(page, 'CALLS')).toBeLessThan(120);
   await expectNonBlankCanvas(page);
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -815,6 +816,17 @@ async function readCanvasState(page: Page): Promise<{
 
     return { hasCanvas: true, nonBlankPixels, uniqueColors: uniqueColors.size, width, height };
   });
+}
+
+async function getDebugOverlayNumber(page: Page, label: string): Promise<number> {
+  const text = await page.locator('.debug-overlay').textContent();
+  const match = text?.match(new RegExp(`${label} ([0-9.]+)`));
+
+  if (!match) {
+    throw new Error(`Missing debug overlay metric ${label}`);
+  }
+
+  return Number(match[1]);
 }
 
 async function runOutOfBoundsPlay(page: Page): Promise<GameplaySnapshot> {
