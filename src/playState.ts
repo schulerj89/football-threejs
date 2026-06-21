@@ -49,9 +49,11 @@ import {
   type PlayDefinition,
 } from './playbook';
 import {
+  createReceiverRouteRuntimeMap,
   createReceiverRouteStateMap,
   getRouteDefinition,
   resolveReceiverRoute,
+  type ReceiverRouteRuntimeMap,
   type ReceiverRouteState,
 } from './receiverRoutes';
 import {
@@ -153,6 +155,7 @@ export interface GameplayModel {
   player: PlayerModel;
   players: PlayerModel[];
   playbookId: PlaybookId;
+  receiverRouteRuntime: ReceiverRouteRuntimeMap;
   receiverRouteStates: Record<string, ReceiverRouteState>;
   previousPlayerPositions: Record<string, FootballSpot>;
   selectedPlay: PlayDefinition;
@@ -222,6 +225,7 @@ export function createGameplayModel(options: CreateGameplayModelOptions = {}): G
   const initialSnapSpot = cloneFootballSpot(drive.lineOfScrimmage);
   const players = createFormationPlayers(initialSnapSpot, selectedPlay);
   const ballCarrier = getBallCarrier(players, selectedPlay);
+  const receiverRouteRuntime = createReceiverRouteRuntimeForSpot(selectedPlay, initialSnapSpot);
 
   return {
     activePlayStartSpot: null,
@@ -242,6 +246,7 @@ export function createGameplayModel(options: CreateGameplayModelOptions = {}): G
     player: ballCarrier,
     players,
     playbookId,
+    receiverRouteRuntime,
     receiverRouteStates: createReceiverRouteStateMap(selectedPlay),
     previousPlayerPositions: capturePlayerPositions(players),
     selectedPlay,
@@ -269,7 +274,7 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
   gameplay.forwardPassEligible = true;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(play);
-  gameplay.receiverRouteStates = createReceiverRouteStateMap(play);
+  resetReceiverRoutesForSpot(gameplay, play, gameplay.currentBallSpot);
   resetBlockingState(gameplay.blocking);
   resetFormationAt(gameplay, gameplay.currentBallSpot, play);
   gameplay.player = getBallCarrier(gameplay.players, play);
@@ -299,7 +304,7 @@ export function startPlay(gameplay: GameplayModel): boolean {
   gameplay.playResetTimerSeconds = null;
   gameplay.playState = 'live';
   resetBlockingState(gameplay.blocking);
-  gameplay.receiverRouteStates = createReceiverRouteStateMap(gameplay.selectedPlay);
+  resetReceiverRoutesForSpot(gameplay, gameplay.selectedPlay, gameplay.currentBallSpot);
   gameplay.previousPlayerPositions = capturePlayerPositions(gameplay.players);
   gameplay.player = getBallCarrier(gameplay.players, gameplay.selectedPlay);
   for (const player of gameplay.players) {
@@ -414,7 +419,7 @@ export function resetPlay(gameplay: GameplayModel): void {
   gameplay.passAudit = null;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(gameplay.selectedPlay);
-  gameplay.receiverRouteStates = createReceiverRouteStateMap(gameplay.selectedPlay);
+  resetReceiverRoutesForSpot(gameplay, gameplay.selectedPlay, resetSpot);
   gameplay.previousPlayerPositions = {};
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
@@ -446,7 +451,7 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
   gameplay.passAudit = null;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(defaultPlay);
-  gameplay.receiverRouteStates = createReceiverRouteStateMap(defaultPlay);
+  resetReceiverRoutesForSpot(gameplay, defaultPlay, initialSpot);
   gameplay.previousPlayerPositions = {};
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
@@ -483,6 +488,7 @@ export function updateGameplayModel(
         lineOfScrimmage: gameplay.currentBallSpot,
         play: gameplay.selectedPlay,
         profiler: options.profiler,
+        receiverRouteRuntime: gameplay.receiverRouteRuntime,
         receiverRouteStates: gameplay.receiverRouteStates,
       });
       updateForwardPassEligibility(gameplay);
@@ -840,12 +846,14 @@ function enterScoreAttackGameOver(gameplay: GameplayModel): void {
 }
 
 function calculatePassTarget(gameplay: GameplayModel, receiver: PlayerModel): PassTargetSolution {
-  const routeDefinition = getRouteDefinition(gameplay.selectedPlay, receiver.id);
-  const route = resolveReceiverRoute(
-    gameplay.selectedPlay,
-    receiver.id,
-    resolveSnapPlacement(gameplay.currentBallSpot),
-  );
+  const routeRuntime = gameplay.receiverRouteRuntime[receiver.id];
+  const routeDefinition = routeRuntime?.definition ?? getRouteDefinition(gameplay.selectedPlay, receiver.id);
+  const route = routeRuntime?.route ??
+    resolveReceiverRoute(
+      gameplay.selectedPlay,
+      receiver.id,
+      resolveSnapPlacement(gameplay.currentBallSpot),
+    );
 
   return solveRouteAwarePassTarget({
     ballStart: gameplay.ball.position,
@@ -1009,6 +1017,22 @@ function resetFormationAt(
 ): void {
   gameplay.formationOrigin = cloneFootballSpot(snapSpot);
   resetFormationPlayers(gameplay.players, snapSpot, play);
+}
+
+function resetReceiverRoutesForSpot(
+  gameplay: GameplayModel,
+  play: PlayDefinition,
+  snapSpot: FootballSpot,
+): void {
+  gameplay.receiverRouteRuntime = createReceiverRouteRuntimeForSpot(play, snapSpot);
+  gameplay.receiverRouteStates = createReceiverRouteStateMap(play);
+}
+
+function createReceiverRouteRuntimeForSpot(
+  play: PlayDefinition,
+  snapSpot: FootballSpot,
+): ReceiverRouteRuntimeMap {
+  return createReceiverRouteRuntimeMap(play, resolveSnapPlacement(snapSpot));
 }
 
 function clonePlayResult(playResult: PlayResult | null): PlayResult | null {

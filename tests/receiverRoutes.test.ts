@@ -7,6 +7,7 @@ import {
   advanceRouteState,
   calculateCrossTrackError,
   createReceiverRouteAuditSnapshot,
+  createReceiverRouteRuntimeMap,
   createReceiverRouteState,
   getRouteFinalPoint,
   getRouteTangentAtDistance,
@@ -49,6 +50,23 @@ describe('receiver routes', () => {
         }
       }
     }
+  });
+
+  it('creates fresh resolved runtime routes for a play and snap placement', () => {
+    const play = getPlay('slant-flat');
+    const snapPlacement = createSnapPlacementForLane('middle');
+    const firstRuntime = createReceiverRouteRuntimeMap(play, snapPlacement);
+    const secondRuntime = createReceiverRouteRuntimeMap(play, snapPlacement);
+    const firstRoute = firstRuntime['offense-wr'].route;
+    const secondRoute = secondRuntime['offense-wr'].route;
+
+    expect(Object.keys(firstRuntime)).toEqual(Object.keys(play.receiverRoutes ?? {}));
+    expect(firstRuntime['offense-wr'].definition).toBe(play.receiverRoutes?.['offense-wr']);
+    expect(firstRoute).toEqual(resolveReceiverRoute(play, 'offense-wr', snapPlacement));
+    expect(firstRoute).not.toBe(secondRoute);
+    expect(firstRoute.points).not.toBe(secondRoute.points);
+    expect(firstRoute.segmentLengths).not.toBe(secondRoute.segmentLengths);
+    expect(firstRoute.cumulativeLengths).not.toBe(secondRoute.cumulativeLengths);
   });
 
   it('calculates segment lengths and total route length in football yards', () => {

@@ -35,6 +35,13 @@ export interface ReceiverRouteState {
   segmentIndex: number;
 }
 
+export interface ReceiverRouteRuntime {
+  definition: ReceiverRouteDefinition;
+  route: ResolvedReceiverRoute;
+}
+
+export type ReceiverRouteRuntimeMap = Record<string, ReceiverRouteRuntime>;
+
 export interface ReceiverRoutePlayDefinition extends FormationPlayDefinition {
   receiverRoutes?: Record<string, ReceiverRouteDefinition>;
 }
@@ -126,6 +133,33 @@ export function createReceiverRouteStateMap(
       createReceiverRouteState(route, receiverId),
     ]),
   );
+}
+
+export function createReceiverRouteRuntimeMap(
+  play: ReceiverRoutePlayDefinition,
+  snapPlacement: SnapPlacement,
+): ReceiverRouteRuntimeMap {
+  const runtimeMap: ReceiverRouteRuntimeMap = {};
+  const receiverRoutes = play.receiverRoutes;
+
+  if (!receiverRoutes) {
+    return runtimeMap;
+  }
+
+  for (const receiverId of Object.keys(receiverRoutes)) {
+    const route = resolveReceiverRoute(play, receiverId, snapPlacement);
+
+    if (!route) {
+      continue;
+    }
+
+    runtimeMap[receiverId] = {
+      definition: receiverRoutes[receiverId],
+      route,
+    };
+  }
+
+  return runtimeMap;
 }
 
 export function resolveEligibleReceiverRoutes(

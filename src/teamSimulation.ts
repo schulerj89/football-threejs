@@ -17,7 +17,9 @@ import {
   getRouteTangentAtDistance,
   resolveReceiverRoute,
   sampleRouteAtDistance,
+  type ReceiverRouteRuntimeMap,
   type ReceiverRouteState,
+  type ResolvedReceiverRoute,
 } from './receiverRoutes';
 import type { FramePerformanceProfiler } from './performance/FramePerformanceProfiler';
 
@@ -36,6 +38,7 @@ export interface RushingDrillAiOptions {
   lineOfScrimmage: FootballSpot;
   play: PlayDefinition;
   profiler?: FramePerformanceProfiler;
+  receiverRouteRuntime?: ReceiverRouteRuntimeMap;
   receiverRouteStates?: Record<string, ReceiverRouteState>;
 }
 
@@ -79,6 +82,7 @@ export function updateRushingDrillAi(
         options.lineOfScrimmage,
         options.play,
         delta,
+        options.receiverRouteRuntime,
         options.receiverRouteStates,
       );
     });
@@ -96,6 +100,7 @@ export function updateRushingDrillAi(
       options.lineOfScrimmage,
       options.play,
       delta,
+      options.receiverRouteRuntime,
       options.receiverRouteStates,
     );
     acquireBlockingEngagements(players, blocking, options.play);
@@ -232,11 +237,12 @@ function updateReceivers(
   lineOfScrimmage: FootballSpot,
   play: PlayDefinition,
   deltaSeconds: number,
+  receiverRouteRuntime?: ReceiverRouteRuntimeMap,
   receiverRouteStates?: Record<string, ReceiverRouteState>,
 ): void {
   const localRouteStates: Record<string, ReceiverRouteState> = {};
   const routeStates = receiverRouteStates ?? localRouteStates;
-  const snapPlacement = resolveSnapPlacement(lineOfScrimmage);
+  let snapPlacement: ReturnType<typeof resolveSnapPlacement> | null = null;
 
   for (const receiver of players) {
     if (receiver.team !== 'offense' || receiver.role !== 'receiver') {
@@ -247,8 +253,17 @@ function updateReceivers(
       continue;
     }
 
-    const routeDefinition = getRouteDefinition(play, receiver.id);
-    const route = resolveReceiverRoute(play, receiver.id, snapPlacement);
+    const cachedRouteRuntime = receiverRouteRuntime?.[receiver.id];
+    let routeDefinition = cachedRouteRuntime?.definition ?? null;
+    let route = cachedRouteRuntime?.route ?? null;
+
+    if (!routeDefinition || !route) {
+      routeDefinition = getRouteDefinition(play, receiver.id);
+      if (routeDefinition) {
+        snapPlacement ??= resolveSnapPlacement(lineOfScrimmage);
+        route = resolveReceiverRoute(play, receiver.id, snapPlacement);
+      }
+    }
 
     if (!routeDefinition || !route || routeDefinition.speedYardsPerSecond <= 0) {
       receiver.velocity.x = 0;
@@ -423,7 +438,7 @@ function movePlayerToward(
 
 function moveReceiverAlongRoute(
   receiver: PlayerModel,
-  route: NonNullable<ReturnType<typeof resolveReceiverRoute>>,
+  route: ResolvedReceiverRoute,
   routeState: ReceiverRouteState,
   routeSpeedYardsPerSecond: number,
   deltaSeconds: number,

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { resolveSnapPlacement } from '../src/ballSpotting';
 import { DEFENDER_CONFIG, isTackleContact } from '../src/defenderModel';
 import { INITIAL_BALL_SPOT, PLAYABLE_FIELD_BOUNDS } from '../src/field';
 import { createFormationPlayers, getPlay, getRushingPlay } from '../src/playbook';
 import { PLAYER_MOVEMENT_CONFIG, createPlayerModel, type PlayerModel } from '../src/playerModel';
+import { createReceiverRouteRuntimeMap } from '../src/receiverRoutes';
 import {
   BLOCKING_CONFIG,
   acquireBlockingEngagements,
@@ -100,6 +102,33 @@ describe('five-on-five rushing drill simulation', () => {
     expect(coverageDefender.velocity.z).toBeLessThan(0);
     expect(passRusher.currentState).toBe('pursuing');
     expect(passRusher.velocity.z).toBeLessThan(0);
+  });
+
+  it('uses cached receiver route runtime when supplied', () => {
+    const play = getPlay('quick-pass');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+    const quarterback = getPlayer(players, 'offense-qb');
+    const receiver = getPlayer(players, 'offense-wr');
+    const receiverStart = { ...receiver.position };
+    const receiverRouteRuntime = createReceiverRouteRuntimeMap(
+      play,
+      resolveSnapPlacement(INITIAL_BALL_SPOT),
+    );
+    const playWithoutRouteLookup = {
+      ...play,
+      receiverRoutes: {},
+    };
+
+    updateRushingDrillAi(players, createBlockingState(), quarterback, {
+      bounds: PLAYABLE_FIELD_BOUNDS,
+      deltaSeconds: 0.1,
+      lineOfScrimmage: INITIAL_BALL_SPOT,
+      play: playWithoutRouteLookup,
+      receiverRouteRuntime,
+    });
+
+    expect(receiver.currentState).toBe('runningRoute');
+    expect(receiver.position.z).toBeGreaterThan(receiverStart.z);
   });
 
   it('runs both Slant Flat receiver routes and assigns coverage defenders deterministically', () => {
