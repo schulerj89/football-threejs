@@ -125,6 +125,7 @@ declare global {
       getRenderMetrics: () => RenderMetricsSnapshot;
       getRouteArtSnapshot: () => RouteArtRendererSnapshot;
       playAudioTestOneShot: () => Promise<boolean>;
+      setAudioPageActiveForTest: (active: boolean) => void;
       setAudioMuted: (muted: boolean) => void;
       startAudioTestLoop: () => Promise<boolean>;
       stopAudioTestLoop: () => boolean;
@@ -224,6 +225,7 @@ const gameAudioDirector = new GameAudioDirector(new AudioMixer({
   },
 }));
 gameAudioDirector.installControls(window);
+gameAudioDirector.setPageActive(!document.hidden);
 const debugOverlay = new DebugOverlay({ renderer, player: getActivePrimaryPlayer() });
 const gameplayHud = createGameplayHud();
 const playCallUi = formationPreviewModel ? null : createPlayCallUi(gameplayModel.availablePlays);
@@ -284,6 +286,9 @@ if (
     getRenderMetrics: () => latestRenderMetrics ?? createRenderMetricsSnapshot(0),
     getRouteArtSnapshot: () => routeArtRenderer.getSnapshot(),
     playAudioTestOneShot: () => gameAudioDirector.playTestOneShot(),
+    setAudioPageActiveForTest: (active: boolean) => {
+      gameAudioDirector.setPageActive(active);
+    },
     setAudioMuted: (muted: boolean) => {
       gameAudioDirector.setMuted(muted);
     },
@@ -303,6 +308,9 @@ if (presentationAuditEnabled) {
 
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', resize);
+document.addEventListener('visibilitychange', syncAudioPageActivity);
+window.addEventListener('blur', syncAudioPageActivity);
+window.addEventListener('focus', syncAudioPageActivity);
 
 renderFrame(0);
 
@@ -503,6 +511,10 @@ function resize(): void {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(width, height);
   cameraController.resize(width, height);
+}
+
+function syncAudioPageActivity(): void {
+  gameAudioDirector.setPageActive(!document.hidden && document.hasFocus());
 }
 
 function getActivePlayers() {

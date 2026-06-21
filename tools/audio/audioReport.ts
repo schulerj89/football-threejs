@@ -31,8 +31,12 @@ export interface FootballAudioAssetReportEntry {
 export interface FootballAudioPackReport {
   assetCount: number;
   assets: FootballAudioAssetReportEntry[];
+  decodedOneShotMemoryBudgetBytes: number;
+  decodedOneShotMemoryBytes: number;
+  decodedOneShotMemoryUnderBudget: boolean;
   generatedAt: string;
   generatedCount: number;
+  longestClipSeconds: number | null;
   targetCompressedBytes: number;
   totalCompressedBytes: number;
   underTarget: boolean;
@@ -40,6 +44,7 @@ export interface FootballAudioPackReport {
 }
 
 const STARTER_PACK_TARGET_BYTES = 5 * 1024 * 1024;
+const DECODED_ONE_SHOT_MEMORY_TARGET_BYTES = 8 * 1024 * 1024;
 const PCM_BYTES_PER_SAMPLE = Float32Array.BYTES_PER_ELEMENT;
 const ESTIMATED_DECODED_CHANNELS = 2;
 const OUTPUT_SAMPLE_RATE = 44_100;
@@ -83,8 +88,17 @@ export function createFootballAudioReport(
   return {
     assetCount: plan.length,
     assets,
+    decodedOneShotMemoryBudgetBytes: DECODED_ONE_SHOT_MEMORY_TARGET_BYTES,
+    decodedOneShotMemoryBytes: assets.reduce(
+      (sum, asset) => sum + (asset.decodedMemoryBytes ?? 0),
+      0,
+    ),
+    decodedOneShotMemoryUnderBudget:
+      assets.reduce((sum, asset) => sum + (asset.decodedMemoryBytes ?? 0), 0) <=
+      DECODED_ONE_SHOT_MEMORY_TARGET_BYTES,
     generatedAt,
     generatedCount: assets.filter((asset) => asset.exists).length,
+    longestClipSeconds: getLongestClipSeconds(assets),
     targetCompressedBytes: STARTER_PACK_TARGET_BYTES,
     totalCompressedBytes: assets.reduce((sum, asset) => sum + asset.compressedBytes, 0),
     underTarget:
@@ -150,6 +164,13 @@ function estimateDecodedMemoryBytes(durationSeconds: number): number {
 function promptForbidsSpeech(asset: AudioAssetPlan): boolean {
   const text = `${asset.prompt ?? ''} ${asset.script ?? ''}`.toLowerCase();
   return text.includes('no speech') || text.includes('no voice') || text.includes('no intelligible');
+}
+
+function getLongestClipSeconds(
+  assets: readonly FootballAudioAssetReportEntry[],
+): number | null {
+  const durations = assets.map((asset) => asset.durationSeconds).filter((duration) => duration !== null);
+  return durations.length > 0 ? Math.max(...durations) : null;
 }
 
 function createAuditionIndexHtml(report: FootballAudioPackReport): string {

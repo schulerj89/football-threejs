@@ -17,6 +17,7 @@ export interface GameAudioEventHistoryEntry {
     | 'missingAsset'
     | 'muted'
     | 'noAsset'
+    | 'pageHidden'
     | 'suspended'
     | null;
   status: 'played' | 'suppressed';
@@ -25,6 +26,7 @@ export interface GameAudioEventHistoryEntry {
 
 export interface GameAudioDirectorSnapshot extends AudioMixerSnapshot {
   eventHistory: GameAudioEventHistoryEntry[];
+  pageActive: boolean;
   recentEvents: PresentationAudioEvent[];
 }
 
@@ -87,6 +89,7 @@ export class GameAudioDirector {
   private readonly lastVariantByGroup = new Map<string, string>();
   private previousSnapshot: GameplaySnapshot | null = null;
   private lastWhistleTimeSeconds = Number.NEGATIVE_INFINITY;
+  private pageActive = true;
 
   constructor(private readonly mixer: AudioPlaybackPort) {}
 
@@ -106,6 +109,21 @@ export class GameAudioDirector {
     }
 
     this.previousSnapshot = snapshot;
+  }
+
+  setPageActive(active: boolean): void {
+    if (this.pageActive === active) {
+      return;
+    }
+
+    this.pageActive = active;
+
+    if (!active) {
+      for (const loop of this.ambienceLoops.values()) {
+        this.mixer.stopLoop(loop.assetId);
+      }
+      this.ambienceLoops.clear();
+    }
   }
 
   async playTestOneShot(assetId = 'runtime-test-click'): Promise<boolean> {
@@ -132,6 +150,7 @@ export class GameAudioDirector {
     return {
       ...this.mixer.getSnapshot(),
       eventHistory: this.eventHistory.map((entry) => ({ ...entry })),
+      pageActive: this.pageActive,
       recentEvents: this.recentEvents.map((event) => ({ ...event })),
     };
   }
@@ -285,6 +304,10 @@ export class GameAudioDirector {
 
   private getPlaybackSuppressionReason(): GameAudioEventHistoryEntry['reason'] {
     const snapshot = this.mixer.getSnapshot();
+
+    if (!this.pageActive) {
+      return 'pageHidden';
+    }
 
     if (!snapshot.enabled) {
       return 'audioDisabled';

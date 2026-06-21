@@ -17,9 +17,11 @@ export interface StreamedAudioAsset {
 }
 
 export interface AudioAssetLoaderSnapshot {
+  decodedAssetIds: string[];
   decodedBufferBytes: number;
   loadedAssetIds: string[];
   loadedCompressedBytes: number;
+  longestLoadedClipSeconds: number | null;
   missingOptionalAssetIds: string[];
   streamedAssetIds: string[];
 }
@@ -129,8 +131,18 @@ export class AudioAssetLoader {
   }
 
   getSnapshot(): AudioAssetLoaderSnapshot {
+    const decodedAssets = [...this.decodedAssets.values()];
+    const streamedAssets = [...this.streamAssets.values()];
+    const loadedDurations = [
+      ...decodedAssets.map((asset) => asset.buffer.duration),
+      ...streamedAssets
+        .map((asset) => asset.element.duration)
+        .filter((duration) => Number.isFinite(duration)),
+    ];
+
     return {
-      decodedBufferBytes: [...this.decodedAssets.values()].reduce(
+      decodedAssetIds: [...this.decodedAssets.keys()].sort(),
+      decodedBufferBytes: decodedAssets.reduce(
         (sum, asset) => sum + asset.decodedBytes,
         0,
       ),
@@ -138,10 +150,11 @@ export class AudioAssetLoader {
         ...this.decodedAssets.keys(),
         ...this.streamAssets.keys(),
       ].sort(),
-      loadedCompressedBytes: [...this.decodedAssets.values()].reduce(
+      loadedCompressedBytes: decodedAssets.reduce(
         (sum, asset) => sum + asset.compressedBytes,
         0,
       ),
+      longestLoadedClipSeconds: loadedDurations.length > 0 ? Math.max(...loadedDurations) : null,
       missingOptionalAssetIds: [...this.missingOptionalAssetIds].sort(),
       streamedAssetIds: [...this.streamAssets.keys()].sort(),
     };

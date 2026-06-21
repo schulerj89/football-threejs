@@ -338,18 +338,25 @@ interface RouteArtRendererSnapshot {
 }
 
 interface AudioRuntimeSnapshot {
+  activeAudioNodeCount: number;
   activeBuses: string[];
   activeLoops: string[];
   activeOneShots: number;
+  activeSourceCount: number;
   busGains: Record<string, number>;
   contextState: 'closed' | 'running' | 'suspended' | 'unavailable';
+  decodedAssetIds: string[];
   decodedBufferBytes: number;
   enabled: boolean;
   lastUnlockError: string | null;
   loadedAssetIds: string[];
   loadedCompressedBytes: number;
+  longestLoadedClipSeconds: number | null;
   missingOptionalAssetIds: string[];
   muted: boolean;
+  pageActive: boolean;
+  preparedMediaElementSourceCount: number;
+  userGestureUnlocked: boolean;
   eventHistory: Array<{
     assetId: string | null;
     eventId: string;
@@ -505,14 +512,25 @@ test('starts runtime audio debug and plays local test assets without mutating ga
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO');
   await expect(page.locator('.audio-debug-overlay')).toContainText('EVENT_HISTORY');
+  await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO_NODES');
+  await expect(page.locator('.audio-debug-overlay')).toContainText('SOURCES');
 
   const before = await getGameplaySnapshot(page);
   const initialAudio = await getAudioSnapshot(page);
   expect(initialAudio.enabled).toBe(true);
   expect(initialAudio.activeBuses).toContain('master');
+  expect(initialAudio.userGestureUnlocked).toBe(false);
+  expect(initialAudio.loadedAssetIds).toEqual([]);
+  expect(initialAudio.activeAudioNodeCount).toBeGreaterThanOrEqual(5);
 
+  await setAudioMuted(page, true);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.muted)).toBe(true);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(false);
+  expect((await getAudioSnapshot(page)).loadedAssetIds).toEqual([]);
+  await setAudioMuted(page, false);
   await page.keyboard.press('M');
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.muted)).toBe(true);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
   await page.keyboard.press('M');
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.muted)).toBe(false);
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.contextState)).toBe('running');
@@ -528,13 +546,37 @@ test('starts runtime audio debug and plays local test assets without mutating ga
   await expect.poll(
     () => getAudioSnapshot(page).then((snapshot) => snapshot.activeLoops.includes('runtime-test-crowd-loop')),
   ).toBe(true);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.activeSourceCount)).toBeGreaterThan(0);
   await expect.poll(
     () => getAudioSnapshot(page).then((snapshot) => snapshot.streamedAssetIds.includes('runtime-test-crowd-loop')),
   ).toBe(true);
+  expect((await getAudioSnapshot(page)).preparedMediaElementSourceCount).toBeLessThanOrEqual(2);
   await expect(stopAudioTestLoop(page)).resolves.toBe(true);
 
   const after = await getGameplaySnapshot(page);
   expect(after).toEqual(before);
+});
+
+test('unlocks audio from a pointer gesture and keeps audio-disabled startup unloaded', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1&audioDebug=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.mouse.click(24, 24);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.contextState)).toBe('running');
+
+  await setAudioPageActiveForTest(page, false);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.pageActive)).toBe(false);
+  await setAudioPageActiveForTest(page, true);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.pageActive)).toBe(true);
+
+  await page.goto('/?debug=1&readback=1&audioDebug=1&audio=0');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.keyboard.press('Space');
+  await page.keyboard.press('R');
+  const disabledAudio = await getAudioSnapshot(page);
+  expect(disabledAudio.enabled).toBe(false);
+  expect(disabledAudio.loadedAssetIds).toEqual([]);
+  expect(disabledAudio.streamedAssetIds).toEqual([]);
+  expect(disabledAudio.decodedAssetIds).toEqual([]);
 });
 
 test('supports football visual and appearance audit presentation options', async ({ page }) => {
@@ -2128,6 +2170,42 @@ async function stopAudioTestLoop(page: Page): Promise<boolean> {
 
     return debugApi.stopAudioTestLoop();
   });
+}
+
+async function setAudioMuted(page: Page, muted: boolean): Promise<void> {
+  return page.evaluate((nextMuted) => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          setAudioMuted: (muted: boolean) => void;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    debugApi.setAudioMuted(nextMuted);
+  }, muted);
+}
+
+async function setAudioPageActiveForTest(page: Page, active: boolean): Promise<void> {
+  return page.evaluate((nextActive) => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          setAudioPageActiveForTest: (active: boolean) => void;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    debugApi.setAudioPageActiveForTest(nextActive);
+  }, active);
 }
 
 async function getRenderMetrics(page: Page): Promise<RenderMetricsSnapshot> {

@@ -2,7 +2,7 @@
 
 Audio is now planned product scope for the low-poly football game, including football sound effects, announcer presentation, crowd ambience, and cinematic presentation support.
 
-Current implementation scope includes offline generation planning, a local-file runtime mixer foundation, and event-driven crowd/SFX playback from local starter-pack asset IDs. Generated asset approval, announcer playback, spatial audio, music, visual crowd rendering, and camera changes remain future work.
+Current implementation scope includes offline generation planning, a local-file runtime mixer foundation, and event-driven crowd/SFX playback from local starter-pack asset IDs. Runtime playback is explicitly user-gesture gated, uses scheduled gain ramps for buses and loops, suppresses stale cues while hidden or unfocused, and exposes debug memory/node diagnostics. Generated asset approval, announcer playback, spatial audio, music, visual crowd rendering, and camera changes remain future work.
 
 ## Production Roles
 
@@ -31,6 +31,9 @@ Project-specific direction lives in:
 
 - One-shot SFX should stay under the per-asset `maxBytes` in `tools/audio/audioPlan.ts`.
 - Crowd loops should be reviewable streamed layers, not long decoded buffers.
+- Starter-pack compressed audio should stay under 5 MiB.
+- Estimated decoded one-shot memory should stay under 8 MiB.
+- `?audioDebug=1` should be used to confirm active node/source counts, streamed versus decoded assets, and longest loaded clip data during runtime audits.
 - Announcer lines should stay concise and caption-matched.
 - Approved generated files should be preserved rather than regenerated.
 

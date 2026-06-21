@@ -17,19 +17,25 @@ import {
 type BusGainMap = Record<AudioBusName, GainNode>;
 
 export interface AudioMixerSnapshot {
+  activeAudioNodeCount: number;
   activeBuses: AudioBusName[];
   activeLoops: string[];
   activeOneShots: number;
+  activeSourceCount: number;
   busGains: Record<AudioBusName, number>;
   contextState: AudioContextState | 'unavailable';
+  decodedAssetIds: string[];
   decodedBufferBytes: number;
   enabled: boolean;
   lastUnlockError: string | null;
   loadedAssetIds: string[];
   loadedCompressedBytes: number;
+  longestLoadedClipSeconds: number | null;
   missingOptionalAssetIds: string[];
   muted: boolean;
+  preparedMediaElementSourceCount: number;
   streamedAssetIds: string[];
+  userGestureUnlocked: boolean;
 }
 
 export interface AudioLoopStartOptions {
@@ -50,7 +56,9 @@ interface ActiveLoop {
   asset: LocalAudioAsset;
   element: HTMLAudioElement;
   gain: GainNode;
+  gainValue: number;
   source: MediaElementAudioSourceNode;
+  stopTimer: ReturnType<typeof setTimeout> | null;
 }
 
 const DEFAULT_AUDIO_FLAGS: AudioFeatureFlags = {
@@ -59,6 +67,9 @@ const DEFAULT_AUDIO_FLAGS: AudioFeatureFlags = {
   audioEnabled: true,
   crowdAudioEnabled: true,
 };
+const BUS_GAIN_RAMP_SECONDS = 0.035;
+const LOOP_GAIN_RAMP_SECONDS = 0.08;
+const ONE_SHOT_ATTACK_SECONDS = 0.005;
 
 export class AudioMixer {
   readonly context: AudioContext;
@@ -69,10 +80,22 @@ export class AudioMixer {
   private readonly flags: AudioFeatureFlags;
   private readonly loader: AudioAssetLoader;
   private readonly preparedLoops = new Map<string, ActiveLoop>();
+  private readonly reportedBusGains: Record<AudioBusName, number> = {
+    announcer: 0,
+    crowd: 0,
+    gameplaySfx: 0,
+    master: 0,
+    ui: 0,
+  };
+  private readonly activeOneShotNodes = new Set<{
+    gain: GainNode;
+    source: AudioBufferSourceNode;
+  }>();
   private readonly storage: StorageLike | null;
   private lastUnlockError: string | null = null;
   private settings: AudioSettings;
   private unlockListenersInstalled = false;
+  private userGestureUnlocked = false;
 
   constructor(options: AudioMixerOptions = {}) {
     this.flags = options.flags ?? DEFAULT_AUDIO_FLAGS;
@@ -110,13 +133,15 @@ export class AudioMixer {
     }
 
     if (isAudioContextRunning(this.context)) {
+      this.userGestureUnlocked = true;
       return true;
     }
 
     try {
       await this.context.resume();
       this.lastUnlockError = null;
-      return isAudioContextRunning(this.context);
+      this.userGestureUnlocked = isAudioContextRunning(this.context);
+      return this.userGestureUnlocked;
     } catch (error) {
       this.lastUnlockError = error instanceof Error ? error.message : String(error);
       return false;
@@ -167,10 +192,13 @@ export class AudioMixer {
     const source = this.context.createBufferSource();
     const gain = this.context.createGain();
     source.buffer = decodedAsset.buffer;
-    gain.gain.value = asset.defaultGain;
+    setGainNow(gain.gain, 0, this.context.currentTime);
+    scheduleGain(gain.gain, asset.defaultGain, this.context.currentTime, ONE_SHOT_ATTACK_SECONDS);
     source.connect(gain);
     gain.connect(this.getBusForCategory(asset.category));
     this.activeOneShotsByAsset.set(asset.assetId, activeCount + 1);
+    const oneShotNodes = { gain, source };
+    this.activeOneShotNodes.add(oneShotNodes);
     source.onended = (): void => {
       const nextCount = Math.max(0, (this.activeOneShotsByAsset.get(asset.assetId) ?? 1) - 1);
       if (nextCount === 0) {
@@ -180,6 +208,7 @@ export class AudioMixer {
       }
       source.disconnect();
       gain.disconnect();
+      this.activeOneShotNodes.delete(oneShotNodes);
     };
     source.start();
     return true;
@@ -194,7 +223,7 @@ export class AudioMixer {
 
     if (activeLoop) {
       if (options.gain !== undefined) {
-        activeLoop.gain.gain.value = clampGain(options.gain);
+        this.rampLoopGain(activeLoop, options.gain);
       }
       return true;
     }
@@ -214,19 +243,25 @@ export class AudioMixer {
 
       const source = this.context.createMediaElementSource(streamedAsset.element);
       const gain = this.context.createGain();
-      gain.gain.value = 0;
+      setGainNow(gain.gain, 0, this.context.currentTime);
       source.connect(gain);
       gain.connect(this.getBusForCategory(streamedAsset.asset.category));
       loop = {
         asset: streamedAsset.asset,
         element: streamedAsset.element,
         gain,
+        gainValue: 0,
         source,
+        stopTimer: null,
       };
       this.preparedLoops.set(assetId, loop);
     }
 
-    loop.gain.gain.value = clampGain(options.gain ?? loop.asset.defaultGain);
+    if (loop.stopTimer) {
+      clearTimeout(loop.stopTimer);
+      loop.stopTimer = null;
+    }
+    this.rampLoopGain(loop, options.gain ?? loop.asset.defaultGain);
 
     try {
       await loop.element.play();
@@ -235,7 +270,7 @@ export class AudioMixer {
         loop.asset.assetId,
         error instanceof Error ? error.message : String(error),
       );
-      loop.gain.gain.value = 0;
+      this.rampLoopGain(loop, 0);
       return false;
     }
 
@@ -250,12 +285,12 @@ export class AudioMixer {
       return false;
     }
 
-    activeLoop.gain.gain.value = clampGain(gain);
+    this.rampLoopGain(activeLoop, gain);
     return true;
   }
 
   getLoopGain(assetId: string): number {
-    return this.activeLoops.get(assetId)?.gain.gain.value ?? 0;
+    return this.activeLoops.get(assetId)?.gainValue ?? 0;
   }
 
   hasActiveLoop(assetId: string): boolean {
@@ -269,9 +304,18 @@ export class AudioMixer {
       return false;
     }
 
-    activeLoop.element.pause();
-    activeLoop.gain.gain.value = 0;
-    this.activeLoops.delete(assetId);
+    this.rampLoopGain(activeLoop, 0);
+    if (activeLoop.stopTimer) {
+      clearTimeout(activeLoop.stopTimer);
+    }
+    activeLoop.stopTimer = setTimeout(() => {
+      if (activeLoop.gainValue > 0) {
+        return;
+      }
+
+      activeLoop.element.pause();
+      this.activeLoops.delete(assetId);
+    }, LOOP_GAIN_RAMP_SECONDS * 1000);
     return true;
   }
 
@@ -279,24 +323,28 @@ export class AudioMixer {
     const loaderSnapshot = this.loader.getSnapshot();
 
     return {
-      activeBuses: getActiveBuses(this.buses),
+      activeAudioNodeCount: this.getActiveAudioNodeCount(),
+      activeBuses: getActiveBuses(this.reportedBusGains),
       activeLoops: [...this.activeLoops.keys()].sort(),
       activeOneShots: [...this.activeOneShotsByAsset.values()].reduce(
         (sum, count) => sum + count,
         0,
       ),
-      busGains: Object.fromEntries(
-        Object.entries(this.buses).map(([busName, bus]) => [busName, bus.gain.value]),
-      ) as Record<AudioBusName, number>,
+      activeSourceCount: this.activeLoops.size + this.activeOneShotNodes.size,
+      busGains: { ...this.reportedBusGains },
       contextState: this.context.state,
+      decodedAssetIds: loaderSnapshot.decodedAssetIds,
       decodedBufferBytes: loaderSnapshot.decodedBufferBytes,
       enabled: this.flags.audioEnabled,
       lastUnlockError: this.lastUnlockError,
       loadedAssetIds: loaderSnapshot.loadedAssetIds,
       loadedCompressedBytes: loaderSnapshot.loadedCompressedBytes,
+      longestLoadedClipSeconds: loaderSnapshot.longestLoadedClipSeconds,
       missingOptionalAssetIds: loaderSnapshot.missingOptionalAssetIds,
       muted: this.settings.muted,
+      preparedMediaElementSourceCount: this.preparedLoops.size,
       streamedAssetIds: loaderSnapshot.streamedAssetIds,
+      userGestureUnlocked: this.userGestureUnlocked,
     };
   }
 
@@ -309,19 +357,40 @@ export class AudioMixer {
   }
 
   private applySettings(): void {
-    this.buses.master.gain.value =
-      this.flags.audioEnabled && !this.settings.muted ? this.settings.masterVolume : 0;
-    this.buses.crowd.gain.value =
-      this.flags.crowdAudioEnabled ? this.settings.crowdVolume : 0;
-    this.buses.announcer.gain.value =
-      this.flags.announcerEnabled ? this.settings.announcerVolume : 0;
-    this.buses.gameplaySfx.gain.value = this.settings.effectsVolume;
-    this.buses.ui.gain.value = this.settings.effectsVolume;
+    this.setBusGain(
+      'master',
+      this.flags.audioEnabled && !this.settings.muted ? this.settings.masterVolume : 0,
+    );
+    this.setBusGain('crowd', this.flags.crowdAudioEnabled ? this.settings.crowdVolume : 0);
+    this.setBusGain('announcer', this.flags.announcerEnabled ? this.settings.announcerVolume : 0);
+    this.setBusGain('gameplaySfx', this.settings.effectsVolume);
+    this.setBusGain('ui', this.settings.effectsVolume);
     saveAudioSettings(this.settings, this.storage);
   }
 
+  private setBusGain(busName: AudioBusName, gain: number): void {
+    const targetGain = clampGain(gain);
+    this.reportedBusGains[busName] = targetGain;
+    scheduleGain(this.buses[busName].gain, targetGain, this.context.currentTime, BUS_GAIN_RAMP_SECONDS);
+  }
+
+  private rampLoopGain(loop: ActiveLoop, gain: number): void {
+    const targetGain = clampGain(gain);
+    loop.gainValue = targetGain;
+    scheduleGain(loop.gain.gain, targetGain, this.context.currentTime, LOOP_GAIN_RAMP_SECONDS);
+  }
+
+  private getActiveAudioNodeCount(): number {
+    return Object.keys(this.buses).length +
+      (this.activeLoops.size * 2) +
+      (this.activeOneShotNodes.size * 2);
+  }
+
   private canPlay(): boolean {
-    return this.flags.audioEnabled && !this.settings.muted && this.context.state === 'running';
+    return this.flags.audioEnabled &&
+      this.userGestureUnlocked &&
+      !this.settings.muted &&
+      this.context.state === 'running';
   }
 
   private getBusForCategory(category: AudioPlaybackCategory): GainNode {
@@ -379,8 +448,8 @@ function createBrowserAudioContext(): AudioContext {
   return new AudioContextConstructor();
 }
 
-function getActiveBuses(buses: BusGainMap): AudioBusName[] {
-  return (Object.keys(buses) as AudioBusName[]).filter((busName) => buses[busName].gain.value > 0);
+function getActiveBuses(busGains: Record<AudioBusName, number>): AudioBusName[] {
+  return (Object.keys(busGains) as AudioBusName[]).filter((busName) => busGains[busName] > 0);
 }
 
 function isAudioContextRunning(context: AudioContext): boolean {
@@ -393,4 +462,42 @@ function clampGain(gain: number): number {
   }
 
   return Math.min(1, Math.max(0, gain));
+}
+
+function setGainNow(param: AudioParam, gain: number, currentTime: number): void {
+  const targetGain = clampGain(gain);
+
+  if (typeof param.cancelScheduledValues === 'function') {
+    param.cancelScheduledValues(currentTime);
+  }
+
+  if (typeof param.setValueAtTime === 'function') {
+    param.setValueAtTime(targetGain, currentTime);
+  } else {
+    param.value = targetGain;
+  }
+}
+
+function scheduleGain(
+  param: AudioParam,
+  gain: number,
+  currentTime: number,
+  rampSeconds: number,
+): void {
+  const targetGain = clampGain(gain);
+  const currentGain = clampGain(param.value);
+
+  if (
+    typeof param.cancelScheduledValues === 'function' &&
+    typeof param.setValueAtTime === 'function' &&
+    typeof param.linearRampToValueAtTime === 'function' &&
+    rampSeconds > 0
+  ) {
+    param.cancelScheduledValues(currentTime);
+    param.setValueAtTime(currentGain, currentTime);
+    param.linearRampToValueAtTime(targetGain, currentTime + rampSeconds);
+    return;
+  }
+
+  param.value = targetGain;
 }

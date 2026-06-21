@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.32.1] - 2026-06-21
+
+### Fixed
+
+- Added an explicit user-gesture unlock gate so runtime audio does not fetch or prepare generated assets on initial load even when the browser reports the `AudioContext` as running.
+- Replaced abrupt bus, loop, and one-shot gain changes with short scheduled ramps to reduce clicks during mute/unmute, bus-volume changes, crowd crossfades, and loop starts/stops.
+- Added page activity handling so hidden or unfocused pages fade/stop ambience work and suppress stale result cues without replaying them on resume.
+- Expanded audio diagnostics with active node/source counts, prepared media source count, decoded-vs-streamed asset IDs, longest loaded clip, and starter-pack decoded-memory budget reporting.
+- Added reliability coverage for pointer and keyboard unlock, mute before/after unlock, audio-disabled startup without generated asset fetches, hidden-page suppression, repeated touchdowns, ambience loop caps, source-node reuse, and one-shot node cleanup.
+
 ## [0.32.0] - 2026-06-21
 
 ### Added

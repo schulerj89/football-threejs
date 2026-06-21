@@ -214,6 +214,64 @@ describe('presentation audio event bridge and director', () => {
     expect(firstDownAssets).toHaveLength(2);
     expect(firstDownAssets[0]).not.toBe(firstDownAssets[1]);
   });
+
+  it('suppresses events while the page is inactive and does not replay stale results on resume', async () => {
+    const mixer = new FakeAudioPlaybackPort();
+    const director = new GameAudioDirector(mixer);
+    const live = makeSnapshot({ playState: 'live' });
+    const touchdown = makeSnapshot({
+      lastPlayResult: makeResult(30, 'touchdown', 45),
+      playState: 'dead',
+      score: 6,
+    });
+
+    director.update(live, 0.016);
+    director.setPageActive(false);
+    director.update(touchdown, 0.016);
+    await director.flushPendingAudioForTests();
+
+    expect(mixer.playedOneShots).toEqual([]);
+    expect(director.getSnapshot().eventHistory.some((entry) => entry.reason === 'pageHidden')).toBe(true);
+
+    director.setPageActive(true);
+    director.update(touchdown, 0.016);
+    await director.flushPendingAudioForTests();
+
+    expect(mixer.playedOneShots).toEqual([]);
+  });
+
+  it('keeps no more than two ambience loops active during live and pre-snap transitions', async () => {
+    const mixer = new FakeAudioPlaybackPort();
+    const director = new GameAudioDirector(mixer);
+
+    director.update(makeSnapshot({ playState: 'preSnap' }), 0.5);
+    director.update(makeSnapshot({ playState: 'live' }), 0.5);
+    await director.flushPendingAudioForTests();
+
+    expect(mixer.loopGains.size).toBeLessThanOrEqual(2);
+
+    director.update(makeSnapshot({ playState: 'preSnap' }), 0.5);
+    await director.flushPendingAudioForTests();
+
+    expect(mixer.loopGains.size).toBeLessThanOrEqual(2);
+  });
+
+  it('handles repeated touchdown results as separate stable result identities', async () => {
+    const mixer = new FakeAudioPlaybackPort();
+    const director = new GameAudioDirector(mixer);
+
+    for (const resultId of [40, 41]) {
+      director.update(makeSnapshot({ playState: 'live' }), 0.016);
+      director.update(makeSnapshot({
+        lastPlayResult: makeResult(resultId, 'touchdown', 45),
+        playState: 'dead',
+        score: resultId === 40 ? 6 : 12,
+      }), 0.016);
+    }
+    await director.flushPendingAudioForTests();
+
+    expect(countAssets(mixer.playedOneShots, 'crowd_touchdown')).toBe(2);
+  });
 });
 
 function makeSnapshot(overrides: {
@@ -314,9 +372,11 @@ class FakeAudioPlaybackPort implements AudioPlaybackPort {
   currentTime = 0;
   playResult = true;
   snapshot: AudioMixerSnapshot = {
+    activeAudioNodeCount: 5,
     activeBuses: ['master', 'crowd', 'gameplaySfx'],
     activeLoops: [],
     activeOneShots: 0,
+    activeSourceCount: 0,
     busGains: {
       announcer: 0.85,
       crowd: 0.45,
@@ -325,14 +385,18 @@ class FakeAudioPlaybackPort implements AudioPlaybackPort {
       ui: 0.85,
     },
     contextState: 'running',
+    decodedAssetIds: [],
     decodedBufferBytes: 0,
     enabled: true,
     lastUnlockError: null,
     loadedAssetIds: [],
     loadedCompressedBytes: 0,
+    longestLoadedClipSeconds: null,
     missingOptionalAssetIds: [],
     muted: false,
+    preparedMediaElementSourceCount: 0,
     streamedAssetIds: [],
+    userGestureUnlocked: true,
   };
 
   getCurrentTime(): number {
@@ -346,7 +410,9 @@ class FakeAudioPlaybackPort implements AudioPlaybackPort {
   getSnapshot(): AudioMixerSnapshot {
     return {
       ...this.snapshot,
+      activeSourceCount: this.loopGains.size,
       activeLoops: [...this.loopGains.keys()],
+      preparedMediaElementSourceCount: this.loopGains.size,
     };
   }
 
