@@ -167,6 +167,7 @@ describe('gameplay camera controller', () => {
       cinematics: 'brief',
       height: 900,
       initialMode: 'tacticalOrthographic',
+      shotPreview: 'prePlayOrbit180',
       width: 1440,
     });
 
@@ -183,6 +184,24 @@ describe('gameplay camera controller', () => {
     });
   });
 
+  it('does not start the pre-play orbit during normal pre-snap play selection', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+    const controller = new GameplayCameraController({
+      cinematics: 'brief',
+      height: 900,
+      initialMode: 'offensePerspective',
+      width: 1440,
+    });
+
+    controller.update(snapshotGameplayModel(gameplay), 0);
+    expect(controller.getDebugSnapshot().activeShotName ?? null).toBeNull();
+
+    expect(selectPlay(gameplay, 'quick-pass-7')).toBe(true);
+    controller.update(snapshotGameplayModel(gameplay), 0.016);
+
+    expect(controller.getDebugSnapshot().activeShotName ?? null).toBeNull();
+  });
+
   it('can skip a transient orbit shot and restore the selected camera', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
@@ -190,6 +209,7 @@ describe('gameplay camera controller', () => {
       cinematics: 'brief',
       height: 900,
       initialMode: 'offensePerspective',
+      shotPreview: 'prePlayOrbit180',
       width: 1440,
     });
 
@@ -213,6 +233,7 @@ describe('gameplay camera controller', () => {
       cinematics: 'brief',
       height: 900,
       initialMode: 'cinematicBroadcast',
+      shotPreview: 'prePlayOrbit180',
       width: 1440,
     });
 
@@ -235,6 +256,7 @@ describe('gameplay camera controller', () => {
         cinematics: 'full',
         height: 900,
         initialMode: 'offensePerspective',
+        shotPreview: 'prePlayOrbit180',
         width: 1440,
       });
 
@@ -256,6 +278,7 @@ describe('gameplay camera controller', () => {
         cinematics: 'full',
         height: 900,
         initialMode: 'offensePerspective',
+        shotPreview: 'prePlayOrbit180',
         width: 1440,
       });
 
@@ -353,6 +376,7 @@ describe('gameplay camera controller', () => {
       cinematics: 'full',
       height: 900,
       initialMode: 'offensePerspective',
+      shotPreview: 'prePlayOrbit180',
       width: 1440,
     });
 

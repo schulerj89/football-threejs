@@ -25,6 +25,10 @@ export interface PlayerBodyDimensions {
   shoulderDepth: number;
   shoulderHeight: number;
   shoulderCenterY: number;
+  jerseyPanelWidth: number;
+  jerseyPanelHeight: number;
+  jerseyPanelCenterY: number;
+  jerseyPanelForwardOffset: number;
   armLength: number;
   armRadius: number;
   armPivotY: number;
@@ -94,6 +98,10 @@ export const PLAYER_BODY_DIMENSIONS: PlayerBodyDimensions = {
   shoulderDepth: 0.52,
   shoulderHeight: 0.24,
   shoulderCenterY: 0.36,
+  jerseyPanelWidth: 0.52,
+  jerseyPanelHeight: 0.58,
+  jerseyPanelCenterY: 0.02,
+  jerseyPanelForwardOffset: 0.392,
   armLength: 0.62,
   armRadius: 0.11,
   armPivotY: 0.32,
@@ -124,6 +132,7 @@ export const PLAYER_BODY_DIMENSIONS: PlayerBodyDimensions = {
 const BODY_PART_NAMES = {
   head: 'head',
   headAnchor: PLAYER_HEAD_ANCHOR_NAME,
+  jerseyTexturePanel: 'jerseyTexturePanel',
   leftArm: 'leftArm',
   leftArmPivot: 'leftArmPivot',
   leftFoot: 'leftFoot',
@@ -164,7 +173,7 @@ const PLAYER_UNIFORM_COLORS = {
 } as const;
 
 type UniformClothPart = keyof typeof PLAYER_UNIFORM_COLORS.offense;
-type UniformPart = UniformClothPart | 'skin';
+type UniformPart = UniformClothPart | 'skin' | 'jerseyTexture';
 type UniformMeshReference = {
   mesh: THREE.Mesh;
   uniformPart: UniformPart;
@@ -206,6 +215,10 @@ const sharedGeometry = {
     FOOT_DEPTH,
   ),
   head: new THREE.IcosahedronGeometry(PLAYER_BODY_DIMENSIONS.headRadius, 1),
+  jerseyPanel: new THREE.PlaneGeometry(
+    PLAYER_BODY_DIMENSIONS.jerseyPanelWidth,
+    PLAYER_BODY_DIMENSIONS.jerseyPanelHeight,
+  ),
   leg: new THREE.CylinderGeometry(
     PLAYER_BODY_DIMENSIONS.legRadius * 0.85,
     PLAYER_BODY_DIMENSIONS.legRadius,
@@ -383,6 +396,20 @@ function createMannequinBodyRoot(
   );
   torso.position.set(0, PLAYER_BODY_DIMENSIONS.torsoCenterY, 0);
   bodyRoot.add(torso);
+
+  const jerseyTexturePanel = createBodyMesh(
+    BODY_PART_NAMES.jerseyTexturePanel,
+    sharedGeometry.jerseyPanel,
+    'jerseyTexture',
+    player,
+    debugRoleColors,
+  );
+  jerseyTexturePanel.position.set(
+    0,
+    PLAYER_BODY_DIMENSIONS.jerseyPanelCenterY,
+    PLAYER_BODY_DIMENSIONS.jerseyPanelForwardOffset * PLAYER_FORWARD_Z,
+  );
+  bodyRoot.add(jerseyTexturePanel);
 
   const shoulderPads = createBodyMesh(
     BODY_PART_NAMES.shoulderPads,
@@ -593,9 +620,13 @@ function getUniformMaterial(
   role: PlayerRole,
   playerId: string,
   debugRoleColors: boolean,
-): THREE.MeshLambertMaterial {
+): THREE.Material {
   if (uniformPart === 'skin') {
     return getSkinToneMaterial(resolvePlayerAppearance(playerId).skinToneId);
+  }
+
+  if (uniformPart === 'jerseyTexture') {
+    return getJerseyTextureMaterial(team, debugRoleColors);
   }
 
   const materialKey = debugRoleColors
@@ -617,6 +648,77 @@ function getUniformMaterial(
   material.name = materialKey;
   materialCache.set(materialKey, material);
   return material;
+}
+
+function getJerseyTextureMaterial(
+  team: PlayerTeam,
+  debugRoleColors: boolean,
+): THREE.MeshBasicMaterial {
+  const materialKey = `jersey-texture:${debugRoleColors ? 'debug' : team}`;
+  const cached = materialCache.get(materialKey);
+
+  if (cached instanceof THREE.MeshBasicMaterial) {
+    return cached;
+  }
+
+  const material = new THREE.MeshBasicMaterial({
+    alphaTest: 0.08,
+    map: createJerseyTexture(team, debugRoleColors),
+    side: THREE.FrontSide,
+    transparent: true,
+  });
+  material.name = materialKey;
+  materialCache.set(materialKey, material);
+  return material;
+}
+
+function createJerseyTexture(team: PlayerTeam, debugRoleColors: boolean): THREE.DataTexture {
+  const width = 64;
+  const height = 64;
+  const data = new Uint8Array(width * height * 4);
+  const accent = debugRoleColors || team === 'offense'
+    ? [246, 250, 255, 220]
+    : [30, 35, 42, 220];
+  const trim = team === 'offense'
+    ? [18, 45, 98, 180]
+    : [184, 55, 55, 190];
+
+  paintRect(data, width, 7, 8, 50, 5, accent);
+  paintRect(data, width, 7, 51, 50, 4, accent);
+  paintRect(data, width, 7, 13, 5, 38, trim);
+  paintRect(data, width, 52, 13, 5, 38, trim);
+  paintRect(data, width, 25, 22, 5, 22, accent);
+  paintRect(data, width, 36, 22, 5, 22, accent);
+  paintRect(data, width, 23, 20, 8, 4, accent);
+  paintRect(data, width, 34, 20, 8, 4, accent);
+
+  const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.name = `jersey-panel-${debugRoleColors ? 'debug' : team}`;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function paintRect(
+  data: Uint8Array,
+  textureWidth: number,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rgba: readonly number[],
+): void {
+  for (let row = y; row < y + height; row += 1) {
+    for (let column = x; column < x + width; column += 1) {
+      const index = (row * textureWidth + column) * 4;
+      data[index] = rgba[0];
+      data[index + 1] = rgba[1];
+      data[index + 2] = rgba[2];
+      data[index + 3] = rgba[3];
+    }
+  }
 }
 
 function getSkinToneMaterial(skinToneId: SkinToneId): THREE.MeshLambertMaterial {
@@ -661,7 +763,14 @@ function getBasicMaterial(name: string, color: number): THREE.MeshBasicMaterial 
 }
 
 function isUniformPart(value: unknown): value is UniformPart {
-  return value === 'jersey' || value === 'pants' || value === 'shoes' || value === 'skin' || value === 'trim';
+  return (
+    value === 'jersey' ||
+    value === 'jerseyTexture' ||
+    value === 'pants' ||
+    value === 'shoes' ||
+    value === 'skin' ||
+    value === 'trim'
+  );
 }
 
 function getOrCreatePlayerVisualReferences(playerVisual: THREE.Object3D): PlayerVisualHierarchyReferences {

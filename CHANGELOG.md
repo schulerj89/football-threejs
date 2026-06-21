@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.4] - 2026-06-21
+
+### Fixed
+
+- Reduced the normal presentation-official crew to the referee and umpire.
+- Added a shared image-textured jersey panel mesh to the procedural player body without changing gameplay collision or replacing the primitive mannequin.
+- Prevented play-card clicks from leaving focus on card buttons so Space can reliably snap the ball after selecting a play with the pointer.
+- Disabled the normal pre-snap orbit camera during play selection while keeping explicit shot previews and touchdown/cutaway shots available.
+- Smoothed the debug overlay `FRAME_MS` display so startup and first-play presentation work does not make the visible metric jump as harshly.
+- Allowed runtime formations to compress longitudinally within the full field surface so out-of-bounds resets inside the 10-yard line no longer crash on deep defenders resolving beyond the back of the end zone.
+
+### Tests
+
+- Added unit coverage for red-zone out-of-bounds reset recovery and jersey-panel sharing.
+- Updated camera, official, player-visual, and browser smoke coverage for the two-ref crew, no normal pre-play orbit, click-then-Space play-card flow, and the new mannequin mesh counts.
+
 ## [0.51.3] - 2026-06-21
 
 ### Fixed

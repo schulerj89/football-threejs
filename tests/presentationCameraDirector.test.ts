@@ -59,9 +59,21 @@ describe('presentation camera director', () => {
     expect(gameplay.playState).toBe('live');
   });
 
-  it('starts a pre-play orbit shot for a new pre-snap formation', () => {
+  it('does not start a normal pre-play orbit during pre-snap play selection', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
     const director = new PresentationCameraDirector({ cinematics: 'full' });
+    const debug = director.update(snapshotGameplayModel(gameplay), new THREE.PerspectiveCamera(), 0);
+
+    expect(debug.activeShotName).toBeNull();
+    expect(debug.phase).toBe('preSnapEstablish');
+  });
+
+  it('keeps the pre-play orbit available for explicit shot preview', () => {
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
+    const director = new PresentationCameraDirector({
+      cinematics: 'full',
+      shotPreview: 'prePlayOrbit180',
+    });
     const debug = director.update(snapshotGameplayModel(gameplay), new THREE.PerspectiveCamera(), 0);
 
     expect(debug.activeShotName).toBe('prePlayOrbit180');
@@ -74,7 +86,10 @@ describe('presentation camera director', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
     const before = JSON.stringify(snapshot);
-    const director = new PresentationCameraDirector({ cinematics: 'full' });
+    const director = new PresentationCameraDirector({
+      cinematics: 'full',
+      shotPreview: 'prePlayOrbit180',
+    });
     const camera = new THREE.PerspectiveCamera();
 
     director.update(snapshot, camera, 0);

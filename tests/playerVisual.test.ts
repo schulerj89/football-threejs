@@ -31,6 +31,7 @@ describe('player visual', () => {
     expect(bodyRoot).toBeInstanceOf(THREE.Group);
     expect(bodyRoot?.parent).toBe(playerVisual);
     expect(bodyRoot?.getObjectByName('torso')).toBeInstanceOf(THREE.Mesh);
+    expect(bodyRoot?.getObjectByName('jerseyTexturePanel')).toBeInstanceOf(THREE.Mesh);
     expect(bodyRoot?.getObjectByName('shoulderPads')).toBeInstanceOf(THREE.Mesh);
     expect(bodyRoot?.getObjectByName('leftArmPivot')).toBeInstanceOf(THREE.Group);
     expect(bodyRoot?.getObjectByName('rightArmPivot')).toBeInstanceOf(THREE.Group);
@@ -59,15 +60,15 @@ describe('player visual', () => {
     expect(snapshot.bodyStyle).toBe('mannequin');
     expect(snapshot.totalHeight).toBe(PLAYER_BODY_DIMENSIONS.totalHeight);
     expect(snapshot.shoulderWidth).toBe(PLAYER_BODY_DIMENSIONS.shoulderWidth);
-    expect(snapshot.meshesPerPlayer).toBe(10);
+    expect(snapshot.meshesPerPlayer).toBe(11);
     expect(snapshot.bodyTriangleCount).toBeGreaterThanOrEqual(300);
     expect(snapshot.bodyTriangleCount).toBeLessThanOrEqual(700);
     expect(snapshot.bodyBounds.min.y).toBeGreaterThanOrEqual(-0.001);
     expect(snapshot.minimumBodyY).toBeGreaterThanOrEqual(-0.001);
     expect(snapshot.bodyBounds.size.y).toBeGreaterThan(1.45);
     expect(snapshot.bodyBounds.size.y).toBeLessThanOrEqual(PLAYER_BODY_DIMENSIONS.totalHeight);
-    expect(snapshot.uniqueBodyGeometryCount).toBe(7);
-    expect(snapshot.uniqueBodyMaterialCount).toBe(4);
+    expect(snapshot.uniqueBodyGeometryCount).toBe(8);
+    expect(snapshot.uniqueBodyMaterialCount).toBe(5);
     expect(snapshot.headBounds).not.toBeNull();
     expect(snapshot.neckBounds).not.toBeNull();
     expect(snapshot.appearance).toEqual(resolvePlayerAppearance(player.id));
@@ -184,6 +185,25 @@ describe('player visual', () => {
     expect(getMeshColorHex(debugRunnerVisual, 'torso')).not.toBe(
       getMeshColorHex(debugBlockerVisual, 'torso'),
     );
+  });
+
+  it('adds a shared image-textured jersey panel without replacing the primitive body', () => {
+    const offenseVisual = createPlaceholderPlayerVisual(
+      createPlayerModel(undefined, { id: 'offense-qb', role: 'quarterback', team: 'offense' }),
+    );
+    const defenseVisual = createPlaceholderPlayerVisual(
+      createPlayerModel(undefined, { id: 'defense-qb', role: 'defender', team: 'defense' }),
+    );
+    const offensePanel = getMesh(offenseVisual, 'jerseyTexturePanel');
+    const defensePanel = getMesh(defenseVisual, 'jerseyTexturePanel');
+
+    expect(offenseVisual.getObjectByName('torso')).toBeInstanceOf(THREE.Mesh);
+    expect(offensePanel.geometry).toBe(defensePanel.geometry);
+    expect(offensePanel.material).toBeInstanceOf(THREE.MeshBasicMaterial);
+    expect(defensePanel.material).toBeInstanceOf(THREE.MeshBasicMaterial);
+    expect((offensePanel.material as THREE.MeshBasicMaterial).map).toBeInstanceOf(THREE.DataTexture);
+    expect((defensePanel.material as THREE.MeshBasicMaterial).map).toBeInstanceOf(THREE.DataTexture);
+    expect(offensePanel.material).not.toBe(defensePanel.material);
   });
 
   it('reuses cached body material references when material inputs are unchanged', () => {
@@ -306,23 +326,21 @@ function getMeshColorHex(playerVisual: THREE.Object3D, meshName: string): number
 }
 
 function getMeshMaterial(playerVisual: THREE.Object3D, meshName: string): THREE.Material {
-  const mesh = playerVisual.getObjectByName(meshName);
-
-  if (!(mesh instanceof THREE.Mesh) || !(mesh.material instanceof THREE.Material)) {
-    throw new Error(`Missing mesh material ${meshName}`);
-  }
-
-  return mesh.material;
+  return getMesh(playerVisual, meshName).material as THREE.Material;
 }
 
 function getMeshSkinToneId(playerVisual: THREE.Object3D, meshName: string): string {
+  return String(getMesh(playerVisual, meshName).userData.skinToneId);
+}
+
+function getMesh(playerVisual: THREE.Object3D, meshName: string): THREE.Mesh {
   const mesh = playerVisual.getObjectByName(meshName);
 
   if (!(mesh instanceof THREE.Mesh)) {
-    throw new Error(`Missing skin mesh ${meshName}`);
+    throw new Error(`Missing mesh ${meshName}`);
   }
 
-  return String(mesh.userData.skinToneId);
+  return mesh;
 }
 
 function findMatchingSkinToneIds(): [string, string] {

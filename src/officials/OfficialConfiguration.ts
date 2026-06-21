@@ -8,11 +8,6 @@ import type {
 export const OFFICIAL_CREW: readonly OfficialDefinition[] = [
   { id: 'official-referee', role: 'referee' },
   { id: 'official-umpire', role: 'umpire' },
-  { assignedSideline: 'left', id: 'official-down-judge', role: 'downJudge' },
-  { assignedSideline: 'right', id: 'official-line-judge', role: 'lineJudge' },
-  { assignedSideline: 'left', id: 'official-field-judge', role: 'fieldJudge' },
-  { assignedSideline: 'right', id: 'official-side-judge', role: 'sideJudge' },
-  { id: 'official-back-judge', role: 'backJudge' },
 ] as const;
 
 export const OFFICIAL_POSITIONING_CONFIG = {

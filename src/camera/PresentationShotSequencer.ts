@@ -1,6 +1,5 @@
 import type { PresentationAudioEvent } from '../audio/PresentationEventBridge';
 import type { GameplaySnapshot, PlayState } from '../playState';
-import { createPrePlayShotKey } from './CameraFocusResolver';
 import type {
   CinematicsSetting,
   FieldPlaneBounds,
@@ -15,8 +14,8 @@ import { PresentationShotFactory } from './PresentationShotDefinitions';
 export class PresentationShotSequencer {
   private activeOrbitShot: ActiveOrbitShot | null = null;
   private readonly completedEventShotKeys = new Set<string>();
+  private completedPreviewShotName: PresentationOrbitShotName | null = null;
   private currentPreSnapAnchorKey: string | null = null;
-  private lastCompletedPrePlayKey: string | null = null;
   private lastCompletedTouchdownResultId: number | null = null;
   private phase: PresentationCameraPhase = 'preSnapEstablish';
   private phaseElapsedSeconds = 0;
@@ -43,8 +42,8 @@ export class PresentationShotSequencer {
   reset(): void {
     this.activeOrbitShot = null;
     this.completedEventShotKeys.clear();
+    this.completedPreviewShotName = null;
     this.currentPreSnapAnchorKey = null;
-    this.lastCompletedPrePlayKey = null;
     this.lastCompletedTouchdownResultId = null;
     this.phase = 'preSnapEstablish';
     this.phaseElapsedSeconds = 0;
@@ -150,6 +149,7 @@ export class PresentationShotSequencer {
     this.markOrbitShotCompleted(completedShot);
 
     if (completedShot.preview) {
+      this.activeOrbitShot = null;
       return;
     }
 
@@ -217,10 +217,14 @@ export class PresentationShotSequencer {
 
   private maybeStartOrbitShot(
     snapshot: GameplaySnapshot,
-    formationBounds: FieldPlaneBounds,
+    _formationBounds: FieldPlaneBounds,
     options: PresentationCameraUpdateOptions,
   ): void {
     if (this.shotPreview) {
+      if (this.completedPreviewShotName === this.shotPreview) {
+        return;
+      }
+
       this.activeOrbitShot = {
         elapsedSeconds: 0,
         key: `preview:${this.shotPreview}`,
@@ -261,15 +265,6 @@ export class PresentationShotSequencer {
     }
 
     if (snapshot.playState === 'preSnap') {
-      const prePlayKey = createPrePlayShotKey(snapshot, formationBounds, this.preSnapSequenceId);
-      if (prePlayKey !== this.lastCompletedPrePlayKey) {
-        this.activeOrbitShot = {
-          elapsedSeconds: 0,
-          key: prePlayKey,
-          name: 'prePlayOrbit180',
-          preview: false,
-        };
-      }
       return;
     }
 
@@ -294,11 +289,7 @@ export class PresentationShotSequencer {
 
   private markOrbitShotCompleted(activeShot: ActiveOrbitShot): void {
     if (activeShot.preview) {
-      return;
-    }
-
-    if (activeShot.name === 'prePlayOrbit180') {
-      this.lastCompletedPrePlayKey = activeShot.key;
+      this.completedPreviewShotName = activeShot.name;
       return;
     }
 

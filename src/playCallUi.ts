@@ -27,6 +27,7 @@ export class PlayCallUi {
     this.grid = document.createElement('div');
     this.grid.className = 'play-call-grid';
     this.root.appendChild(this.grid);
+    this.root.addEventListener('pointerdown', this.handlePointerDown);
     this.root.addEventListener('pointerup', this.handlePointerUp);
     document.body.appendChild(this.root);
   }
@@ -51,6 +52,7 @@ export class PlayCallUi {
   }
 
   dispose(): void {
+    this.root.removeEventListener('pointerdown', this.handlePointerDown);
     this.root.removeEventListener('pointerup', this.handlePointerUp);
     this.root.remove();
     this.pendingSelectedPlayId = null;
@@ -78,6 +80,21 @@ export class PlayCallUi {
     this.lastRenderKey = renderKey;
     this.renderCards(gameplay);
   }
+
+  private readonly handlePointerDown = (event: PointerEvent): void => {
+    if (!this.enabled) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    if (target.closest('.play-card')) {
+      event.preventDefault();
+    }
+  };
 
   private renderCards(gameplay: GameplaySnapshot): void {
     const snapPlacement: SnapPlacement = {
@@ -109,6 +126,7 @@ export class PlayCallUi {
     }
 
     this.pendingSelectedPlayId = playId;
+    card.blur();
     event.preventDefault();
   };
 }

@@ -5,7 +5,6 @@ import { SNAP_LANE_X, type SnapLane } from '../../src/ballSpotting';
 import { FIELD_DIRECTION } from '../../src/fieldSpec';
 import {
   OFFICIAL_CREW,
-  getSafeSidelineX,
 } from '../../src/officials/OfficialConfiguration';
 import {
   isOfficialInsidePresentationBounds,
@@ -32,15 +31,10 @@ import {
 } from '../../src/playState';
 
 describe('football officials formation', () => {
-  it('defines the seven stable football-official IDs', () => {
+  it('defines the two stable presentation-official IDs', () => {
     expect(OFFICIAL_CREW.map((official) => official.id)).toEqual([
       'official-referee',
       'official-umpire',
-      'official-down-judge',
-      'official-line-judge',
-      'official-field-judge',
-      'official-side-judge',
-      'official-back-judge',
     ]);
   });
 
@@ -53,8 +47,8 @@ describe('football officials formation', () => {
         playState: 'preSnap',
       }));
 
-      expect(officials).toHaveLength(7);
-      expect(new Set(officials.map((official) => official.id)).size).toBe(7);
+      expect(officials).toHaveLength(2);
+      expect(new Set(officials.map((official) => official.id)).size).toBe(2);
       expect(officials.every(isOfficialInsidePresentationBounds)).toBe(true);
       expect(officials.every((official) => official.poseIntent === 'neutral')).toBe(true);
       expect(officials.every((official) => official.updateState === 'formation')).toBe(true);
@@ -86,14 +80,12 @@ describe('football officials formation', () => {
     }
   });
 
-  it('keeps sideline officials near their assigned sidelines', () => {
+  it('uses only the reduced central crew', () => {
     const officials = resolveOfficialFormation(makeInput({ playState: 'preSnap' }));
     const sidelineOfficials = officials.filter((official) => official.assignedSideline);
 
-    expect(sidelineOfficials).toHaveLength(4);
-    for (const official of sidelineOfficials) {
-      expect(official.position.x).toBeCloseTo(getSafeSidelineX(official.assignedSideline!));
-    }
+    expect(sidelineOfficials).toHaveLength(0);
+    expect(officials.map((official) => official.role)).toEqual(['referee', 'umpire']);
   });
 });
 
@@ -205,7 +197,7 @@ describe('football officials presentation', () => {
       controller.reset(snapshot);
       controller.update(snapshot, 1 / 60, true);
       expect(controller.group.children).toHaveLength(1);
-      expect(controller.getSnapshot().visibleOfficialCount).toBe(7);
+      expect(controller.getSnapshot().visibleOfficialCount).toBe(2);
     }
 
     controller.applySettings({ enabled: false });

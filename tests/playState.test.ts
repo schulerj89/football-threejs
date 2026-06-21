@@ -7,6 +7,7 @@ import {
   isTackleContact,
   updateDefenderPursuit,
 } from '../src/defenderModel';
+import { resetDriveModel } from '../src/driveModel';
 import { INITIAL_BALL_SPOT, LINE_OF_SCRIMMAGE_Z, PLAYABLE_FIELD_BOUNDS } from '../src/field';
 import { calculateYardsGained } from '../src/fieldScale';
 import { FORMATION_MEASUREMENTS } from '../src/formationLayout';
@@ -1662,6 +1663,40 @@ describe('play state transitions', () => {
         PLAYABLE_FIELD_BOUNDS.minX + receiver.collisionRadius,
       );
     }
+  });
+
+  it('resets after going out of bounds inside the 10-yard line', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+    const redZoneSpot = { x: 0, z: PLAYABLE_FIELD_BOUNDS.maxZ - 5 };
+    const deadBallZ = PLAYABLE_FIELD_BOUNDS.maxZ - PLAYER_MOVEMENT_CONFIG.collisionRadius - 0.35;
+
+    resetDriveModel(gameplay.drive, redZoneSpot);
+    gameplay.currentBallSpot = { ...redZoneSpot };
+    gameplay.nextBallSpot = { ...redZoneSpot };
+    gameplay.nextSnapSpot = { ...redZoneSpot };
+    selectPlay(gameplay, 'inside-zone-11');
+    startPlay(gameplay);
+    gameplay.player.position.x =
+      PLAYABLE_FIELD_BOUNDS.maxX + gameplay.player.collisionRadius + 0.1;
+    gameplay.player.position.z = deadBallZ;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: {
+        x: PLAYABLE_FIELD_BOUNDS.maxX - gameplay.player.collisionRadius,
+        z: deadBallZ,
+      },
+      type: 'outOfBounds',
+    });
+
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds);
+
+    expect(gameplay.playState).toBe('preSnap');
+    expect(gameplay.currentBallSpot.z).toBeCloseTo(deadBallZ);
+    expect(gameplay.players).toHaveLength(22);
+    expect(gameplay.player.id).toBe('offense-rb');
   });
 
   it('auto-resets after the configured touchdown delay without clearing score', () => {

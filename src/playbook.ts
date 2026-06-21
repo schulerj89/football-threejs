@@ -1,10 +1,13 @@
 import { resolveSnapPlacement } from './ballSpotting';
+import { FIELD_BOUNDS } from './fieldSpec';
 import type { FootballSpot } from './fieldScale';
 import {
+  DEFAULT_FORMATION_FIELD_SPEC,
   FORMATION_MEASUREMENTS,
   assertValidResolvedFormation,
   resolveFormation,
   resolveFormationTarget,
+  type FormationFieldSpec,
   type FormationSide,
   type FormationPoint,
   type FormationSlot,
@@ -107,6 +110,11 @@ const {
 const SEVEN = SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS;
 const ELEVEN = ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS;
 const PLAY_SIDE: PreferredFormationSide = 'right';
+const RUNTIME_FORMATION_FIELD_SPEC: FormationFieldSpec = {
+  ...DEFAULT_FORMATION_FIELD_SPEC,
+  clampLongitudinalToBounds: true,
+  playableBounds: FIELD_BOUNDS,
+};
 const SPREAD_QUICK_ELEVEN_RECEIVER_IDS = [
   'offense-wr-left',
   'offense-wr-right',
@@ -834,7 +842,11 @@ export function getProtectionAssignmentDefenderId(
 }
 
 function resolvePlayFormation(ballSpot: FootballSpot, play: PlayDefinition) {
-  const formation = resolveFormation(play, resolveSnapPlacement(ballSpot));
+  const formation = resolveFormation(
+    play,
+    resolveSnapPlacement(ballSpot),
+    RUNTIME_FORMATION_FIELD_SPEC,
+  );
   assertValidResolvedFormation(formation);
 
   return formation;

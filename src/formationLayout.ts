@@ -90,6 +90,7 @@ export interface FormationValidationConfig {
 }
 
 export interface FormationFieldSpec {
+  clampLongitudinalToBounds?: boolean;
   fieldWidth: number;
   playDirectionZ: number;
   playableBounds: FieldBounds;
@@ -376,8 +377,17 @@ function resolveLongitudinalAnchor(
   fieldSpec: FormationFieldSpec,
 ): number {
   const direction = anchor.side === 'defense' ? 1 : -1;
+  const z = snapPlacement.spot.z + direction * anchor.depthYards * fieldSpec.playDirectionZ;
 
-  return snapPlacement.spot.z + direction * anchor.depthYards * fieldSpec.playDirectionZ;
+  if (!fieldSpec.clampLongitudinalToBounds) {
+    return z;
+  }
+
+  return clamp(
+    z,
+    fieldSpec.playableBounds.minZ + FORMATION_MEASUREMENTS.playerRadius,
+    fieldSpec.playableBounds.maxZ - FORMATION_MEASUREMENTS.playerRadius,
+  );
 }
 
 function resolveConcreteSide(
@@ -697,4 +707,8 @@ function formatCount(count: number): string {
   }
 
   return count.toString();
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

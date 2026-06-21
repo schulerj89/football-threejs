@@ -36,6 +36,7 @@ export class DebugOverlay {
   private frameCount = 0;
   private elapsed = 0;
   private fps = 0;
+  private displayedFrameTimeMs: number | null = null;
 
   constructor({ initialVisible, renderer, player }: DebugOverlayOptions) {
     this.element = document.createElement('div');
@@ -140,8 +141,13 @@ export class DebugOverlay {
     }
 
     if (renderMetrics) {
+      const frameTimeMs = this.smoothDisplayedFrameTime(
+        renderMetrics.frameTimeMs,
+        deltaSeconds,
+      );
+
       lines.push(
-        `FRAME_MS ${renderMetrics.frameTimeMs.toFixed(1)}`,
+        `FRAME_MS ${frameTimeMs.toFixed(1)}`,
         `GEOMS ${renderMetrics.geometries}`,
         `TEX ${renderMetrics.textures}`,
         `PLAYERS ${renderMetrics.playerCount}`,
@@ -157,6 +163,21 @@ export class DebugOverlay {
     }
 
     this.element.textContent = lines.join('\n');
+  }
+
+  private smoothDisplayedFrameTime(rawFrameTimeMs: number, deltaSeconds: number): number {
+    if (!Number.isFinite(rawFrameTimeMs)) {
+      return this.displayedFrameTimeMs ?? 0;
+    }
+
+    if (this.displayedFrameTimeMs === null) {
+      this.displayedFrameTimeMs = rawFrameTimeMs;
+      return this.displayedFrameTimeMs;
+    }
+
+    const alpha = Math.min(0.24, Math.max(0.08, deltaSeconds * 6));
+    this.displayedFrameTimeMs += (rawFrameTimeMs - this.displayedFrameTimeMs) * alpha;
+    return this.displayedFrameTimeMs;
   }
 }
 

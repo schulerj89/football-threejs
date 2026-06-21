@@ -858,7 +858,7 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   const officials = await getOfficialsSnapshot(page);
   expect(officials).toMatchObject({
     enabled: true,
-    visibleOfficialCount: 7,
+    visibleOfficialCount: 2,
   });
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
@@ -1109,9 +1109,9 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   const bodySnapshots = await getPlayerBodyVisualSnapshots(page);
   expect(bodySnapshots).toHaveLength(10);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'mannequin')).toBe(true);
-  expect(bodySnapshots.every((snapshot) => snapshot.meshesPerPlayer === 10)).toBe(true);
-  expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyGeometryCount === 7)).toBe(true);
-  expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyMaterialCount === 4)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.meshesPerPlayer === 11)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyGeometryCount === 8)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyMaterialCount === 5)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyTriangleCount >= 300)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyTriangleCount <= 700)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyBounds.min.y >= -0.001)).toBe(true);
@@ -1168,7 +1168,7 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   await expect(page.locator('.debug-overlay')).toContainText('CAM tacticalOrthographic');
   await expect(page.locator('.debug-overlay')).toContainText('BODY mannequin');
   await expect(page.locator('.debug-overlay')).toContainText('BODY_TRIS');
-  await expect.poll(() => getDebugOverlayNumber(page, 'CALLS')).toBeLessThan(190);
+  await expect.poll(() => getDebugOverlayNumber(page, 'CALLS')).toBeLessThan(210);
   await expectNonBlankCanvas(page);
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1238,16 +1238,11 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
   const officials = await getOfficialsSnapshot(page);
   expect(officials).toMatchObject({
     enabled: true,
-    visibleOfficialCount: 7,
+    visibleOfficialCount: 2,
   });
   expect(officials.officials.map((official) => official.id)).toEqual([
     'official-referee',
     'official-umpire',
-    'official-down-judge',
-    'official-line-judge',
-    'official-field-judge',
-    'official-side-judge',
-    'official-back-judge',
   ]);
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
@@ -1452,7 +1447,7 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   expect(integratedResetCycles.after.visualRootCount).toBe(22);
   expect(integratedResetCycles.after.helmetInstanceCount).toBe(22);
   expect(integratedResetCycles.after.footballMeshCount).toBe(integratedResetCycles.before.footballMeshCount);
-  expect(integratedResetCycles.after.officialCount).toBe(7);
+  expect(integratedResetCycles.after.officialCount).toBe(2);
   expect(integratedResetCycles.after.officialMeshCount).toBe(integratedResetCycles.before.officialMeshCount);
   expect(integratedResetCycles.after.crowdInstanceCount).toBeGreaterThanOrEqual(500);
   expect(integratedResetCycles.after.crowdInstanceCount).toBe(
@@ -1770,7 +1765,7 @@ test('stages a static 7v7 formation preview across snap lanes and camera modes',
   const metrics = await getRenderMetrics(page);
   expect(metrics.playerCount).toBe(14);
   expect(metrics.calls).toBeGreaterThan(0);
-  expect(metrics.calls).toBeLessThan(260);
+  expect(metrics.calls).toBeLessThan(280);
   expect(metrics.frameTimeMs).toBeGreaterThan(0);
   expect(metrics.triangles).toBeGreaterThan(0);
   expect(metrics.sceneMeshCount).toBeGreaterThanOrEqual(metrics.playerBodyMeshCount);
@@ -2082,17 +2077,18 @@ test('renders graphical play cards and selects plays through the shared request 
   await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-receiver-route')).toHaveCount(3);
   await expect(page.locator('.play-card[data-play-id="inside-zone-7"]')).toHaveAttribute('data-selected', 'true');
 
-  await page.locator('.play-card[data-play-id="outside-zone-7"]').click();
-  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
-    selectedPlay: { id: 'outside-zone-7', displayName: 'Outside Zone 7' },
-  });
-  await expect(page.locator('.play-card[data-play-id="outside-zone-7"]')).toHaveAttribute('data-selected', 'true');
-
   await page.keyboard.press('3');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     selectedPlay: { id: 'quick-pass-7', displayName: 'Quick Pass 7' },
   });
   await expect(page.locator('.play-card[data-play-id="quick-pass-7"]')).toHaveAttribute('data-selected', 'true');
+
+  await page.locator('.play-card[data-play-id="outside-zone-7"]').click();
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'outside-zone-7', displayName: 'Outside Zone 7' },
+  });
+  await expect(page.locator('.play-card[data-play-id="outside-zone-7"]')).toHaveAttribute('data-selected', 'true');
+  expect(await page.evaluate(() => document.activeElement?.classList.contains('play-card') ?? false)).toBe(false);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(cards).toHaveCount(4);
@@ -2104,7 +2100,7 @@ test('renders graphical play cards and selects plays through the shared request 
 
   await page.keyboard.press('1');
   await page.waitForTimeout(100);
-  expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('quick-pass-7');
+  expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('outside-zone-7');
 });
 
 test('shows on-field receiver routes before snap and supports route audit mode', async ({ page }) => {
@@ -2447,25 +2443,14 @@ test('supports cinematic orbit shot settings without blocking gameplay input', a
 
   await page.goto('/?cameraDebug=1&readback=1&experience=performance&camera=offense&cinematics=brief&audioDebug=1&captions=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
-  await expect(page.locator('.debug-overlay')).toContainText('SHOT prePlayOrbit180');
   await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO');
   expect((await getAudioSnapshot(page)).captionsEnabled).toBe(true);
-  await expect.poll(async () => {
-    const snapshot = await getCameraSnapshot(page);
-    return snapshot.activeShotName === 'prePlayOrbit180' ||
-      (snapshot.mode === 'offensePerspective' && snapshot.state === 'preSnapFormation');
-  }).toBe(true);
   const briefShot = await getCameraSnapshot(page);
-  expect(briefShot.mode).toBe('offensePerspective');
-  if (briefShot.activeShotName === 'prePlayOrbit180') {
-    expect(briefShot).toMatchObject({
-      restoreCamera: 'offensePerspective',
-      state: 'cinematicBroadcast',
-    });
-    expect(briefShot.orbitRadius).toBeGreaterThan(0);
-  } else {
-    expect(briefShot.state).toBe('preSnapFormation');
-  }
+  expect(briefShot.activeShotName ?? null).toBeNull();
+  expect(briefShot).toMatchObject({
+    mode: 'offensePerspective',
+    state: 'preSnapFormation',
+  });
 
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
