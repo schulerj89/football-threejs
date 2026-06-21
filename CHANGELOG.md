@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.46.1] - 2026-06-21
+
+### Added
+
+- Added a frozen 11v11 optimization ownership manifest documenting the measured bottlenecks, classifications, branch ownership, and merge rules.
+
+### Changed
+
+- Cached receiver route runtime data for selected/reset/snapped plays so receiver updates and pass targeting reuse resolved routes instead of resolving route definitions every frame.
+- Cached player visual hierarchy and helmet references so normal per-frame sync avoids repeated `getObjectByName`, body traversal, helmet part traversal, and unchanged material reassignment.
+
+### Performance
+
+- Short production perf smoke reduced `eleven-pass-flight` `receiverRouteUpdates` from baseline avg `0.09 ms` / p95 `0.20 ms` to avg `0.006 ms` / p95 `0.05 ms` after the gameplay branch merge.
+- Short production perf smoke reduced `eleven-pass-flight` `playerVisualSync` from baseline avg `0.32 ms` / p95 `0.40 ms` to avg `0.023 ms` / p95 `0.10 ms` after both optimization branches were integrated.
+
 ## [0.46.0] - 2026-06-21
 
 ### Added

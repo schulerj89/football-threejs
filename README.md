@@ -70,6 +70,7 @@ Run `npm run perf:11v11` to build production assets and profile deterministic 11
 - Use `npm run perf:report` to print the latest report summary without rerunning the benchmark.
 - For quick local smoke runs, override durations with environment variables such as `FOOTBALL_PERF_SAMPLE_MS=1500`, `FOOTBALL_PERF_COMPARISON_SAMPLE_MS=750`, and `FOOTBALL_PERF_WARMUP_MS=500`.
 - Current officials/referee visuals are not implemented; the profiling harness records official mesh count and the officials-on/off comparison dimension for future enforcement.
+- Measured optimization ownership and before/after evidence lives in `docs/PERFORMANCE_OPTIMIZATION_OWNERSHIP.md`.
 
 ## Audio Production
 
