@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.49.0] - 2026-06-21
+
+### Added
+
+- Added a runtime memory profiler that reports renderer counters, calculated geometry/index/instance buffer bytes, texture estimates with unknown formats labelled, browser memory support status, and subsystem ownership for field, players, helmets, football, route art, crowd, stadium, and other resources.
+- Added a lazy `Memory` debug panel with crowd-capacity controls for running, canceling, applying, and exporting a session-local benchmark report.
+- Added an adaptive crowd-capacity benchmark that temporarily suppresses the normal presentation crowd, measures a no-crowd baseline, tests deterministic spectator counts, disposes temporary crowd resources between trials, and recommends a crowd density for the current browser session only.
+
+### Changed
+
+- Extended the debug registry metadata for richer runtime debug-feature descriptions while preserving lazy creation and disposal.
+- Preserved the existing quality debug overlay as a separate `Quality` feature and `?qualityDebug=1` path while adding `?memoryDebug=1` for memory diagnostics.
+
+### Tests
+
+- Added unit coverage for geometry/index/instance byte calculations, texture estimates, unsupported browser memory APIs, scene resource grouping, crowd benchmark cancellation, repeated benchmark resource cleanup, and crowd-density recommendation mapping.
+- Added browser smoke coverage for opening the runtime memory panel from the `F1` debug panel without mutating gameplay state.
+
 ## [0.48.0] - 2026-06-21
 
 ### Added

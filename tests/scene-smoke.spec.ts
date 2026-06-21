@@ -865,11 +865,18 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
 
   await page.keyboard.press('F1');
   await expect(page.locator('.debug-panel')).toBeVisible();
-  await expect(page.locator('.debug-feature-row')).toHaveCount(16);
+  await expect(page.locator('.debug-feature-row')).toHaveCount(17);
   await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').check();
   await expect(page.locator('.debug-overlay')).toBeVisible();
   await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').uncheck();
   await expect(page.locator('.debug-overlay')).toBeHidden();
+  await page.locator('.debug-feature-row').filter({ hasText: 'Memory' }).getByRole('checkbox').check();
+  await expect(page.locator('.memory-debug-panel')).toBeVisible();
+  await expect(page.locator('.memory-debug-panel')).toContainText('RENDERER COUNTERS');
+  const memorySnapshot = await page.evaluate(() => window.__footballDebug?.getMemoryProfileSnapshot());
+  expect(memorySnapshot?.disclaimer).toContain('not exact GPU VRAM');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Memory' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.memory-debug-panel')).toBeHidden();
 
   await page.locator('.title-screen').getByLabel('Debug tools').check();
   let experience = await getGameExperienceSnapshot(page);

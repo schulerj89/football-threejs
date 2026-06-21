@@ -4,12 +4,14 @@ export interface DisposableDebugFeature {
 
 export interface DebugFeature {
   create(): DisposableDebugFeature;
+  description?: string;
   enabled: boolean;
   id: string;
   label: string;
 }
 
 export interface DebugFeatureSnapshot {
+  description?: string;
   enabled: boolean;
   id: string;
   label: string;
@@ -45,6 +47,7 @@ export class DebugFeatureRegistry {
   getSnapshots(): DebugFeatureSnapshot[] {
     return [...this.features.values()]
       .map(({ definition }) => ({
+        ...(definition.description ? { description: definition.description } : {}),
         enabled: definition.enabled,
         id: definition.id,
         label: definition.label,

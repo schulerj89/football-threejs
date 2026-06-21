@@ -14,7 +14,7 @@ The active default prototype is now a twenty-two-player 11v11 offensive score-at
 - Direction of play is positive `Z`.
 - The initial line of scrimmage is at `Z = -15`.
 - Field dimensions, paint widths, field bounds, playable bounds, and plain layout data are centralized in `src/fieldSpec.ts`.
-- Static field markings are batched by material while the line of scrimmage, first-down line, and play-direction marker remain dynamic.
+- Static field markings are batched by material while the line of scrimmage and first-down line remain dynamic.
 - Yard numbers face the sidelines, and the presentation-only goalposts sit on the end lines at the back of each end zone.
 - Painted hash marks and snap-placement hash lanes share the same widened arcade hash X value derived from the professional hash position.
 - World-unit to football-yard conversion is centralized in `src/fieldScale.ts`.
@@ -74,6 +74,16 @@ Run `npm run perf:11v11` to build production assets and profile deterministic 11
 - For quick local smoke runs, override durations with environment variables such as `FOOTBALL_PERF_SAMPLE_MS=1500`, `FOOTBALL_PERF_COMPARISON_SAMPLE_MS=750`, and `FOOTBALL_PERF_WARMUP_MS=500`.
 - Current officials/referee visuals are not implemented; the profiling harness records official mesh count and the officials-on/off comparison dimension for future enforcement.
 - Measured optimization ownership and before/after evidence lives in `docs/PERFORMANCE_OPTIMIZATION_OWNERSHIP.md`.
+
+## Runtime Memory Profiling
+
+Press `F1` and enable `Memory`, or open with `?memoryDebug=1`, to inspect runtime resource estimates.
+
+- Reports renderer counters, calculated BufferGeometry/index/InstancedMesh bytes, texture estimates, browser memory support, and subsystem ownership groups.
+- Calculated texture and buffer totals are diagnostic estimates from Three.js-visible resources, not exact GPU VRAM usage.
+- The crowd capacity test temporarily removes the normal presentation crowd, measures a no-crowd baseline, tests deterministic spectator counts, disposes temporary crowd resources between trials, and recommends a count only for the current browser session.
+- `Apply Recommended Count` maps the session recommendation to the existing low/medium/high crowd-density setting; crowd visuals are not automatically enabled.
+- Query helpers: `?memoryDebug=1`, `?crowdCapacityCounts=0,500,1000`, `?crowdCapacityTarget=30fps|60fps|custom`, and `?crowdCapacityFrameMs=16.67`.
 
 ## Audio Production
 

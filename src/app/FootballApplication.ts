@@ -18,6 +18,19 @@ import { FramePerformanceProfiler } from '../performance/FramePerformanceProfile
 import { PerformanceScenarioRunner } from '../performance/PerformanceScenarioRunner';
 import { AdaptiveQualityController } from '../performance/AdaptiveQualityController';
 import { RuntimePerformanceMonitor } from '../performance/RuntimePerformanceMonitor';
+import { BrowserMemoryProvider } from '../performance/BrowserMemoryProvider';
+import {
+  CrowdCapacityBenchmark,
+  type CrowdCapacityTargetProfile,
+} from '../performance/CrowdCapacityBenchmark';
+import {
+  SceneResourceProfiler,
+} from '../performance/SceneResourceProfiler';
+import type {
+  CrowdCapacityBenchmarkSnapshot,
+  CrowdCapacityReport,
+  SceneResourceProfileSnapshot,
+} from '../performance/MemoryTypes';
 import {
   collectRendererMetrics,
   collectSceneStructureMetrics,
@@ -26,6 +39,7 @@ import {
   type ResourceChangeSnapshot,
 } from '../performance/RendererMetricsCollector';
 import type { QualityDebugSnapshot } from '../ui/PerformanceSettingsPanel';
+import type { CrowdDensity } from '../presentation/CrowdPresentationController';
 
 export interface FootballApplicationOptions {
   mount: HTMLDivElement;
@@ -45,10 +59,13 @@ export class FootballApplication {
   private readonly performanceScenarioRunner: PerformanceScenarioRunner | null;
   private readonly qualityController: AdaptiveQualityController;
   private readonly runtimePerformanceMonitor = new RuntimePerformanceMonitor();
+  private readonly sceneResourceProfiler: SceneResourceProfiler;
+  private readonly crowdCapacityBenchmark: CrowdCapacityBenchmark;
   private readonly loop: GameLoop;
   private readonly removeSceneResizeHandler: () => void;
   private gameExperience: ResolvedGameExperienceSettings;
   private hasRenderedFirstFrame = false;
+  private crowdSuppressedForCapacityBenchmark = false;
   private previousPerformanceResourceSnapshot: ResourceChangeSnapshot | null = null;
 
   constructor({ mount, searchParams = new URLSearchParams(window.location.search) }: FootballApplicationOptions) {
@@ -89,16 +106,31 @@ export class FootballApplication {
     this.presentation.syncBall(
       this.gameplay.formationPreviewModel?.ball ?? this.gameplay.gameplayModel.ball,
     );
+    this.sceneResourceProfiler = new SceneResourceProfiler(new BrowserMemoryProvider());
+    void this.sceneResourceProfiler.refreshBrowserMemory();
+    this.crowdCapacityBenchmark = new CrowdCapacityBenchmark({
+      candidateCounts: resolveCrowdCapacityCandidates(searchParams),
+      createProfile: () => this.createMemoryProfileSnapshot(),
+      scene: this.sceneRuntime.scene,
+      targetFrameTimeMs: resolveCrowdCapacityTargetFrameTime(searchParams),
+      targetProfile: resolveCrowdCapacityTargetProfile(searchParams),
+    });
     this.performanceScenarioRunner = this.performanceProfiler.enabled
       ? new PerformanceScenarioRunner(() => this.gameplay.gameplayModel)
       : null;
     this.diagnostics = new ApplicationDiagnostics({
+      applyCrowdCapacityRecommendation: () => this.applyCrowdCapacityRecommendation(),
+      cancelCrowdCapacityBenchmark: () => this.cancelCrowdCapacityBenchmark(),
       gameplay: this.gameplay,
+      getCrowdCapacityBenchmarkSnapshot: () => this.crowdCapacityBenchmark.getSnapshot(),
       getGameExperience: () => this.gameExperience,
+      getMemoryProfileSnapshot: () => this.createMemoryProfileSnapshot(),
       isCrowdPresentationDebugEnabled: () => this.isCrowdPresentationDebugEnabled(),
       playerVisuals: this.playerVisuals,
       performanceProfiler: this.performanceProfiler,
       performanceScenarioRunner: this.performanceScenarioRunner,
+      runCrowdCapacityBenchmark: () => this.runCrowdCapacityBenchmark(),
+      exportCrowdCapacityReport: () => this.crowdCapacityBenchmark.exportReport(),
       getQualityDebugSnapshot: () => this.createQualityDebugSnapshot(),
       presentation: this.presentation,
       sceneRuntime: this.sceneRuntime,
@@ -177,6 +209,7 @@ export class FootballApplication {
     window.removeEventListener('blur', this.syncAudioPageActivity);
     window.removeEventListener('focus', this.syncAudioPageActivity);
     this.removeSceneResizeHandler();
+    this.crowdCapacityBenchmark.dispose();
     this.developmentTools.dispose();
     this.lifecycle.dispose();
     this.gameplay.dispose();
@@ -258,6 +291,8 @@ export class FootballApplication {
       this.presentation.syncPlayCallUi(gameplaySnapshot, gameplayActive);
       this.sceneRuntime.render(this.presentation.camera);
     }
+    this.crowdCapacityBenchmark.update(delta);
+    this.syncCrowdCapacityBenchmarkSuppression();
     this.presentation.recordCrowdPresentationFrame(delta, this.sceneRuntime.renderer);
     if (this.developmentTools.shouldCollectPresentationDiagnostics()) {
       this.diagnostics.latestRenderMetrics = this.diagnostics.createRenderMetricsSnapshot(delta);
@@ -345,6 +380,12 @@ export class FootballApplication {
       routeArtSnapshot: this.presentation.getRouteArtSnapshot(),
       runtimeAudioSnapshot: this.presentation.getRuntimeAudioSnapshot(),
       qualityDebugSnapshot: this.createQualityDebugSnapshot(),
+      memoryDebugSnapshot: this.developmentTools.shouldCollectMemoryDiagnostics()
+        ? {
+            benchmark: this.crowdCapacityBenchmark.getSnapshot(),
+            profile: this.createMemoryProfileSnapshot(),
+          }
+        : null,
       sevenAuditSnapshot: this.diagnostics.getSevenAuditSnapshot(),
     });
   }
@@ -499,6 +540,53 @@ export class FootballApplication {
     };
   }
 
+  private createMemoryProfileSnapshot(): SceneResourceProfileSnapshot {
+    return this.sceneResourceProfiler.profile({
+      playerVisuals: this.playerVisuals.values(),
+      renderer: this.sceneRuntime.renderer,
+      scene: this.sceneRuntime.scene,
+    });
+  }
+
+  private runCrowdCapacityBenchmark(): CrowdCapacityBenchmarkSnapshot {
+    this.setCrowdSuppressedForCapacityBenchmark(true);
+    void this.sceneResourceProfiler.refreshBrowserMemory();
+    return this.crowdCapacityBenchmark.start();
+  }
+
+  private cancelCrowdCapacityBenchmark(): CrowdCapacityBenchmarkSnapshot {
+    const snapshot = this.crowdCapacityBenchmark.cancel();
+    this.setCrowdSuppressedForCapacityBenchmark(false);
+    return snapshot;
+  }
+
+  private applyCrowdCapacityRecommendation(): CrowdDensity | null {
+    return this.crowdCapacityBenchmark.applyRecommendedDensity((crowdDensity) => {
+      this.applyExperienceSettings({
+        ...this.gameExperience.settings,
+        crowdDensity,
+      }, { persist: true });
+    });
+  }
+
+  private syncCrowdCapacityBenchmarkSuppression(): void {
+    if (
+      this.crowdSuppressedForCapacityBenchmark &&
+      this.crowdCapacityBenchmark.getSnapshot().status !== 'running'
+    ) {
+      this.setCrowdSuppressedForCapacityBenchmark(false);
+    }
+  }
+
+  private setCrowdSuppressedForCapacityBenchmark(suppressed: boolean): void {
+    if (this.crowdSuppressedForCapacityBenchmark === suppressed) {
+      return;
+    }
+
+    this.crowdSuppressedForCapacityBenchmark = suppressed;
+    this.presentation.setCrowdBenchmarkSuppressed(suppressed);
+  }
+
   private isCrowdPresentationDebugEnabled(): boolean {
     return this.searchParams.has('crowdDebug') ||
       (this.searchParams.has('presentationAudit') && !resolveCrowdPreviewEnabled(this.searchParams));
@@ -510,4 +598,39 @@ export class FootballApplication {
       document.body.dataset.sceneReady = 'true';
     }
   }
+}
+
+function resolveCrowdCapacityCandidates(searchParams: URLSearchParams): number[] | undefined {
+  const raw = searchParams.get('crowdCapacityCounts');
+  if (!raw) {
+    return undefined;
+  }
+
+  const counts = raw
+    .split(',')
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isFinite(value));
+  return counts.length > 0 ? counts : undefined;
+}
+
+function resolveCrowdCapacityTargetProfile(
+  searchParams: URLSearchParams,
+): CrowdCapacityTargetProfile | undefined {
+  const value = searchParams.get('crowdCapacityTarget');
+  if (value === '30fps' || value === '60fps' || value === 'custom') {
+    return value;
+  }
+  return undefined;
+}
+
+function resolveCrowdCapacityTargetFrameTime(
+  searchParams: URLSearchParams,
+): number | undefined {
+  const raw = searchParams.get('crowdCapacityFrameMs');
+  if (!raw) {
+    return undefined;
+  }
+
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
 }

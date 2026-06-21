@@ -52,6 +52,9 @@ export class DebugPanel {
       ...this.options.registry.getSnapshots().map((feature) => {
         const label = document.createElement('label');
         label.className = 'debug-feature-row';
+        if (feature.description) {
+          label.title = feature.description;
+        }
         const input = document.createElement('input');
         input.type = 'checkbox';
         input.checked = feature.enabled;

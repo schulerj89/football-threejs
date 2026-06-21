@@ -46,6 +46,11 @@ import type {
   PerformanceScenarioRunner,
   PerformanceScenarioSnapshot,
 } from '../performance/PerformanceScenarioRunner';
+import type {
+  CrowdCapacityBenchmarkSnapshot,
+  CrowdCapacityReport,
+  SceneResourceProfileSnapshot,
+} from '../performance/MemoryTypes';
 import type { QualityDebugSnapshot } from '../ui/PerformanceSettingsPanel';
 import type { PerformanceScenarioName } from '../performance/PerformanceBudget';
 import type {
@@ -60,7 +65,13 @@ import type { SceneRuntime } from './SceneRuntime';
 
 export interface ApplicationDiagnosticsOptions {
   getGameExperience: () => ResolvedGameExperienceSettings;
+  getCrowdCapacityBenchmarkSnapshot: () => CrowdCapacityBenchmarkSnapshot;
   isCrowdPresentationDebugEnabled: () => boolean;
+  getMemoryProfileSnapshot: () => SceneResourceProfileSnapshot;
+  runCrowdCapacityBenchmark: () => CrowdCapacityBenchmarkSnapshot;
+  cancelCrowdCapacityBenchmark: () => CrowdCapacityBenchmarkSnapshot;
+  applyCrowdCapacityRecommendation: () => string | null;
+  exportCrowdCapacityReport: () => CrowdCapacityReport | null;
   gameplay: GameplayRuntime;
   getQualityDebugSnapshot: () => QualityDebugSnapshot;
   playerVisuals: PlayerVisualRegistry;
@@ -273,6 +284,9 @@ export class ApplicationDiagnostics {
       getGamePresentationRuntimeSnapshot: () =>
         this.options.presentation.getGamePresentationRuntimeSnapshot(),
       getHelmetAssetSnapshot,
+      getCrowdCapacityBenchmarkSnapshot: () =>
+        this.options.getCrowdCapacityBenchmarkSnapshot(),
+      getMemoryProfileSnapshot: () => this.options.getMemoryProfileSnapshot(),
       getPassAuditSnapshot: () =>
         this.options.gameplay.getActivePresentationSnapshot(
           !!this.options.presentation.crowdPreviewController,
@@ -294,6 +308,11 @@ export class ApplicationDiagnostics {
       getRenderMetrics: () => this.latestRenderMetrics ?? this.createRenderMetricsSnapshot(0),
       getRouteArtSnapshot: () => this.options.presentation.getRouteArtSnapshot(),
       playAudioTestOneShot: () => this.options.presentation.gameAudioDirector.playTestOneShot(),
+      applyCrowdCapacityRecommendation: () =>
+        this.options.applyCrowdCapacityRecommendation(),
+      cancelCrowdCapacityBenchmark: () => this.options.cancelCrowdCapacityBenchmark(),
+      exportCrowdCapacityReport: () => this.options.exportCrowdCapacityReport(),
+      runCrowdCapacityBenchmark: () => this.options.runCrowdCapacityBenchmark(),
       runElevenAuditResetCycles: (cycles = 100) => this.runElevenAuditResetCycles(cycles),
       runSevenAuditResetCycles: (cycles = 100) => this.runSevenAuditResetCycles(cycles),
       setPerformanceScenario: (scenario) =>

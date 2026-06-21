@@ -120,6 +120,7 @@ export class PresentationRuntime {
   private presentationHoldDirector: PresentationHoldDirector;
   private readonly searchParams: URLSearchParams;
   private readonly shotPreview: ReturnType<typeof resolvePresentationShotPreview>;
+  private crowdBenchmarkSuppressed = false;
 
   constructor({
     formationPreviewActive,
@@ -253,6 +254,15 @@ export class PresentationRuntime {
 
   setPageActive(active: boolean): void {
     this.gamePresentationRuntime.setPageActive(active);
+  }
+
+  setCrowdBenchmarkSuppressed(suppressed: boolean): void {
+    if (this.crowdBenchmarkSuppressed === suppressed) {
+      return;
+    }
+
+    this.crowdBenchmarkSuppressed = suppressed;
+    this.rebuildCrowdPresentationController();
   }
 
   setPlays(plays: PlayDefinition[]): void {
@@ -495,7 +505,11 @@ export class PresentationRuntime {
       this.crowdPresentationController = null;
     }
 
-    if (this.crowdPreviewController || !this.crowdPresentationSettings.crowdVisualsEnabled) {
+    if (
+      this.crowdBenchmarkSuppressed ||
+      this.crowdPreviewController ||
+      !this.crowdPresentationSettings.crowdVisualsEnabled
+    ) {
       return;
     }
 

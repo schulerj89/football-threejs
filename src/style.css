@@ -467,6 +467,65 @@ canvas {
   white-space: pre-wrap;
 }
 
+.memory-debug-panel {
+  position: fixed;
+  right: 12px;
+  top: 12px;
+  z-index: 31;
+  width: min(620px, calc(100vw - 24px));
+  max-height: min(74vh, 760px);
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(8, 12, 14, 0.88);
+  color: #f3f5f6;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.memory-debug-panel h2 {
+  margin: 0 0 8px;
+  font: 700 14px/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.memory-debug-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.memory-debug-controls button {
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f3f5f6;
+  cursor: pointer;
+  font: 600 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.memory-debug-controls button:hover,
+.memory-debug-controls button:focus-visible {
+  border-color: rgba(242, 217, 75, 0.72);
+  outline: none;
+}
+
+.memory-debug-status {
+  margin-bottom: 8px;
+  color: #cbd8d0;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 11px;
+}
+
+.memory-debug-body {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 .appearance-audit-overlay {
   position: fixed;
   right: 12px;

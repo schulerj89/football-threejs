@@ -79,6 +79,10 @@ import {
   syncPerformanceDebugOverlay,
   type QualityDebugSnapshot,
 } from '../ui/PerformanceSettingsPanel';
+import {
+  MemoryDebugPanel,
+  type MemoryDebugSnapshot,
+} from '../ui/MemoryDebugPanel';
 import { DebugPanel } from '../ui/DebugPanel';
 import {
   DebugFeatureRegistry,
@@ -90,6 +94,11 @@ import type {
 import type {
   PerformanceScenarioSnapshot,
 } from '../performance/PerformanceScenarioRunner';
+import type {
+  CrowdCapacityBenchmarkSnapshot,
+  CrowdCapacityReport,
+  SceneResourceProfileSnapshot,
+} from '../performance/MemoryTypes';
 import {
   createSevenAuditOverlay,
   syncSevenAuditOverlay,
@@ -146,6 +155,8 @@ export interface FootballDebugApi {
   getGameplaySnapshot: () => GameplaySnapshot;
   getGamePresentationRuntimeSnapshot: () => GamePresentationRuntimeSnapshot;
   getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
+  getCrowdCapacityBenchmarkSnapshot: () => CrowdCapacityBenchmarkSnapshot;
+  getMemoryProfileSnapshot: () => SceneResourceProfileSnapshot;
   getPassAuditSnapshot: () => PassAuditSnapshot | null;
   getQualityDebugSnapshot: () => QualityDebugSnapshot;
   getElevenAuditSnapshot: () => ElevenAuditSnapshot | null;
@@ -163,6 +174,10 @@ export interface FootballDebugApi {
   getRenderMetrics: () => RenderMetricsSnapshot;
   getRouteArtSnapshot: () => RouteArtRendererSnapshot;
   playAudioTestOneShot: () => Promise<boolean>;
+  applyCrowdCapacityRecommendation: () => string | null;
+  cancelCrowdCapacityBenchmark: () => CrowdCapacityBenchmarkSnapshot;
+  exportCrowdCapacityReport: () => CrowdCapacityReport | null;
+  runCrowdCapacityBenchmark: () => CrowdCapacityBenchmarkSnapshot;
   runElevenAuditResetCycles: (cycles?: number) => ElevenAuditResetCycleResult | null;
   runSevenAuditResetCycles: (cycles?: number) => SevenAuditResetCycleResult | null;
   setPerformanceScenario: (scenario: PerformanceScenarioName) => PerformanceScenarioSnapshot | null;
@@ -222,6 +237,7 @@ export interface DevelopmentOverlayFrame {
   routeArtSnapshot: RouteArtRendererSnapshot;
   runtimeAudioSnapshot: RuntimeAudioDebugSnapshot;
   qualityDebugSnapshot: QualityDebugSnapshot;
+  memoryDebugSnapshot: MemoryDebugSnapshot | null;
   sevenAuditSnapshot: SevenAuditSnapshot | null;
   playerVisuals: Map<string, THREE.Group>;
 }
@@ -235,6 +251,7 @@ export class DevelopmentToolsRuntime {
   private elevenAuditOverlay: HTMLDivElement | null = null;
   private formationAuditOverlay: HTMLDivElement | null = null;
   private passAuditOverlay: HTMLDivElement | null = null;
+  private memoryDebugPanel: MemoryDebugPanel | null = null;
   private performanceDebugOverlay: HTMLDivElement | null = null;
   private poseDebugOverlay: HTMLDivElement | null = null;
   private presentationAuditOverlay: HTMLDivElement | null = null;
@@ -283,12 +300,17 @@ export class DevelopmentToolsRuntime {
       !!this.presentationAuditOverlay ||
       !!this.routeAuditOverlay ||
       !!this.passAuditOverlay ||
+      !!this.memoryDebugPanel ||
       !!this.performanceDebugOverlay ||
       !!this.sevenAuditOverlay ||
       !!this.elevenAuditOverlay ||
       !!this.appearanceAuditOverlay ||
       !!this.crowdPresentationOverlay ||
       !!this.presentationHardeningAuditOverlay;
+  }
+
+  shouldCollectMemoryDiagnostics(): boolean {
+    return !!this.memoryDebugPanel;
   }
 
   syncCrowdPreviewOverlay(snapshot: CrowdPreviewSnapshot): void {
@@ -325,6 +347,9 @@ export class DevelopmentToolsRuntime {
     }
     if (this.passAuditOverlay) {
       syncPassAuditOverlay(this.passAuditOverlay, frame.gameplaySnapshot.passAudit);
+    }
+    if (this.memoryDebugPanel && frame.memoryDebugSnapshot) {
+      this.memoryDebugPanel.sync(frame.memoryDebugSnapshot);
     }
     if (this.performanceDebugOverlay) {
       syncPerformanceDebugOverlay(this.performanceDebugOverlay, frame.qualityDebugSnapshot);
@@ -511,14 +536,39 @@ export class DevelopmentToolsRuntime {
       },
     );
     registerElementFeature(
-      'memory',
-      'Memory',
+      'quality',
+      'Quality',
       options.performanceDebugEnabled,
       createPerformanceDebugOverlay,
       (element) => {
         this.performanceDebugOverlay = element;
       },
     );
+    this.debugFeatureRegistry.register({
+      create: () => {
+        const panel = new MemoryDebugPanel({
+          onApplyRecommendedCount: () => options.debugApi.applyCrowdCapacityRecommendation(),
+          onCancelBenchmark: () => {
+            options.debugApi.cancelCrowdCapacityBenchmark();
+          },
+          onExportReport: () => options.debugApi.exportCrowdCapacityReport(),
+          onRunBenchmark: () => {
+            options.debugApi.runCrowdCapacityBenchmark();
+          },
+        });
+        this.memoryDebugPanel = panel;
+        return {
+          dispose: () => {
+            panel.dispose();
+            this.memoryDebugPanel = null;
+          },
+        };
+      },
+      enabled: queryEnabled('memoryDebug'),
+      id: 'memory',
+      label: 'Memory',
+      description: 'Scene resource memory estimates and crowd capacity benchmark.',
+    });
     registerElementFeature(
       'motion',
       'Player motion',
@@ -626,6 +676,7 @@ export class DevelopmentToolsRuntime {
       options.elevenAuditEnabled ||
       options.audioDebugEnabled ||
       options.performanceDebugEnabled ||
+      options.searchParams.has('memoryDebug') ||
       options.commentaryDebugEnabled ||
       options.crowdPresentationDebugEnabled ||
       options.crowdPreviewEnabled;

@@ -10,6 +10,7 @@ import type {
   CrowdPerInstanceStorageSnapshot,
   CrowdRendererMemorySnapshot,
   CrowdRendererRenderSnapshot,
+  CrowdResourceSnapshotBase,
 } from './CrowdTypes';
 
 export class CrowdFrameMetrics {
@@ -80,6 +81,31 @@ export function estimateInstanceBufferBytes(nearCount: number, farCount: number)
     nearCount * NEAR_MESHES_PER_SPECTATOR * bytesPerInstancedPart +
     farCount * FAR_MESHES_PER_SPECTATOR * bytesPerInstancedPart
   );
+}
+
+export function createCrowdMemoryBudgetSnapshot(
+  snapshot: CrowdResourceSnapshotBase,
+): {
+  geometryCount: number;
+  materialCount: number;
+  textureCount: number;
+  totalInstanceBufferBytes: number;
+} {
+  return {
+    geometryCount: snapshot.geometryCount,
+    materialCount: snapshot.materialCount,
+    textureCount: snapshot.textureCount,
+    totalInstanceBufferBytes: snapshot.estimatedInstanceBufferBytes,
+  };
+}
+
+export function resourcesReturnedNearBaseline(
+  before: { geometries: number; textures: number },
+  after: { geometries: number; textures: number },
+  tolerance = 2,
+): boolean {
+  return Math.abs(after.geometries - before.geometries) <= tolerance &&
+    Math.abs(after.textures - before.textures) <= tolerance;
 }
 
 export function countCrowdDrawCalls(group: THREE.Group): number {
