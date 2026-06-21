@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.37.0] - 2026-06-21
+
+### Added
+
+- Added optional normal-game crowd visuals with persisted/query settings, benchmarked low/medium/high density presets, shared instanced spectator resources, and development overlay/audit snapshots.
+- Added deterministic crowd reaction states for idle, anticipation, first down, touchdown, and disappointment using stable presentation event IDs, deterministic spectator subsets, and bounded low-frequency matrix updates.
+- Added presentation hold coordination for full-cinematics post-play cutaways without changing authoritative gameplay results or default `cinematics=off` reset timing.
+- Added full-cinematics first-down and touchdown fan cutaway shots through the existing `PresentationCameraDirector`, with touchdown cutaways chaining into the scorer orbit.
+- Added a presentation hardening audit matrix reporting audio, announcer, captions, crowd visuals, crowd reactions, cinematics, active camera shot, presentation holds, duplicate suppression, render metrics, and audio memory counters.
+- Added unit and browser smoke coverage for crowd settings, reaction dedupe, bounded crowd updates, presentation holds/skips, fan cutaways, audio-disabled crowd startup, and presentation audit output.
+
 ## [0.36.0] - 2026-06-21
 
 ### Added

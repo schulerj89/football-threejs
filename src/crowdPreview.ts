@@ -78,15 +78,17 @@ export interface CrowdPreviewControllerOptions {
   width: number;
 }
 
-interface CrowdResources {
+export interface CrowdResources {
   detailedArmLeft: THREE.InstancedMesh;
   detailedArmRight: THREE.InstancedMesh;
   detailedHead: THREE.InstancedMesh;
   detailedTorso: THREE.InstancedMesh;
   farBody: THREE.InstancedMesh;
+  farPlacements: readonly CrowdPreviewPlacement[];
   geometries: THREE.BufferGeometry[];
   group: THREE.Group;
   materials: THREE.Material[];
+  nearPlacements: readonly CrowdPreviewPlacement[];
   seatingShell: THREE.Mesh;
   snapshotBase: {
     actualSpectatorCount: number;
@@ -110,7 +112,7 @@ interface FrameStats {
 const CROWD_COUNT_DEFAULT = 500;
 const CROWD_COUNT_MAX = 10_000;
 const CROWD_COUNT_MIN = 0;
-const CROWD_BENCHMARK_COUNTS = [500, 2_000, 5_000, 10_000] as const;
+export const CROWD_BENCHMARK_COUNTS = [500, 2_000, 5_000, 10_000] as const;
 const DEFAULT_BENCHMARK_DURATION_SECONDS = 1.2;
 const TRANSFORM_MATRIX_BYTES = 16 * Float32Array.BYTES_PER_ELEMENT;
 const INSTANCE_COLOR_BYTES = 3 * Float32Array.BYTES_PER_ELEMENT;
@@ -393,7 +395,7 @@ export function syncCrowdPreviewOverlay(
   ].join('\n');
 }
 
-function createCrowdResources(requestedCount: number): CrowdResources {
+export function createCrowdResources(requestedCount: number): CrowdResources {
   const placements = createCrowdPlacements(requestedCount);
   const nearPlacements = placements.filter((placement) => placement.lod === 'near');
   const farPlacements = placements.filter((placement) => placement.lod === 'far');
@@ -447,9 +449,11 @@ function createCrowdResources(requestedCount: number): CrowdResources {
     detailedHead,
     detailedTorso,
     farBody,
+    farPlacements,
     geometries: ownedGeometries,
     group,
     materials: ownedMaterials,
+    nearPlacements,
     seatingShell,
     snapshotBase,
   };
@@ -619,7 +623,7 @@ function createSharedCrowdMaterials(): {
   };
 }
 
-function applyDetailedInstances(
+export function applyDetailedInstances(
   placements: readonly CrowdPreviewPlacement[],
   torsoMesh: THREE.InstancedMesh,
   headMesh: THREE.InstancedMesh,
@@ -652,7 +656,7 @@ function applyDetailedInstances(
   markInstanceAttributesDirty(torsoMesh, headMesh, leftArmMesh, rightArmMesh);
 }
 
-function applyFarInstances(
+export function applyFarInstances(
   placements: readonly CrowdPreviewPlacement[],
   farBodyMesh: THREE.InstancedMesh,
 ): void {
@@ -668,7 +672,7 @@ function applyFarInstances(
   markInstanceAttributesDirty(farBodyMesh);
 }
 
-function setPartMatrix(
+export function setPartMatrix(
   matrix: THREE.Matrix4,
   placement: CrowdPreviewPlacement,
   localX: number,
@@ -692,7 +696,7 @@ function setPartMatrix(
   matrix.compose(position, quaternion, scaleVector);
 }
 
-function markInstanceAttributesDirty(...meshes: THREE.InstancedMesh[]): void {
+export function markInstanceAttributesDirty(...meshes: THREE.InstancedMesh[]): void {
   for (const mesh of meshes) {
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) {
@@ -720,7 +724,7 @@ function applyCrowdPreviewCameraView(
   }
 }
 
-function estimateInstanceBufferBytes(nearCount: number, farCount: number): number {
+export function estimateInstanceBufferBytes(nearCount: number, farCount: number): number {
   const bytesPerInstancedPart = TRANSFORM_MATRIX_BYTES + INSTANCE_COLOR_BYTES + CUSTOM_REACTION_BYTES;
 
   return (
@@ -729,7 +733,7 @@ function estimateInstanceBufferBytes(nearCount: number, farCount: number): numbe
   );
 }
 
-function countCrowdDrawCalls(group: THREE.Group): number {
+export function countCrowdDrawCalls(group: THREE.Group): number {
   let drawCalls = 0;
 
   group.traverse((object) => {
@@ -741,7 +745,7 @@ function countCrowdDrawCalls(group: THREE.Group): number {
   return drawCalls;
 }
 
-function countCrowdTriangles(group: THREE.Group): number {
+export function countCrowdTriangles(group: THREE.Group): number {
   let triangles = 0;
 
   group.traverse((object) => {
@@ -766,7 +770,7 @@ function getGeometryTriangleCount(geometry: THREE.BufferGeometry): number {
   return position ? position.count / 3 : 0;
 }
 
-function disposeCrowdResources(resources: CrowdResources): void {
+export function disposeCrowdResources(resources: CrowdResources): void {
   for (const geometry of new Set(resources.geometries)) {
     geometry.dispose();
   }
@@ -798,12 +802,12 @@ function createBenchmarkReport(snapshot: CrowdPreviewSnapshot): CrowdPreviewBenc
   };
 }
 
-function resolveUniformColor(seed: number): number {
+export function resolveUniformColor(seed: number): number {
   const colors = [0x354f7d, 0x7d3f35, 0x436946, 0x6e5c38, 0x4a4f57, 0x7a7341];
   return colors[seed % colors.length];
 }
 
-function resolveSkinColor(seed: number): number {
+export function resolveSkinColor(seed: number): number {
   const colors = [0xf1c7a1, 0xd8a176, 0xb97952, 0x8f563b, 0x6b3d2e, 0x4a2b22];
   return colors[Math.floor(seed / 7) % colors.length];
 }
@@ -820,7 +824,7 @@ function formatBenchmark(snapshot: CrowdPreviewSnapshot): string {
   return 'off';
 }
 
-function stableHash(value: string): number {
+export function stableHash(value: string): number {
   let hash = 2166136261;
 
   for (let index = 0; index < value.length; index += 1) {

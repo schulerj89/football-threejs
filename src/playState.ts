@@ -203,6 +203,10 @@ export interface GameplaySnapshot {
   passFeedback: 'pastLineOfScrimmage' | null;
 }
 
+export interface GameplayUpdateOptions {
+  suppressDeadPlayReset?: boolean;
+}
+
 export interface CreateGameplayModelOptions {
   playbookId?: PlaybookId;
 }
@@ -451,7 +455,11 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
   return true;
 }
 
-export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): void {
+export function updateGameplayModel(
+  gameplay: GameplayModel,
+  deltaSeconds = 0,
+  options: GameplayUpdateOptions = {},
+): void {
   const delta = Math.max(0, deltaSeconds);
   gameplay.previousPlayerPositions = capturePlayerPositions(gameplay.players);
 
@@ -489,7 +497,7 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
     if (gameplay.playState === 'live') {
       detectOutOfBounds(gameplay);
     }
-  } else if (gameplay.playResetTimerSeconds !== null) {
+  } else if (gameplay.playResetTimerSeconds !== null && !options.suppressDeadPlayReset) {
     gameplay.playResetTimerSeconds -= delta;
 
     if (gameplay.playResetTimerSeconds <= 0) {

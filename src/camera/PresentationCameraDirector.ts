@@ -1,13 +1,16 @@
 import * as THREE from 'three';
+import type { PresentationAudioEvent } from '../audio/PresentationEventBridge';
 import { PLAYABLE_FIELD_BOUNDS } from '../field';
-import { FIELD_BOUNDS } from '../fieldSpec';
+import { FIELD_BOUNDS, FIELD_DIMENSIONS } from '../fieldSpec';
 import type { GameplaySnapshot, PlayState } from '../playState';
 import type { PlayerSnapshot, Vector2 } from '../playerModel';
 
 export type CinematicsSetting = 'brief' | 'full' | 'off';
 
 export type PresentationOrbitShotName =
+  | 'firstDownCrowdCutaway'
   | 'prePlayOrbit180'
+  | 'touchdownCrowdCutaway'
   | 'touchdownOrbit360';
 
 export type PresentationCameraPhase =
@@ -43,8 +46,10 @@ export interface PresentationCameraDebugSnapshot {
 export interface PresentationCameraConfig {
   cinematics: {
     fieldPadding: number;
+    firstDownCrowdCutaway: PresentationOrbitShotConfig;
     minimumCameraHeight: number;
     prePlayOrbit180: PresentationOrbitShotConfig;
+    touchdownCrowdCutaway: PresentationOrbitShotConfig;
     touchdownOrbit360: PresentationOrbitShotConfig;
   };
   fieldOfView: number;
@@ -104,19 +109,37 @@ interface PresentationCameraDirectorOptions {
 
 interface PresentationCameraUpdateOptions {
   aspectRatio?: number;
+  crowdCutawaysEnabled?: boolean;
+  presentationEvents?: readonly PresentationAudioEvent[];
   restoreCameraMode?: string;
 }
 
 interface ActiveOrbitShot {
   elapsedSeconds: number;
   key: string;
+  lockedCenter?: THREE.Vector3;
   name: PresentationOrbitShotName;
   preview: boolean;
+  resultCenter?: THREE.Vector3;
+  resultId?: number;
 }
 
 export const PRESENTATION_CAMERA_CONFIG: PresentationCameraConfig = {
   cinematics: {
-    fieldPadding: 10,
+    fieldPadding: 52,
+    firstDownCrowdCutaway: {
+      briefDuration: 0.75,
+      briefSweepDegrees: 12,
+      distance: 16,
+      fieldOfView: 34,
+      fullDuration: 1.1,
+      fullSweepDegrees: 20,
+      height: 7,
+      lookAhead: 0,
+      maximumRadius: 24,
+      minimumRadius: 12,
+      sidelineOffset: 0,
+    },
     minimumCameraHeight: 5.5,
     prePlayOrbit180: {
       briefDuration: 1.05,
@@ -129,6 +152,19 @@ export const PRESENTATION_CAMERA_CONFIG: PresentationCameraConfig = {
       lookAhead: 4,
       maximumRadius: 58,
       minimumRadius: 28,
+      sidelineOffset: 0,
+    },
+    touchdownCrowdCutaway: {
+      briefDuration: 0.8,
+      briefSweepDegrees: 18,
+      distance: 17,
+      fieldOfView: 34,
+      fullDuration: 1.2,
+      fullSweepDegrees: 30,
+      height: 7.5,
+      lookAhead: 0,
+      maximumRadius: 26,
+      minimumRadius: 13,
       sidelineOffset: 0,
     },
     touchdownOrbit360: {
@@ -225,6 +261,7 @@ export class PresentationCameraDirector {
   private activeOrbitShot: ActiveOrbitShot | null = null;
   private readonly cinematics: CinematicsSetting;
   private debugSnapshot: PresentationCameraDebugSnapshot = createEmptyDebugSnapshot();
+  private readonly completedEventShotKeys = new Set<string>();
   private readonly playDirection: Vector2;
   private lastCompletedPrePlayKey: string | null = null;
   private lastCompletedTouchdownResultId: number | null = null;
@@ -255,6 +292,7 @@ export class PresentationCameraDirector {
 
   reset(): void {
     this.activeOrbitShot = null;
+    this.completedEventShotKeys.clear();
     this.phase = 'preSnapEstablish';
     this.phaseElapsedSeconds = 0;
     this.previousPlayState = null;
@@ -648,7 +686,7 @@ export class PresentationCameraDirector {
     }
 
     if (!this.activeOrbitShot) {
-      this.maybeStartOrbitShot(snapshot, formationBounds);
+      this.maybeStartOrbitShot(snapshot, formationBounds, options);
     }
 
     if (!this.activeOrbitShot) {
@@ -668,6 +706,7 @@ export class PresentationCameraDirector {
   private maybeStartOrbitShot(
     snapshot: GameplaySnapshot,
     formationBounds: FieldPlaneBounds,
+    options: PresentationCameraUpdateOptions,
   ): void {
     if (this.shotPreview) {
       this.activeOrbitShot = {
@@ -677,6 +716,32 @@ export class PresentationCameraDirector {
         preview: true,
       };
       return;
+    }
+
+    const cutawayEvent = selectHighestPriorityCutawayEvent(options.presentationEvents ?? []);
+    if (
+      cutawayEvent &&
+      snapshot.playState === 'dead' &&
+      this.cinematics === 'full' &&
+      options.crowdCutawaysEnabled !== false
+    ) {
+      const cutawayName = cutawayEvent.type === 'touchdown'
+        ? 'touchdownCrowdCutaway'
+        : 'firstDownCrowdCutaway';
+      const cutawayKey = `${cutawayName}:${cutawayEvent.id}`;
+
+      if (!this.completedEventShotKeys.has(cutawayKey)) {
+        this.activeOrbitShot = {
+          elapsedSeconds: 0,
+          key: cutawayKey,
+          lockedCenter: this.createCrowdCutawayCenter(cutawayEvent, snapshot),
+          name: cutawayName,
+          preview: false,
+          resultCenter: this.createResultSpotCenter(cutawayEvent, snapshot),
+          resultId: cutawayEvent.playResult?.id,
+        };
+        return;
+      }
     }
 
     if (this.cinematics === 'off') {
@@ -707,8 +772,10 @@ export class PresentationCameraDirector {
       this.activeOrbitShot = {
         elapsedSeconds: 0,
         key: String(touchdownResultId),
+        lockedCenter: this.createTouchdownOrbitCenter(snapshot),
         name: 'touchdownOrbit360',
         preview: false,
+        resultId: touchdownResultId,
       };
     }
   }
@@ -720,6 +787,13 @@ export class PresentationCameraDirector {
     aspectRatio: number,
     restoreCameraMode: string | null,
   ): PresentationCameraShot {
+    if (
+      activeShot.name === 'firstDownCrowdCutaway' ||
+      activeShot.name === 'touchdownCrowdCutaway'
+    ) {
+      return this.createCrowdCutawayShot(activeShot, aspectRatio, restoreCameraMode);
+    }
+
     const config = this.config.cinematics[activeShot.name];
     const duration = this.cinematics === 'full'
       ? config.fullDuration
@@ -731,7 +805,9 @@ export class PresentationCameraDirector {
         ? config.fullSweepDegrees
         : config.briefSweepDegrees,
     );
-    const center = activeShot.name === 'prePlayOrbit180'
+    const center = activeShot.lockedCenter
+      ? activeShot.lockedCenter.clone()
+      : activeShot.name === 'prePlayOrbit180'
       ? this.createPrePlayOrbitCenter(formationBounds)
       : this.createTouchdownOrbitCenter(snapshot);
     const phase: PresentationCameraPhase = activeShot.name === 'prePlayOrbit180'
@@ -760,16 +836,84 @@ export class PresentationCameraDirector {
     };
   }
 
+  private createCrowdCutawayShot(
+    activeShot: ActiveOrbitShot,
+    aspectRatio: number,
+    restoreCameraMode: string | null,
+  ): PresentationCameraShot {
+    const config = this.config.cinematics[activeShot.name];
+    const duration = this.cinematics === 'full'
+      ? config.fullDuration
+      : config.briefDuration;
+    const rawProgress = clamp(activeShot.elapsedSeconds / Math.max(0.001, duration), 0, 1);
+    const progress = easeInOutCubic(rawProgress);
+    const center = activeShot.lockedCenter ?? new THREE.Vector3(0, 5.2, 0);
+    const sideSign = this.getSidelineSign(center);
+    const radius = clamp(
+      config.distance * (aspectRatio < 0.75 ? 1.18 : 1),
+      config.minimumRadius,
+      config.maximumRadius,
+    );
+    const sweepRadians = THREE.MathUtils.degToRad(
+      this.cinematics === 'full'
+        ? config.fullSweepDegrees
+        : config.briefSweepDegrees,
+    );
+    const lateralDrift = Math.sin(-sweepRadians / 2 + sweepRadians * progress) * 3.5;
+    const position = new THREE.Vector3(
+      center.x - this.sidelineDirection.x * sideSign * radius + this.playDirection.x * lateralDrift,
+      config.height,
+      center.z - this.sidelineDirection.z * sideSign * radius + this.playDirection.z * lateralDrift,
+    );
+    const phase: PresentationCameraPhase = activeShot.name === 'touchdownCrowdCutaway'
+      ? 'touchdownResult'
+      : 'deadBallResult';
+    const focus = center.clone();
+    const lookTarget = new THREE.Vector3(center.x, center.y + 0.5, center.z);
+
+    return {
+      activeShotName: activeShot.name,
+      fieldOfView: config.fieldOfView,
+      focus,
+      lookTarget,
+      orbitCenter: center.clone(),
+      orbitRadius: radius,
+      phase,
+      position: this.preventCameraClipping(position),
+      restoreCamera: restoreCameraMode,
+      shotProgress: rawProgress,
+    };
+  }
+
   private completeOrbitShotIfFinished(shot: PresentationCameraShot): void {
     if (!this.activeOrbitShot || shot.shotProgress === null || shot.shotProgress < 1) {
       return;
     }
 
-    this.markOrbitShotCompleted(this.activeOrbitShot);
+    const completedShot = this.activeOrbitShot;
+    this.markOrbitShotCompleted(completedShot);
 
-    if (!this.activeOrbitShot.preview) {
-      this.activeOrbitShot = null;
+    if (completedShot.preview) {
+      return;
     }
+
+    if (
+      completedShot.name === 'touchdownCrowdCutaway' &&
+      completedShot.resultId !== undefined &&
+      !this.completedEventShotKeys.has(`touchdownOrbit360:${completedShot.resultId}`)
+    ) {
+      this.activeOrbitShot = {
+        elapsedSeconds: 0,
+        key: String(completedShot.resultId),
+        lockedCenter: completedShot.resultCenter,
+        name: 'touchdownOrbit360',
+        preview: false,
+        resultId: completedShot.resultId,
+      };
+      return;
+    }
+
+    this.activeOrbitShot = null;
   }
 
   private markOrbitShotCompleted(activeShot: ActiveOrbitShot): void {
@@ -782,7 +926,16 @@ export class PresentationCameraDirector {
       return;
     }
 
-    this.lastCompletedTouchdownResultId = Number(activeShot.key);
+    if (
+      activeShot.name === 'firstDownCrowdCutaway' ||
+      activeShot.name === 'touchdownCrowdCutaway'
+    ) {
+      this.completedEventShotKeys.add(activeShot.key);
+      return;
+    }
+
+    this.completedEventShotKeys.add(`${activeShot.name}:${activeShot.resultId ?? activeShot.key}`);
+    this.lastCompletedTouchdownResultId = activeShot.resultId ?? Number(activeShot.key);
   }
 
   private createPrePlayOrbitCenter(formationBounds: FieldPlaneBounds): THREE.Vector3 {
@@ -804,6 +957,43 @@ export class PresentationCameraDirector {
       : scorer.position.z;
 
     return new THREE.Vector3(x, 1.55, z);
+  }
+
+  private createCrowdCutawayCenter(
+    event: PresentationAudioEvent,
+    snapshot: GameplaySnapshot,
+  ): THREE.Vector3 {
+    const spot = event.playResult?.endingBallSpot ??
+      snapshot.lastPlayResult?.endingBallSpot ??
+      snapshot.nextSnapSpot;
+    const sideSign = spot.x >= 0 ? 1 : -1;
+    const sidelineDistance = FIELD_DIMENSIONS.fieldWidth / 2 + 22;
+    const downfield = clamp(spot.z, FIELD_BOUNDS.minZ + 12, FIELD_BOUNDS.maxZ - 12);
+
+    return new THREE.Vector3(
+      this.sidelineDirection.x * sideSign * sidelineDistance + this.playDirection.x * downfield,
+      5.25,
+      this.sidelineDirection.z * sideSign * sidelineDistance + this.playDirection.z * downfield,
+    );
+  }
+
+  private createResultSpotCenter(
+    event: PresentationAudioEvent,
+    snapshot: GameplaySnapshot,
+  ): THREE.Vector3 {
+    const spot = event.playResult?.endingBallSpot ??
+      snapshot.lastPlayResult?.endingBallSpot ??
+      snapshot.player.position;
+
+    return new THREE.Vector3(spot.x, 1.55, spot.z);
+  }
+
+  private getSidelineSign(point: THREE.Vector3): -1 | 1 {
+    const sidelineProjection =
+      point.x * this.sidelineDirection.x +
+      point.z * this.sidelineDirection.z;
+
+    return sidelineProjection >= 0 ? 1 : -1;
   }
 
   private calculateOrbitRadius(
@@ -973,6 +1163,28 @@ function getBallCarrier(snapshot: GameplaySnapshot): PlayerSnapshot | null {
   }
 
   return snapshot.players.find((player) => player.id === possession.playerId) ?? null;
+}
+
+function selectHighestPriorityCutawayEvent(
+  events: readonly PresentationAudioEvent[],
+): PresentationAudioEvent | null {
+  let selected: PresentationAudioEvent | null = null;
+  let selectedPriority = 0;
+
+  for (const event of events) {
+    const priority = event.type === 'touchdown'
+      ? 2
+      : event.type === 'firstDown'
+        ? 1
+        : 0;
+
+    if (priority > selectedPriority) {
+      selected = event;
+      selectedPriority = priority;
+    }
+  }
+
+  return selected;
 }
 
 function smoothVectorWithSpeedLimit(

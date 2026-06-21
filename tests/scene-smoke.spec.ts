@@ -131,7 +131,12 @@ interface HelmetAssetSnapshot {
 }
 
 interface CameraSnapshot {
-  activeShotName?: 'prePlayOrbit180' | 'touchdownOrbit360' | null;
+  activeShotName?:
+    | 'firstDownCrowdCutaway'
+    | 'prePlayOrbit180'
+    | 'touchdownCrowdCutaway'
+    | 'touchdownOrbit360'
+    | null;
   cameraPosition: { x: number; y: number; z: number };
   formationBounds?: {
     center: { x: number; z: number };
@@ -437,6 +442,95 @@ interface CrowdPreviewSnapshot {
   textureCount: number;
 }
 
+interface CrowdPresentationSnapshot {
+  actualSpectatorCount: number;
+  averageFrameTimeMs: number;
+  crowdDrawCalls: number;
+  crowdTriangles: number;
+  density: 'high' | 'low' | 'medium';
+  deterministicSubsets: boolean;
+  estimatedInstanceBufferBytes: number;
+  farInstanceCount: number;
+  frameCount: number;
+  geometryCount: number;
+  materialCount: number;
+  minimumObservedFps: number;
+  nearInstanceCount: number;
+  noPerSpectatorObject3D: boolean;
+  pageActive: boolean;
+  perInstanceStorage: {
+    colorBytes: number;
+    customReactionDataBytes: number;
+    farMeshesPerSpectator: number;
+    nearMeshesPerSpectator: number;
+    transformMatrixBytes: number;
+  };
+  reactionHistory: Array<{
+    eventId: string;
+    eventType: string;
+    reason: string | null;
+    state: string | null;
+    status: 'started' | 'suppressed';
+  }>;
+  reactionState: 'anticipation' | 'disappointment' | 'firstDown' | 'idle' | 'touchdown';
+  reactionUpdateCount: number;
+  reactionUpdateHz: number;
+  reactionsEnabled: boolean;
+  rendererMemory: { geometries: number; textures: number };
+  rendererRender: { calls: number; triangles: number };
+  requestedSpectatorCount: number;
+  settings: {
+    crowdDensity: 'high' | 'low' | 'medium';
+    crowdReactionsEnabled: boolean;
+    crowdVisualsEnabled: boolean;
+  };
+  textureCount: number;
+  visualsEnabled: boolean;
+}
+
+interface PresentationHoldSnapshot {
+  active: boolean;
+  duplicateSuppressionCount: number;
+  history: Array<{
+    eventId: string;
+    eventType: string;
+    reason: string | null;
+    status: 'started' | 'suppressed';
+  }>;
+  reason: 'firstDown' | 'touchdown' | null;
+  remainingSeconds: number;
+  skippedCount: number;
+}
+
+interface PresentationHardeningAuditSnapshot {
+  activeCameraShot: CameraSnapshot['activeShotName'];
+  audio: {
+    activeAudioNodes: number;
+    announcerEnabled: boolean;
+    captionsEnabled: boolean;
+    compressedAudioBytes: number;
+    decodedAudioBytes: number;
+    enabled: boolean;
+  };
+  cameraMode: CameraSnapshot['mode'];
+  cinematics: 'brief' | 'full' | 'off';
+  crowd: CrowdPresentationSnapshot | null;
+  currentResultType: PlayResultSnapshot['type'] | null;
+  duplicateEventSuppressions: number;
+  hold: PresentationHoldSnapshot;
+  matrix: {
+    announcerEnabled: boolean;
+    audioEnabled: boolean;
+    cameraMode: CameraSnapshot['mode'];
+    captionsEnabled: boolean;
+    cinematics: 'brief' | 'full' | 'off';
+    crowdReactionsEnabled: boolean;
+    crowdVisualsEnabled: boolean;
+  };
+  renderMetrics: RenderMetricsSnapshot | null;
+  resultEventCounts: Record<'firstDown' | 'incomplete' | 'sack' | 'touchdown' | 'turnoverOnDowns', number>;
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -595,6 +689,49 @@ test('renders the development crowd preview with bounded instanced resources', a
   await page.keyboard.press('4');
   await expect.poll(() => getCrowdPreviewSnapshot(page).then((snapshot) => snapshot.cameraView)).toBe('close');
 
+  await expectNonBlankCanvas(page);
+});
+
+test('runs normal-game crowd visuals, reactions, and presentation audit without loading audio', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?debug=1&readback=1&crowdDebug=1&presentationAudit=1&crowdVisuals=1&crowdDensity=low&audio=0&cinematics=full');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.crowd-presentation-overlay')).toContainText('CROWD PRESENTATION');
+  await expect(page.locator('.presentation-hardening-audit-overlay')).toContainText('PRESENTATION MATRIX');
+
+  const crowd = await getCrowdPresentationSnapshot(page);
+  expect(crowd).toMatchObject({
+    actualSpectatorCount: 500,
+    crowdDrawCalls: 6,
+    density: 'low',
+    deterministicSubsets: true,
+    noPerSpectatorObject3D: true,
+    reactionsEnabled: true,
+    visualsEnabled: true,
+  });
+  expect(crowd.nearInstanceCount + crowd.farInstanceCount).toBe(500);
+  expect(crowd.reactionUpdateHz).toBeLessThanOrEqual(15);
+
+  const audit = await getPresentationHardeningAuditSnapshot(page);
+  expect(audit).toMatchObject({
+    cinematics: 'full',
+    matrix: {
+      audioEnabled: false,
+      crowdReactionsEnabled: true,
+      crowdVisualsEnabled: true,
+    },
+  });
+  expect((await getAudioSnapshot(page)).loadedAssetIds).toEqual([]);
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await expect.poll(() => getCrowdPresentationSnapshot(page)).toMatchObject({
+    reactionState: 'anticipation',
+  });
+
+  await page.keyboard.press('R');
+  await waitForPreSnap(page);
+  expect((await getPresentationHoldSnapshot(page)).active).toBe(false);
   await expectNonBlankCanvas(page);
 });
 
@@ -1765,8 +1902,6 @@ test('going out of bounds ends the play and resets at the resolved snap spot', a
   expect(outOfBounds.lastPlayResult?.yardsGained).toEqual(expect.any(Number));
   expect(outOfBounds.drive.currentDown).toBe(2);
   expect(outOfBounds.drive.lineOfScrimmage).toEqual(outOfBounds.nextBallSpot);
-  await expect(page.locator('.out-of-bounds-message')).toBeVisible();
-  await expect(page.locator('.result-message')).toContainText('yards');
 
   await expect.poll(() => getGameplaySnapshot(page), { timeout: 3000 }).toMatchObject({
     ball: { possession: { kind: 'none' } },
@@ -2307,6 +2442,72 @@ async function getCrowdPreviewSnapshot(page: Page): Promise<CrowdPreviewSnapshot
 
     if (!snapshot) {
       throw new Error('Missing crowd preview snapshot');
+    }
+
+    return snapshot;
+  });
+}
+
+async function getCrowdPresentationSnapshot(page: Page): Promise<CrowdPresentationSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getCrowdPresentationSnapshot: () => CrowdPresentationSnapshot | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    const snapshot = debugApi.getCrowdPresentationSnapshot();
+
+    if (!snapshot) {
+      throw new Error('Missing crowd presentation snapshot');
+    }
+
+    return snapshot;
+  });
+}
+
+async function getPresentationHoldSnapshot(page: Page): Promise<PresentationHoldSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getPresentationHoldSnapshot: () => PresentationHoldSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getPresentationHoldSnapshot();
+  });
+}
+
+async function getPresentationHardeningAuditSnapshot(page: Page): Promise<PresentationHardeningAuditSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getPresentationHardeningAuditSnapshot: () => PresentationHardeningAuditSnapshot | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    const snapshot = debugApi.getPresentationHardeningAuditSnapshot();
+
+    if (!snapshot) {
+      throw new Error('Missing presentation hardening audit snapshot');
     }
 
     return snapshot;

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PLAYABLE_FIELD_BOUNDS } from '../field';
 import type { GameplaySnapshot } from '../playState';
 import type { PlayerSnapshot, Vector2 } from '../playerModel';
+import type { PresentationAudioEvent } from '../audio/PresentationEventBridge';
 import {
   PRESENTATION_CAMERA_CONFIG,
   type CinematicsSetting,
@@ -50,6 +51,11 @@ interface GameplayCameraControllerOptions {
   initialMode?: GameplayCameraMode;
   shotPreview?: PresentationOrbitShotName | null;
   width: number;
+}
+
+interface GameplayCameraUpdateOptions {
+  crowdCutawaysEnabled?: boolean;
+  presentationEvents?: readonly PresentationAudioEvent[];
 }
 
 interface CameraFocus {
@@ -205,12 +211,16 @@ export class GameplayCameraController {
     return skipped;
   }
 
-  update(snapshot: GameplaySnapshot, deltaSeconds: number): void {
+  update(
+    snapshot: GameplaySnapshot,
+    deltaSeconds: number,
+    options: GameplayCameraUpdateOptions = {},
+  ): void {
     if (this.previousPlayState === 'dead' && snapshot.playState === 'preSnap') {
       this.resetLineOfScrimmageSeconds = 0.7;
     }
 
-    if (this.updatePresentationOverride(snapshot, deltaSeconds)) {
+    if (this.updatePresentationOverride(snapshot, deltaSeconds, options)) {
       this.previousPlayState = snapshot.playState;
       return;
     }
@@ -219,7 +229,7 @@ export class GameplayCameraController {
       this.cameraState = 'tacticalOverview';
       this.positionTacticalCamera();
     } else if (this.mode === 'cinematicBroadcast') {
-      this.updateCinematicBroadcastCamera(snapshot, deltaSeconds);
+      this.updateCinematicBroadcastCamera(snapshot, deltaSeconds, options);
     } else {
       this.updateOffensePerspectiveCamera(snapshot, deltaSeconds);
     }
@@ -312,13 +322,19 @@ export class GameplayCameraController {
     this.isPerspectiveInitialized = true;
   }
 
-  private updateCinematicBroadcastCamera(snapshot: GameplaySnapshot, deltaSeconds: number): void {
+  private updateCinematicBroadcastCamera(
+    snapshot: GameplaySnapshot,
+    deltaSeconds: number,
+    options: GameplayCameraUpdateOptions,
+  ): void {
     this.cinematicDebug = this.presentationDirector.update(
       snapshot,
       this.perspectiveCamera,
       deltaSeconds,
       {
         aspectRatio: this.width / this.height,
+        crowdCutawaysEnabled: options.crowdCutawaysEnabled,
+        presentationEvents: options.presentationEvents,
         restoreCameraMode: this.mode,
       },
     );
@@ -335,7 +351,11 @@ export class GameplayCameraController {
     );
   }
 
-  private updatePresentationOverride(snapshot: GameplaySnapshot, deltaSeconds: number): boolean {
+  private updatePresentationOverride(
+    snapshot: GameplaySnapshot,
+    deltaSeconds: number,
+    options: GameplayCameraUpdateOptions,
+  ): boolean {
     if (
       this.mode === 'cinematicBroadcast' ||
       (this.cinematics === 'off' && !this.shotPreview)
@@ -350,6 +370,8 @@ export class GameplayCameraController {
       deltaSeconds,
       {
         aspectRatio: this.width / this.height,
+        crowdCutawaysEnabled: options.crowdCutawaysEnabled,
+        presentationEvents: options.presentationEvents,
         restoreCameraMode: this.mode,
       },
     );
@@ -496,6 +518,10 @@ export function resolvePresentationShotPreview(
   value: string | null,
 ): PresentationOrbitShotName | null {
   if (value === 'prePlayOrbit180' || value === 'touchdownOrbit360') {
+    return value;
+  }
+
+  if (value === 'firstDownCrowdCutaway' || value === 'touchdownCrowdCutaway') {
     return value;
   }
 

@@ -50,6 +50,14 @@ import {
   type CrowdPreviewSnapshot,
 } from './crowdPreview';
 import {
+  CrowdPresentationController,
+  applyCrowdPresentationQuerySettings,
+  createCrowdPresentationOverlay,
+  loadCrowdPresentationSettings,
+  syncCrowdPresentationOverlay,
+  type CrowdPresentationSnapshot,
+} from './presentation/CrowdPresentationController';
+import {
   PLAYABLE_FIELD_BOUNDS,
   WORLD_SCALE,
   createFootballField,
@@ -115,6 +123,16 @@ import {
   type PresentationAuditSnapshot,
   type PresentationAuditState,
 } from './presentationAudit';
+import {
+  createPresentationHardeningAuditOverlay,
+  createPresentationHardeningAuditSnapshot,
+  syncPresentationHardeningAuditOverlay,
+  type PresentationHardeningAuditSnapshot,
+} from './presentation/PresentationHardeningAudit';
+import {
+  PresentationHoldDirector,
+  type PresentationHoldSnapshot,
+} from './presentation/PresentationHoldDirector';
 import { snapshotPlayerModel, type PlayerSnapshot } from './playerModel';
 import { updatePlayerSimulation } from './playerSimulation';
 import {
@@ -138,11 +156,14 @@ declare global {
       getBallVisualSnapshot: () => BallVisualSnapshot;
       getCameraSnapshot: () => GameplayCameraDebugSnapshot;
       getCameraFramingSnapshot: () => CameraFramingSnapshot;
+      getCrowdPresentationSnapshot: () => CrowdPresentationSnapshot | null;
       getCrowdPreviewSnapshot: () => CrowdPreviewSnapshot | null;
       getFormationPreviewSnapshot: () => FormationPreviewSnapshot | null;
       getGameplaySnapshot: () => GameplaySnapshot;
       getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
       getPassAuditSnapshot: () => PassAuditSnapshot | null;
+      getPresentationHardeningAuditSnapshot: () => PresentationHardeningAuditSnapshot | null;
+      getPresentationHoldSnapshot: () => PresentationHoldSnapshot;
       getPresentationAuditSnapshot: () => PresentationAuditSnapshot | null;
       getPlayerBodyVisualSnapshots: () => PlayerBodyVisualSnapshot[];
       getPlayerPoseSnapshots: () => PlayerPoseSnapshot[];
@@ -197,6 +218,13 @@ const passAuditEnabled = searchParams.has('passAudit');
 const appearanceAuditEnabled = searchParams.has('appearanceAudit');
 const audioFeatureFlags = resolveAudioFeatureFlags(searchParams);
 const commentaryDebugEnabled = searchParams.has('commentaryDebug');
+const crowdPresentationSettings = applyCrowdPresentationQuerySettings(
+  loadCrowdPresentationSettings(),
+  searchParams,
+);
+const crowdPresentationDebugEnabled =
+  searchParams.has('crowdDebug') ||
+  (presentationAuditEnabled && !crowdPreviewEnabled);
 let presentationAuditState: PresentationAuditState = resolvePresentationAuditState(
   searchParams.get('presentationState'),
 );
@@ -261,6 +289,14 @@ if (crowdPreviewController) {
   scene.add(crowdPreviewController.group);
 }
 
+const crowdPresentationController = !crowdPreviewController && crowdPresentationSettings.crowdVisualsEnabled
+  ? new CrowdPresentationController({ settings: crowdPresentationSettings })
+  : null;
+
+if (crowdPresentationController) {
+  scene.add(crowdPresentationController.group);
+}
+
 const ambientLight = new THREE.HemisphereLight(0xdde7ef, 0x344038, 2.4);
 scene.add(ambientLight);
 
@@ -286,6 +322,7 @@ const gameAudioDirector = new GameAudioDirector(audioMixer);
 const broadcastCommentaryDirector = new BroadcastCommentaryDirector(audioMixer, {
   enabled: audioFeatureFlags.announcerEnabled,
 });
+const presentationHoldDirector = new PresentationHoldDirector(cinematicsSetting);
 gameAudioDirector.installControls(window);
 gameAudioDirector.setPageActive(!document.hidden);
 broadcastCommentaryDirector.setPageActive(!document.hidden);
@@ -312,6 +349,12 @@ const audioDebugOverlay = audioFeatureFlags.audioDebug || commentaryDebugEnabled
   ? createAudioDebugOverlay()
   : null;
 const crowdPreviewOverlay = crowdPreviewController ? createCrowdPreviewOverlay() : null;
+const crowdPresentationOverlay = crowdPresentationDebugEnabled && crowdPresentationController
+  ? createCrowdPresentationOverlay()
+  : null;
+const presentationHardeningAuditOverlay = presentationAuditEnabled && !crowdPreviewController
+  ? createPresentationHardeningAuditOverlay()
+  : null;
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 let latestRenderMetrics: RenderMetricsSnapshot | null = null;
@@ -324,6 +367,7 @@ if (
   appearanceAuditEnabled ||
   audioFeatureFlags.audioDebug ||
   commentaryDebugEnabled ||
+  crowdPresentationDebugEnabled ||
   crowdPreviewEnabled
 ) {
   window.__footballDebug = {
@@ -345,12 +389,15 @@ if (
     getBallVisualSnapshot: () => getBallVisualSnapshot(ballVisual),
     getCameraSnapshot: () => cameraController.getDebugSnapshot(),
     getCameraFramingSnapshot: () => getCameraFramingSnapshot(),
+    getCrowdPresentationSnapshot: () => crowdPresentationController?.getSnapshot() ?? null,
     getCrowdPreviewSnapshot: () => crowdPreviewController?.getSnapshot() ?? null,
     getFormationPreviewSnapshot: () =>
       formationPreviewModel ? snapshotFormationPreviewModel(formationPreviewModel) : null,
     getGameplaySnapshot: () => getActivePresentationSnapshot(),
     getHelmetAssetSnapshot,
     getPassAuditSnapshot: () => getActivePresentationSnapshot().passAudit,
+    getPresentationHardeningAuditSnapshot: () => getPresentationHardeningAuditSnapshot(),
+    getPresentationHoldSnapshot: () => presentationHoldDirector.getSnapshot(),
     getPresentationAuditSnapshot: () => getPresentationAuditSnapshot(),
     getPlayerBodyVisualSnapshots: () =>
       [...playerVisuals.values()].map((playerVisual) => getPlayerBodyVisualSnapshot(playerVisual)),
@@ -452,11 +499,16 @@ function renderFrame(delta: number): void {
       gameplayModel.player.velocity.z = 0;
     }
 
-    updateGameplayModel(gameplayModel, delta);
+    updateGameplayModel(gameplayModel, delta, {
+      suppressDeadPlayReset: presentationHoldDirector.shouldHoldDeadPlayReset(),
+    });
   }
 
   const gameplaySnapshot = getActivePresentationSnapshot();
   gameAudioDirector.update(gameplaySnapshot, delta);
+  const presentationEvents = gameAudioDirector.getSnapshot().recentEvents;
+  presentationHoldDirector.update(presentationEvents, delta);
+  crowdPresentationController?.update(gameplaySnapshot, presentationEvents, delta);
   if (!formationPreviewModel) {
     broadcastCommentaryDirector.update(gameplaySnapshot, delta);
   }
@@ -475,7 +527,12 @@ function renderFrame(delta: number): void {
   syncBallVisual(ballVisual, formationPreviewModel?.ball ?? gameplayModel.ball);
   routeArtRenderer.update(gameplaySnapshot, gameplayModel.selectedPlay);
   playerPoseController.update(gameplaySnapshot, playerVisuals, delta);
-  cameraController.update(gameplaySnapshot, delta);
+  cameraController.update(gameplaySnapshot, delta, {
+    crowdCutawaysEnabled: !!crowdPresentationController &&
+      crowdPresentationSettings.crowdVisualsEnabled &&
+      crowdPresentationSettings.crowdReactionsEnabled,
+    presentationEvents,
+  });
   syncGameplayHud(gameplayHud, gameplaySnapshot);
   syncBroadcastCaptions(broadcastCaptions, broadcastCommentaryDirector.getSnapshot());
   if (playCallUi) {
@@ -488,6 +545,7 @@ function renderFrame(delta: number): void {
     syncFormationAuditOverlay(formationAuditOverlay, gameplayModel, formationPreviewModel?.formation);
   }
   renderer.render(scene, cameraController.camera);
+  crowdPresentationController?.recordFrame(delta, renderer);
   if (shouldCollectPresentationDiagnostics()) {
     latestRenderMetrics = createRenderMetricsSnapshot(delta);
   }
@@ -511,6 +569,15 @@ function renderFrame(delta: number): void {
   }
   if (audioDebugOverlay) {
     syncAudioDebugOverlay(audioDebugOverlay, getRuntimeAudioSnapshot());
+  }
+  if (crowdPresentationOverlay && crowdPresentationController) {
+    syncCrowdPresentationOverlay(crowdPresentationOverlay, crowdPresentationController.getSnapshot());
+  }
+  if (presentationHardeningAuditOverlay) {
+    const snapshot = getPresentationHardeningAuditSnapshot();
+    if (snapshot) {
+      syncPresentationHardeningAuditOverlay(presentationHardeningAuditOverlay, snapshot);
+    }
   }
   const renderMetrics = debugOverlay.isVisible() ? latestRenderMetrics ?? undefined : undefined;
   debugOverlay.update(
@@ -536,6 +603,8 @@ function updatePlayControls(): void {
 
   if (requests.startPlay || requests.resetPlay || requests.restartChallenge) {
     cameraController.skipPresentationShot();
+    presentationHoldDirector.skip();
+    crowdPresentationController?.skipReactionHold();
   }
 
   if (requests.restartChallenge) {
@@ -666,6 +735,7 @@ function syncAudioPageActivity(): void {
   const pageActive = !document.hidden && document.hasFocus();
   gameAudioDirector.setPageActive(pageActive);
   broadcastCommentaryDirector.setPageActive(pageActive);
+  crowdPresentationController?.setPageActive(pageActive);
 }
 
 function getActivePlayers() {
@@ -777,13 +847,34 @@ function getPresentationAuditSnapshot(): PresentationAuditSnapshot | null {
   });
 }
 
+function getPresentationHardeningAuditSnapshot(): PresentationHardeningAuditSnapshot | null {
+  if (!presentationAuditEnabled && !crowdPresentationDebugEnabled) {
+    return null;
+  }
+
+  const gameplaySnapshot = getActivePresentationSnapshot();
+
+  return createPresentationHardeningAuditSnapshot({
+    audio: getRuntimeAudioSnapshot(),
+    camera: cameraController.getDebugSnapshot(),
+    cinematics: cinematicsSetting,
+    crowd: crowdPresentationController?.getSnapshot() ?? null,
+    crowdSettings: crowdPresentationSettings,
+    currentResultType: gameplaySnapshot.lastPlayResult?.type ?? null,
+    hold: presentationHoldDirector.getSnapshot(),
+    renderMetrics: latestRenderMetrics,
+  });
+}
+
 function shouldCollectPresentationDiagnostics(): boolean {
   return debugOverlay.isVisible() ||
     !!poseDebugOverlay ||
     !!presentationAuditOverlay ||
     !!routeAuditOverlay ||
     !!passAuditOverlay ||
-    !!appearanceAuditOverlay;
+    !!appearanceAuditOverlay ||
+    !!crowdPresentationOverlay ||
+    !!presentationHardeningAuditOverlay;
 }
 
 function createEmptyPresentationAuditSnapshot(): PresentationAuditSnapshot {

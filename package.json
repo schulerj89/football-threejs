@@ -1,6 +1,6 @@
 {
   "name": "football-threejs",
-  "version": "0.36.0",
+  "version": "0.37.0",
   "private": true,
   "type": "module",
   "description": "Low-poly 3D American football prototype built with Three.js.",
@@ -13,7 +13,7 @@
     "audio:generate:speech": "tsx tools/audio/generateSpeech.ts",
     "audio:report": "tsx tools/audio/audioReport.ts",
     "test": "npm run test:unit && npm run test:smoke",
-    "test:unit": "vitest run tests/playerSimulation.test.ts tests/playState.test.ts tests/driveModel.test.ts tests/scoreAttackModel.test.ts tests/fieldSpec.test.ts tests/fieldGeometry.test.ts tests/ballSpotting.test.ts tests/formationLayout.test.ts tests/formationPreview.test.ts tests/receiverRoutes.test.ts tests/passTargeting.test.ts tests/audioPipeline.test.ts tests/audioRuntime.test.ts tests/gameAudioDirector.test.ts tests/broadcastCommentaryDirector.test.ts tests/ballVisual.test.ts tests/routeArtRenderer.test.ts tests/playCallDiagram.test.ts tests/gameplayCameraController.test.ts tests/presentationCameraDirector.test.ts tests/presentationAudit.test.ts tests/helmetVisual.test.ts tests/playerVisual.test.ts tests/playerPoseController.test.ts tests/teamSimulation.test.ts tests/playbook.test.ts tests/crowdPreview.test.ts",
+    "test:unit": "vitest run tests/playerSimulation.test.ts tests/playState.test.ts tests/driveModel.test.ts tests/scoreAttackModel.test.ts tests/fieldSpec.test.ts tests/fieldGeometry.test.ts tests/ballSpotting.test.ts tests/formationLayout.test.ts tests/formationPreview.test.ts tests/receiverRoutes.test.ts tests/passTargeting.test.ts tests/audioPipeline.test.ts tests/audioRuntime.test.ts tests/gameAudioDirector.test.ts tests/broadcastCommentaryDirector.test.ts tests/ballVisual.test.ts tests/routeArtRenderer.test.ts tests/playCallDiagram.test.ts tests/gameplayCameraController.test.ts tests/presentationCameraDirector.test.ts tests/presentationAudit.test.ts tests/presentationHoldDirector.test.ts tests/helmetVisual.test.ts tests/playerVisual.test.ts tests/playerPoseController.test.ts tests/teamSimulation.test.ts tests/playbook.test.ts tests/crowdPreview.test.ts tests/crowdPresentation.test.ts",
     "test:smoke": "playwright test"
   },
   "dependencies": {
