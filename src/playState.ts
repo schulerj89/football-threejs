@@ -22,7 +22,14 @@ import {
   cloneFootballSpot,
   type FootballSpot,
 } from './fieldScale';
-import { createFormationPlayers, resetFormationPlayers } from './formation';
+import {
+  DEFAULT_PLAY_ID,
+  createFormationPlayers,
+  getRushingPlay,
+  resetFormationPlayers,
+  type PlayId,
+  type RushingPlayDefinition,
+} from './playbook';
 import {
   RUNNER_PLAYER_ID,
   snapshotPlayerModel,
@@ -72,6 +79,7 @@ export interface GameplayModel {
   nextPlayResultId: number;
   player: PlayerModel;
   players: PlayerModel[];
+  selectedPlay: RushingPlayDefinition;
   playState: PlayState;
   playResetTimerSeconds: number | null;
   score: number;
@@ -92,13 +100,19 @@ export interface GameplaySnapshot {
   nextBallSpot: FootballSpot;
   player: PlayerSnapshot;
   players: PlayerSnapshot[];
+  selectedPlay: {
+    displayName: string;
+    id: PlayId;
+    initialMovementDirection: FootballSpot;
+  };
   playState: PlayState;
   score: number;
 }
 
 export function createGameplayModel(): GameplayModel {
   const initialSpot = cloneFootballSpot(INITIAL_BALL_SPOT);
-  const players = createFormationPlayers(initialSpot);
+  const selectedPlay = getRushingPlay(DEFAULT_PLAY_ID);
+  const players = createFormationPlayers(initialSpot, selectedPlay);
   const runner = getRunner(players);
 
   return {
@@ -112,10 +126,24 @@ export function createGameplayModel(): GameplayModel {
     nextPlayResultId: 1,
     player: runner,
     players,
+    selectedPlay,
     playState: 'preSnap',
     playResetTimerSeconds: null,
     score: 0,
   };
+}
+
+export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
+  if (gameplay.playState !== 'preSnap') {
+    return false;
+  }
+
+  const play = getRushingPlay(playId);
+  gameplay.selectedPlay = play;
+  resetBlockingState(gameplay.blocking);
+  resetFormationPlayers(gameplay.players, gameplay.currentBallSpot, play);
+  resetBallModel(gameplay.ball, gameplay.currentBallSpot);
+  return true;
 }
 
 export function startPlay(gameplay: GameplayModel): boolean {
@@ -170,7 +198,7 @@ export function resetPlay(gameplay: GameplayModel): void {
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
   resetBlockingState(gameplay.blocking);
-  resetFormationPlayers(gameplay.players, resetSpot);
+  resetFormationPlayers(gameplay.players, resetSpot, gameplay.selectedPlay);
   resetBallModel(gameplay.ball, resetSpot);
 }
 
@@ -183,6 +211,7 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
         bounds: PLAYABLE_FIELD_BOUNDS,
         deltaSeconds,
         lineOfScrimmage: gameplay.currentBallSpot,
+        play: gameplay.selectedPlay,
       });
       detectTackle(gameplay);
     }
@@ -223,6 +252,11 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     nextBallSpot: cloneFootballSpot(gameplay.nextBallSpot),
     player: snapshotPlayerModel(gameplay.player),
     players: gameplay.players.map(snapshotPlayerModel),
+    selectedPlay: {
+      displayName: gameplay.selectedPlay.displayName,
+      id: gameplay.selectedPlay.id,
+      initialMovementDirection: { ...gameplay.selectedPlay.initialMovementDirection },
+    },
     playState: gameplay.playState,
     score: gameplay.score,
   };

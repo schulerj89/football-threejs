@@ -56,6 +56,11 @@ interface GameplaySnapshot {
   nextBallSpot: FootballSpot;
   player: PlayerSnapshot;
   players: PlayerSnapshot[];
+  selectedPlay: {
+    displayName: string;
+    id: 'inside-run' | 'outside-run';
+    initialMovementDirection: FootballSpot;
+  };
   playState: 'preSnap' | 'live' | 'dead';
   score: number;
 }
@@ -79,7 +84,9 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
   await expect(page.locator('.drive-status')).toHaveText('1st & 10 | Ball -15');
+  await expect(page.locator('.play-call')).toHaveText('Inside Run');
   const initial = await getGameplaySnapshot(page);
+  expect(initial.selectedPlay.id).toBe('inside-run');
   expect(initial.players).toHaveLength(6);
   expect(initial.players.filter((player) => player.team === 'offense')).toHaveLength(3);
   expect(initial.players.filter((player) => player.team === 'defense')).toHaveLength(3);
@@ -161,6 +168,35 @@ test('keeps D reserved for movement instead of debug toggling', async ({ page })
   await expect(page.locator('.debug-overlay')).toBeVisible();
 });
 
+test('selects rushing plays before snap and locks selection while live', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  await page.keyboard.press('2');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'outside-run', displayName: 'Outside Run' },
+    playState: 'preSnap',
+  });
+  await expect(page.locator('.play-call')).toHaveText('Outside Run');
+  const outside = await getGameplaySnapshot(page);
+  expect(outside.player.position.x).toBeGreaterThan(0);
+
+  await page.keyboard.press('1');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'inside-run', displayName: 'Inside Run' },
+  });
+  await expect(page.locator('.play-call')).toHaveText('Inside Run');
+  const inside = await getGameplaySnapshot(page);
+  expect(inside.player.position.x).toBeCloseTo(0);
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await page.keyboard.press('2');
+  await page.waitForTimeout(100);
+
+  expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('inside-run');
+});
+
 test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
   await page.goto('/?debug=1&readback=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -176,6 +212,7 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
   });
   expect(initial.players).toHaveLength(6);
   expect(initial.players.every((player) => player.currentState === 'idle')).toBe(true);
+  expect(initial.selectedPlay.displayName).toBe('Inside Run');
   expect(initial.player.position).toEqual({ x: 0, z: -15 });
 
   await page.keyboard.down('w');

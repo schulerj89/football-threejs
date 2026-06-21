@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a three-on-three rushing drill with a basic offensive drive: a graybox American-football field, one controllable placeholder ball carrier, two AI blockers, three AI defenders, downs, yards-to-go, first-down line, touchdown scoring, tackle and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a three-on-three rushing drill with two data-defined rushing plays and a basic offensive drive: a graybox American-football field, one controllable placeholder ball carrier, two AI blockers, three AI defenders, selectable Inside Run and Outside Run play calls, downs, yards-to-go, first-down line, touchdown scoring, tackle and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
 
 ## World Scale
 
@@ -29,8 +29,11 @@ Open the dev server at `http://127.0.0.1:5173`.
 ## Controls
 
 - Move with `WASD` or the arrow keys.
+- Press `1` during pre-snap to select `Inside Run`.
+- Press `2` during pre-snap to select `Outside Run`.
 - Press `Space` from pre-snap to start the play and give the player possession.
 - Press `R` to reset the play to pre-snap.
+- Play selection is locked while a play is live; reset preserves the selected play.
 - Cross the opposing goal line during a live play to score a touchdown.
 - Avoid defenders to score; defender contact ends the play as a tackle.
 - AI blockers move toward lane targets and can engage one defender each to slow pursuit.
@@ -52,6 +55,13 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No imported assets
 - No throwing
 - No loose-ball physics
+- No large play-calling menu
+- No audibles
+- No defensive play selection
+- No passing plays
+- No route editor
+- No procedural play generation
+- No additional formations beyond the two current rushing plays
 - No offensive linemen rules
 - No holding penalties
 - No pancake blocks

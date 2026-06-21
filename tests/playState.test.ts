@@ -16,6 +16,7 @@ import {
   hasCrossedSideline,
   markPlayDead,
   resetPlay,
+  selectPlay,
   snapshotGameplayModel,
   startPlay,
   updateGameplayModel,
@@ -78,6 +79,42 @@ describe('play state transitions', () => {
     expect(gameplay.ball.position.x).toBeCloseTo(gameplay.player.position.x + BALL_CARRY_ATTACHMENT.x);
     expect(gameplay.ball.position.y).toBeCloseTo(BALL_CARRY_ATTACHMENT.y);
     expect(gameplay.ball.position.z).toBeCloseTo(gameplay.player.position.z + BALL_CARRY_ATTACHMENT.z);
+  });
+
+  it('selects a rushing play during preSnap and resets players into that formation', () => {
+    const gameplay = createGameplayModel();
+
+    expect(gameplay.selectedPlay.id).toBe('inside-run');
+    expect(selectPlay(gameplay, 'outside-run')).toBe(true);
+
+    expect(gameplay.selectedPlay.id).toBe('outside-run');
+    expect(gameplay.player.position.x).toBeCloseTo(2.5);
+    expect(gameplay.players.every((player) => player.currentState === 'idle')).toBe(true);
+    expect(gameplay.ball.possession).toEqual({ kind: 'none' });
+    expect(gameplay.ball.position.z).toBeCloseTo(LINE_OF_SCRIMMAGE_Z);
+  });
+
+  it('prevents play selection during live play', () => {
+    const gameplay = createGameplayModel();
+
+    startPlay(gameplay);
+    expect(selectPlay(gameplay, 'outside-run')).toBe(false);
+
+    expect(gameplay.selectedPlay.id).toBe('inside-run');
+    expect(gameplay.player.currentState).toBe('userControlled');
+  });
+
+  it('preserves the selected play when resetting', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'outside-run');
+    startPlay(gameplay);
+    gameplay.player.position.x = 8;
+    resetPlay(gameplay);
+
+    expect(gameplay.selectedPlay.id).toBe('outside-run');
+    expect(gameplay.player.position.x).toBeCloseTo(2.5);
+    expect(gameplay.playState).toBe('preSnap');
   });
 
   it('rejects invalid start and dead transitions', () => {

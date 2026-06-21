@@ -2,7 +2,7 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a three-on-three rushing drill with a controllable primitive ball carrier, two AI blockers, three AI defenders, deterministic blocking engagements, a basic offensive drive, downs, yards-to-go, touchdown scoring, tackle and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, and delayed reset.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a three-on-three rushing drill with two data-defined rushing plays, a controllable primitive ball carrier, two AI blockers, three AI defenders, deterministic blocking engagements, a basic offensive drive, downs, yards-to-go, touchdown scoring, tackle and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, and delayed reset.
 
 ## Current Non-Goals
 
@@ -11,6 +11,13 @@ This repository is a low-poly 3D American football game prototype built with Thr
 - No imported assets
 - No throwing
 - No loose-ball physics
+- No large play-calling menu
+- No audibles
+- No defensive play selection
+- No passing plays
+- No route editor
+- No procedural play generation
+- No additional formations beyond the two current rushing plays
 - No offensive linemen rules
 - No holding penalties
 - No pancake blocks
@@ -57,6 +64,8 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Keep input, simulation, and visual synchronization in separate modules.
 - All gameplay players use the common player model with stable ID, team, role, position, velocity, facing, collision radius, and current state.
 - Initial formations belong in data, not hard-coded mesh positions.
+- Rushing play definitions belong in data and must stay independent from Three.js scene objects.
+- Play selection is allowed during pre-snap only; resetting preserves the selected play.
 - The gameplay model owns player position, velocity, facing, and blocking engagement state; Three.js meshes only display that state.
 - The gameplay model owns play state and ball possession; the ball mesh is never authoritative.
 - The gameplay model owns play results, start spots, dead-ball spots, yards gained, and scoring team data; UI and meshes only display that state.
@@ -75,12 +84,12 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- Three offensive and three defensive players appear in formation without initial overlap.
-- All players remain stationary before the snap.
-- On the snap, the runner becomes user-controlled, blockers move toward lanes, and defenders pursue the runner.
-- Blockers can engage one defender each, engaged defenders are impeded, and engagements can end after separation.
-- Circle-based gameplay collision prevents players from occupying the exact same position.
-- The runner can score or be tackled.
-- Assignment, engagement, disengagement, separation, and tackle detection have deterministic tests.
+- Inside Run and Outside Run can be selected before the snap.
+- Each play has a stable ID, display name, formation, ball-carrier role, initial direction, and blocker lane data.
+- Selecting a play resets players into valid positions and visibly changes formation or blocking direction.
+- Selection cannot change during live play.
+- Reset preserves the current selected play.
+- Both plays work with downs, yardage, tackles, touchdowns, and resets.
+- Play lookup, formation placement, invalid IDs, and selection restrictions have deterministic tests.
 - Existing tests pass.
-- The browser smoke test proves formation, movement, score, tackle, out-of-bounds, and turnover-on-downs outcomes work.
+- The browser smoke test proves play selection plus formation, movement, score, tackle, out-of-bounds, and turnover-on-downs outcomes work.

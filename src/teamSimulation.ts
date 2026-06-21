@@ -1,5 +1,5 @@
 import type { PlayableFieldBounds } from './field';
-import { getBlockingLaneTarget } from './formation';
+import { getBlockingLaneTarget, type RushingPlayDefinition } from './playbook';
 import type { FootballSpot } from './fieldScale';
 import { DEFENDER_CONFIG, updateDefenderPursuit } from './defenderModel';
 import type { PlayerModel, Vector2 } from './playerModel';
@@ -17,6 +17,7 @@ export interface RushingDrillAiOptions {
   bounds: PlayableFieldBounds;
   deltaSeconds: number;
   lineOfScrimmage: FootballSpot;
+  play: RushingPlayDefinition;
 }
 
 export const BLOCKING_CONFIG = {
@@ -44,7 +45,7 @@ export function updateRushingDrillAi(
   const delta = Math.max(0, Math.min(options.deltaSeconds, 0.1));
 
   releaseSeparatedEngagements(players, blocking);
-  updateBlockers(players, blocking, options.lineOfScrimmage, delta);
+  updateBlockers(players, blocking, options.lineOfScrimmage, options.play, delta);
   acquireBlockingEngagements(players, blocking);
   updateDefenders(players, blocking, runner, delta);
   keepPlayersInFieldDepth(players, options.bounds);
@@ -130,6 +131,7 @@ function updateBlockers(
   players: PlayerModel[],
   blocking: BlockingState,
   lineOfScrimmage: FootballSpot,
+  play: RushingPlayDefinition,
   deltaSeconds: number,
 ): void {
   for (const blocker of players) {
@@ -145,7 +147,12 @@ function updateBlockers(
     }
 
     blocker.currentState = 'movingToLane';
-    movePlayerToward(blocker, getBlockingLaneTarget(blocker, lineOfScrimmage), BLOCKING_CONFIG.blockerLaneSpeed, deltaSeconds);
+    movePlayerToward(
+      blocker,
+      getBlockingLaneTarget(blocker, lineOfScrimmage, play),
+      BLOCKING_CONFIG.blockerLaneSpeed,
+      deltaSeconds,
+    );
   }
 }
 

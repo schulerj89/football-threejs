@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2026-06-21
+
+### Added
+
+- Added a data-driven rushing playbook with stable Inside Run and Outside Run play IDs.
+- Added play definitions for display name, starting formation, ball-carrier role, initial movement direction, and blocker lane data.
+- Added pre-snap keyboard selection with `1` for Inside Run and `2` for Outside Run.
+- Added selected-play HUD display, pre-snap formation reset on selection, live-play selection lockout, and reset preservation.
+- Added deterministic playbook and gameplay tests for play lookup, formation placement, invalid IDs, and selection restrictions.
+- Expanded browser smoke coverage for play selection and live selection lockout.
+
 ## [0.8.0] - 2026-06-21
 
 ### Added

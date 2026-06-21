@@ -13,6 +13,7 @@ import { KeyboardMovementInput, KeyboardPlayControls } from './input';
 import {
   createGameplayModel,
   resetPlay,
+  selectPlay,
   snapshotGameplayModel,
   startPlay,
   updateGameplayModel,
@@ -145,6 +146,10 @@ function updatePlayControls(): void {
   if (requests.resetPlay) {
     resetPlay(gameplayModel);
     return;
+  }
+
+  if (requests.selectedPlayId) {
+    selectPlay(gameplayModel, requests.selectedPlayId);
   }
 
   if (requests.startPlay) {

@@ -70,12 +70,14 @@ export class KeyboardMovementInput {
 
 export interface PlayControlRequests {
   resetPlay: boolean;
+  selectedPlayId: string | null;
   startPlay: boolean;
 }
 
 export class KeyboardPlayControls {
   private readonly target: Window;
   private resetRequested = false;
+  private selectedPlayId: string | null = null;
   private startRequested = false;
 
   constructor(target: Window) {
@@ -86,10 +88,12 @@ export class KeyboardPlayControls {
   consumeRequests(): PlayControlRequests {
     const requests = {
       resetPlay: this.resetRequested,
+      selectedPlayId: this.selectedPlayId,
       startPlay: this.startRequested,
     };
 
     this.resetRequested = false;
+    this.selectedPlayId = null;
     this.startRequested = false;
 
     return requests;
@@ -98,6 +102,7 @@ export class KeyboardPlayControls {
   dispose(): void {
     this.target.removeEventListener('keydown', this.handleKeyDown);
     this.resetRequested = false;
+    this.selectedPlayId = null;
     this.startRequested = false;
   }
 
@@ -110,6 +115,18 @@ export class KeyboardPlayControls {
 
     if (normalizeKey(event.key) === 'r') {
       this.resetRequested = true;
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === '1') {
+      this.selectedPlayId = 'inside-run';
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === '2') {
+      this.selectedPlayId = 'outside-run';
       event.preventDefault();
     }
   };

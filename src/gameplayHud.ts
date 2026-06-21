@@ -3,6 +3,7 @@ import type { GameplaySnapshot } from './playState';
 export interface GameplayHud {
   driveStatus: HTMLDivElement;
   outOfBoundsMessage: HTMLDivElement;
+  playCall: HTMLDivElement;
   resultMessage: HTMLDivElement;
   root: HTMLDivElement;
   score: HTMLDivElement;
@@ -22,6 +23,10 @@ export function createGameplayHud(): GameplayHud {
   const driveStatus = document.createElement('div');
   driveStatus.className = 'drive-status';
   root.appendChild(driveStatus);
+
+  const playCall = document.createElement('div');
+  playCall.className = 'play-call';
+  root.appendChild(playCall);
 
   const touchdownMessage = document.createElement('div');
   touchdownMessage.className = 'touchdown-message';
@@ -52,6 +57,7 @@ export function createGameplayHud(): GameplayHud {
   return {
     driveStatus,
     outOfBoundsMessage,
+    playCall,
     resultMessage,
     root,
     score,
@@ -69,6 +75,7 @@ export function syncGameplayHud(hud: GameplayHud, gameplay: GameplaySnapshot): v
   hud.driveStatus.textContent = `${formatDown(gameplay.drive.currentDown)} & ${formatDistance(
     gameplay.drive.yardsToFirstDown,
   )} | Ball ${formatNumber(gameplay.drive.lineOfScrimmage.z)}`;
+  hud.playCall.textContent = gameplay.selectedPlay.displayName;
   hud.tackleMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'tackle';
   hud.touchdownMessage.hidden = lastPlayResult?.type !== 'touchdown';
   hud.outOfBoundsMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'outOfBounds';

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFENDER_CONFIG, isTackleContact } from '../src/defenderModel';
 import { INITIAL_BALL_SPOT, PLAYABLE_FIELD_BOUNDS } from '../src/field';
-import { createFormationPlayers } from '../src/formation';
+import { createFormationPlayers, getRushingPlay } from '../src/playbook';
 import { createPlayerModel, type PlayerModel } from '../src/playerModel';
 import {
   BLOCKING_CONFIG,
@@ -49,6 +49,7 @@ describe('three-on-three rushing drill simulation', () => {
 
   it('impedes engaged defenders while unblocked defenders pursue at full speed', () => {
     const players = createFormationPlayers(INITIAL_BALL_SPOT);
+    const play = getRushingPlay('inside-run');
     const runner = getPlayer(players, 'runner');
     const blocking = createBlockingState();
 
@@ -59,6 +60,7 @@ describe('three-on-three rushing drill simulation', () => {
       bounds: PLAYABLE_FIELD_BOUNDS,
       deltaSeconds: 0.1,
       lineOfScrimmage: INITIAL_BALL_SPOT,
+      play,
     });
 
     const engagedDefender = getPlayer(players, 'defender-left');
