@@ -38,6 +38,12 @@ import {
   updateGameplayModel,
   type GameplaySnapshot,
 } from './playState';
+import {
+  PlayerPoseController,
+  createPlayerPoseDebugOverlay,
+  syncPlayerPoseDebugOverlay,
+  type PlayerPoseSnapshot,
+} from './presentation/PlayerPoseController';
 import { snapshotPlayerModel, type PlayerSnapshot } from './playerModel';
 import { updatePlayerSimulation } from './playerSimulation';
 import {
@@ -55,6 +61,7 @@ declare global {
       getGameplaySnapshot: () => GameplaySnapshot;
       getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
       getPlayerBodyVisualSnapshots: () => PlayerBodyVisualSnapshot[];
+      getPlayerPoseSnapshots: () => PlayerPoseSnapshot[];
       getPlayerSnapshot: () => PlayerSnapshot;
     };
   }
@@ -74,6 +81,7 @@ const playerVisualOptions = {
   bodyStyle: resolvePlayerBodyVisualStyle(searchParams.get('playerBody')),
   debugRoleColors: searchParams.has('debugRoleColors'),
 };
+const playerMotionEnabled = searchParams.get('playerMotion') !== '0';
 const field = createFootballField({
   fieldAudit: searchParams.has('fieldAudit'),
 });
@@ -119,6 +127,10 @@ const playControls = new KeyboardPlayControls(window);
 const debugOverlay = new DebugOverlay({ renderer, player: gameplayModel.player });
 const gameplayHud = createGameplayHud();
 const playCallUi = createPlayCallUi();
+const playerPoseController = new PlayerPoseController(undefined, {
+  enabled: playerMotionEnabled,
+});
+const poseDebugOverlay = searchParams.has('poseDebug') ? createPlayerPoseDebugOverlay() : null;
 const formationAuditOverlay = searchParams.has('formationAudit')
   ? createFormationAuditOverlay()
   : null;
@@ -132,6 +144,7 @@ if (import.meta.env.DEV || searchParams.has('debug')) {
     getHelmetAssetSnapshot,
     getPlayerBodyVisualSnapshots: () =>
       [...playerVisuals.values()].map((playerVisual) => getPlayerBodyVisualSnapshot(playerVisual)),
+    getPlayerPoseSnapshots: () => playerPoseController.getPoseSnapshots(),
     getPlayerSnapshot: () => snapshotPlayerModel(gameplayModel.player),
   };
   window.addEventListener('keydown', handleDevelopmentCameraToggle);
@@ -180,9 +193,13 @@ function renderFrame(delta: number): void {
   }
   syncBallVisual(ballVisual, gameplayModel.ball);
   const gameplaySnapshot = snapshotGameplayModel(gameplayModel);
+  playerPoseController.update(gameplaySnapshot, playerVisuals, delta);
   cameraController.update(gameplaySnapshot, delta);
   syncGameplayHud(gameplayHud, gameplaySnapshot);
   syncPlayCallUi(playCallUi, gameplaySnapshot);
+  if (poseDebugOverlay) {
+    syncPlayerPoseDebugOverlay(poseDebugOverlay, playerPoseController.getPoseSnapshots());
+  }
   if (formationAuditOverlay) {
     syncFormationAuditOverlay(formationAuditOverlay, gameplayModel);
   }

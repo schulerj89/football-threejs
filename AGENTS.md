@@ -2,7 +2,7 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness, not the final product identity. The current milestone is an intentional procedural low-poly player silhouette that preserves the reusable helmet GLB while replacing rectangular placeholder bodies.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness, not the final product identity. The current milestone adds visual-only procedural player poses and locomotion to the low-poly mannequin while preserving the reusable helmet GLB and gameplay-owned state.
 
 The active playable prototype is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay play data, low-poly procedural player bodies with cloned low-poly helmet visuals, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera.
 
@@ -68,6 +68,8 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Passing play definitions use ordered eligible receiver IDs; selected receiver state belongs to the gameplay model, not the HUD or mesh layer.
 - Imported player art and procedural player silhouettes must remain visual-only; gameplay collision stays in the gameplay player model.
 - Player visuals should preserve the root object used by gameplay synchronization, keep the helmet attached through the stable head anchor, and expose comparison/debug URL options when replacing major placeholder geometry.
+- Procedural player pose and locomotion belong in `src/presentation/PlayerPoseController.ts`; pose controllers may read gameplay snapshots and transform visual pivots but must never mutate gameplay state.
+- Pose amplitudes, blend rates, stride rates, velocity thresholds, and frame-delta clamps belong in a single pose configuration object.
 - Normal player body colors should emphasize team identity; role-specific body colors belong behind explicit debug options.
 - Repeated GLB assets should be loaded once and cloned or instanced, with material clones created before team-specific tinting.
 - Forward-pass eligibility is gameplay state reset per play; crossing the original line of scrimmage disables it permanently for that play using the documented epsilon in `src/passRules.ts`.
@@ -84,13 +86,9 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- Every player receives the procedural low-poly body silhouette by default, with the previous box body available only as a comparison URL option.
-- The existing player root, gameplay position sync, facing sync, collision radius, movement, blocking, tackling, possession, AI, and helmet attachment remain unchanged.
-- The body hierarchy is `bodyRoot` with torso, shoulder pads, arm pivots, leg pivots, feet, and the stable head anchor for the helmet.
-- The mannequin uses shared primitive geometry and simple shared materials, stays within the body triangle budget, and uses no textures or imported body model.
-- Team identity drives normal body colors; role colors are available only through explicit debug mode.
-- The body exposes development measurements for height, shoulder width, body bounds, body triangles, and body mesh count.
-- The low-poly helmet GLB loads once, clones to every player, attaches to the player head anchor, tints shell colors by team, and leaves gameplay collision unchanged.
-- The mannequin works from both tactical orthographic and offense-perspective cameras.
-- Existing gameplay and helmet tests pass.
-- Browser smoke tests pass, including startup, debug measurements, camera rendering, and comparison body mode.
+- Offense and defense derive distinct pre-snap ready pose intents while staying at exact gameplay positions.
+- Moving players use visual-only locomotion on the existing shoulder and hip pivots with deterministic phase offsets from stable player IDs.
+- Locomotion phase advances from visual distance traveled where practical, and near-zero velocity blends back to the appropriate ready pose.
+- `?playerMotion=0` disables procedural motion, and `?poseDebug=1` displays each player's pose intent and phase.
+- The pose controller does not modify gameplay snapshots, player root positions, root facing, collision, blocking, tackling, possession, AI, camera, or movement speed.
+- Existing gameplay, helmet, visual, unit, and browser smoke tests pass.

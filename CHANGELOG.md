@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.0] - 2026-06-21
+
+### Added
+
+- Added a visual-only `PlayerPoseController` presentation layer for low-poly mannequin ready stances and locomotion.
+- Added offensive and defensive pre-snap pose intents, locomotion intent derivation, deterministic per-player phase offsets, distance-driven stride phase, transition smoothing, and frame-delta clamping.
+- Added `?playerMotion=0` to disable procedural player motion for comparison.
+- Added `?poseDebug=1` to display every player's current pose intent and locomotion phase.
+- Added focused unit coverage for pose intent selection, stride-rate consistency, deterministic phase offsets, locomotion phase opposition, disabled motion, and gameplay snapshot immutability.
+- Added browser smoke coverage for pose-debug output, pre-snap pose intents, locomotion during movement, and disabled motion mode.
+
+### Changed
+
+- Documented the visual-only player motion options in README and updated AGENTS implementation rules for pose-controller ownership.
+
 ## [0.21.1] - 2026-06-21
 
 ### Fixed

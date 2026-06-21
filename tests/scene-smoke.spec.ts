@@ -145,6 +145,14 @@ interface PlayerBodyVisualSnapshot {
   uniqueBodyMaterialCount: number;
 }
 
+interface PlayerPoseSnapshot {
+  intent: 'locomotion' | 'neutral' | 'readyDefense' | 'readyOffense';
+  phaseOffsetRadians: number;
+  phaseRadians: number;
+  playerId: string;
+  speed: number;
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -215,14 +223,31 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   ).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.combinedBounds.size.y <= 2.25)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.totalHeight === 2)).toBe(true);
-  const firstBodyBounds = bodySnapshots[0].bodyBounds.size;
+  for (const teamPrefix of ['player-offense-', 'player-defense-']) {
+    const teamBodySnapshots = bodySnapshots.filter((snapshot) =>
+      snapshot.playerId.startsWith(teamPrefix),
+    );
+    const firstBodyBounds = teamBodySnapshots[0].bodyBounds.size;
+    expect(
+      teamBodySnapshots.every(
+        (snapshot) =>
+          Math.abs(snapshot.bodyBounds.size.x - firstBodyBounds.x) < 0.001 &&
+          Math.abs(snapshot.bodyBounds.size.y - firstBodyBounds.y) < 0.001 &&
+          Math.abs(snapshot.bodyBounds.size.z - firstBodyBounds.z) < 0.001,
+      ),
+    ).toBe(true);
+  }
+  const poseSnapshots = await getPlayerPoseSnapshots(page);
+  expect(poseSnapshots).toHaveLength(10);
   expect(
-    bodySnapshots.every(
-      (snapshot) =>
-        Math.abs(snapshot.bodyBounds.size.x - firstBodyBounds.x) < 0.001 &&
-        Math.abs(snapshot.bodyBounds.size.y - firstBodyBounds.y) < 0.001 &&
-        Math.abs(snapshot.bodyBounds.size.z - firstBodyBounds.z) < 0.001,
-    ),
+    poseSnapshots
+      .filter((snapshot) => snapshot.playerId.startsWith('offense-'))
+      .every((snapshot) => snapshot.intent === 'readyOffense'),
+  ).toBe(true);
+  expect(
+    poseSnapshots
+      .filter((snapshot) => snapshot.playerId.startsWith('defense-'))
+      .every((snapshot) => snapshot.intent === 'readyDefense'),
   ).toBe(true);
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
@@ -254,6 +279,32 @@ test('supports the box player body comparison URL option', async ({ page }) => {
   expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'box')).toBe(true);
   await expect(page.locator('.debug-overlay')).toContainText('BODY box');
   await expectNonBlankCanvas(page);
+});
+
+test('supports procedural player motion debug and comparison modes', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1&poseDebug=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.pose-debug-overlay')).toContainText('POSE DEBUG');
+  await expect(page.locator('.pose-debug-overlay')).toContainText('offense-qb readyOffense');
+  await expect(page.locator('.pose-debug-overlay')).toContainText('defense-safety readyDefense');
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await page.keyboard.down('w');
+  await expect.poll(async () => {
+    const poses = await getPlayerPoseSnapshots(page);
+    return poses.some(
+      (snapshot) => snapshot.playerId === 'offense-rb' && snapshot.intent === 'locomotion',
+    );
+  }).toBe(true);
+  await page.keyboard.up('w');
+
+  await page.goto('/?debug=1&readback=1&poseDebug=1&playerMotion=0');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  expect((await getPlayerPoseSnapshots(page)).every((snapshot) => snapshot.intent === 'neutral')).toBe(
+    true,
+  );
+  await expect(page.locator('.pose-debug-overlay')).toContainText('neutral');
 });
 
 test('starts field and formation audit modes without render errors', async ({ page }) => {
@@ -1090,5 +1141,23 @@ async function getPlayerBodyVisualSnapshots(page: Page): Promise<PlayerBodyVisua
     }
 
     return debugApi.getPlayerBodyVisualSnapshots();
+  });
+}
+
+async function getPlayerPoseSnapshots(page: Page): Promise<PlayerPoseSnapshot[]> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getPlayerPoseSnapshots: () => PlayerPoseSnapshot[];
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getPlayerPoseSnapshots();
   });
 }
