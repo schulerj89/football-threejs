@@ -1,0 +1,14 @@
+{
+  "assetId": "crowd_first_down_01",
+  "category": "crowd",
+  "compressedBytes": 56886,
+  "contentHash": "6568d5570f9032b66aa543783e48de3536566443f4839ab9b1c918d69149ec62",
+  "durationSeconds": 3.48,
+  "generatedAt": "2026-06-21T12:55:58.854Z",
+  "kind": "oneShot",
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Large outdoor American-football crowd quick positive swell after a first down, then natural decay. Three to four seconds, medium excitement, no long climax. No speech, no intelligible chants, no announcer, no music, no copyrighted recording, no real stadium imitation.",
+  "requestedDurationSeconds": 3.5,
+  "runtimeLoadingStrategy": "buffer"
+}

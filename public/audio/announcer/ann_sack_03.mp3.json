@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_sack_03",
+  "caption": "Nowhere to go. The rush drops him before the throw.",
+  "category": "announcer",
+  "compressedBytes": 48527,
+  "contentHash": "368e76a0fe3cdbe8de4f42cc966be12953a9a6c8ce171a1d0ca77fae39202f8b",
+  "durationSeconds": 2.96,
+  "eventCategory": "sack",
+  "generatedAt": "2026-06-21T12:56:54.434Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.2,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Nowhere to go. The rush drops him before the throw.",
+  "scriptId": "ann_sack_03",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

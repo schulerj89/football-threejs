@@ -1,0 +1,14 @@
+{
+  "assetId": "crowd_idle_loop_01",
+  "category": "crowd",
+  "compressedBytes": 481115,
+  "contentHash": "89b41c44c2354ff0506e42753a4eb66ba96ed62fd5f0accae5ddf4a0805989e6",
+  "durationSeconds": 30,
+  "generatedAt": "2026-06-21T12:55:49.611Z",
+  "kind": "loop",
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Seamless 30 second looping ambience for a large outdoor American-football stadium. Steady anticipatory crowd murmur with distant scattered cheers. Wide stadium perspective, restrained energy, natural loop point. No speech, no intelligible chants, no announcer, no music, no copyrighted recording, no real stadium imitation.",
+  "requestedDurationSeconds": 30,
+  "runtimeLoadingStrategy": "stream"
+}

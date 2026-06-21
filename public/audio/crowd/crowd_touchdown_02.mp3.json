@@ -1,0 +1,14 @@
+{
+  "assetId": "crowd_touchdown_02",
+  "category": "crowd",
+  "compressedBytes": 136716,
+  "contentHash": "8ac835d872c4ded282977bd6c2a4af207d7f282838fcfe6c0dc47b4ae73de001",
+  "durationSeconds": 8.48,
+  "generatedAt": "2026-06-21T12:56:05.789Z",
+  "kind": "oneShot",
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Large outdoor American-football crowd explosive touchdown celebration with rolling cheers and natural tail. Seven to nine seconds, energetic but not musical. No speech, no intelligible chants, no announcer, no music, no copyrighted recording, no real stadium imitation.",
+  "requestedDurationSeconds": 8.5,
+  "runtimeLoadingStrategy": "buffer"
+}

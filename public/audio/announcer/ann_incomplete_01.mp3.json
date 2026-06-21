@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_incomplete_01",
+  "caption": "The throw is there late, and it falls away.",
+  "category": "announcer",
+  "compressedBytes": 39332,
+  "contentHash": "f2d6c846823ab42dc4289d03209cc1f8dc5dfe0098262e194ad1cf2d4f30c74d",
+  "durationSeconds": 2.4,
+  "eventCategory": "incomplete",
+  "generatedAt": "2026-06-21T12:57:02.651Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.6,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The throw is there late, and it falls away.",
+  "scriptId": "ann_incomplete_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_big_gain_02",
+  "caption": "He found space and turned it into a chunk.",
+  "category": "announcer",
+  "compressedBytes": 39332,
+  "contentHash": "b1b448f6479f9763ca0ba61f8c215ee4c124f3900572f3b8264f6d4620333e84",
+  "durationSeconds": 2.4,
+  "eventCategory": "bigGain",
+  "generatedAt": "2026-06-21T12:56:59.951Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.7,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "He found space and turned it into a chunk.",
+  "scriptId": "ann_big_gain_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

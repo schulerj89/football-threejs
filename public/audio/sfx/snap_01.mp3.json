@@ -1,0 +1,14 @@
+{
+  "assetId": "snap_01",
+  "category": "sfx",
+  "compressedBytes": 13836,
+  "contentHash": "0610cb6bd6c565b65333c1718cc109b98bb046608519ba92a0b30730bf507ce1",
+  "durationSeconds": 0.8,
+  "generatedAt": "2026-06-21T12:56:19.480Z",
+  "kind": "oneShot",
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Compact American-football snap sound: quick ball movement, gloves, jersey and pad rustle, close microphone, no voice, no whistle, no crowd.",
+  "requestedDurationSeconds": 0.8,
+  "runtimeLoadingStrategy": "buffer"
+}

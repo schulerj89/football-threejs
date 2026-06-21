@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_challenge_ending_02",
+  "caption": "Time runs out, and the offense has its number.",
+  "category": "announcer",
+  "compressedBytes": 41839,
+  "contentHash": "597902bf85d033322dbe775506d1eec574773df0c995e5a0a0419ed0eed1055b",
+  "durationSeconds": 2.56,
+  "eventCategory": "challengeEnding",
+  "generatedAt": "2026-06-21T12:57:13.228Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Time runs out, and the offense has its number.",
+  "scriptId": "ann_challenge_ending_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

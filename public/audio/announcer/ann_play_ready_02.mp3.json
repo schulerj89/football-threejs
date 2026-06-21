@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_play_ready_02",
+  "caption": "Quiet at the line. The play call is in.",
+  "category": "announcer",
+  "compressedBytes": 35570,
+  "contentHash": "50c3e17e9429c48c33533c4a6784426772c151c5cdca0e0f619347a163deb1d8",
+  "durationSeconds": 2.16,
+  "eventCategory": "playReady",
+  "generatedAt": "2026-06-21T12:56:42.972Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.5,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Quiet at the line. The play call is in.",
+  "scriptId": "ann_play_ready_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

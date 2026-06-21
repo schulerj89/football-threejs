@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_game_opening_02",
+  "caption": "Here we go. Clean execution is the whole story on this drive.",
+  "category": "announcer",
+  "compressedBytes": 56050,
+  "contentHash": "e942e8c27a68625a62e1b362bde4b98b967c4f78b634e6736ca2a35744e2a793",
+  "durationSeconds": 3.44,
+  "eventCategory": "gameOpening",
+  "generatedAt": "2026-06-21T12:56:40.876Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.5,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Here we go. Clean execution is the whole story on this drive.",
+  "scriptId": "ann_game_opening_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

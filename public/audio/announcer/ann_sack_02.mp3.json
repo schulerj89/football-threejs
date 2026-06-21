@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_sack_02",
+  "caption": "The pocket closes fast, and the defense wins the down.",
+  "category": "announcer",
+  "compressedBytes": 53542,
+  "contentHash": "6824d561a39dfabeef1ac32ee0a8d62a1be694e728bc45926b299aac41049b4e",
+  "durationSeconds": 3.28,
+  "eventCategory": "sack",
+  "generatedAt": "2026-06-21T12:56:53.092Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The pocket closes fast, and the defense wins the down.",
+  "scriptId": "ann_sack_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

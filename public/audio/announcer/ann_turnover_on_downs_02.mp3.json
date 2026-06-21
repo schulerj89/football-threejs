@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_turnover_on_downs_02",
+  "caption": "Fourth down comes up short, and the drill resets.",
+  "category": "announcer",
+  "compressedBytes": 43511,
+  "contentHash": "c7109f7124a0a9ff0b1b3082cd25a801cf6f26388c646e3b075797ad5b19f7a9",
+  "durationSeconds": 2.64,
+  "eventCategory": "turnoverOnDowns",
+  "generatedAt": "2026-06-21T12:57:10.216Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Fourth down comes up short, and the drill resets.",
+  "scriptId": "ann_turnover_on_downs_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

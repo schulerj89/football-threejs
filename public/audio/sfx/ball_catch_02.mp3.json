@@ -1,0 +1,14 @@
+{
+  "assetId": "ball_catch_02",
+  "category": "sfx",
+  "compressedBytes": 13836,
+  "contentHash": "1508e144340b187bee4d79b0bef6799fe892b0cbd2bdab0d07ce1fc4a936d056",
+  "durationSeconds": 0.8,
+  "generatedAt": "2026-06-21T12:56:16.414Z",
+  "kind": "oneShot",
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Close football catch sound: leather ball hits gloves and chest pads, slightly sharper hand slap and jersey rustle, no voice, no crowd.",
+  "requestedDurationSeconds": 0.8,
+  "runtimeLoadingStrategy": "buffer"
+}

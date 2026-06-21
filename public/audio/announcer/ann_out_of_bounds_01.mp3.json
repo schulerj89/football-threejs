@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_out_of_bounds_01",
+  "caption": "Forced to the sideline, and the spot comes back in.",
+  "category": "announcer",
+  "compressedBytes": 43511,
+  "contentHash": "d06fa6ae19ec62cb8f84aa86adb7f1c0b222b3778594b74b06329123149bbd39",
+  "durationSeconds": 2.64,
+  "eventCategory": "outOfBounds",
+  "generatedAt": "2026-06-21T12:57:06.544Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Forced to the sideline, and the spot comes back in.",
+  "scriptId": "ann_out_of_bounds_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_incomplete_02",
+  "caption": "Close window, no connection.",
+  "category": "announcer",
+  "compressedBytes": 31808,
+  "contentHash": "f80c6c80534595938b7a59108871c5cee1fdd182d579adb90770aa3b18cd6852",
+  "durationSeconds": 1.92,
+  "eventCategory": "incomplete",
+  "generatedAt": "2026-06-21T12:57:03.469Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 1.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Close window, no connection.",
+  "scriptId": "ann_incomplete_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_sack_01",
+  "caption": "Pressure gets there. The quarterback is wrapped up behind the line.",
+  "category": "announcer",
+  "compressedBytes": 53542,
+  "contentHash": "fe6884ed078a1e75066c42de5edcd7eeb9e78c647be93e19d71f7ac44c13f07e",
+  "durationSeconds": 3.28,
+  "eventCategory": "sack",
+  "generatedAt": "2026-06-21T12:56:51.480Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.7,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Pressure gets there. The quarterback is wrapped up behind the line.",
+  "scriptId": "ann_sack_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

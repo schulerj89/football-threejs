@@ -1,0 +1,14 @@
+{
+  "assetId": "crowd_pressure_loop_01",
+  "category": "crowd",
+  "compressedBytes": 481115,
+  "contentHash": "72d8889163b7913f9e717d5757efeccf28d826f6abdfac8d131ba84b7ed12939",
+  "durationSeconds": 30,
+  "generatedAt": "2026-06-21T12:55:57.072Z",
+  "kind": "loop",
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Seamless 30 second looping ambience from the same large outdoor American-football stadium perspective. Urgent sustained crowd energy and pressure without a peak or climax. Natural loop point, broad crowd texture, no individual voice should be understood. No speech, no intelligible chants, no announcer, no music, no copyrighted recording, no real stadium imitation.",
+  "requestedDurationSeconds": 30,
+  "runtimeLoadingStrategy": "stream"
+}

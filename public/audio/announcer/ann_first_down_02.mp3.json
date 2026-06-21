@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_first_down_02",
+  "caption": "They needed the marker, and they got there.",
+  "category": "announcer",
+  "compressedBytes": 39332,
+  "contentHash": "1e2c40938d3934423cb5af356dfac02509db818c4f2d45a209d13c7dbcbd7ce3",
+  "durationSeconds": 2.4,
+  "eventCategory": "firstDown",
+  "generatedAt": "2026-06-21T12:56:45.308Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "They needed the marker, and they got there.",
+  "scriptId": "ann_first_down_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

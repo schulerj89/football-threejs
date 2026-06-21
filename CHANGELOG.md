@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.40.0] - 2026-06-21
+
+### Added
+
+- Generated the approved local ElevenLabs prototype audio pack: two streamed crowd loops, six crowd reactions, seven football-event one-shots, 27 prototype announcer MP3 clips, three preserved voice previews, and provenance sidecars.
+- Added `npm run audio:verify` to validate runtime-manifest paths, non-empty decodable files, duration bounds, provenance sidecars, caption/catalog consistency, compressed-size budget, decoded-buffer budget policy, readiness classification, and the audition page.
+- Added `public/audio/audio-readiness.json`, `public/audio/audio-verification-report.json`, refreshed `public/audio/football-sfx-pack-report.json`, and a full `public/audio/audition-index.html` listing crowd, effects, announcer captions/prompts, duration, size, and generation metadata.
+
+### Changed
+
+- Bounded runtime decoded audio buffer caching with least-recently-used eviction and skipped known-missing optional assets without repeated fetch attempts.
+- Updated README and AGENTS to reflect that the first runtime MP3 pack is generated and verified locally while ElevenLabs remains offline-only production tooling.
+
 ## [0.39.0] - 2026-06-21
 
 ### Added

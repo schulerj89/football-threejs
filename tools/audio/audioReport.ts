@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { DEFAULT_MAX_DECODED_AUDIO_BUFFER_BYTES } from '../../src/audio/AudioAssetLoader';
 import { FOOTBALL_AUDIO_PLAN } from './audioPlan';
 import {
   isDirectCli,
@@ -36,7 +37,9 @@ export interface FootballAudioPackReport {
   decodedOneShotMemoryUnderBudget: boolean;
   generatedAt: string;
   generatedCount: number;
+  largestDecodedBufferBytes: number;
   longestClipSeconds: number | null;
+  totalBufferedDecodedMemoryBytes: number;
   targetCompressedBytes: number;
   totalCompressedBytes: number;
   underTarget: boolean;
@@ -44,7 +47,7 @@ export interface FootballAudioPackReport {
 }
 
 const STARTER_PACK_TARGET_BYTES = 5 * 1024 * 1024;
-const DECODED_ONE_SHOT_MEMORY_TARGET_BYTES = 8 * 1024 * 1024;
+const DECODED_ONE_SHOT_MEMORY_TARGET_BYTES = DEFAULT_MAX_DECODED_AUDIO_BUFFER_BYTES;
 const PCM_BYTES_PER_SAMPLE = Float32Array.BYTES_PER_ELEMENT;
 const ESTIMATED_DECODED_CHANNELS = 2;
 const OUTPUT_SAMPLE_RATE = 44_100;
@@ -85,20 +88,32 @@ export function createFootballAudioReport(
     } satisfies FootballAudioAssetReportEntry;
   });
 
+  const totalBufferedDecodedMemoryBytes = assets.reduce(
+    (sum, asset) => sum + (asset.decodedMemoryBytes ?? 0),
+    0,
+  );
+  const largestDecodedBufferBytes = Math.max(
+    0,
+    ...assets.map((asset) => asset.decodedMemoryBytes ?? 0),
+  );
+  const runtimeDecodedCacheEstimate = Math.min(
+    totalBufferedDecodedMemoryBytes,
+    DECODED_ONE_SHOT_MEMORY_TARGET_BYTES,
+  );
+
   return {
     assetCount: plan.length,
     assets,
     decodedOneShotMemoryBudgetBytes: DECODED_ONE_SHOT_MEMORY_TARGET_BYTES,
-    decodedOneShotMemoryBytes: assets.reduce(
-      (sum, asset) => sum + (asset.decodedMemoryBytes ?? 0),
-      0,
-    ),
+    decodedOneShotMemoryBytes: runtimeDecodedCacheEstimate,
     decodedOneShotMemoryUnderBudget:
-      assets.reduce((sum, asset) => sum + (asset.decodedMemoryBytes ?? 0), 0) <=
-      DECODED_ONE_SHOT_MEMORY_TARGET_BYTES,
+      runtimeDecodedCacheEstimate <= DECODED_ONE_SHOT_MEMORY_TARGET_BYTES &&
+      largestDecodedBufferBytes <= DECODED_ONE_SHOT_MEMORY_TARGET_BYTES,
     generatedAt,
     generatedCount: assets.filter((asset) => asset.exists).length,
+    largestDecodedBufferBytes,
     longestClipSeconds: getLongestClipSeconds(assets),
+    totalBufferedDecodedMemoryBytes,
     targetCompressedBytes: STARTER_PACK_TARGET_BYTES,
     totalCompressedBytes: assets.reduce((sum, asset) => sum + asset.compressedBytes, 0),
     underTarget:

@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_big_gain_01",
+  "caption": "Big lane, big burst. The offense flips the field.",
+  "category": "announcer",
+  "compressedBytes": 49781,
+  "contentHash": "fb8b9380f1c1e71820659a5aba5131de30e508b74caae4029409619d68022342",
+  "durationSeconds": 3.04,
+  "eventCategory": "bigGain",
+  "generatedAt": "2026-06-21T12:56:58.702Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Big lane, big burst. The offense flips the field.",
+  "scriptId": "ann_big_gain_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

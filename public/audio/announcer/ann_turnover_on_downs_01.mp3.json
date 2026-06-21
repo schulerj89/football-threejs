@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_turnover_on_downs_01",
+  "caption": "The stop holds. The drive ends on downs.",
+  "category": "announcer",
+  "compressedBytes": 47273,
+  "contentHash": "e25ed5e7bdd8361d3d1945b6fe5c0daa3482b601b4fbb09e474d9faa1a7e48a5",
+  "durationSeconds": 2.88,
+  "eventCategory": "turnoverOnDowns",
+  "generatedAt": "2026-06-21T12:57:08.932Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.6,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The stop holds. The drive ends on downs.",
+  "scriptId": "ann_turnover_on_downs_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,14 @@
+{
+  "assetId": "referee_whistle_01",
+  "category": "sfx",
+  "compressedBytes": 17180,
+  "contentHash": "2bacb07fb852ce60b32ed7c85685dd97a04d9c1468b31a8e9f7778acc59a2876",
+  "durationSeconds": 1,
+  "generatedAt": "2026-06-21T12:56:18.069Z",
+  "kind": "oneShot",
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Short clean referee dead-play whistle, crisp single whistle blast with small tail, no voice, no crowd, no music.",
+  "requestedDurationSeconds": 1,
+  "runtimeLoadingStrategy": "buffer"
+}

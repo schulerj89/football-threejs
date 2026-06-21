@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_big_gain_03",
+  "caption": "That is the kind of gain that changes the drive.",
+  "category": "announcer",
+  "compressedBytes": 46019,
+  "contentHash": "8f32ca33806b4c6679585596c7b4f3c5450267654ea957dd7a8d5adf164c2fc9",
+  "durationSeconds": 2.8,
+  "eventCategory": "bigGain",
+  "generatedAt": "2026-06-21T12:57:01.297Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "That is the kind of gain that changes the drive.",
+  "scriptId": "ann_big_gain_03",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,14 @@
+{
+  "assetId": "ball_catch_01",
+  "category": "sfx",
+  "compressedBytes": 13836,
+  "contentHash": "c47b962fcdb9e92aa669ef3f5964a6fda1dd05407885274fc2f0360de75d5237",
+  "durationSeconds": 0.8,
+  "generatedAt": "2026-06-21T12:56:15.044Z",
+  "kind": "oneShot",
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Close football catch sound: leather football striking gloves and chest pads with a soft slap and fabric movement, no voice, no crowd.",
+  "requestedDurationSeconds": 0.8,
+  "runtimeLoadingStrategy": "buffer"
+}

@@ -15,6 +15,7 @@ import {
 } from '../tools/audio/announcerScriptCatalog';
 import { FOOTBALL_AUDIO_PLAN, FOOTBALL_SFX_AUDIO_PLAN, validateFootballAudioPlan } from '../tools/audio/audioPlan';
 import { createFootballAudioReport, writeFootballAudioReportFiles } from '../tools/audio/audioReport';
+import { createAudioVerificationReport, writeAudioVerificationArtifacts } from '../tools/audio/audioVerify';
 import { generateSoundEffects } from '../tools/audio/generateSoundEffects';
 import { generateSpeech } from '../tools/audio/generateSpeech';
 import {
@@ -312,6 +313,21 @@ describe('audio production pipeline', () => {
       const written = writeFootballAudioReportFiles(report);
       expect(existsSync(join(cwd, written.reportPath))).toBe(true);
       expect(readFileSync(join(cwd, written.auditionIndexPath), 'utf8')).toContain('Football SFX Audition Index');
+    });
+  });
+
+  it('writes verification readiness artifacts without an API key', async () => {
+    await withTemporaryCwd(async (cwd) => {
+      const report = createAudioVerificationReport([FOOTBALL_AUDIO_PLAN[0]], []);
+      const written = writeAudioVerificationArtifacts(report);
+
+      expect(report.readiness).toBe('unavailable');
+      expect(report.missingAssetIds).toEqual(['crowd_idle_loop_01']);
+      expect(existsSync(join(cwd, written.reportPath))).toBe(true);
+      expect(existsSync(join(cwd, written.readinessPath))).toBe(true);
+      expect(readFileSync(join(cwd, written.auditionIndexPath), 'utf8')).toContain(
+        'Football Audio Audition Index',
+      );
     });
   });
 

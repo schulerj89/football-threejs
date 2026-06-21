@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_first_down_03",
+  "caption": "Good push after the snap. The chains move again.",
+  "category": "announcer",
+  "compressedBytes": 49781,
+  "contentHash": "fd0cd09da16b03bd053468a6d46c06c4f63174fd00141c8a97051a373bb8d8ba",
+  "durationSeconds": 3.04,
+  "eventCategory": "firstDown",
+  "generatedAt": "2026-06-21T12:56:47.064Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Good push after the snap. The chains move again.",
+  "scriptId": "ann_first_down_03",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

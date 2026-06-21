@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_touchdown_01",
+  "caption": "He breaks through and finishes it. Touchdown.",
+  "category": "announcer",
+  "compressedBytes": 41839,
+  "contentHash": "5dc7bacfc55b9861ee45035f7fbad34e6a5966b0def5abda743f65e78ff8146b",
+  "durationSeconds": 2.56,
+  "eventCategory": "touchdown",
+  "generatedAt": "2026-06-21T12:56:48.058Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.9,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "He breaks through and finishes it. Touchdown.",
+  "scriptId": "ann_touchdown_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

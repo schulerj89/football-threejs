@@ -132,6 +132,50 @@ describe('runtime audio mixer', () => {
     expect(loader.getSnapshot().missingOptionalAssetIds).toEqual([BUFFER_TEST_ASSET.assetId]);
   });
 
+  it('skips known-missing optional decoded assets without retrying fetches', async () => {
+    let fetchCalls = 0;
+    const loader = new AudioAssetLoader({
+      audioContext: new FakeAudioContext('running').asAudioContext(),
+      fetcher: async () => {
+        fetchCalls += 1;
+        return new Response(null, { status: 404 }) as Response;
+      },
+      knownMissingAssetIds: [BUFFER_TEST_ASSET.assetId],
+      manifest: [BUFFER_TEST_ASSET],
+      warn: () => undefined,
+    });
+
+    await expect(loader.loadDecodedBuffer(BUFFER_TEST_ASSET.assetId)).resolves.toBeNull();
+
+    expect(fetchCalls).toBe(0);
+    expect(loader.getSnapshot().missingOptionalAssetIds).toEqual([BUFFER_TEST_ASSET.assetId]);
+  });
+
+  it('bounds decoded one-shot cache memory with least-recently-used eviction', async () => {
+    const fakeContext = new FakeAudioContext('running');
+    const assets = ['clip-a', 'clip-b', 'clip-c'].map((assetId) => ({
+      ...BUFFER_TEST_ASSET,
+      assetId,
+      url: `/audio/sfx/${assetId}.mp3`,
+    }));
+    const loader = new AudioAssetLoader({
+      audioContext: fakeContext.asAudioContext(),
+      fetcher: async () => new Response(new ArrayBuffer(16)) as Response,
+      manifest: assets,
+      maxDecodedBufferBytes: 2048,
+      warn: () => undefined,
+    });
+
+    await loader.loadDecodedBuffer('clip-a');
+    await loader.loadDecodedBuffer('clip-b');
+    await loader.loadDecodedBuffer('clip-a');
+    await loader.loadDecodedBuffer('clip-c');
+
+    expect(loader.getSnapshot().decodedBufferBudgetBytes).toBe(2048);
+    expect(loader.getSnapshot().decodedBufferBytes).toBeLessThanOrEqual(2048);
+    expect(loader.getSnapshot().decodedAssetIds).toEqual(['clip-a', 'clip-c']);
+  });
+
   it('warns once when an optional streamed loop cannot play', async () => {
     const warnings: string[] = [];
     const fakeContext = new FakeAudioContext('running');
@@ -275,6 +319,12 @@ describe('runtime audio mixer', () => {
     expect(report.decodedOneShotMemoryUnderBudget).toBe(true);
     expect(report.decodedOneShotMemoryBytes).toBeLessThanOrEqual(
       report.decodedOneShotMemoryBudgetBytes,
+    );
+    expect(report.largestDecodedBufferBytes).toBeLessThanOrEqual(
+      report.decodedOneShotMemoryBudgetBytes,
+    );
+    expect(report.totalBufferedDecodedMemoryBytes).toBeGreaterThanOrEqual(
+      report.decodedOneShotMemoryBytes,
     );
     expect(
       report.assets

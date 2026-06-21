@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_out_of_bounds_02",
+  "caption": "He steps out before the defense can finish the hit.",
+  "category": "announcer",
+  "compressedBytes": 39332,
+  "contentHash": "bcf40a55defd4567c88387ce9a05a8063fa2d708e3f1a2673990415a77028f5e",
+  "durationSeconds": 2.4,
+  "eventCategory": "outOfBounds",
+  "generatedAt": "2026-06-21T12:57:07.817Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "He steps out before the defense can finish the hit.",
+  "scriptId": "ann_out_of_bounds_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

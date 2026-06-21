@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_incomplete_03",
+  "caption": "The pass misses the mark. The drive moves to the next down.",
+  "category": "announcer",
+  "compressedBytes": 53542,
+  "contentHash": "267f8e9acfe7c38f84e980a69b5ef2a4f2ee6cbb769c2ab9f29c7e27b7b0bb79",
+  "durationSeconds": 3.28,
+  "eventCategory": "incomplete",
+  "generatedAt": "2026-06-21T12:57:05.164Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The pass misses the mark. The drive moves to the next down.",
+  "scriptId": "ann_incomplete_03",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

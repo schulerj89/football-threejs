@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_touchdown_02",
+  "caption": "Into the paint. The offense cashes in.",
+  "category": "announcer",
+  "compressedBytes": 39332,
+  "contentHash": "9f16ccfb19693427d52bdf33a2f7eef77ebcf709d5887bf4800512582583c19b",
+  "durationSeconds": 2.4,
+  "eventCategory": "touchdown",
+  "generatedAt": "2026-06-21T12:56:49.034Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.7,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Into the paint. The offense cashes in.",
+  "scriptId": "ann_touchdown_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

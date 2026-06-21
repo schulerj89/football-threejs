@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_play_ready_01",
+  "caption": "Fresh snap coming. The offense is set.",
+  "category": "announcer",
+  "compressedBytes": 36824,
+  "contentHash": "9ea7681c02af08b4c42f79496c0d84fcad51930a2f39bc7e5784d8a207b1689b",
+  "durationSeconds": 2.24,
+  "eventCategory": "playReady",
+  "generatedAt": "2026-06-21T12:56:41.786Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Fresh snap coming. The offense is set.",
+  "scriptId": "ann_play_ready_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

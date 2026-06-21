@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_challenge_ending_01",
+  "caption": "That is the horn. Final score is on the board.",
+  "category": "announcer",
+  "compressedBytes": 44765,
+  "contentHash": "aab08453202552d7e338bce49973093c7badd15285b303a95c5bf011def41295",
+  "durationSeconds": 2.72,
+  "eventCategory": "challengeEnding",
+  "generatedAt": "2026-06-21T12:57:11.887Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "That is the horn. Final score is on the board.",
+  "scriptId": "ann_challenge_ending_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

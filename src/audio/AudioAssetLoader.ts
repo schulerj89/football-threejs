@@ -17,6 +17,7 @@ export interface StreamedAudioAsset {
 }
 
 export interface AudioAssetLoaderSnapshot {
+  decodedBufferBudgetBytes: number;
   decodedAssetIds: string[];
   decodedBufferBytes: number;
   loadedAssetIds: string[];
@@ -30,9 +31,13 @@ export interface AudioAssetLoaderOptions {
   audioContext: Pick<AudioContext, 'decodeAudioData'>;
   createAudioElement?: (url: string) => HTMLAudioElement;
   fetcher?: typeof fetch;
+  knownMissingAssetIds?: readonly string[];
   manifest?: readonly LocalAudioAsset[];
+  maxDecodedBufferBytes?: number;
   warn?: (message: string) => void;
 }
+
+export const DEFAULT_MAX_DECODED_AUDIO_BUFFER_BYTES = 8 * 1024 * 1024;
 
 export class AudioAssetLoader {
   private readonly audioContext: Pick<AudioContext, 'decodeAudioData'>;
@@ -40,6 +45,7 @@ export class AudioAssetLoader {
   private readonly decodedAssets = new Map<string, DecodedAudioAsset>();
   private readonly fetcher: typeof fetch;
   private readonly manifest: readonly LocalAudioAsset[];
+  private readonly maxDecodedBufferBytes: number;
   private readonly missingOptionalAssetIds = new Set<string>();
   private readonly streamAssets = new Map<string, StreamedAudioAsset>();
   private readonly warnedAssetIds = new Set<string>();
@@ -50,6 +56,11 @@ export class AudioAssetLoader {
     this.createAudioElement = options.createAudioElement ?? ((url) => new Audio(url));
     this.fetcher = options.fetcher ?? fetch.bind(globalThis);
     this.manifest = options.manifest ?? LOCAL_AUDIO_ASSET_MANIFEST;
+    this.maxDecodedBufferBytes =
+      options.maxDecodedBufferBytes ?? DEFAULT_MAX_DECODED_AUDIO_BUFFER_BYTES;
+    for (const assetId of options.knownMissingAssetIds ?? []) {
+      this.missingOptionalAssetIds.add(assetId);
+    }
     this.warn = options.warn ?? ((message) => console.warn(message));
   }
 
@@ -61,12 +72,17 @@ export class AudioAssetLoader {
     const cached = this.decodedAssets.get(assetId);
 
     if (cached) {
+      this.decodedAssets.delete(assetId);
+      this.decodedAssets.set(assetId, cached);
       return cached;
     }
 
     const asset = this.getAsset(assetId);
 
     if (!asset || asset.loadingStrategy !== 'buffer') {
+      return null;
+    }
+    if (this.missingOptionalAssetIds.has(asset.assetId)) {
       return null;
     }
 
@@ -87,6 +103,7 @@ export class AudioAssetLoader {
         decodedBytes: estimateDecodedBytes(buffer),
       };
       this.decodedAssets.set(assetId, decodedAsset);
+      this.enforceDecodedBufferBudget(assetId);
       return decodedAsset;
     } catch (error) {
       this.warnMissingOptionalAsset(
@@ -107,6 +124,9 @@ export class AudioAssetLoader {
     const asset = this.getAsset(assetId);
 
     if (!asset || asset.loadingStrategy !== 'stream') {
+      return null;
+    }
+    if (this.missingOptionalAssetIds.has(asset.assetId)) {
       return null;
     }
 
@@ -141,6 +161,7 @@ export class AudioAssetLoader {
     ];
 
     return {
+      decodedBufferBudgetBytes: this.maxDecodedBufferBytes,
       decodedAssetIds: [...this.decodedAssets.keys()].sort(),
       decodedBufferBytes: decodedAssets.reduce(
         (sum, asset) => sum + asset.decodedBytes,
@@ -174,6 +195,27 @@ export class AudioAssetLoader {
 
     this.warnedAssetIds.add(asset.assetId);
     this.warn(`Optional audio asset ${asset.assetId} is unavailable at ${asset.url}: ${reason}`);
+  }
+
+  private enforceDecodedBufferBudget(protectedAssetId: string): void {
+    while (this.getDecodedBufferBytes() > this.maxDecodedBufferBytes) {
+      const oldestAssetId = [...this.decodedAssets.keys()].find(
+        (assetId) => assetId !== protectedAssetId,
+      );
+
+      if (!oldestAssetId) {
+        break;
+      }
+
+      this.decodedAssets.delete(oldestAssetId);
+    }
+  }
+
+  private getDecodedBufferBytes(): number {
+    return [...this.decodedAssets.values()].reduce(
+      (sum, asset) => sum + asset.decodedBytes,
+      0,
+    );
   }
 }
 

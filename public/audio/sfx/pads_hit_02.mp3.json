@@ -1,0 +1,14 @@
+{
+  "assetId": "pads_hit_02",
+  "category": "sfx",
+  "compressedBytes": 15090,
+  "contentHash": "e2cb07168e74f4cdb0c562cfa93bc54a9db28432af450d173c3d7903050ba855",
+  "durationSeconds": 0.88,
+  "generatedAt": "2026-06-21T12:56:12.231Z",
+  "kind": "oneShot",
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Short low-poly arcade-realistic American-football shoulder-pad collision with a tighter chest-pad bump, no bones breaking, no cinematic explosion, no voice.",
+  "requestedDurationSeconds": 0.9,
+  "runtimeLoadingStrategy": "buffer"
+}

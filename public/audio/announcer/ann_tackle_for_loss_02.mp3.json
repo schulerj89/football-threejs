@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_tackle_for_loss_02",
+  "caption": "The defense knifes through and shuts it down early.",
+  "category": "announcer",
+  "compressedBytes": 41839,
+  "contentHash": "ae2561049de62478f557fe72fa0b79189fe632e54323004e5b5deb757c498a78",
+  "durationSeconds": 2.56,
+  "eventCategory": "tackleForLoss",
+  "generatedAt": "2026-06-21T12:56:57.368Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The defense knifes through and shuts it down early.",
+  "scriptId": "ann_tackle_for_loss_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}
