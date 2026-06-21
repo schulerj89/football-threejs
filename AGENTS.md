@@ -2,7 +2,7 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a one-defender rushing drill with a controllable primitive ball carrier, one simple pursuing defender, touchdown scoring, tackle and out-of-bounds outcomes, dead-ball spotting, signed yardage, moving line of scrimmage, and delayed reset.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a one-defender rushing drill with a controllable primitive ball carrier, one simple pursuing defender, a basic offensive drive, downs, yards-to-go, touchdown scoring, tackle and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, and delayed reset.
 
 ## Current Non-Goals
 
@@ -20,10 +20,13 @@ This repository is a low-poly 3D American football game prototype built with Thr
 - No pathfinding library
 - No sprinting
 - No animation
+- No quarters
 - No game clock
-- No downs
-- No first downs
-- No possession changes
+- No play clock
+- No punts
+- No field goals
+- No penalties
+- No defensive possessions
 - No additional players
 - No celebration animation
 - No stadium presentation
@@ -54,6 +57,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - The gameplay model owns player position, velocity, and facing; Three.js meshes only display that state.
 - The gameplay model owns play state and ball possession; the ball mesh is never authoritative.
 - The gameplay model owns play results, start spots, dead-ball spots, yards gained, and scoring team data; UI and meshes only display that state.
+- Drive and down rules belong in a dedicated model, not renderer or HUD code.
 - Keep conversion between world units and football yards centralized.
 - Goal-line detection and scoring must use gameplay coordinates, not mesh positions.
 - Sideline and dead-ball spotting must use gameplay coordinates, not mesh positions.
@@ -67,10 +71,13 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- A live play records its starting ball spot and completed play result as gameplay data.
-- Tackle and out-of-bounds plays record the dead-ball spot, signed yards gained or lost, and reset the next snap at that spot.
-- Touchdowns keep the existing score, message, and reset behavior.
-- The visible line of scrimmage follows the current gameplay ball spot.
-- Positive gain, negative gain, out-of-bounds, and touchdown outcomes have deterministic tests.
+- The drive starts at first-and-10 and tracks current down, yards to go, line of scrimmage, and first-down marker.
+- Non-touchdown play results update down and distance exactly once.
+- Reaching the line to gain awards a new first-and-10.
+- Failed fourth down shows `TURNOVER ON DOWNS`, marks the drive over, and resets a new offensive drill from the configured start.
+- Touchdowns keep the existing score/message timing and reset the next drive to first-and-10.
+- The HUD shows down, distance, ball position, and score.
+- The field draws visible line-of-scrimmage and first-down lines.
+- Drive-rule transitions have deterministic tests.
 - Existing tests pass.
-- The browser smoke test proves score, tackle, and out-of-bounds outcomes work.
+- The browser smoke test proves score, tackle, out-of-bounds, and turnover-on-downs outcomes work.

@@ -15,6 +15,14 @@ import {
   type DefenderModel,
   type DefenderSnapshot,
 } from './defenderModel';
+import {
+  applyPlayResultToDrive,
+  createDriveModel,
+  resetDriveModel,
+  snapshotDriveModel,
+  type DriveModel,
+  type DriveSnapshot,
+} from './driveModel';
 import { INITIAL_BALL_SPOT, OPPOSING_GOAL_LINE_Z, PLAYABLE_FIELD_BOUNDS } from './field';
 import {
   calculateYardsGained,
@@ -37,6 +45,7 @@ export type ScoringTeam = 'offense' | null;
 
 export interface PlayResult {
   endingBallSpot: FootballSpot;
+  id: number;
   reason: PlayEndReason;
   scoringTeam: ScoringTeam;
   startingBallSpot: FootballSpot;
@@ -50,6 +59,7 @@ export const GAMEPLAY_CONFIG = {
   opposingGoalLineZ: OPPOSING_GOAL_LINE_Z,
   outOfBoundsResetDelaySeconds: 1.25,
   tackleResetDelaySeconds: 1.25,
+  turnoverResetDelaySeconds: 1.25,
 } as const;
 
 export interface GameplayModel {
@@ -57,8 +67,10 @@ export interface GameplayModel {
   ball: BallModel;
   currentBallSpot: FootballSpot;
   defender: DefenderModel;
+  drive: DriveModel;
   lastPlayResult: PlayResult | null;
   nextBallSpot: FootballSpot;
+  nextPlayResultId: number;
   player: PlayerModel;
   playState: PlayState;
   playResetTimerSeconds: number | null;
@@ -73,6 +85,7 @@ export interface GameplaySnapshot {
   activePlayStartSpot: FootballSpot | null;
   currentBallSpot: FootballSpot;
   defender: DefenderSnapshot;
+  drive: DriveSnapshot;
   lastPlayResult: PlayResult | null;
   nextBallSpot: FootballSpot;
   player: PlayerSnapshot;
@@ -88,8 +101,10 @@ export function createGameplayModel(): GameplayModel {
     ball: createBallModel(initialSpot),
     currentBallSpot: cloneFootballSpot(initialSpot),
     defender: createDefenderModel(initialSpot),
+    drive: createDriveModel(initialSpot),
     lastPlayResult: null,
     nextBallSpot: cloneFootballSpot(initialSpot),
+    nextPlayResultId: 1,
     player: createPlayerModel(initialSpot),
     playState: 'preSnap',
     playResetTimerSeconds: null,
@@ -98,13 +113,14 @@ export function createGameplayModel(): GameplayModel {
 }
 
 export function startPlay(gameplay: GameplayModel): boolean {
-  if (gameplay.playState !== 'preSnap') {
+  if (gameplay.playState !== 'preSnap' || gameplay.drive.state !== 'active') {
     return false;
   }
 
-  gameplay.activePlayStartSpot = cloneFootballSpot(gameplay.currentBallSpot);
+  gameplay.currentBallSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
+  gameplay.activePlayStartSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
   gameplay.lastPlayResult = null;
-  gameplay.nextBallSpot = cloneFootballSpot(gameplay.currentBallSpot);
+  gameplay.nextBallSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
   gameplay.playResetTimerSeconds = null;
   gameplay.playState = 'live';
   giveBallToPlayer(gameplay.ball, gameplay.player);
@@ -121,7 +137,15 @@ export function markPlayDead(gameplay: GameplayModel): boolean {
 }
 
 export function resetPlay(gameplay: GameplayModel): void {
-  const resetSpot = cloneFootballSpot(gameplay.nextBallSpot);
+  const shouldResetDrive = gameplay.drive.state === 'over';
+
+  if (shouldResetDrive) {
+    resetDriveModel(gameplay.drive);
+  }
+
+  const resetSpot = shouldResetDrive
+    ? cloneFootballSpot(INITIAL_BALL_SPOT)
+    : cloneFootballSpot(gameplay.nextBallSpot);
 
   gameplay.activePlayStartSpot = null;
   gameplay.currentBallSpot = cloneFootballSpot(resetSpot);
@@ -168,6 +192,7 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     },
     currentBallSpot: cloneFootballSpot(gameplay.currentBallSpot),
     defender: snapshotDefenderModel(gameplay.defender),
+    drive: snapshotDriveModel(gameplay.drive),
     lastPlayResult: clonePlayResult(gameplay.lastPlayResult),
     nextBallSpot: cloneFootballSpot(gameplay.nextBallSpot),
     player: snapshotPlayerModel(gameplay.player),
@@ -264,17 +289,26 @@ function recordPlayResult(
 ): void {
   const startingSpot = gameplay.activePlayStartSpot ?? gameplay.currentBallSpot;
 
-  gameplay.lastPlayResult = {
+  const playResult: PlayResult = {
     endingBallSpot: cloneFootballSpot(endingSpot),
+    id: gameplay.nextPlayResultId,
     reason: type,
     scoringTeam,
     startingBallSpot: cloneFootballSpot(startingSpot),
     type,
     yardsGained: calculateYardsGained(startingSpot, endingSpot),
   };
+  gameplay.nextPlayResultId += 1;
+  gameplay.lastPlayResult = playResult;
   gameplay.nextBallSpot = cloneFootballSpot(nextBallSpot);
+
+  const driveUpdate = applyPlayResultToDrive(gameplay.drive, playResult);
+  gameplay.nextBallSpot = cloneFootballSpot(driveUpdate.nextBallSpot);
   gameplay.playState = 'dead';
-  gameplay.playResetTimerSeconds = resetDelaySeconds;
+  gameplay.playResetTimerSeconds =
+    gameplay.drive.lastDriveResult?.type === 'turnoverOnDowns'
+      ? GAMEPLAY_CONFIG.turnoverResetDelaySeconds
+      : resetDelaySeconds;
   stopLiveActors(gameplay);
 }
 
@@ -308,6 +342,7 @@ function clonePlayResult(playResult: PlayResult | null): PlayResult | null {
 
   return {
     endingBallSpot: cloneFootballSpot(playResult.endingBallSpot),
+    id: playResult.id,
     reason: playResult.reason,
     scoringTeam: playResult.scoringTeam,
     startingBallSpot: cloneFootballSpot(playResult.startingBallSpot),

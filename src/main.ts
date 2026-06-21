@@ -7,7 +7,7 @@ import {
   PLAYABLE_FIELD_BOUNDS,
   WORLD_SCALE,
   createFootballField,
-  syncFootballFieldLineOfScrimmage,
+  syncFootballFieldDriveLines,
 } from './field';
 import { createGameplayHud, syncGameplayHud } from './gameplayHud';
 import { KeyboardMovementInput, KeyboardPlayControls } from './input';
@@ -118,7 +118,11 @@ function renderFrame(delta: number): void {
   }
 
   updateGameplayModel(gameplayModel, delta);
-  syncFootballFieldLineOfScrimmage(field, gameplayModel.currentBallSpot);
+  syncFootballFieldDriveLines(
+    field,
+    gameplayModel.drive.lineOfScrimmage,
+    gameplayModel.drive.firstDownMarker,
+  );
   syncDefenderVisual(defenderVisual, gameplayModel.defender);
   syncPlayerVisual(playerVisual, playerModel);
   syncBallVisual(ballVisual, gameplayModel.ball);

@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a one-defender rushing drill: a graybox American-football field, one controllable placeholder ball carrier, one simple pursuing defender, touchdown scoring, tackle and out-of-bounds outcomes, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a one-defender rushing drill with a basic offensive drive: a graybox American-football field, one controllable placeholder ball carrier, one simple pursuing defender, downs, yards-to-go, first-down line, touchdown scoring, tackle and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
 
 ## World Scale
 
@@ -35,6 +35,8 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Avoid the defender to score; defender contact ends the play as a tackle.
 - Crossing a sideline during a live play ends the play out of bounds.
 - Tackle and out-of-bounds results display signed yards gained or lost, then reset the next play at the dead-ball spot.
+- The drill tracks down, distance, ball position, and score.
+- Reaching the first-down line resets to first-and-10; a failed fourth down shows `TURNOVER ON DOWNS` and starts a new offensive drill.
 - Diagonal movement is normalized to the same max speed as cardinal movement.
 - End-line movement is clamped; sidelines are live-play boundaries.
 
@@ -58,10 +60,13 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No pathfinding library
 - No sprinting
 - No animation
+- No quarters
 - No game clock
-- No downs
-- No first downs
-- No possession changes
+- No play clock
+- No punts
+- No field goals
+- No penalties
+- No defensive possessions
 - No celebration animation
 - No stadium presentation
 - No center or snap animation

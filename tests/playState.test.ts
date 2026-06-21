@@ -31,6 +31,13 @@ describe('play state transitions', () => {
     expect(gameplay.activePlayStartSpot).toBeNull();
     expect(gameplay.currentBallSpot).toEqual(INITIAL_BALL_SPOT);
     expect(gameplay.nextBallSpot).toEqual(INITIAL_BALL_SPOT);
+    expect(gameplay.drive).toMatchObject({
+      currentDown: 1,
+      firstDownMarker: { x: 0, z: LINE_OF_SCRIMMAGE_Z + 10 },
+      lineOfScrimmage: INITIAL_BALL_SPOT,
+      state: 'active',
+      yardsToFirstDown: 10,
+    });
     expect(gameplay.defender.position).toEqual(DEFENDER_CONFIG.initialPosition);
     expect(gameplay.defender.velocity).toEqual({ x: 0, z: 0 });
     expect(gameplay.ball.possession).toEqual({ kind: 'none' });
@@ -44,6 +51,8 @@ describe('play state transitions', () => {
 
     expect(gameplay.playState).toBe('live');
     expect(gameplay.activePlayStartSpot).toEqual(INITIAL_BALL_SPOT);
+    expect(gameplay.drive.currentDown).toBe(1);
+    expect(gameplay.drive.yardsToFirstDown).toBe(10);
     expect(gameplay.ball.possession).toEqual({
       kind: 'player',
       playerId: gameplay.player.id,
@@ -134,6 +143,13 @@ describe('play state transitions', () => {
         z: GAMEPLAY_CONFIG.opposingGoalLineZ,
       }),
     );
+    expect(gameplay.drive.state).toBe('over');
+    expect(gameplay.drive.lastDriveResult).toMatchObject({
+      nextDriveStartSpot: INITIAL_BALL_SPOT,
+      reason: 'touchdown',
+      type: 'touchdown',
+    });
+    expect(gameplay.nextBallSpot).toEqual(INITIAL_BALL_SPOT);
     expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
     expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.touchdownResetDelaySeconds);
   });
@@ -183,11 +199,20 @@ describe('play state transitions', () => {
       type: 'tackle',
     });
     expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(5);
+    expect(gameplay.drive).toMatchObject({
+      currentDown: 2,
+      firstDownMarker: { x: 0, z: LINE_OF_SCRIMMAGE_Z + 10 },
+      lineOfScrimmage: { x: 0, z: LINE_OF_SCRIMMAGE_Z + 5 },
+      state: 'active',
+    });
+    expect(gameplay.drive.yardsToFirstDown).toBeCloseTo(5);
     expect(gameplay.nextBallSpot).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z + 5 });
 
     updateGameplayModel(gameplay, GAMEPLAY_CONFIG.tackleResetDelaySeconds);
 
     expect(gameplay.currentBallSpot).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z + 5 });
+    expect(gameplay.drive.currentDown).toBe(2);
+    expect(gameplay.drive.yardsToFirstDown).toBeCloseTo(5);
     expect(gameplay.player.position).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z + 5 });
     expect(gameplay.ball.position).toMatchObject({
       x: 0,
@@ -214,6 +239,8 @@ describe('play state transitions', () => {
       type: 'tackle',
     });
     expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(-4);
+    expect(gameplay.drive.currentDown).toBe(2);
+    expect(gameplay.drive.yardsToFirstDown).toBeCloseTo(14);
     expect(gameplay.nextBallSpot).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z - 4 });
   });
 
@@ -240,6 +267,8 @@ describe('play state transitions', () => {
       type: 'outOfBounds',
     });
     expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(6);
+    expect(gameplay.drive.currentDown).toBe(2);
+    expect(gameplay.drive.yardsToFirstDown).toBeCloseTo(4);
     expect(gameplay.nextBallSpot).toEqual(expectedSpot);
     expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds);
 
@@ -261,6 +290,12 @@ describe('play state transitions', () => {
     expect(snapshotGameplayModel(gameplay)).toMatchObject({
       ball: { possession: { kind: 'none' } },
       currentBallSpot: INITIAL_BALL_SPOT,
+      drive: {
+        currentDown: 1,
+        lineOfScrimmage: INITIAL_BALL_SPOT,
+        state: 'active',
+        yardsToFirstDown: 10,
+      },
       defender: { position: DEFENDER_CONFIG.initialPosition, velocity: { x: 0, z: 0 } },
       lastPlayResult: null,
       nextBallSpot: INITIAL_BALL_SPOT,
@@ -331,6 +366,8 @@ describe('play state transitions', () => {
       type: 'tackle',
       yardsGained: 0,
     });
+    expect(gameplay.drive.currentDown).toBe(2);
+    expect(gameplay.drive.yardsToFirstDown).toBe(10);
     expect(gameplay.score).toBe(0);
     expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.tackleResetDelaySeconds);
 

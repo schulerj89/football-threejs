@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2026-06-21
+
+### Added
+
+- Added a dedicated drive/down model for current down, yards to go, line of scrimmage, and first-down marker state.
+- Added first-and-10 drive starts, first-down awards, down advancement, and failed fourth-down turnover handling.
+- Added `TURNOVER ON DOWNS` messaging and reset to a new offensive drill from the configured starting spot.
+- Added a visible first-down line and HUD display for down, distance, ball position, and score.
+- Added deterministic drive-rule tests for second-and-7, new first down, failed fourth down, touchdown reset, and duplicate result protection.
+- Expanded browser smoke coverage for the four-down turnover loop.
+
 ## [0.6.0] - 2026-06-21
 
 ### Added

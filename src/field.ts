@@ -43,10 +43,12 @@ const materials = {
   line: new THREE.MeshBasicMaterial({ color: 0xf0f2ef }),
   hash: new THREE.MeshBasicMaterial({ color: 0xbcc6bd }),
   scrimmage: new THREE.MeshBasicMaterial({ color: 0x38a3ff }),
+  firstDown: new THREE.MeshBasicMaterial({ color: 0xf2d94b }),
   direction: new THREE.MeshBasicMaterial({ color: 0xf2b84b }),
 } as const;
 
 export interface FootballField {
+  firstDownLineMarker: THREE.Mesh;
   group: THREE.Group;
   lineOfScrimmageMarker: THREE.Mesh;
   lineOfScrimmageZ: number;
@@ -71,9 +73,11 @@ export function createFootballField(): FootballField {
   addYardLines(group);
   addHashMarks(group);
   const lineOfScrimmageMarker = addLineOfScrimmage(group);
+  const firstDownLineMarker = addFirstDownLine(group);
   const playDirectionMarker = addPlayDirectionMarker(group);
 
   return {
+    firstDownLineMarker,
     group,
     lineOfScrimmageMarker,
     lineOfScrimmageZ: LINE_OF_SCRIMMAGE_Z,
@@ -82,13 +86,15 @@ export function createFootballField(): FootballField {
   };
 }
 
-export function syncFootballFieldLineOfScrimmage(
+export function syncFootballFieldDriveLines(
   field: FootballField,
-  ballSpot: { z: number },
+  lineOfScrimmage: { z: number },
+  firstDownMarker: { z: number },
 ): void {
-  field.lineOfScrimmageZ = ballSpot.z;
-  field.lineOfScrimmageMarker.position.z = ballSpot.z;
-  field.playDirectionMarker.position.z = ballSpot.z + 7;
+  field.lineOfScrimmageZ = lineOfScrimmage.z;
+  field.lineOfScrimmageMarker.position.z = lineOfScrimmage.z;
+  field.firstDownLineMarker.position.z = firstDownMarker.z;
+  field.playDirectionMarker.position.z = lineOfScrimmage.z + 7;
 }
 
 function addEndZones(group: THREE.Group): void {
@@ -157,6 +163,19 @@ function addLineOfScrimmage(group: THREE.Group): THREE.Mesh {
     LINE_OF_SCRIMMAGE_Z,
     undefined,
     materials.scrimmage,
+  );
+}
+
+function addFirstDownLine(group: THREE.Group): THREE.Mesh {
+  return addLine(
+    group,
+    'first-down-line',
+    WORLD_SCALE.fieldWidth + 1.5,
+    0.22,
+    0,
+    LINE_OF_SCRIMMAGE_Z + 10,
+    undefined,
+    materials.firstDown,
   );
 }
 
