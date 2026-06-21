@@ -12,6 +12,7 @@ import type { QualityMode } from '../performance/QualityProfile';
 import { getPlaybookOptions } from '../playbook';
 import type { PlaybookId } from '../roster';
 import { TeamCustomizationPanel } from './TeamCustomizationPanel';
+import { RosterPreviewPanel } from './RosterPreviewPanel';
 
 export interface SettingsPanelOptions {
   initialSettings: GameExperienceSettings;
@@ -28,6 +29,7 @@ export class SettingsPanel {
   private readonly showGameMode: boolean;
   private readonly showTeamCustomization: boolean;
   private readonly teamCustomizationPanel: TeamCustomizationPanel | null;
+  private readonly rosterPreviewPanel: RosterPreviewPanel | null;
   private readonly presetSelect = document.createElement('select');
   private readonly playbookSelect = document.createElement('select');
   private readonly qualityModeSelect = document.createElement('select');
@@ -48,6 +50,8 @@ export class SettingsPanel {
   private readonly announcerVolumeInput = document.createElement('input');
   private readonly captionsInput = document.createElement('input');
   private readonly routeArtInput = document.createElement('input');
+  private readonly controlledPlayerLabelInput = document.createElement('input');
+  private readonly selectedReceiverLabelInput = document.createElement('input');
   private readonly playerMotionInput = document.createElement('input');
   private readonly officialsInput = document.createElement('input');
   private readonly officialsDebugLabelsInput = document.createElement('input');
@@ -68,6 +72,9 @@ export class SettingsPanel {
             });
           },
         })
+      : null;
+    this.rosterPreviewPanel = this.showTeamCustomization
+      ? new RosterPreviewPanel(this.settings)
       : null;
     this.root.className = 'game-setup-screen settings-panel';
     this.root.append(this.createContent());
@@ -154,6 +161,8 @@ export class SettingsPanel {
       this.createRangeRow('Announcer volume', this.announcerVolumeInput),
       this.createCheckboxRow('Captions', this.captionsInput),
       this.createCheckboxRow('Route art', this.routeArtInput),
+      this.createCheckboxRow('Controlled player label', this.controlledPlayerLabelInput),
+      this.createCheckboxRow('Selected receiver label', this.selectedReceiverLabelInput),
       this.createCheckboxRow('Player motion', this.playerMotionInput),
       this.createCheckboxRow('Officials', this.officialsInput),
       this.createCheckboxRow('Officials debug labels', this.officialsDebugLabelsInput),
@@ -164,6 +173,9 @@ export class SettingsPanel {
       const teamWrapper = document.createElement('div');
       teamWrapper.className = 'game-setup-team';
       teamWrapper.append(this.teamCustomizationPanel.root);
+      if (this.rosterPreviewPanel) {
+        teamWrapper.append(this.rosterPreviewPanel.root);
+      }
       content.append(teamWrapper);
     }
     this.installHandlers();
@@ -299,6 +311,16 @@ export class SettingsPanel {
     this.routeArtInput.addEventListener('change', () => {
       this.updateCustomSettings({ routeArtEnabled: this.routeArtInput.checked });
     });
+    this.controlledPlayerLabelInput.addEventListener('change', () => {
+      this.updateCustomSettings({
+        controlledPlayerLabelEnabled: this.controlledPlayerLabelInput.checked,
+      });
+    });
+    this.selectedReceiverLabelInput.addEventListener('change', () => {
+      this.updateCustomSettings({
+        selectedReceiverLabelEnabled: this.selectedReceiverLabelInput.checked,
+      });
+    });
     this.playerMotionInput.addEventListener('change', () => {
       this.updateCustomSettings({ playerMotionEnabled: this.playerMotionInput.checked });
     });
@@ -347,10 +369,13 @@ export class SettingsPanel {
     this.announcerVolumeInput.value = String(this.settings.announcerVolume);
     this.captionsInput.checked = this.settings.captionsEnabled;
     this.routeArtInput.checked = this.settings.routeArtEnabled;
+    this.controlledPlayerLabelInput.checked = this.settings.controlledPlayerLabelEnabled;
+    this.selectedReceiverLabelInput.checked = this.settings.selectedReceiverLabelEnabled;
     this.playerMotionInput.checked = this.settings.playerMotionEnabled;
     this.officialsDebugLabelsInput.checked = this.settings.officialsDebugLabels;
     this.officialsInput.checked = this.settings.officialsEnabled;
     this.teamCustomizationPanel?.setSettings(this.settings.teamProfiles);
+    this.rosterPreviewPanel?.setSettings(this.settings);
 
     const customEnabled = this.settings.preset === 'custom';
     for (const control of this.customControls) {

@@ -92,7 +92,7 @@ describe('team profiles', () => {
             },
           },
         },
-        version: 4,
+        version: 5,
       }),
     );
 

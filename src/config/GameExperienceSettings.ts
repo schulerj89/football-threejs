@@ -54,6 +54,7 @@ export interface GameExperienceSettings {
   audioEnabled: boolean;
   captionsEnabled: boolean;
   cinematics: CinematicsSetting;
+  controlledPlayerLabelEnabled: boolean;
   crowdAudioEnabled: boolean;
   crowdDensity: CrowdDensity;
   crowdReactionsEnabled: boolean;
@@ -70,6 +71,7 @@ export interface GameExperienceSettings {
   preset: ExperiencePreset;
   qualityMode: QualityMode;
   routeArtEnabled: boolean;
+  selectedReceiverLabelEnabled: boolean;
   stadiumEnabled: boolean;
   teamProfiles: TeamProfileSettings;
 }
@@ -87,6 +89,7 @@ export interface GameExperienceQueryOverrides {
   audioEnabled?: boolean;
   captionsEnabled?: boolean;
   cinematics?: CinematicsSetting;
+  controlledPlayerLabelEnabled?: boolean;
   crowdAudioEnabled?: boolean;
   crowdDensity?: CrowdDensity;
   crowdReactionsEnabled?: boolean;
@@ -103,6 +106,7 @@ export interface GameExperienceQueryOverrides {
   preset?: ExperiencePreset;
   qualityMode?: QualityMode;
   routeArtEnabled?: boolean;
+  selectedReceiverLabelEnabled?: boolean;
   stadiumEnabled?: boolean;
   teamProfiles?: TeamProfileSettings;
 }
@@ -163,6 +167,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   audioEnabled: true,
   captionsEnabled: false,
   cinematics: 'brief',
+  controlledPlayerLabelEnabled: true,
   crowdAudioEnabled: true,
   crowdDensity: 'low',
   crowdReactionsEnabled: true,
@@ -179,6 +184,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   preset: 'broadcast',
   qualityMode: DEFAULT_QUALITY_MODE,
   routeArtEnabled: true,
+  selectedReceiverLabelEnabled: false,
   stadiumEnabled: true,
   teamProfiles: DEFAULT_TEAM_PROFILE_SETTINGS,
 } as const;
@@ -304,6 +310,8 @@ export function normalizeGameExperienceSettings(
     cinematics: isCinematicsSetting(settings.cinematics)
       ? settings.cinematics
       : presetDefaults.cinematics,
+    controlledPlayerLabelEnabled:
+      settings.controlledPlayerLabelEnabled ?? presetDefaults.controlledPlayerLabelEnabled,
     crowdAudioEnabled: settings.crowdAudioEnabled ?? presetDefaults.crowdAudioEnabled,
     crowdDensity: isCrowdDensity(settings.crowdDensity)
       ? settings.crowdDensity
@@ -331,6 +339,8 @@ export function normalizeGameExperienceSettings(
       ? normalizeQualityMode(settings.qualityMode)
       : presetDefaults.qualityMode,
     routeArtEnabled: settings.routeArtEnabled ?? presetDefaults.routeArtEnabled,
+    selectedReceiverLabelEnabled:
+      settings.selectedReceiverLabelEnabled ?? presetDefaults.selectedReceiverLabelEnabled,
     stadiumEnabled: settings.stadiumEnabled ?? presetDefaults.stadiumEnabled,
     teamProfiles: normalizeTeamProfileSettings(
       settings.teamProfiles ?? presetDefaults.teamProfiles,
@@ -383,6 +393,12 @@ export function resolveGameExperienceQueryOverrides(
   applyBooleanOverride(overrides, 'crowdReactionsEnabled', searchParams, 'crowdReactions');
   applyBooleanOverride(overrides, 'audioEnabled', searchParams, 'audio');
   applyBooleanOverride(overrides, 'crowdAudioEnabled', searchParams, 'crowdAudio');
+  applyBooleanOverride(
+    overrides,
+    'controlledPlayerLabelEnabled',
+    searchParams,
+    'controlledPlayerLabel',
+  );
   applyBooleanOverride(overrides, 'announcerEnabled', searchParams, 'announcer');
   applyBooleanOverride(overrides, 'captionsEnabled', searchParams, 'captions');
   applyBooleanOverride(overrides, 'debugToolsEnabled', searchParams, 'debugTools');
@@ -396,6 +412,12 @@ export function resolveGameExperienceQueryOverrides(
   );
   applyBooleanOverride(overrides, 'officialsEnabled', searchParams, 'officials');
   applyBooleanOverride(overrides, 'routeArtEnabled', searchParams, 'routeArt');
+  applyBooleanOverride(
+    overrides,
+    'selectedReceiverLabelEnabled',
+    searchParams,
+    'selectedReceiverLabel',
+  );
   applyBooleanOverride(overrides, 'playerMotionEnabled', searchParams, 'playerMotion');
   applyBooleanOverride(overrides, 'stadiumEnabled', searchParams, 'stadium');
   applyVolumeOverride(overrides, 'announcerVolume', searchParams, 'announcerVolume');
@@ -550,6 +572,7 @@ function applyBooleanOverride(
     | 'announcerEnabled'
     | 'audioEnabled'
     | 'captionsEnabled'
+    | 'controlledPlayerLabelEnabled'
     | 'crowdAudioEnabled'
     | 'crowdReactionsEnabled'
     | 'crowdVisualsEnabled'
@@ -559,6 +582,7 @@ function applyBooleanOverride(
     | 'officialsEnabled'
     | 'playerMotionEnabled'
     | 'routeArtEnabled'
+    | 'selectedReceiverLabelEnabled'
     | 'stadiumEnabled'
   >,
   searchParams: URLSearchParams,

@@ -1,5 +1,9 @@
 import type { GameplaySnapshot } from './playState';
 import {
+  getRosterPlayerForGameplayId,
+  type GameplayRosterBinding,
+} from './roster/GameplayRosterBinding';
+import {
   getReadableTextColor,
   type TeamPresentationTheme,
 } from './teams/TeamThemeApplier';
@@ -114,6 +118,7 @@ export function syncGameplayHud(
   hud: GameplayHud,
   gameplay: GameplaySnapshot,
   teamTheme: TeamPresentationTheme | null = null,
+  rosterBinding: GameplayRosterBinding | null = null,
 ): void {
   if (teamTheme) {
     applyGameplayHudTeamTheme(hud, teamTheme);
@@ -130,7 +135,7 @@ export function syncGameplayHud(
   hud.playCall.textContent = gameplay.selectedPlay.displayName;
   hud.targetLabel.hidden = !gameplay.selectedReceiver;
   hud.targetLabel.textContent = gameplay.selectedReceiver
-    ? `Target ${gameplay.selectedReceiver.displayName}`
+    ? `Target ${formatTargetLabel(gameplay.selectedReceiver, rosterBinding)}`
     : '';
   hud.tackleMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'tackle';
   hud.sackMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'sack';
@@ -148,6 +153,21 @@ export function syncGameplayHud(
   hud.gameOverMessage.textContent = isGameOver
     ? `FINAL SCORE ${gameplay.scoreAttack.finalScore ?? gameplay.score} - PRESS ENTER`
     : '';
+}
+
+function formatTargetLabel(
+  selectedReceiver: NonNullable<GameplaySnapshot['selectedReceiver']>,
+  rosterBinding: GameplayRosterBinding | null,
+): string {
+  const rosterPlayer = rosterBinding
+    ? getRosterPlayerForGameplayId(rosterBinding, selectedReceiver.id)
+    : null;
+
+  if (!rosterPlayer) {
+    return selectedReceiver.displayName;
+  }
+
+  return `#${rosterPlayer.jerseyNumber} ${rosterPlayer.displayName}`;
 }
 
 export function applyGameplayHudTeamTheme(

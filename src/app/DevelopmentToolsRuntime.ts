@@ -24,6 +24,11 @@ import {
   type CrowdPresentationSnapshot,
 } from '../presentation/CrowdPresentationController';
 import {
+  createControlledPlayerLabelOverlay,
+  syncControlledPlayerLabelOverlay,
+  type ControlledPlayerLabelSnapshot,
+} from '../presentation/ControlledPlayerLabel';
+import {
   createOfficialsDebugOverlay,
   syncOfficialsDebugOverlay,
 } from '../officials/OfficialsPresentationController';
@@ -162,6 +167,7 @@ export interface FootballDebugApi {
   getAppearanceAuditSnapshot: () => AppearanceAuditSnapshot;
   getBallVisualSnapshot: () => unknown;
   getCameraSnapshot: () => GameplayCameraDebugSnapshot;
+  getControlledPlayerLabelSnapshot: () => ControlledPlayerLabelSnapshot;
   getCameraFramingSnapshot: () => CameraFramingSnapshot;
   getCrowdPresentationSnapshot: () => CrowdPresentationSnapshot | null;
   getCrowdPreviewSnapshot: () => CrowdPreviewSnapshot | null;
@@ -238,6 +244,7 @@ export interface DevelopmentToolsRuntimeOptions {
 export interface DevelopmentOverlayFrame {
   activePrimaryPlayer: Parameters<DebugOverlay['update']>[2];
   cameraSnapshot: GameplayCameraDebugSnapshot;
+  controlledPlayerLabelSnapshot: ControlledPlayerLabelSnapshot;
   crowdPresentationSnapshot: CrowdPresentationSnapshot | null;
   crowdPreviewSnapshot: CrowdPreviewSnapshot | null;
   deltaSeconds: number;
@@ -266,6 +273,7 @@ export class DevelopmentToolsRuntime {
   private audioDebugOverlay: HTMLDivElement | null = null;
   private crowdPresentationOverlay: HTMLDivElement | null = null;
   private crowdPreviewOverlay: HTMLDivElement | null = null;
+  private controlledPlayerLabelOverlay: HTMLDivElement | null = null;
   private debugOverlay: DebugOverlay | null = null;
   private elevenAuditOverlay: HTMLDivElement | null = null;
   private formationAuditOverlay: HTMLDivElement | null = null;
@@ -322,6 +330,7 @@ export class DevelopmentToolsRuntime {
       !!this.passAuditOverlay ||
       !!this.memoryDebugPanel ||
       !!this.officialsDebugOverlay ||
+      !!this.controlledPlayerLabelOverlay ||
       !!this.performanceDebugOverlay ||
       !!this.sevenAuditOverlay ||
       !!this.elevenAuditOverlay ||
@@ -374,6 +383,12 @@ export class DevelopmentToolsRuntime {
     }
     if (this.officialsDebugOverlay) {
       syncOfficialsDebugOverlay(this.officialsDebugOverlay, frame.officialsSnapshot);
+    }
+    if (this.controlledPlayerLabelOverlay) {
+      syncControlledPlayerLabelOverlay(
+        this.controlledPlayerLabelOverlay,
+        frame.controlledPlayerLabelSnapshot,
+      );
     }
     if (this.performanceDebugOverlay) {
       syncPerformanceDebugOverlay(this.performanceDebugOverlay, frame.qualityDebugSnapshot);
@@ -526,6 +541,15 @@ export class DevelopmentToolsRuntime {
       createOfficialsDebugOverlay,
       (element) => {
         this.officialsDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'rosterLabels',
+      'Roster labels',
+      queryEnabled('labelDebug') || queryEnabled('rosterDebug'),
+      createControlledPlayerLabelOverlay,
+      (element) => {
+        this.controlledPlayerLabelOverlay = element;
       },
     );
     registerElementFeature(

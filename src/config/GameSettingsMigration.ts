@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 4;
+export const GAME_SETTINGS_SCHEMA_VERSION = 5;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -42,21 +42,27 @@ function migrateOfficialSettings(value: unknown): unknown {
   if (preset === 'broadcast') {
     return {
       ...value,
+      controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
       officialsDebugLabels: value.officialsDebugLabels ?? false,
       officialsEnabled: true,
+      selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
     };
   }
 
   if (preset === 'performance') {
     return {
       ...value,
+      controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
       officialsDebugLabels: value.officialsDebugLabels ?? false,
       officialsEnabled: false,
+      selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
     };
   }
 
   return {
     ...value,
+    controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
     officialsDebugLabels: value.officialsDebugLabels ?? false,
+    selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
   };
 }

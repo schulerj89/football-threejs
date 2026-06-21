@@ -269,6 +269,8 @@ export class ApplicationDiagnostics {
         createAppearanceAuditSnapshot(this.options.playerVisuals.visuals),
       getBallVisualSnapshot: () => this.options.presentation.getBallVisualSnapshot(),
       getCameraSnapshot: () => this.options.presentation.cameraDebugSnapshot,
+      getControlledPlayerLabelSnapshot: () =>
+        this.options.presentation.getControlledPlayerLabelSnapshot(),
       getCameraFramingSnapshot: () => this.getCameraFramingSnapshot(),
       getCrowdPresentationSnapshot: () => this.options.presentation.getCrowdPresentationSnapshot(),
       getCrowdPreviewSnapshot: () => this.options.presentation.getCrowdPreviewSnapshot(),
@@ -504,6 +506,7 @@ function countActiveDebugOverlays(): number {
     '.audio-debug-overlay',
     '.crowd-presentation-overlay',
     '.crowd-preview-overlay',
+    '.controlled-player-label-debug-overlay',
     '.debug-overlay',
     '.eleven-audit-overlay',
     '.field-audit-overlay',

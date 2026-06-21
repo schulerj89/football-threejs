@@ -716,12 +716,30 @@ interface OfficialsPresentationSnapshot {
   };
 }
 
+interface ControlledPlayerLabelSnapshot {
+  labels: Array<{
+    displayName: string | null;
+    footballPosition: string | null;
+    gameplayPlayerId: string | null;
+    jerseyNumber: number | null;
+    kind: 'controlled' | 'selectedReceiver';
+    labelPosition: { x: number; y: number; z: number };
+    rosterPlayerId: string | null;
+    visibilityReason: string;
+    visible: boolean;
+  }>;
+  textureCacheKeys: string[];
+  textureCacheSize: number;
+  visibleLabelCount: number;
+}
+
 interface GameExperienceSettingsSnapshot {
   announcerEnabled: boolean;
   announcerVolume: number;
   audioEnabled: boolean;
   captionsEnabled: boolean;
   cinematics: 'brief' | 'full' | 'off';
+  controlledPlayerLabelEnabled: boolean;
   crowdAudioEnabled: boolean;
   crowdDensity: 'high' | 'low' | 'medium';
   crowdReactionsEnabled: boolean;
@@ -738,6 +756,7 @@ interface GameExperienceSettingsSnapshot {
   preset: 'broadcast' | 'custom' | 'performance';
   qualityMode: 'adaptive60' | 'lockedBroadcast' | 'lockedPerformance';
   routeArtEnabled: boolean;
+  selectedReceiverLabelEnabled: boolean;
   stadiumEnabled: boolean;
 }
 
@@ -878,6 +897,20 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
     enabled: true,
     visibleOfficialCount: 2,
   });
+  await expect.poll(async () => {
+    const labels = await getControlledPlayerLabelSnapshot(page);
+    return labels.labels.find((label) => label.kind === 'controlled');
+  }).toMatchObject({
+    displayName: 'Miles Redd',
+    gameplayPlayerId: 'offense-rb',
+    jerseyNumber: 24,
+    visible: true,
+  });
+  const labelSnapshot = await getControlledPlayerLabelSnapshot(page);
+  expect(labelSnapshot.textureCacheSize).toBe(1);
+  expect(labelSnapshot.textureCacheKeys[0]).toContain('metro-meteors-rb-24');
+  await page.waitForTimeout(100);
+  expect((await getControlledPlayerLabelSnapshot(page)).textureCacheSize).toBe(1);
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
   });
@@ -987,7 +1020,7 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
 
   await page.keyboard.press('F1');
   await expect(page.locator('.debug-panel')).toBeVisible();
-  await expect(page.locator('.debug-feature-row')).toHaveCount(18);
+  await expect(page.locator('.debug-feature-row')).toHaveCount(19);
   await expect(page.locator('.debug-feature-row span')).toContainText([
     '11v11 audit',
     '7v7 audit',
@@ -1006,6 +1039,7 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
     'Presentation',
     'Presentation hardening',
     'Quality',
+    'Roster labels',
     'Route',
   ]);
   await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').check();
@@ -1211,7 +1245,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     customSettings: null,
     preset: 'broadcast',
     settings: null,
-    version: 4,
+    version: 5,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({
@@ -1228,6 +1262,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     audioEnabled: true,
     captionsEnabled: false,
     cinematics: 'brief',
+    controlledPlayerLabelEnabled: true,
     crowdAudioEnabled: true,
     crowdDensity: 'low',
     crowdReactionsEnabled: true,
@@ -1239,6 +1274,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     playbookId: '11v11',
     preset: 'broadcast',
     routeArtEnabled: true,
+    selectedReceiverLabelEnabled: false,
     stadiumEnabled: true,
   });
   expect(experience.assetReadiness).toMatchObject({
@@ -2584,7 +2620,7 @@ test('selects plays before snap and locks selection while live', async ({ page }
     displayName: 'Receiver',
     id: 'offense-wr',
   });
-  await expect(page.locator('.target-label')).toHaveText('Target Receiver');
+  await expect(page.locator('.target-label')).toHaveText('Target #11 Silas Cross');
 
   await page.keyboard.press('4');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
@@ -2592,7 +2628,7 @@ test('selects plays before snap and locks selection while live', async ({ page }
     selectedReceiver: { id: 'offense-wr', displayName: 'Slant' },
   });
   await expect(page.locator('.play-call')).toHaveText('Slant Flat');
-  await expect(page.locator('.target-label')).toHaveText('Target Slant');
+  await expect(page.locator('.target-label')).toHaveText('Target #11 Silas Cross');
   const slantFlat = await getGameplaySnapshot(page);
   expect(slantFlat.player).toMatchObject({ id: 'offense-qb', role: 'quarterback' });
   expect(getPlayer(slantFlat, 'offense-wr')).toMatchObject({ role: 'receiver' });
@@ -2605,7 +2641,7 @@ test('selects plays before snap and locks selection while live', async ({ page }
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     selectedReceiver: { id: 'offense-rb', displayName: 'Flat' },
   });
-  await expect(page.locator('.target-label')).toHaveText('Target Flat');
+  await expect(page.locator('.target-label')).toHaveText('Target #24 Miles Redd');
 
   await page.keyboard.press('1');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
@@ -2719,7 +2755,7 @@ test('selects Slant Flat, cycles the target, and throws to the selected receiver
 
   await page.keyboard.press('4');
   await expect(page.locator('.play-call')).toHaveText('Slant Flat');
-  await expect(page.locator('.target-label')).toHaveText('Target Slant');
+  await expect(page.locator('.target-label')).toHaveText('Target #11 Silas Cross');
   const preSnap = await getGameplaySnapshot(page);
   const leftReceiverBeforeSnap = getPlayer(preSnap, 'offense-wr');
   const rightReceiverBeforeSnap = getPlayer(preSnap, 'offense-rb');
@@ -2732,7 +2768,7 @@ test('selects Slant Flat, cycles the target, and throws to the selected receiver
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     selectedReceiver: { displayName: 'Flat', id: 'offense-rb' },
   });
-  await expect(page.locator('.target-label')).toHaveText('Target Flat');
+  await expect(page.locator('.target-label')).toHaveText('Target #24 Miles Redd');
 
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
@@ -3602,6 +3638,24 @@ async function getOfficialsSnapshot(page: Page): Promise<OfficialsPresentationSn
     }
 
     return debugApi.getOfficialsSnapshot();
+  });
+}
+
+async function getControlledPlayerLabelSnapshot(page: Page): Promise<ControlledPlayerLabelSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getControlledPlayerLabelSnapshot: () => ControlledPlayerLabelSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getControlledPlayerLabelSnapshot();
   });
 }
 

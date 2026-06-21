@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.53.0] - 2026-06-21
+
+### Added
+
+- Added fictional roster identities for every starter and specialist on the four starter teams, with stable roster IDs, jersey numbers, football positions, archetypes, appearance IDs, and position-number convention warnings.
+- Added active lineup binding from stable gameplay player IDs to roster player IDs for the maintained 5v5, 7v7, and default 11v11 playbooks without replacing gameplay IDs.
+- Added a title/setup roster preview listing the active lineup's number, name, and football position for the selected game mode and teams.
+- Added a pooled retro world-space controlled-player label that displays the current carrier's roster name and jersey number, transfers after catches, caches label textures by roster player, and stays presentation-only.
+
+### Changed
+
+- Extended settings schema version 5 with controlled-player and selected-receiver label toggles, defaulting the controlled-player label on and the selected-receiver label off.
+- Updated HUD pass-target text to resolve roster names and jersey numbers when a roster binding is available while preserving gameplay receiver IDs and display labels.
+- Added F1/debug readback for roster-label presentation state, including gameplay ID, roster ID, display name, number, visibility reason, label position, and texture-cache size.
+
+### Tests
+
+- Added roster identity and controlled-player label unit coverage for unique jersey numbers, lineup binding, stable identities across resets/play changes, catch transfer, texture caching, disabled-label behavior, and readable team colors.
+- Updated browser smoke coverage for the default controlled-player label, roster target labels, settings migration, and the expanded experience settings snapshot.
+
 ## [0.52.0] - 2026-06-21
 
 ### Added

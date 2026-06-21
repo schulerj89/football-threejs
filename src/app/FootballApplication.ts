@@ -373,6 +373,7 @@ export class FootballApplication {
     this.developmentTools.syncGameplayOverlays({
       activePrimaryPlayer,
       cameraSnapshot: this.presentation.cameraDebugSnapshot,
+      controlledPlayerLabelSnapshot: this.presentation.getControlledPlayerLabelSnapshot(),
       crowdPresentationSnapshot: this.presentation.getCrowdPresentationSnapshot(),
       crowdPreviewSnapshot: this.presentation.getCrowdPreviewSnapshot(),
       deltaSeconds: delta,

@@ -85,6 +85,14 @@ import {
   resolveTeamPresentationTheme,
   type TeamPresentationTheme,
 } from '../teams/TeamThemeApplier';
+import {
+  createGameplayRosterBinding,
+  type GameplayRosterBinding,
+} from '../roster/GameplayRosterBinding';
+import {
+  ControlledPlayerLabelRenderer,
+  type ControlledPlayerLabelSnapshot,
+} from '../presentation/ControlledPlayerLabel';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -122,6 +130,7 @@ export class PresentationRuntime {
   readonly routeArtRenderer: RouteArtRenderer;
   readonly stadiumController: StadiumController;
   readonly officialsController: OfficialsPresentationController;
+  readonly controlledPlayerLabels: ControlledPlayerLabelRenderer;
 
   private readonly scene: THREE.Scene;
   private cameraController: GameplayCameraController;
@@ -136,6 +145,7 @@ export class PresentationRuntime {
   private readonly searchParams: URLSearchParams;
   private readonly shotPreview: ReturnType<typeof resolvePresentationShotPreview>;
   private teamTheme: TeamPresentationTheme;
+  private rosterBinding: GameplayRosterBinding;
   private crowdBenchmarkSuppressed = false;
 
   constructor({
@@ -152,6 +162,10 @@ export class PresentationRuntime {
     this.searchParams = searchParams;
     this.gameExperience = gameExperience;
     this.teamTheme = resolveTeamPresentationTheme(gameExperience.settings.teamProfiles);
+    this.rosterBinding = createGameplayRosterBinding(
+      gameExperience.settings.playbookId,
+      gameExperience.settings.teamProfiles,
+    );
     this.qualityProfile = getQualityProfile('broadcastHigh');
     this.crowdPresentationSettings = resolveEffectiveCrowdSettings(
       gameExperience.crowdPresentationSettings,
@@ -221,6 +235,16 @@ export class PresentationRuntime {
       enabled: gameExperience.settings.routeArtEnabled,
     });
     this.scene.add(this.routeArtRenderer.group);
+
+    this.controlledPlayerLabels = new ControlledPlayerLabelRenderer({
+      binding: this.rosterBinding,
+      settings: {
+        controlledPlayerLabelEnabled: gameExperience.settings.controlledPlayerLabelEnabled,
+        selectedReceiverLabelEnabled: gameExperience.settings.selectedReceiverLabelEnabled,
+      },
+      teamTheme: this.teamTheme,
+    });
+    this.scene.add(this.controlledPlayerLabels.group);
 
     this.cameraController = this.createCameraController();
     this.audioMixer = new AudioMixer({
@@ -378,18 +402,24 @@ export class PresentationRuntime {
       });
     }
     const cameraSnapshot = this.cameraController.getDebugSnapshot();
+    this.controlledPlayerLabels.update(
+      gameplaySnapshot,
+      this.cameraController.camera,
+      cameraSnapshot,
+      active,
+    );
     this.presentationHoldDirector.updateCameraState(cameraSnapshot);
     this.gamePresentationRuntime.recordCameraSnapshot(cameraSnapshot);
     if (profiler?.enabled) {
       profiler.measure('hudDomUpdate', () => {
-        syncGameplayHud(this.gameplayHud, gameplaySnapshot, this.teamTheme);
+        syncGameplayHud(this.gameplayHud, gameplaySnapshot, this.teamTheme, this.rosterBinding);
         syncBroadcastCaptions(
           this.broadcastCaptions,
           this.broadcastCommentaryDirector.getSnapshot(),
         );
       });
     } else {
-      syncGameplayHud(this.gameplayHud, gameplaySnapshot, this.teamTheme);
+      syncGameplayHud(this.gameplayHud, gameplaySnapshot, this.teamTheme, this.rosterBinding);
       syncBroadcastCaptions(
         this.broadcastCaptions,
         this.broadcastCommentaryDirector.getSnapshot(),
@@ -408,6 +438,7 @@ export class PresentationRuntime {
   syncApplicationChrome(appPhase: 'gameplay' | 'title'): void {
     document.body.dataset.appPhase = appPhase;
     this.gameplayHud.root.hidden = appPhase !== 'gameplay';
+    this.controlledPlayerLabels.setApplicationPhase(appPhase);
     if (appPhase !== 'gameplay') {
       this.playCallUi?.hide();
       this.broadcastCaptions.hidden = true;
@@ -423,6 +454,10 @@ export class PresentationRuntime {
 
     this.gameExperience = gameExperience;
     this.teamTheme = resolveTeamPresentationTheme(gameExperience.settings.teamProfiles);
+    this.rosterBinding = createGameplayRosterBinding(
+      gameExperience.settings.playbookId,
+      gameExperience.settings.teamProfiles,
+    );
     this.crowdPresentationSettings = resolveEffectiveCrowdSettings(
       gameExperience.crowdPresentationSettings,
       this.qualityProfile,
@@ -430,6 +465,12 @@ export class PresentationRuntime {
     this.audioMixer.setFeatureFlags(gameExperience.audioFeatureFlags);
     this.audioMixer.setSettings(gameExperience.audioSettings);
     this.routeArtRenderer.setEnabled(gameExperience.settings.routeArtEnabled);
+    this.controlledPlayerLabels.setBinding(this.rosterBinding);
+    this.controlledPlayerLabels.setSettings({
+      controlledPlayerLabelEnabled: gameExperience.settings.controlledPlayerLabelEnabled,
+      selectedReceiverLabelEnabled: gameExperience.settings.selectedReceiverLabelEnabled,
+    });
+    this.controlledPlayerLabels.setTeamTheme(this.teamTheme);
     this.playerPoseController.setEnabled(gameExperience.settings.playerMotionEnabled);
     this.officialsController.applySettings({
       debugLabelsEnabled: gameExperience.settings.officialsDebugLabels,
@@ -530,6 +571,10 @@ export class PresentationRuntime {
     return this.routeArtRenderer.getSnapshot();
   }
 
+  getControlledPlayerLabelSnapshot(): ControlledPlayerLabelSnapshot {
+    return this.controlledPlayerLabels.getSnapshot();
+  }
+
   recordCrowdPresentationFrame(deltaSeconds: number, renderer: THREE.WebGLRenderer): void {
     this.crowdPresentationController?.recordFrame(deltaSeconds, renderer);
   }
@@ -541,7 +586,9 @@ export class PresentationRuntime {
   dispose(): void {
     this.scene.remove(this.ballVisual);
     this.scene.remove(this.routeArtRenderer.group);
+    this.scene.remove(this.controlledPlayerLabels.group);
     this.routeArtRenderer.dispose();
+    this.controlledPlayerLabels.dispose();
     if (this.crowdPreviewController) {
       this.scene.remove(this.crowdPreviewController.group);
       this.crowdPreviewController.dispose();
