@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.48.0] - 2026-06-21
+
+### Added
+
+- Added a versioned `GameSettings` facade, migration helper, and localStorage store for player-facing settings, including playbook, presentation, crowd, audio volume, route-art, player-motion, officials, and debug-tool preferences.
+- Added a registry-driven runtime debug panel toggled with `F1`, with lazily created/disposed debug features for metrics, camera, formation, route, passing, appearance, audio, commentary, crowd, presentation, memory, and audit overlays.
+- Added settings UI support for debug tools, route art, procedural motion, officials, mute, and master/crowd/announcer volumes.
+
+### Changed
+
+- Replaced the setup widget with the new `SettingsPanel`, while preserving the title and pause flows and keeping `GameSetupScreen` as a compatibility export.
+- Updated game-mode choices to come from playbook registry metadata instead of a second hard-coded UI list.
+- Runtime settings now apply safe presentation changes immediately, including camera, captions, route art, player motion, crowd settings, audio gains, mute, and debug visibility.
+
+### Tests
+
+- Added unit coverage for settings migration/persistence and debug-feature lazy lifecycle.
+- Added browser smoke coverage for `F1` debug-panel toggling and title-screen debug-setting persistence.
+
 ## [0.47.1] - 2026-06-21
 
 ### Changed
