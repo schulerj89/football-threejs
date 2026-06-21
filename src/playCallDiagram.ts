@@ -7,12 +7,11 @@ import {
   type ResolvedFormationSlot,
 } from './formationLayout';
 import {
-  getEligibleReceiverIds,
   type PlayDefinition,
 } from './playbook';
 import {
-  getRouteFinalPoint,
-  resolveReceiverRoute,
+  resolveEligibleReceiverRoutes,
+  type ResolvedReceiverRoute,
 } from './receiverRoutes';
 
 export interface SvgPoint {
@@ -48,6 +47,8 @@ export interface PlayCallPlayerMarker {
 
 export interface PlayCallRoute {
   end: SvgPoint;
+  footballPoints: FootballSpot[];
+  points: SvgPoint[];
   receiverId: string;
   start: SvgPoint;
 }
@@ -94,7 +95,7 @@ export function createPlayCallDiagramModel(
   const formation = resolveFormation(play, snapPlacement);
   const ballCarrier = getBallCarrierSlot(play, formation.slots);
   const blockerTargets = resolveBlockerTargets(play, snapPlacement);
-  const receiverRouteTargets = resolveReceiverRouteTargets(play, snapPlacement);
+  const receiverRoutes = resolveEligibleReceiverRoutes(play, snapPlacement);
   const runTarget = play.kind === 'run'
     ? resolveRunTarget(play, ballCarrier.position, blockerTargets)
     : null;
@@ -102,7 +103,7 @@ export function createPlayCallDiagramModel(
     snapPlacement.spot,
     ...formation.slots.map((slot) => slot.position),
     ...Object.values(blockerTargets),
-    ...Object.values(receiverRouteTargets),
+    ...receiverRoutes.flatMap((route) => route.points),
   ];
 
   if (runTarget) {
@@ -151,25 +152,18 @@ export function createPlayCallDiagramModel(
         point: normalizeFootballSpotToSvg(slot.position, transform),
         role: slot.role,
       })),
-    receiverRoutes: getEligibleReceiverIds(play)
-      .map((receiverId) => {
-        const receiver = formation.slots.find((slot) => slot.id === receiverId);
-        const target = receiverRouteTargets[receiverId];
-
-        if (!receiver || !target) {
-          return null;
-        }
-
-        return {
-          end: normalizeFootballSpotToSvg(target, transform),
-          receiverId,
-          start: normalizeFootballSpotToSvg(receiver.position, transform),
-        };
-      })
-      .filter((route): route is PlayCallRoute => route !== null),
+    receiverRoutes: receiverRoutes.map((route) => createPlayCallRoute(route, transform)),
     runDirection: runTarget
       ? {
           end: normalizeFootballSpotToSvg(runTarget, transform),
+          footballPoints: [
+            { ...ballCarrier.position },
+            { ...runTarget },
+          ],
+          points: [
+            normalizeFootballSpotToSvg(ballCarrier.position, transform),
+            normalizeFootballSpotToSvg(runTarget, transform),
+          ],
           receiverId: ballCarrier.id,
           start: normalizeFootballSpotToSvg(ballCarrier.position, transform),
         }
@@ -254,19 +248,6 @@ function resolveBlockerTargets(
   );
 }
 
-function resolveReceiverRouteTargets(
-  play: PlayDefinition,
-  snapPlacement: SnapPlacement,
-): Record<string, FootballSpot> {
-  return Object.fromEntries(
-    Object.keys(play.receiverRoutes ?? {}).flatMap((receiverId) => {
-      const route = resolveReceiverRoute(play, receiverId, snapPlacement);
-
-      return route ? [[receiverId, getRouteFinalPoint(route)]] : [];
-    }),
-  );
-}
-
 function resolveRunTarget(
   play: PlayDefinition,
   carrierPosition: FootballSpot,
@@ -284,6 +265,21 @@ function resolveRunTarget(
   return {
     x: carrierPosition.x + play.initialMovementDirection.x * RUN_ARROW_YARDS,
     z: carrierPosition.z + play.initialMovementDirection.z * RUN_ARROW_YARDS,
+  };
+}
+
+function createPlayCallRoute(
+  route: ResolvedReceiverRoute,
+  transform: FootballToSvgTransform,
+): PlayCallRoute {
+  const points = route.points.map((point) => normalizeFootballSpotToSvg(point, transform));
+
+  return {
+    end: points[points.length - 1],
+    footballPoints: route.points.map((point) => ({ ...point })),
+    points,
+    receiverId: route.receiverId,
+    start: points[0],
   };
 }
 

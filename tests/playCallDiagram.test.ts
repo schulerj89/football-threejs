@@ -7,6 +7,7 @@ import {
   normalizeFootballSpotToSvg,
 } from '../src/playCallDiagram';
 import { getEligibleReceiverIds, getPlay, PLAYS } from '../src/playbook';
+import { resolveEligibleReceiverRoutes } from '../src/receiverRoutes';
 
 describe('play call diagrams', () => {
   it('creates one diagram model for every available offensive play', () => {
@@ -43,6 +44,7 @@ describe('play call diagrams', () => {
       expect(diagram.receiverRoutes.map((route) => route.receiverId)).toEqual(
         getEligibleReceiverIds(play),
       );
+      expect(diagram.receiverRoutes.every((route) => route.points.length >= 2)).toBe(true);
     }
   });
 
@@ -74,6 +76,23 @@ describe('play call diagrams', () => {
     expect(quickPass.receiverRoutes[0].end.x).toBeGreaterThan(quickPass.receiverRoutes[0].start.x);
     expect(slantFlat.receiverRoutes[0].end.x).toBeGreaterThan(slantFlat.receiverRoutes[0].start.x);
     expect(slantFlat.receiverRoutes[1].end.x).toBeGreaterThan(slantFlat.receiverRoutes[1].start.x);
+  });
+
+  it('normalizes every resolved route point into the play-card route geometry', () => {
+    const snapPlacement = createCenterSnapPlacement(INITIAL_BALL_SPOT);
+    const play = getPlay('slant-flat');
+    const diagram = createPlayCallDiagramModel(play, snapPlacement);
+    const resolvedRoutes = resolveEligibleReceiverRoutes(play, snapPlacement);
+
+    for (const resolvedRoute of resolvedRoutes) {
+      const cardRoute = diagram.receiverRoutes.find((route) => route.receiverId === resolvedRoute.receiverId);
+
+      expect(cardRoute).toBeDefined();
+      expect(cardRoute?.footballPoints).toEqual(resolvedRoute.points);
+      expect(cardRoute?.points).toEqual(
+        resolvedRoute.points.map((point) => normalizeFootballSpotToSvg(point, diagram.transform)),
+      );
+    }
   });
 
   it('normalizes football coordinates into SVG coordinates with the defense above the line', () => {

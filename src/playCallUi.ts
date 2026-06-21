@@ -151,16 +151,15 @@ function createDiagramSvg(model: PlayCallDiagramModel): SVGSVGElement {
   }
 
   if (model.runDirection) {
-    svg.appendChild(createArrowLine(
-      model.runDirection.start,
-      model.runDirection.end,
+    svg.appendChild(createArrowPath(
+      model.runDirection.points,
       'play-card-run-direction',
       runMarkerId,
     ));
   }
 
   for (const route of model.receiverRoutes) {
-    svg.appendChild(createArrowLine(route.start, route.end, 'play-card-receiver-route', routeMarkerId));
+    svg.appendChild(createArrowPath(route.points, 'play-card-receiver-route', routeMarkerId));
   }
 
   for (const player of model.players) {
@@ -294,13 +293,18 @@ function createAssignmentBar(start: SvgPoint, end: SvgPoint): SVGLineElement {
   );
 }
 
-function createArrowLine(
-  start: SvgPoint,
-  end: SvgPoint,
+function createArrowPath(
+  points: readonly SvgPoint[],
   className: string,
   markerId: string,
-): SVGLineElement {
-  const line = createLine(start, end, className);
+): SVGPolylineElement {
+  const line = createSvgElement('polyline');
+  line.classList.add(className);
+  line.setAttribute(
+    'points',
+    points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' '),
+  );
+  line.setAttribute('fill', 'none');
   line.setAttribute('marker-end', `url(#${markerId})`);
 
   return line;

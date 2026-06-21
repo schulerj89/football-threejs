@@ -6,6 +6,7 @@ import { ALL_PLAYS, getPlay } from '../src/playbook';
 import {
   advanceRouteState,
   calculateCrossTrackError,
+  createReceiverRouteAuditSnapshot,
   createReceiverRouteState,
   getRouteFinalPoint,
   getRouteTangentAtDistance,
@@ -109,6 +110,44 @@ describe('receiver routes', () => {
     expect(projection.distanceAlongRoute).toBe(4);
     expect(calculateCrossTrackError(route, { x: 3, z: 4 })).toBe(3);
     expect(getRouteTangentAtDistance(route, 2)).toEqual({ x: 0, z: 1 });
+  });
+
+  it('reports approximately zero cross-track error when a receiver is on the route', () => {
+    const route = makeRoute([
+      { x: 0, z: 0 },
+      { x: 0, z: 10 },
+    ]);
+    const audit = createReceiverRouteAuditSnapshot(route, { x: 0, z: 4 });
+
+    expect(audit.nearestPoint).toEqual({ x: 0, z: 4 });
+    expect(audit.crossTrackErrorYards).toBeCloseTo(0);
+    expect(audit.exceedsTolerance).toBe(false);
+  });
+
+  it('reports approximately one yard of cross-track error from a straight route', () => {
+    const route = makeRoute([
+      { x: 0, z: 0 },
+      { x: 0, z: 10 },
+    ]);
+    const audit = createReceiverRouteAuditSnapshot(route, { x: 1, z: 4 }, undefined, 0.75);
+
+    expect(audit.nearestPoint).toEqual({ x: 0, z: 4 });
+    expect(audit.crossTrackErrorYards).toBeCloseTo(1);
+    expect(audit.exceedsTolerance).toBe(true);
+  });
+
+  it('projects correctly near segment junctions', () => {
+    const route = makeRoute([
+      { x: 0, z: 0 },
+      { x: 0, z: 5 },
+      { x: 8, z: 5 },
+    ]);
+    const projection = projectPointOntoRoute(route, { x: 0.4, z: 5.2 });
+
+    expect(projection.segmentIndex).toBe(1);
+    expect(projection.point.x).toBeCloseTo(0.4);
+    expect(projection.point.z).toBeCloseTo(5);
+    expect(projection.distanceAlongRoute).toBeCloseTo(5.4);
   });
 
   it('produces distinct slant and flat paths', () => {

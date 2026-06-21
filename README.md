@@ -4,7 +4,7 @@ Low-poly 3D American football prototype built with Three.js, Vite, and TypeScrip
 
 The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness for validating controls, play states, formations, ball spotting, passing, tackling, downs, and camera language before the full game structure arrives.
 
-The current milestone adds a deterministic multi-segment receiver-route foundation. Receiver routes are now ordered mathematical paths with explicit route progress, active segment state, sampling, tangents, projection, and reset behavior. The default playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, and `?playbook=7v7` runs the optional Twin Slants Flat passing drill. The prototype includes graphical pre-snap SVG play cards generated from gameplay data, visual-only procedural player poses and locomotion, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, a development-only `?formationPreview=7v7` staging mode, the preserved orthographic three-quarter camera, the behind-the-offense perspective camera, and the optional cinematic broadcast camera.
+The current milestone adds on-field receiver route art and route auditing. Receiver routes are ordered mathematical paths with explicit route progress, active segment state, sampling, tangents, projection, reset behavior, pre-snap field visualization, and development-only cross-track auditing. The default playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, and `?playbook=7v7` runs the optional Twin Slants Flat passing drill. The prototype includes graphical pre-snap SVG play cards generated from gameplay data, visual-only procedural player poses and locomotion, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, a development-only `?formationPreview=7v7` staging mode, the preserved orthographic three-quarter camera, the behind-the-offense perspective camera, and the optional cinematic broadcast camera.
 
 ## World Scale
 
@@ -61,7 +61,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Avoid defenders to score; defender contact ends the play as a tackle.
 - AI blockers move toward lane targets and can engage one defender each to slow pursuit.
 - Coverage defenders track their assigned receivers while ordinary defenders use the existing simple pursuit or pass-rush behavior. In the 7v7 passing drill, the center and line players use explicit pass-protection assignments, corners and linebacker use explicit coverage assignments, and defenders switch to carrier pursuit after a catch.
-- Receiver route definitions are ordered waypoint paths resolved through the same formation and snap-placement math as player formations. Runtime route progress belongs to the gameplay model and resets with play selection, snap, play reset, and challenge restart.
+- Receiver route definitions are ordered waypoint paths resolved through the same formation and snap-placement math as player formations. Runtime route progress belongs to the gameplay model and resets with play selection, snap, play reset, and challenge restart. Receiver simulation, graphical play cards, and on-field route art all consume `ResolvedReceiverRoute` data rather than separate diagram coordinates.
 - Crossing a sideline during a live play ends the play out of bounds.
 - AI-controlled non-carriers stay inside the playable field while the active ball carrier may cross a sideline to end the play.
 - Each procedural low-poly player body keeps its gameplay-driven collision and movement while displaying a cloned `low_poly_helmet.glb` helmet attached to a head anchor.
@@ -70,6 +70,8 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Use `?debugRoleColors=1` to restore role-colored player bodies for visual debugging.
 - Use `?formationPreview=7v7` for the static fourteen-player development preview. In that mode, press `1` for left-hash staging, `2` for middle staging, and `3` for right-hash staging. Space does not start a play in preview mode.
 - Use `?presentationAudit=1` with `?formationPreview=7v7` to show the 7v7 presentation audit. Add `?presentationState=locomotion` or press `L` for the visual-only locomotion preview; press `P` to return to pre-snap audit framing.
+- Use `?routeArt=0` to disable pre-snap on-field receiver route art, or `?routeArt=1` to explicitly enable it.
+- Use `?routeAudit=1` to show development route auditing with active segment, route distance, completion percentage, nearest projected route point, and cross-track error.
 - Sack, tackle, completed pass, and out-of-bounds results display signed yards gained or lost from the exact dead-ball spot, then reset the next play at the nearest snap lane: left hash, middle, or right hash.
 - Incomplete passes end the play at the original line of scrimmage and advance the down.
 - The drill tracks down, distance, ball position, and score.
@@ -89,6 +91,8 @@ Add `?fieldAudit=1` to show field geometry validation helpers: authoritative fie
 Add `?formationAudit=1` to show the resolved semantic formation: snap lane, field/boundary side, player positions, lateral/depth offsets, and any validation issues highlighted in red.
 
 Add `?presentationAudit=1` to show the development-only presentation audit for 7v7 preview scenarios. It reports snap lane, audit state, camera mode, presentation phase, visual-bound framing, grounding, helmet attachment and gap checks, frame time, draw calls, triangles, player mesh count, material count, and any presentation validation issues.
+
+Add `?routeAudit=1` to show the development-only route audit overlay for receiver routes. It reports route ID, receiver ID, active segment, distance completed, total route distance, completion percentage, nearest projected route point, and cross-track error in yards.
 
 ## Current Non-Goals And Future Scope
 

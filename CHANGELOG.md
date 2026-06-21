@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.27.0] - 2026-06-21
+
+### Added
+
+- Added on-field receiver route art that renders eligible receiver paths before the snap from the same resolved route data used by receiver simulation.
+- Added selected-receiver route highlighting, start markers, break markers, and route-end arrowheads above the turf.
+- Added `?routeArt=0` / `?routeArt=1` route-art control and development-only `?routeAudit=1` route audit mode.
+- Added route-audit measurements for active segment, route progress, completion percentage, nearest projected route point, and cross-track error.
+- Added unit and browser coverage for route art visibility, selected-state rendering, route-audit math, mirrored hash-lane routes, and play-card multi-segment route geometry.
+
+### Changed
+
+- Graphical play cards now draw multi-segment receiver routes from resolved route points instead of a single line to the final target.
+
 ## [0.26.0] - 2026-06-21
 
 ### Added

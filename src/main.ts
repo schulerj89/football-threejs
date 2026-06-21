@@ -54,6 +54,12 @@ import {
   type PlayerPoseSnapshot,
 } from './presentation/PlayerPoseController';
 import {
+  RouteArtRenderer,
+  createRouteAuditOverlay,
+  syncRouteAuditOverlay,
+  type RouteArtRendererSnapshot,
+} from './presentation/RouteArtRenderer';
+import {
   PRESENTATION_AUDIT_CONFIG,
   createCameraFramingSnapshot,
   createPresentationAuditGameplaySnapshot,
@@ -78,6 +84,7 @@ import {
 declare global {
   interface Window {
     __footballDebug?: {
+      forceQuarterbackPastLineForTest: () => boolean;
       getCameraSnapshot: () => GameplayCameraDebugSnapshot;
       getCameraFramingSnapshot: () => CameraFramingSnapshot;
       getFormationPreviewSnapshot: () => FormationPreviewSnapshot | null;
@@ -88,6 +95,7 @@ declare global {
       getPlayerPoseSnapshots: () => PlayerPoseSnapshot[];
       getPlayerSnapshot: () => PlayerSnapshot;
       getRenderMetrics: () => RenderMetricsSnapshot;
+      getRouteArtSnapshot: () => RouteArtRendererSnapshot;
     };
   }
 }
@@ -110,6 +118,8 @@ const playerMotionEnabled = searchParams.get('playerMotion') !== '0';
 const formationPreviewMode = resolveFormationPreviewMode(searchParams.get('formationPreview'));
 const playbookId = resolvePlaybookId(searchParams.get('playbook') ?? searchParams.get('roster'));
 const presentationAuditEnabled = searchParams.has('presentationAudit');
+const routeAuditEnabled = searchParams.has('routeAudit');
+const routeArtEnabled = searchParams.get('routeArt') !== '0';
 let presentationAuditState: PresentationAuditState = resolvePresentationAuditState(
   searchParams.get('presentationState'),
 );
@@ -134,6 +144,12 @@ attachHelmetsToPlayerVisuals(playerVisuals, getActivePlayers());
 const ballVisual = createBallVisual();
 syncBallVisual(ballVisual, gameplayModel.ball);
 scene.add(ballVisual);
+
+const routeArtRenderer = new RouteArtRenderer({
+  auditEnabled: routeAuditEnabled,
+  enabled: routeArtEnabled,
+});
+scene.add(routeArtRenderer.group);
 
 const cameraController = new GameplayCameraController({
   height: window.innerHeight,
@@ -175,12 +191,26 @@ const formationAuditOverlay = searchParams.has('formationAudit')
 const presentationAuditOverlay = presentationAuditEnabled
   ? createPresentationAuditOverlay()
   : null;
+const routeAuditOverlay = routeAuditEnabled ? createRouteAuditOverlay() : null;
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 let latestRenderMetrics: RenderMetricsSnapshot | null = null;
 
 if (import.meta.env.DEV || searchParams.has('debug') || presentationAuditEnabled) {
   window.__footballDebug = {
+    forceQuarterbackPastLineForTest: () => {
+      if (
+        gameplayModel.playState !== 'live' ||
+        gameplayModel.player.role !== 'quarterback'
+      ) {
+        return false;
+      }
+
+      gameplayModel.player.position.z = gameplayModel.drive.lineOfScrimmage.z + 0.25;
+      gameplayModel.player.velocity.x = 0;
+      gameplayModel.player.velocity.z = 0;
+      return true;
+    },
     getCameraSnapshot: () => cameraController.getDebugSnapshot(),
     getCameraFramingSnapshot: () => getCameraFramingSnapshot(),
     getFormationPreviewSnapshot: () =>
@@ -193,6 +223,7 @@ if (import.meta.env.DEV || searchParams.has('debug') || presentationAuditEnabled
     getPlayerPoseSnapshots: () => playerPoseController.getPoseSnapshots(),
     getPlayerSnapshot: () => snapshotPlayerModel(getActivePrimaryPlayer()),
     getRenderMetrics: () => latestRenderMetrics ?? createRenderMetricsSnapshot(0),
+    getRouteArtSnapshot: () => routeArtRenderer.getSnapshot(),
   };
   window.addEventListener('keydown', handleDevelopmentCameraToggle);
 }
@@ -257,6 +288,7 @@ function renderFrame(delta: number): void {
     }
   }
   syncBallVisual(ballVisual, formationPreviewModel?.ball ?? gameplayModel.ball);
+  routeArtRenderer.update(gameplaySnapshot, gameplayModel.selectedPlay);
   playerPoseController.update(gameplaySnapshot, playerVisuals, delta);
   cameraController.update(gameplaySnapshot, delta);
   syncGameplayHud(gameplayHud, gameplaySnapshot);
@@ -278,6 +310,9 @@ function renderFrame(delta: number): void {
       presentationAuditOverlay,
       getPresentationAuditSnapshot() ?? createEmptyPresentationAuditSnapshot(),
     );
+  }
+  if (routeAuditOverlay) {
+    syncRouteAuditOverlay(routeAuditOverlay, routeArtRenderer.getSnapshot());
   }
   const renderMetrics = debugOverlay.isVisible() ? latestRenderMetrics ?? undefined : undefined;
   debugOverlay.update(
@@ -482,7 +517,7 @@ function getPresentationAuditSnapshot(): PresentationAuditSnapshot | null {
 }
 
 function shouldCollectPresentationDiagnostics(): boolean {
-  return debugOverlay.isVisible() || !!poseDebugOverlay || !!presentationAuditOverlay;
+  return debugOverlay.isVisible() || !!poseDebugOverlay || !!presentationAuditOverlay || !!routeAuditOverlay;
 }
 
 function createEmptyPresentationAuditSnapshot(): PresentationAuditSnapshot {

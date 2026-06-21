@@ -237,6 +237,30 @@ interface PresentationAuditSnapshot {
   state: 'locomotionPreview' | 'preSnap';
 }
 
+interface RouteArtRendererSnapshot {
+  auditEnabled: boolean;
+  enabled: boolean;
+  rebuildKey: string;
+  routeCount: number;
+  routes: Array<{
+    audit: null | {
+      completionPercentage: number;
+      crossTrackErrorYards: number;
+      distanceAlongRoute: number;
+      nearestPoint: FootballSpot;
+      receiverId: string;
+      routeId: string;
+      segmentIndex: number;
+      totalLength: number;
+    };
+    points: FootballSpot[];
+    receiverId: string;
+    routeId: string;
+    selected: boolean;
+  }>;
+  visible: boolean;
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -689,6 +713,51 @@ test('renders graphical play cards and selects plays through the shared request 
   expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('quick-pass');
 });
 
+test('shows on-field receiver routes before snap and supports route audit mode', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?debug=1&readback=1&routeArt=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  await page.keyboard.press('4');
+  await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({
+    routeCount: 2,
+    visible: true,
+  });
+  const preSnapRoutes = await getRouteArtSnapshot(page);
+  expect(preSnapRoutes.routes.map((route) => route.receiverId)).toEqual(['offense-wr', 'offense-rb']);
+  expect(preSnapRoutes.routes.every((route) => route.points.length >= 3)).toBe(true);
+  expect(preSnapRoutes.routes.find((route) => route.receiverId === 'offense-wr')?.selected).toBe(true);
+
+  await page.keyboard.press('e');
+  await expect.poll(async () =>
+    (await getRouteArtSnapshot(page)).routes.find((route) => route.receiverId === 'offense-rb')?.selected,
+  ).toBe(true);
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({ visible: false });
+
+  await page.goto('/?debug=1&readback=1&routeArt=0');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.keyboard.press('3');
+  await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({
+    enabled: false,
+    visible: false,
+  });
+
+  await page.goto('/?debug=1&readback=1&routeAudit=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.keyboard.press('3');
+  await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({
+    auditEnabled: true,
+    routeCount: 1,
+    visible: true,
+  });
+  const auditRoutes = await getRouteArtSnapshot(page);
+  expect(auditRoutes.routes[0].audit).not.toBeNull();
+  await expect(page.locator('.route-audit-overlay')).toContainText('ROUTE AUDIT');
+});
+
 test('starts playable 7v7 Twin Slants Flat and throws to the selected target', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?debug=1&readback=1&playbook=7v7');
@@ -1126,7 +1195,7 @@ test('offense perspective tracks an in-flight pass', async ({ page }) => {
 });
 
 test('rejects Quick Pass after the quarterback crosses the line of scrimmage', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&routeArt=0&playerMotion=0');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('3');
@@ -1137,29 +1206,8 @@ test('rejects Quick Pass after the quarterback crosses the line of scrimmage', a
     playState: 'live',
   });
 
-  await page.keyboard.down('w');
-  await page.waitForFunction(() => {
-    const debugApi = (
-      window as Window & {
-        __footballDebug?: {
-          getGameplaySnapshot: () => GameplaySnapshot;
-        };
-      }
-    ).__footballDebug;
-    const snapshot = debugApi?.getGameplaySnapshot();
-
-    if (snapshot?.playState === 'live' && !snapshot.forwardPassEligible) {
-      window.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'KeyF', key: 'f' }));
-      window.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, code: 'KeyF', key: 'f' }));
-      return true;
-    }
-
-    return false;
-  }, undefined, {
-    polling: 'raf',
-    timeout: 3500,
-  });
-  await page.keyboard.up('w');
+  expect(await forceQuarterbackPastLineForTest(page)).toBe(true);
+  await page.keyboard.press('f');
 
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     passAttempted: false,
@@ -1579,6 +1627,24 @@ async function getGameplaySnapshot(page: Page): Promise<GameplaySnapshot> {
   });
 }
 
+async function forceQuarterbackPastLineForTest(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          forceQuarterbackPastLineForTest: () => boolean;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.forceQuarterbackPastLineForTest();
+  });
+}
+
 async function getCameraSnapshot(page: Page): Promise<CameraSnapshot> {
   return page.evaluate(() => {
     const debugApi = (
@@ -1696,6 +1762,24 @@ async function getPresentationAuditSnapshot(page: Page): Promise<PresentationAud
     }
 
     return snapshot;
+  });
+}
+
+async function getRouteArtSnapshot(page: Page): Promise<RouteArtRendererSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getRouteArtSnapshot: () => RouteArtRendererSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getRouteArtSnapshot();
   });
 }
 

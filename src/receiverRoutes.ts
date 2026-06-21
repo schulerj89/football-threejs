@@ -46,6 +46,24 @@ export interface RouteProjection {
   segmentIndex: number;
 }
 
+export interface ReceiverRouteAuditSnapshot {
+  activeSegmentEnd: FootballSpot;
+  activeSegmentStart: FootballSpot;
+  completionPercentage: number;
+  crossTrackErrorYards: number;
+  distanceAlongRoute: number;
+  exceedsTolerance: boolean;
+  nearestPoint: FootballSpot;
+  receiverId: string;
+  routeId: string;
+  segmentIndex: number;
+  totalLength: number;
+}
+
+export const RECEIVER_ROUTE_AUDIT_CONFIG = {
+  corridorToleranceYards: 0.75,
+} as const;
+
 const ROUTE_EPSILON = 0.000001;
 
 export function resolveReceiverRoute(
@@ -108,6 +126,19 @@ export function createReceiverRouteStateMap(
       createReceiverRouteState(route, receiverId),
     ]),
   );
+}
+
+export function resolveEligibleReceiverRoutes(
+  play: ReceiverRoutePlayDefinition,
+  snapPlacement: SnapPlacement,
+): ResolvedReceiverRoute[] {
+  const receiverIds = play.pass?.eligibleReceiverIds ?? Object.keys(play.receiverRoutes ?? {});
+
+  return receiverIds.flatMap((receiverId) => {
+    const route = resolveReceiverRoute(play, receiverId, snapPlacement);
+
+    return route ? [route] : [];
+  });
 }
 
 export function resetReceiverRouteState(
@@ -233,6 +264,45 @@ export function calculateCrossTrackError(
   return projectPointOntoRoute(route, point).distanceToRoute;
 }
 
+export function createReceiverRouteAuditSnapshot(
+  route: ResolvedReceiverRoute,
+  receiverPosition: FootballSpot,
+  routeState?: ReceiverRouteState,
+  toleranceYards: number = RECEIVER_ROUTE_AUDIT_CONFIG.corridorToleranceYards,
+): ReceiverRouteAuditSnapshot {
+  const projection = projectPointOntoRoute(route, receiverPosition);
+  const distanceAlongRoute = clamp(
+    routeState?.distanceAlongRoute ?? projection.distanceAlongRoute,
+    0,
+    route.totalLength,
+  );
+  const segmentIndex = clampSegmentIndex(
+    route,
+    routeState?.segmentIndex ?? getSegmentIndexAtDistance(route, distanceAlongRoute),
+  );
+  const activeSegmentStart = route.points[segmentIndex] ?? route.points[0] ?? { x: 0, z: 0 };
+  const activeSegmentEnd = route.points[segmentIndex + 1] ??
+    route.points[route.points.length - 1] ??
+    activeSegmentStart;
+  const crossTrackErrorYards = projection.distanceToRoute;
+
+  return {
+    activeSegmentEnd: { ...activeSegmentEnd },
+    activeSegmentStart: { ...activeSegmentStart },
+    completionPercentage: route.totalLength <= ROUTE_EPSILON
+      ? 1
+      : distanceAlongRoute / route.totalLength,
+    crossTrackErrorYards,
+    distanceAlongRoute,
+    exceedsTolerance: crossTrackErrorYards > toleranceYards,
+    nearestPoint: { ...projection.point },
+    receiverId: route.receiverId,
+    routeId: route.id,
+    segmentIndex,
+    totalLength: route.totalLength,
+  };
+}
+
 export function advanceRouteState(
   state: ReceiverRouteState,
   route: ResolvedReceiverRoute,
@@ -303,6 +373,14 @@ function getSegmentIndexAtDistance(
   }
 
   return route.segmentLengths.length - 1;
+}
+
+function clampSegmentIndex(route: ResolvedReceiverRoute, segmentIndex: number): number {
+  if (route.segmentLengths.length === 0) {
+    return 0;
+  }
+
+  return Math.min(route.segmentLengths.length - 1, Math.max(0, Math.floor(segmentIndex)));
 }
 
 function calculateSegmentTangent(
