@@ -37,8 +37,11 @@ import { SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS } from './sevenOnSevenFormation';
 
 export type PlayId =
   | 'inside-run'
+  | 'inside-zone-7'
   | 'outside-run'
+  | 'outside-zone-7'
   | 'quick-pass'
+  | 'quick-pass-7'
   | 'slant-flat'
   | 'twin-slants-flat';
 export type PlayKind = 'run' | 'pass';
@@ -248,6 +251,155 @@ export const FIVE_ON_FIVE_PLAYS: PlayDefinition[] = [
 
 export const SEVEN_ON_SEVEN_PLAYS: PlayDefinition[] = [
   {
+    ballCarrierRole: 'runner',
+    blockerLaneTargets: {
+      'offense-center': point(alignedTo('defense-line-middle'), defenseDepth(interiorLaneDepth)),
+      'offense-line-left': point(alignedTo('defense-line-left'), defenseDepth(interiorLaneDepth)),
+      'offense-line-right': point(alignedTo('defense-line-right'), defenseDepth(interiorLaneDepth)),
+      'offense-wr-left': point(alignedTo('defense-corner-left'), defenseDepth(SEVEN.cornerCushion)),
+      'offense-wr-right': point(alignedTo('defense-corner-right'), defenseDepth(SEVEN.cornerCushion)),
+    },
+    displayName: 'Inside Zone 7',
+    formation: [
+      sevenOffenseSlot('offense-center', 'blocker', point(snap(), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-line-left', 'blocker', point(snap(-SEVEN.offensiveLineSpacing), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-line-right', 'blocker', point(snap(SEVEN.offensiveLineSpacing), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-qb', 'quarterback', point(snap(), offenseDepth(SEVEN.quarterbackDepth))),
+      sevenOffenseSlot('offense-rb', 'runner', point(snap(), offenseDepth(SEVEN.runningBackDepth))),
+      sevenOffenseSlot('offense-wr-left', 'blocker', point(sidelineInset('left', SEVEN.receiverSidelineInset), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-wr-right', 'blocker', point(sidelineInset('right', SEVEN.receiverSidelineInset), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenDefenseSlot('defense-line-left', 'defender', point(snap(-SEVEN.defensiveLineGap), defenseDepth(SEVEN.defensiveLineDepth))),
+      sevenDefenseSlot('defense-line-middle', 'defender', point(snap(), defenseDepth(SEVEN.defensiveLineDepth))),
+      sevenDefenseSlot('defense-line-right', 'defender', point(snap(SEVEN.defensiveLineGap), defenseDepth(SEVEN.defensiveLineDepth))),
+      sevenDefenseSlot('defense-corner-left', 'defender', point(alignedTo('offense-wr-left'), defenseDepth(SEVEN.cornerCushion))),
+      sevenDefenseSlot('defense-corner-right', 'defender', point(alignedTo('offense-wr-right'), defenseDepth(SEVEN.cornerCushion))),
+      sevenDefenseSlot('defense-linebacker', 'defender', point(snap(), defenseDepth(SEVEN.linebackerDepth))),
+      sevenDefenseSlot('defense-safety', 'defender', point(midpointOf(['offense-wr-left', 'offense-wr-right']), defenseDepth(SEVEN.safetyDepth))),
+    ],
+    id: 'inside-zone-7',
+    initialMovementDirection: { x: 0, z: 1 },
+    kind: 'run',
+    playbookId: '7v7',
+    preferredSide: PLAY_SIDE,
+    protectionAssignments: {
+      'offense-center': 'defense-line-middle',
+      'offense-line-left': 'defense-line-left',
+      'offense-line-right': 'defense-line-right',
+      'offense-wr-left': 'defense-corner-left',
+      'offense-wr-right': 'defense-corner-right',
+    },
+    roster: SEVEN_ON_SEVEN_ROSTER,
+    validation: sevenOnSevenValidation(),
+  },
+  {
+    ballCarrierRole: 'runner',
+    blockerLaneTargets: {
+      'offense-center': point(snapSide('field', 2.5), defenseDepth(interiorLaneDepth)),
+      'offense-line-left': point(snapSide('field', 5.5), defenseDepth(interiorLaneDepth)),
+      'offense-line-right': point(snapSide('field', 8.5), defenseDepth(interiorLaneDepth - 1.5)),
+      'offense-wr-left': point(alignedTo('defense-corner-left'), defenseDepth(SEVEN.cornerCushion)),
+      'offense-wr-right': point(alignedTo('defense-corner-right'), defenseDepth(SEVEN.cornerCushion)),
+    },
+    displayName: 'Outside Zone 7',
+    formation: [
+      sevenOffenseSlot('offense-center', 'blocker', point(snap(), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-line-left', 'blocker', point(snap(-SEVEN.offensiveLineSpacing), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-line-right', 'blocker', point(snap(SEVEN.offensiveLineSpacing), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-qb', 'quarterback', point(snap(), offenseDepth(SEVEN.quarterbackDepth))),
+      sevenOffenseSlot('offense-rb', 'runner', point(runningBackFieldSide(), offenseDepth(SEVEN.runningBackDepth))),
+      sevenOffenseSlot('offense-wr-left', 'blocker', point(sidelineInset('left', SEVEN.receiverSidelineInset), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-wr-right', 'blocker', point(sidelineInset('right', SEVEN.receiverSidelineInset), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenDefenseSlot('defense-line-left', 'defender', point(snap(-SEVEN.defensiveLineGap), defenseDepth(SEVEN.defensiveLineDepth))),
+      sevenDefenseSlot('defense-line-middle', 'defender', point(snap(), defenseDepth(SEVEN.defensiveLineDepth))),
+      sevenDefenseSlot('defense-line-right', 'defender', point(snap(SEVEN.defensiveLineGap), defenseDepth(SEVEN.defensiveLineDepth))),
+      sevenDefenseSlot('defense-corner-left', 'defender', point(alignedTo('offense-wr-left'), defenseDepth(SEVEN.cornerCushion))),
+      sevenDefenseSlot('defense-corner-right', 'defender', point(alignedTo('offense-wr-right'), defenseDepth(SEVEN.cornerCushion))),
+      sevenDefenseSlot('defense-linebacker', 'defender', point(snap(), defenseDepth(SEVEN.linebackerDepth))),
+      sevenDefenseSlot('defense-safety', 'defender', point(midpointOf(['offense-wr-left', 'offense-wr-right']), defenseDepth(SEVEN.safetyDepth))),
+    ],
+    id: 'outside-zone-7',
+    initialMovementDirection: { x: 0, z: 1 },
+    kind: 'run',
+    playbookId: '7v7',
+    preferredSide: PLAY_SIDE,
+    protectionAssignments: {
+      'offense-center': 'defense-line-middle',
+      'offense-line-left': 'defense-line-left',
+      'offense-line-right': 'defense-line-right',
+      'offense-wr-left': 'defense-corner-left',
+      'offense-wr-right': 'defense-corner-right',
+    },
+    roster: SEVEN_ON_SEVEN_ROSTER,
+    validation: sevenOnSevenValidation(),
+  },
+  {
+    ballCarrierRole: 'quarterback',
+    blockerLaneTargets: {
+      'offense-center': point(alignedTo('defense-line-middle'), defenseDepth(passProtectDepth)),
+      'offense-line-left': point(alignedTo('defense-line-left'), defenseDepth(passProtectDepth)),
+      'offense-line-right': point(alignedTo('defense-line-right'), defenseDepth(passProtectDepth)),
+    },
+    displayName: 'Quick Pass 7',
+    formation: [
+      sevenOffenseSlot('offense-center', 'blocker', point(snap(), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-line-left', 'blocker', point(snap(-SEVEN.offensiveLineSpacing), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-line-right', 'blocker', point(snap(SEVEN.offensiveLineSpacing), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-qb', 'quarterback', point(snap(), offenseDepth(SEVEN.quarterbackDepth))),
+      sevenOffenseSlot('offense-rb', 'receiver', point(runningBackFieldSide(), offenseDepth(SEVEN.runningBackDepth))),
+      sevenOffenseSlot('offense-wr-left', 'receiver', point(sidelineInset('left', SEVEN.receiverSidelineInset), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenOffenseSlot('offense-wr-right', 'receiver', point(sidelineInset('right', SEVEN.receiverSidelineInset), offenseDepth(SEVEN.offensiveLineSetback))),
+      sevenDefenseSlot('defense-line-left', 'defender', point(snap(-SEVEN.defensiveLineGap), defenseDepth(SEVEN.defensiveLineDepth))),
+      sevenDefenseSlot('defense-line-middle', 'defender', point(snap(), defenseDepth(SEVEN.defensiveLineDepth))),
+      sevenDefenseSlot('defense-line-right', 'defender', point(snap(SEVEN.defensiveLineGap), defenseDepth(SEVEN.defensiveLineDepth))),
+      sevenDefenseSlot('defense-corner-left', 'coverageDefender', point(alignedTo('offense-wr-left'), defenseDepth(SEVEN.cornerCushion))),
+      sevenDefenseSlot('defense-corner-right', 'coverageDefender', point(alignedTo('offense-wr-right'), defenseDepth(SEVEN.cornerCushion))),
+      sevenDefenseSlot('defense-linebacker', 'coverageDefender', point(alignedTo('offense-rb'), defenseDepth(SEVEN.linebackerDepth))),
+      sevenDefenseSlot('defense-safety', 'coverageDefender', point(midpointOf(['offense-wr-left', 'offense-wr-right']), defenseDepth(SEVEN.safetyDepth))),
+    ],
+    id: 'quick-pass-7',
+    initialMovementDirection: { x: 0, z: 1 },
+    kind: 'pass',
+    pass: {
+      coverageAssignments: {
+        'defense-corner-left': 'offense-wr-left',
+        'defense-corner-right': 'offense-wr-right',
+        'defense-linebacker': 'offense-rb',
+      },
+      deepHelpAssignments: {
+        'defense-safety': ['offense-wr-left', 'offense-wr-right'],
+      },
+      eligibleReceiverIds: ['offense-wr-left', 'offense-wr-right', 'offense-rb'],
+      receiverDisplayNames: {
+        'offense-rb': 'Running Back',
+        'offense-wr-left': 'Receiver Left',
+        'offense-wr-right': 'Receiver Right',
+      },
+    },
+    playbookId: '7v7',
+    preferredSide: PLAY_SIDE,
+    protectionAssignments: {
+      'offense-center': 'defense-line-middle',
+      'offense-line-left': 'defense-line-left',
+      'offense-line-right': 'defense-line-right',
+    },
+    receiverRoutes: {
+      'offense-rb': route('quick-pass-7-checkdown', 8, [
+        waypoint('release', point(snapSide('boundary', 3), offenseDepth(1.5))),
+        waypoint('checkdown', point(sidelineInset('boundary', SEVEN.receiverSidelineInset + 6), defenseDepth(2.5))),
+      ]),
+      'offense-wr-left': route('quick-pass-7-left-out', 9, [
+        waypoint('stem', point(alignedTo('offense-wr-left'), defenseDepth(4.5))),
+        waypoint('out', point(sidelineInset('left', SEVEN.receiverSidelineInset - 1.5), defenseDepth(6.5))),
+      ]),
+      'offense-wr-right': route('quick-pass-7-right-slant', 9.25, [
+        waypoint('clear-stem', point(alignedTo('offense-wr-right'), defenseDepth(5.5))),
+        waypoint('short-slant', point(fieldCenter(7), defenseDepth(9.5))),
+      ]),
+    },
+    roster: SEVEN_ON_SEVEN_ROSTER,
+    validation: sevenOnSevenValidation(),
+  },
+  {
     ballCarrierRole: 'quarterback',
     blockerLaneTargets: {
       'offense-center': point(alignedTo('defense-line-middle'), defenseDepth(passProtectDepth)),
@@ -309,41 +461,26 @@ export const SEVEN_ON_SEVEN_PLAYS: PlayDefinition[] = [
       ]),
     },
     roster: SEVEN_ON_SEVEN_ROSTER,
-    validation: {
-      coverageAlignmentToleranceYards: 0.001,
-      defensiveGapOffsets: {
-        'defense-line-left': -SEVEN.defensiveLineGap,
-        'defense-line-middle': 0,
-        'defense-line-right': SEVEN.defensiveLineGap,
-      },
-      expectedDefenseCount: 7,
-      expectedOffenseCount: 7,
-      offensiveLineIds: ['offense-line-left', 'offense-center', 'offense-line-right'],
-      receiverSidelineInsetYards: {
-        'offense-wr-left': SEVEN.receiverSidelineInset,
-        'offense-wr-right': SEVEN.receiverSidelineInset,
-      },
-      stablePlayerIds: SEVEN_ON_SEVEN_PLAYER_IDS,
-    },
+    validation: sevenOnSevenValidation(),
   },
 ];
 
-export const PLAYS = FIVE_ON_FIVE_PLAYS;
+export const PLAYS = SEVEN_ON_SEVEN_PLAYS;
 export const ALL_PLAYS = [...FIVE_ON_FIVE_PLAYS, ...SEVEN_ON_SEVEN_PLAYS] as const;
-export const RUSHING_PLAYS = FIVE_ON_FIVE_PLAYS.filter((play) => play.kind === 'run');
+export const RUSHING_PLAYS = ALL_PLAYS.filter((play) => play.kind === 'run');
 
 export const DEFAULT_PLAY_ID: PlayId = 'inside-run';
-export const DEFAULT_SEVEN_ON_SEVEN_PLAY_ID: PlayId = 'twin-slants-flat';
+export const DEFAULT_SEVEN_ON_SEVEN_PLAY_ID: PlayId = 'inside-zone-7';
 
 export function resolvePlaybookId(value: string | null): PlaybookId {
-  return value === '7v7' ? '7v7' : '5v5';
+  return value === '5v5' ? '5v5' : '7v7';
 }
 
-export function getAvailablePlays(playbookId: PlaybookId = '5v5'): PlayDefinition[] {
+export function getAvailablePlays(playbookId: PlaybookId = '7v7'): PlayDefinition[] {
   return playbookId === '7v7' ? [...SEVEN_ON_SEVEN_PLAYS] : [...FIVE_ON_FIVE_PLAYS];
 }
 
-export function getDefaultPlayId(playbookId: PlaybookId = '5v5'): PlayId {
+export function getDefaultPlayId(playbookId: PlaybookId = '7v7'): PlayId {
   return playbookId === '7v7' ? DEFAULT_SEVEN_ON_SEVEN_PLAY_ID : DEFAULT_PLAY_ID;
 }
 
@@ -363,7 +500,7 @@ export function getRushingPlay(playId: string): RushingPlayDefinition {
 
 export function createFormationPlayers(
   ballSpot: FootballSpot,
-  play: PlayDefinition = getPlay(DEFAULT_PLAY_ID),
+  play: PlayDefinition = getPlay(DEFAULT_SEVEN_ON_SEVEN_PLAY_ID),
 ): PlayerModel[] {
   const formation = resolvePlayFormation(ballSpot, play);
 
@@ -583,6 +720,25 @@ function sevenOffenseSlot(id: string, role: PlayerRole, formationPoint: Formatio
 
 function sevenDefenseSlot(id: string, role: PlayerRole, formationPoint: FormationPoint): FormationSlot {
   return defenseSlot(id, role, formationPoint);
+}
+
+function sevenOnSevenValidation(): PlayDefinition['validation'] {
+  return {
+    coverageAlignmentToleranceYards: 0.001,
+    defensiveGapOffsets: {
+      'defense-line-left': -SEVEN.defensiveLineGap,
+      'defense-line-middle': 0,
+      'defense-line-right': SEVEN.defensiveLineGap,
+    },
+    expectedDefenseCount: 7,
+    expectedOffenseCount: 7,
+    offensiveLineIds: ['offense-line-left', 'offense-center', 'offense-line-right'],
+    receiverSidelineInsetYards: {
+      'offense-wr-left': SEVEN.receiverSidelineInset,
+      'offense-wr-right': SEVEN.receiverSidelineInset,
+    },
+    stablePlayerIds: SEVEN_ON_SEVEN_PLAYER_IDS,
+  };
 }
 
 function slantTarget(side: 'left' | 'right'): FormationPoint {

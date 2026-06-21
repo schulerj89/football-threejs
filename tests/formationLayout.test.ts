@@ -11,6 +11,11 @@ import {
   type ResolvedFormation,
 } from '../src/formationLayout';
 import { getPlay } from '../src/playbook';
+import {
+  SEVEN_ON_SEVEN_DEFENSE_PLAYER_IDS,
+  SEVEN_ON_SEVEN_OFFENSE_PLAYER_IDS,
+  SEVEN_ON_SEVEN_PLAYER_IDS,
+} from '../src/roster';
 
 describe('formationLayout', () => {
   it('resolves every current play to a valid five-on-five roster', () => {
@@ -25,6 +30,26 @@ describe('formationLayout', () => {
       expect(formation.slots.filter((slot) => slot.team === 'defense').map((slot) => slot.id).sort()).toEqual(
         [...DEFENSE_PLAYER_IDS].sort(),
       );
+    }
+  });
+
+  it('resolves every 7v7 play at every snap lane with the full fourteen-player roster', () => {
+    for (const playId of ['inside-zone-7', 'outside-zone-7', 'quick-pass-7', 'twin-slants-flat']) {
+      for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+        const formation = resolveFormation(getPlay(playId), {
+          lane,
+          spot: { x: SNAP_LANE_X[lane], z: INITIAL_BALL_SPOT.z },
+        });
+
+        expect(formation.issues).toEqual([]);
+        expect(formation.slots.map((slot) => slot.id).sort()).toEqual([...SEVEN_ON_SEVEN_PLAYER_IDS].sort());
+        expect(formation.slots.filter((slot) => slot.team === 'offense').map((slot) => slot.id).sort()).toEqual(
+          [...SEVEN_ON_SEVEN_OFFENSE_PLAYER_IDS].sort(),
+        );
+        expect(formation.slots.filter((slot) => slot.team === 'defense').map((slot) => slot.id).sort()).toEqual(
+          [...SEVEN_ON_SEVEN_DEFENSE_PLAYER_IDS].sort(),
+        );
+      }
     }
   });
 

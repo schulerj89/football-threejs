@@ -28,6 +28,7 @@ describe('game experience settings', () => {
       crowdReactionsEnabled: true,
       crowdVisualsEnabled: true,
     });
+    expect(resolved.settings.playbookId).toBe('7v7');
     expect(toGameplayCameraMode(resolved.settings.gameplayCamera)).toBe('offensePerspective');
   });
 
@@ -45,6 +46,7 @@ describe('game experience settings', () => {
       crowdVisualsEnabled: false,
       gameplayCamera: 'offense',
       playerMotionEnabled: true,
+      playbookId: '7v7',
     });
   });
 
@@ -80,7 +82,7 @@ describe('game experience settings', () => {
 
     saveGameExperienceSettings({
       ...BROADCAST_EXPERIENCE_SETTINGS,
-      playbookId: '7v7',
+      playbookId: '5v5',
     }, storage);
 
     const resolved = resolveGameExperienceSettings({
@@ -91,12 +93,12 @@ describe('game experience settings', () => {
     expect(resolved.persistedSettings).toMatchObject({
       preset: 'broadcast',
       settings: {
-        playbookId: '7v7',
+        playbookId: '5v5',
         preset: 'broadcast',
       },
     });
     expect(resolved.settings).toMatchObject({
-      playbookId: '7v7',
+      playbookId: '5v5',
       preset: 'broadcast',
     });
   });
@@ -107,7 +109,7 @@ describe('game experience settings', () => {
     const storedBefore = storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY);
 
     const resolved = resolveGameExperienceSettings({
-      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&announcer=0&captions=1&playbook=7v7'),
+      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&announcer=0&captions=1&playbook=5v5'),
       storage,
     });
 
@@ -118,7 +120,7 @@ describe('game experience settings', () => {
       crowdDensity: 'high',
       crowdVisualsEnabled: true,
       gameplayCamera: 'cinematic',
-      playbookId: '7v7',
+      playbookId: '5v5',
       preset: 'performance',
     });
     expect(resolved.hasQueryOverrides).toBe(true);
@@ -128,7 +130,7 @@ describe('game experience settings', () => {
       crowdDensity: 'high',
       crowdVisualsEnabled: true,
       gameplayCamera: 'cinematic',
-      playbookId: '7v7',
+      playbookId: '5v5',
     });
     expect(storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY)).toBe(storedBefore);
   });

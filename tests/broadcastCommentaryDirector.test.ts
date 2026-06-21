@@ -141,7 +141,7 @@ describe('broadcast commentary director', () => {
   });
 
   it('does not mutate gameplay snapshots', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
     const before = JSON.stringify(snapshot);
     const mixer = new FakeCommentaryAudioPort();

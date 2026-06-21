@@ -30,8 +30,26 @@ import {
 } from '../src/playState';
 
 describe('play state transitions', () => {
-  it('starts in preSnap at the line of scrimmage without ball possession', () => {
+  it('defaults to the 7v7 playbook and Inside Zone 7', () => {
     const gameplay = createGameplayModel();
+
+    expect(gameplay.playbookId).toBe('7v7');
+    expect(gameplay.selectedPlay).toMatchObject({
+      displayName: 'Inside Zone 7',
+      id: 'inside-zone-7',
+      kind: 'run',
+    });
+    expect(gameplay.players).toHaveLength(14);
+    expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(7);
+    expect(gameplay.players.filter((player) => player.team === 'defense')).toHaveLength(7);
+    expect(gameplay.player).toMatchObject({
+      id: 'offense-rb',
+      role: 'runner',
+    });
+  });
+
+  it('starts in preSnap at the line of scrimmage without ball possession', () => {
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     expect(gameplay.playState).toBe('preSnap');
     expect(gameplay.player).toMatchObject({
@@ -70,7 +88,7 @@ describe('play state transitions', () => {
   });
 
   it('starts a valid play from preSnap and gives the player possession', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     expect(startPlay(gameplay)).toBe(true);
 
@@ -108,7 +126,7 @@ describe('play state transitions', () => {
   });
 
   it('keeps the score attack clock at 120 before the first snap', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     updateGameplayModel(gameplay, 30);
 
@@ -117,7 +135,7 @@ describe('play state transitions', () => {
   });
 
   it('decreases the score attack clock from supplied delta after the first snap', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     startPlay(gameplay);
     updateGameplayModel(gameplay, 12.25);
@@ -127,7 +145,7 @@ describe('play state transitions', () => {
   });
 
   it('runs the clock during dead-play delays and preSnap between plays', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const defender = getPrimaryDefender(gameplay.players);
 
     startPlay(gameplay);
@@ -152,7 +170,7 @@ describe('play state transitions', () => {
   });
 
   it('allows a live play to finish when the score attack clock reaches zero', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     startPlay(gameplay);
     updateGameplayModel(gameplay, 121);
@@ -183,7 +201,7 @@ describe('play state transitions', () => {
   });
 
   it('prevents another snap after the score attack clock reaches zero in preSnap', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const defender = getPrimaryDefender(gameplay.players);
 
     startPlay(gameplay);
@@ -202,7 +220,7 @@ describe('play state transitions', () => {
   });
 
   it('restarts the score attack from gameOver with clock, drive, score, and default play reset', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'slant-flat');
     startPlay(gameplay);
@@ -240,7 +258,7 @@ describe('play state transitions', () => {
   });
 
   it('selects a rushing play during preSnap and resets players into that formation', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     expect(gameplay.selectedPlay.id).toBe('inside-run');
     expect(selectPlay(gameplay, 'outside-run')).toBe(true);
@@ -256,7 +274,7 @@ describe('play state transitions', () => {
   });
 
   it('prevents play selection during live play', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     startPlay(gameplay);
     expect(selectPlay(gameplay, 'outside-run')).toBe(false);
@@ -266,7 +284,7 @@ describe('play state transitions', () => {
   });
 
   it('preserves the selected play when resetting', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'outside-run');
     startPlay(gameplay);
@@ -282,7 +300,7 @@ describe('play state transitions', () => {
   });
 
   it('sets Outside Run blockers in neutral pre-snap facing at their formation positions', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     expect(selectPlay(gameplay, 'outside-run')).toBe(true);
     const leftBlocker = getPlayer(gameplay.players, 'offense-blocker-left');
@@ -303,7 +321,7 @@ describe('play state transitions', () => {
   });
 
   it('does not let preSnap simulation frames change Outside Run blocker facing', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'outside-run');
     const leftBlocker = getPlayer(gameplay.players, 'offense-blocker-left');
@@ -320,7 +338,7 @@ describe('play state transitions', () => {
   });
 
   it('allows Outside Run blockers to turn toward assignments after the snap', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'outside-run');
     const leftBlocker = getPlayer(gameplay.players, 'offense-blocker-left');
@@ -336,7 +354,7 @@ describe('play state transitions', () => {
   });
 
   it('restores Outside Run blocker formation position and pre-snap facing on reset', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'outside-run');
     const leftBlocker = getPlayer(gameplay.players, 'offense-blocker-left');
@@ -353,7 +371,7 @@ describe('play state transitions', () => {
   });
 
   it('keeps Inside Run blockers in neutral pre-snap facing', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const leftBlocker = getPlayer(gameplay.players, 'offense-blocker-left');
     const rightBlocker = getPlayer(gameplay.players, 'offense-blocker-right');
 
@@ -363,7 +381,7 @@ describe('play state transitions', () => {
   });
 
   it('selects Quick Pass during preSnap and starts the receiver route only after the snap', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     expect(selectPlay(gameplay, 'quick-pass')).toBe(true);
     const receiver = getPlayer(gameplay.players, 'offense-wr');
@@ -392,7 +410,7 @@ describe('play state transitions', () => {
   });
 
   it('selects Slant Flat with two receivers and starts both routes only after the snap', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     expect(selectPlay(gameplay, 'slant-flat')).toBe(true);
     const leftReceiver = getPlayer(gameplay.players, 'offense-wr');
@@ -431,7 +449,7 @@ describe('play state transitions', () => {
   });
 
   it('cycles Slant Flat receivers deterministically before and after the snap', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'slant-flat');
 
@@ -451,7 +469,7 @@ describe('play state transitions', () => {
   });
 
   it('throws Slant Flat toward the selected receiver and locks selection after the throw', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'slant-flat');
     cycleSelectedReceiver(gameplay);
@@ -476,7 +494,7 @@ describe('play state transitions', () => {
   });
 
   it('restores the Slant Flat default target on reset', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'slant-flat');
     cycleSelectedReceiver(gameplay);
@@ -500,7 +518,7 @@ describe('play state transitions', () => {
   });
 
   it('resets receiver route progress when the play resets', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'slant-flat');
     startPlay(gameplay);
@@ -518,7 +536,7 @@ describe('play state transitions', () => {
   });
 
   it('stops automatic route following after catch control transfers to the receiver', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -545,7 +563,7 @@ describe('play state transitions', () => {
   });
 
   it('records route-aware pass audit details for the selected receiver and clears them on reset', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'slant-flat');
     cycleSelectedReceiver(gameplay);
@@ -586,7 +604,14 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel({ playbookId: '7v7' });
 
     expect(gameplay.playbookId).toBe('7v7');
-    expect(gameplay.availablePlays.map((play) => play.id)).toEqual(['twin-slants-flat']);
+    expect(gameplay.availablePlays.map((play) => play.id)).toEqual([
+      'inside-zone-7',
+      'outside-zone-7',
+      'quick-pass-7',
+      'twin-slants-flat',
+    ]);
+    expect(gameplay.selectedPlay.id).toBe('inside-zone-7');
+    expect(selectPlay(gameplay, 'twin-slants-flat')).toBe(true);
     expect(gameplay.selectedPlay).toMatchObject({
       displayName: 'Twin Slants Flat',
       id: 'twin-slants-flat',
@@ -611,6 +636,7 @@ describe('play state transitions', () => {
 
   it('starts Twin Slants Flat receiver routes only after the snap', () => {
     const gameplay = createGameplayModel({ playbookId: '7v7' });
+    selectPlay(gameplay, 'twin-slants-flat');
     const leftReceiver = getPlayer(gameplay.players, 'offense-wr-left');
     const rightReceiver = getPlayer(gameplay.players, 'offense-wr-right');
     const runningBack = getPlayer(gameplay.players, 'offense-rb');
@@ -637,6 +663,19 @@ describe('play state transitions', () => {
     expect(runningBack.position.x).toBeGreaterThan(backStart.x);
   });
 
+  it('cycles Quick Pass 7 receivers in deterministic order', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+
+    expect(selectPlay(gameplay, 'quick-pass-7')).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-left');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-right');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-rb');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-left');
+  });
+
   it('throws Twin Slants Flat toward each selected receiver and locks selection after release', () => {
     const targetExpectations = [
       { direction: 'right', receiverId: 'offense-wr-left' },
@@ -646,6 +685,7 @@ describe('play state transitions', () => {
 
     for (const expectation of targetExpectations) {
       const gameplay = createGameplayModel({ playbookId: '7v7' });
+      selectPlay(gameplay, 'twin-slants-flat');
       selectReceiver(gameplay, expectation.receiverId);
       const receiver = getPlayer(gameplay.players, expectation.receiverId);
       const receiverX = receiver.position.x;
@@ -671,6 +711,7 @@ describe('play state transitions', () => {
   it('catches Twin Slants Flat, transfers control, and then has defenders pursue the receiver', () => {
     const gameplay = createGameplayModel({ playbookId: '7v7' });
 
+    selectPlay(gameplay, 'twin-slants-flat');
     selectReceiver(gameplay, 'offense-rb');
     startPlay(gameplay);
     expect(attemptPass(gameplay)).toBe(true);
@@ -698,6 +739,7 @@ describe('play state transitions', () => {
   it('keeps Twin Slants Flat incompletions at the original line of scrimmage', () => {
     const gameplay = createGameplayModel({ playbookId: '7v7' });
 
+    selectPlay(gameplay, 'twin-slants-flat');
     startPlay(gameplay);
     expect(attemptPass(gameplay)).toBe(true);
     for (const receiver of gameplay.players.filter((player) => player.role === 'receiver')) {
@@ -720,6 +762,7 @@ describe('play state transitions', () => {
   it('classifies pre-throw 7v7 quarterback contact as a sack and post-release contact as live play', () => {
     const sack = createGameplayModel({ playbookId: '7v7' });
 
+    selectPlay(sack, 'twin-slants-flat');
     startPlay(sack);
     const middleRusher = getPlayer(sack.players, 'defense-line-middle');
     middleRusher.position.x = sack.player.position.x;
@@ -731,6 +774,7 @@ describe('play state transitions', () => {
     expect(sack.lastPlayResult?.yardsGained).toBeLessThan(0);
 
     const postRelease = createGameplayModel({ playbookId: '7v7' });
+    selectPlay(postRelease, 'twin-slants-flat');
     startPlay(postRelease);
     expect(attemptPass(postRelease)).toBe(true);
     const lateRusher = getPlayer(postRelease.players, 'defense-line-middle');
@@ -746,6 +790,7 @@ describe('play state transitions', () => {
   it('resets Twin Slants Flat to all fourteen players and the default target', () => {
     const gameplay = createGameplayModel({ playbookId: '7v7' });
 
+    selectPlay(gameplay, 'twin-slants-flat');
     selectReceiver(gameplay, 'offense-rb');
     startPlay(gameplay);
     gameplay.player.position.x = 7;
@@ -763,7 +808,7 @@ describe('play state transitions', () => {
   });
 
   it('throws Quick Pass once and transitions the ball to inFlight state', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -777,7 +822,7 @@ describe('play state transitions', () => {
   });
 
   it('allows a forward pass while the quarterback is behind the original line', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -792,7 +837,7 @@ describe('play state transitions', () => {
   });
 
   it('does not remove forward-pass eligibility inside the line epsilon', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -805,7 +850,7 @@ describe('play state transitions', () => {
   });
 
   it('permanently disables forward passing after the quarterback crosses the original line', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -823,7 +868,7 @@ describe('play state transitions', () => {
   });
 
   it('rejects an ineligible pass without changing ball state or passAttempted', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -842,7 +887,7 @@ describe('play state transitions', () => {
   });
 
   it('records a sack when an ordinary defender contacts the quarterback before a pass', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -869,7 +914,7 @@ describe('play state transitions', () => {
   });
 
   it('does not end the play when the quarterback is contacted after throwing', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -886,7 +931,7 @@ describe('play state transitions', () => {
   });
 
   it('classifies quarterback contact beyond the line of scrimmage as a tackle, not a sack', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -908,7 +953,7 @@ describe('play state transitions', () => {
   });
 
   it('catches a pass, transfers possession and control to the receiver, and records completed-pass yardage', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -948,7 +993,7 @@ describe('play state transitions', () => {
   });
 
   it('ends an incomplete Quick Pass at the original line of scrimmage and advances the down', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -973,7 +1018,7 @@ describe('play state transitions', () => {
   });
 
   it('lets the receiver score after catching Quick Pass', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -993,7 +1038,7 @@ describe('play state transitions', () => {
   });
 
   it('lets the quarterback score a rushing touchdown after crossing the line', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -1008,7 +1053,7 @@ describe('play state transitions', () => {
   });
 
   it('restores forward-pass eligibility on reset', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
@@ -1026,7 +1071,7 @@ describe('play state transitions', () => {
   });
 
   it('rejects invalid start and dead transitions', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     expect(markPlayDead(gameplay)).toBe(false);
     expect(gameplay.playState).toBe('preSnap');
@@ -1040,7 +1085,7 @@ describe('play state transitions', () => {
   });
 
   it('resets to preSnap and clears possession from live or dead', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     startPlay(gameplay);
     gameplay.player.position.x = 8;
@@ -1071,7 +1116,7 @@ describe('play state transitions', () => {
   });
 
   it('keeps carried ball position derived from the gameplay player model', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     startPlay(gameplay);
     gameplay.player.position.x = 3;
     gameplay.player.position.z = -10;
@@ -1084,7 +1129,7 @@ describe('play state transitions', () => {
   });
 
   it('scores when the possessed player crosses the opposing goal line during live play', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     startPlay(gameplay);
     gameplay.player.position.z =
       GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
@@ -1118,7 +1163,7 @@ describe('play state transitions', () => {
   });
 
   it('does not score before crossing the opposing goal line', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     startPlay(gameplay);
     gameplay.player.position.z =
       GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth - 0.01;
@@ -1132,7 +1177,7 @@ describe('play state transitions', () => {
   });
 
   it('does not record multiple touchdowns during one play', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     startPlay(gameplay);
     gameplay.player.position.z =
       GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
@@ -1146,7 +1191,7 @@ describe('play state transitions', () => {
   });
 
   it('records positive yards and resets the next play at a tackle spot', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const defender = getPrimaryDefender(gameplay.players);
     startPlay(gameplay);
     gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z + 5;
@@ -1190,7 +1235,7 @@ describe('play state transitions', () => {
   });
 
   it('records negative yards when the carrier is tackled behind the starting spot', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const defender = getPrimaryDefender(gameplay.players);
     startPlay(gameplay);
     gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z - 4;
@@ -1213,7 +1258,7 @@ describe('play state transitions', () => {
   });
 
   it('keeps exact tackle progress while resetting formation at the resolved snap spot', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const defender = getPrimaryDefender(gameplay.players);
     const exactTackleSpot = { x: PLAYABLE_FIELD_BOUNDS.minX + 2, z: LINE_OF_SCRIMMAGE_Z + 5 };
     const expectedSnapSpot = { x: SNAP_LANE_X.leftHash, z: exactTackleSpot.z };
@@ -1247,7 +1292,7 @@ describe('play state transitions', () => {
   });
 
   it('ends live play out of bounds and resolves the next snap to the nearest hash', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const exactDeadBallSpot = {
       x: PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.halfWidth,
       z: LINE_OF_SCRIMMAGE_Z + 6,
@@ -1288,7 +1333,7 @@ describe('play state transitions', () => {
   });
 
   it('keeps receivers inside bounds after a sideline dead-ball reset', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     selectPlay(gameplay, 'slant-flat');
     startPlay(gameplay);
@@ -1313,7 +1358,7 @@ describe('play state transitions', () => {
   });
 
   it('auto-resets after the configured touchdown delay without clearing score', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     startPlay(gameplay);
     gameplay.player.position.z =
       GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
@@ -1342,7 +1387,7 @@ describe('play state transitions', () => {
   });
 
   it('keeps the defender stationary during preSnap', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
 
     updateGameplayModel(gameplay, 1);
 
@@ -1353,7 +1398,7 @@ describe('play state transitions', () => {
   });
 
   it('steers the defender toward the carrier without instantly matching direction changes', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const defender = getPrimaryDefender(gameplay.players);
     defender.position.x = 0;
     defender.position.z = 0;
@@ -1372,7 +1417,7 @@ describe('play state transitions', () => {
   });
 
   it('detects tackles using the configured tackle radius', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const defender = getPrimaryDefender(gameplay.players);
     defender.position.x = 0;
     defender.position.z = 0;
@@ -1389,7 +1434,7 @@ describe('play state transitions', () => {
   });
 
   it('changes live play to dead on tackle and resets after the configured delay', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const defender = getPrimaryDefender(gameplay.players);
     startPlay(gameplay);
     gameplay.player.position.x = INITIAL_BALL_SPOT.x;
@@ -1462,7 +1507,7 @@ function runSlantFlatPassUntilResolved(
   controlledPlayerId: string;
   passAudit: ReturnType<typeof snapshotGameplayModel>['passAudit'];
 } {
-  const gameplay = createGameplayModel();
+  const gameplay = createGameplayModel({ playbookId: '5v5' });
   const stepSeconds = 1 / fps;
 
   selectPlay(gameplay, 'slant-flat');

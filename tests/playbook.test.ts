@@ -7,6 +7,7 @@ import {
   getAvailablePlays,
   getBlockingLaneTarget,
   getCoverageAssignmentReceiverId,
+  getDefaultPlayId,
   getEligibleReceiverIds,
   getPlay,
   getProtectionAssignmentDefenderId,
@@ -17,6 +18,7 @@ import {
 } from '../src/playbook';
 import { createSnapPlacementForLane } from '../src/formationPreview';
 import { resolveFormation } from '../src/formationLayout';
+import { SEVEN_ON_SEVEN_PLAYER_IDS } from '../src/roster';
 
 describe('playbook', () => {
   it('looks up the stable rushing and passing plays', () => {
@@ -177,12 +179,113 @@ describe('playbook', () => {
     expect(getPlayer(players, 'defense-cover-wr').role).toBe('coverageDefender');
   });
 
-  it('defines Twin Slants Flat as the only 7v7 play with three ordered receivers', () => {
+  it('defines a four-play 7v7 playbook as the default active mode', () => {
     const plays = getAvailablePlays('7v7');
-    const play = getPlay('twin-slants-flat');
-    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
 
-    expect(plays.map((candidate) => candidate.id)).toEqual(['twin-slants-flat']);
+    expect(getDefaultPlayId('7v7')).toBe('inside-zone-7');
+    expect(getAvailablePlays().map((candidate) => candidate.id)).toEqual([
+      'inside-zone-7',
+      'outside-zone-7',
+      'quick-pass-7',
+      'twin-slants-flat',
+    ]);
+    expect(plays.map((candidate) => candidate.displayName)).toEqual([
+      'Inside Zone 7',
+      'Outside Zone 7',
+      'Quick Pass 7',
+      'Twin Slants Flat',
+    ]);
+
+    for (const play of plays) {
+      const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+
+      expect(play).toMatchObject({
+        playbookId: '7v7',
+        roster: { id: '7v7' },
+      });
+      expect(players.map((player) => player.id).sort()).toEqual([...SEVEN_ON_SEVEN_PLAYER_IDS].sort());
+      expect(players).toHaveLength(14);
+      expect(players.filter((player) => player.team === 'offense')).toHaveLength(7);
+      expect(players.filter((player) => player.team === 'defense')).toHaveLength(7);
+    }
+  });
+
+  it('uses running back possession for 7v7 runs and quarterback possession for 7v7 passes', () => {
+    for (const playId of ['inside-zone-7', 'outside-zone-7']) {
+      const play = getPlay(playId);
+      const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+
+      expect(play.ballCarrierRole).toBe('runner');
+      expect(getPlayer(players, 'offense-rb')).toMatchObject({
+        role: 'runner',
+        team: 'offense',
+      });
+      expect(getPlayer(players, 'offense-qb')).toMatchObject({
+        role: 'quarterback',
+        team: 'offense',
+      });
+    }
+
+    for (const playId of ['quick-pass-7', 'twin-slants-flat']) {
+      const play = getPlay(playId);
+      const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+
+      expect(play.ballCarrierRole).toBe('quarterback');
+      expect(getPlayer(players, 'offense-qb')).toMatchObject({
+        role: 'quarterback',
+        team: 'offense',
+      });
+    }
+  });
+
+  it('declares explicit one-to-one 7v7 run blocking assignments without linebacker or safety targets', () => {
+    for (const playId of ['inside-zone-7', 'outside-zone-7']) {
+      const play = getPlay(playId);
+      const assignedDefenders = Object.values(play.protectionAssignments ?? {});
+
+      expect(play.kind).toBe('run');
+      expect(assignedDefenders).toHaveLength(5);
+      expect(new Set(assignedDefenders).size).toBe(assignedDefenders.length);
+      expect(assignedDefenders).not.toContain('defense-linebacker');
+      expect(assignedDefenders).not.toContain('defense-safety');
+      expect(getProtectionAssignmentDefenderId(play, 'offense-center')).toBe('defense-line-middle');
+      expect(getProtectionAssignmentDefenderId(play, 'offense-line-left')).toBe('defense-line-left');
+      expect(getProtectionAssignmentDefenderId(play, 'offense-line-right')).toBe('defense-line-right');
+    }
+  });
+
+  it('defines Quick Pass 7 with three eligible receivers and distinct ordered routes', () => {
+    const play = getPlay('quick-pass-7');
+
+    expect(play).toMatchObject({
+      ballCarrierRole: 'quarterback',
+      displayName: 'Quick Pass 7',
+      id: 'quick-pass-7',
+      kind: 'pass',
+      playbookId: '7v7',
+    });
+    expect(getEligibleReceiverIds(play)).toEqual([
+      'offense-wr-left',
+      'offense-wr-right',
+      'offense-rb',
+    ]);
+    expect(play.receiverRoutes?.['offense-wr-left']?.waypoints.map((waypoint) => waypoint.id)).toEqual([
+      'stem',
+      'out',
+    ]);
+    expect(play.receiverRoutes?.['offense-wr-right']?.waypoints.map((waypoint) => waypoint.id)).toEqual([
+      'clear-stem',
+      'short-slant',
+    ]);
+    expect(play.receiverRoutes?.['offense-rb']?.waypoints.map((waypoint) => waypoint.id)).toEqual([
+      'release',
+      'checkdown',
+    ]);
+  });
+
+  it('preserves Twin Slants Flat with three ordered receivers', () => {
+    const play = getPlay('twin-slants-flat');
+
     expect(play).toMatchObject({
       ballCarrierRole: 'quarterback',
       displayName: 'Twin Slants Flat',
@@ -191,9 +294,6 @@ describe('playbook', () => {
       playbookId: '7v7',
       roster: { id: '7v7' },
     });
-    expect(players).toHaveLength(14);
-    expect(players.filter((player) => player.team === 'offense')).toHaveLength(7);
-    expect(players.filter((player) => player.team === 'defense')).toHaveLength(7);
     expect(getEligibleReceiverIds(play)).toEqual([
       'offense-wr-left',
       'offense-wr-right',

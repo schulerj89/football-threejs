@@ -38,7 +38,7 @@ describe('gameplay camera controller', () => {
   });
 
   it('uses the tactical orthographic camera by default', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const controller = new GameplayCameraController({ height: 900, width: 1440 });
 
     controller.update(snapshotGameplayModel(gameplay), 0);
@@ -51,7 +51,7 @@ describe('gameplay camera controller', () => {
   });
 
   it('frames the line of scrimmage in offense perspective before the snap', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
     const controller = new GameplayCameraController({
       cinematics: 'off',
@@ -74,7 +74,7 @@ describe('gameplay camera controller', () => {
   });
 
   it('tracks an in-flight pass toward the pass target', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     selectPlay(gameplay, 'slant-flat');
     startPlay(gameplay);
     attemptPass(gameplay);
@@ -147,7 +147,7 @@ describe('gameplay camera controller', () => {
   });
 
   it('cycles development camera modes without replacing existing modes', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
     const controller = new GameplayCameraController({ height: 900, width: 1440 });
 
@@ -158,7 +158,7 @@ describe('gameplay camera controller', () => {
   });
 
   it('uses a transient orbit camera without changing the selected gameplay mode', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
     const controller = new GameplayCameraController({
       cinematics: 'brief',
@@ -181,7 +181,7 @@ describe('gameplay camera controller', () => {
   });
 
   it('can skip a transient orbit shot and restore the selected camera', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
     const controller = new GameplayCameraController({
       cinematics: 'brief',
@@ -225,7 +225,7 @@ describe('gameplay camera controller', () => {
   });
 
   it('updates orbit framing when resized', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
     const controller = new GameplayCameraController({
       cinematics: 'full',
@@ -244,7 +244,7 @@ describe('gameplay camera controller', () => {
   });
 
   it('resizes every camera mode without invalid projection data', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
 
     for (const mode of ['tacticalOrthographic', 'offensePerspective', 'cinematicBroadcast'] as const) {

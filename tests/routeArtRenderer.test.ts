@@ -15,7 +15,7 @@ import { resolveEligibleReceiverRoutes } from '../src/receiverRoutes';
 
 describe('route art renderer', () => {
   it('renders one path per eligible receiver route using exact resolved route points', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     selectPlay(gameplay, 'slant-flat');
     const renderer = new RouteArtRenderer();
     const snapshot = snapshotGameplayModel(gameplay);
@@ -48,7 +48,7 @@ describe('route art renderer', () => {
   });
 
   it('marks the selected receiver route with selected visual state', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     selectPlay(gameplay, 'slant-flat');
     gameplay.selectedReceiverId = 'offense-rb';
     const renderer = new RouteArtRenderer();
@@ -63,7 +63,7 @@ describe('route art renderer', () => {
   });
 
   it('is visible during preSnap and hidden during live and dead play outside audit mode', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     selectPlay(gameplay, 'quick-pass');
     const renderer = new RouteArtRenderer();
 
@@ -82,7 +82,7 @@ describe('route art renderer', () => {
   });
 
   it('does not mutate gameplay snapshots when route art is toggled off', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     selectPlay(gameplay, 'quick-pass');
     const snapshot = snapshotGameplayModel(gameplay);
     const before = JSON.stringify(snapshot);
@@ -120,7 +120,7 @@ describe('route art renderer', () => {
   });
 
   it('reports route audit cross-track measurements from live receiver positions', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     selectPlay(gameplay, 'quick-pass');
     const renderer = new RouteArtRenderer({ auditEnabled: true });
 
@@ -141,7 +141,7 @@ function createSnapshotForLane(
   play: PlayDefinition,
   lane: 'leftHash' | 'middle' | 'rightHash',
 ): GameplaySnapshot {
-  const gameplay = createGameplayModel();
+  const gameplay = createGameplayModel({ playbookId: '5v5' });
   selectPlay(gameplay, play.id);
   const snapshot = snapshotGameplayModel(gameplay);
   const snapPlacement = createSnapPlacementForLane(lane, INITIAL_BALL_SPOT.z);

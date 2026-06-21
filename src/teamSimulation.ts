@@ -95,8 +95,12 @@ export function acquireBlockingEngagements(
       continue;
     }
 
-    const defender = findAssignedDefender(blocker, defenders, blocking, play)
-      ?? findNearestEligibleDefender(blocker, defenders, blocking);
+    const assignedDefenderId = play
+      ? getProtectionAssignmentDefenderId(play, blocker.id)
+      : null;
+    const defender = assignedDefenderId
+      ? findAssignedDefender(blocker, assignedDefenderId, defenders, blocking)
+      : findNearestEligibleDefender(blocker, defenders, blocking);
     if (!defender) {
       continue;
     }
@@ -270,20 +274,10 @@ function updateDefenders(
 
 function findAssignedDefender(
   blocker: PlayerModel,
+  defenderId: string,
   defenders: PlayerModel[],
   blocking: BlockingState,
-  play?: PlayDefinition,
 ): PlayerModel | null {
-  if (!play) {
-    return null;
-  }
-
-  const defenderId = getProtectionAssignmentDefenderId(play, blocker.id);
-
-  if (!defenderId) {
-    return null;
-  }
-
   const defender = defenders.find((candidate) => candidate.id === defenderId);
 
   if (

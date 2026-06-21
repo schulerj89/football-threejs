@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.41.0] - 2026-06-21
+
+### Added
+
+- Added 7v7 `Inside Zone 7`, `Outside Zone 7`, and `Quick Pass 7` plays alongside the existing `Twin Slants Flat` play, all using the stable fourteen-player roster and semantic formation data.
+- Added explicit 7v7 run blocking, pass-protection, coverage, route, and possession data for the expanded playbook.
+- Added unit and browser coverage for default 7v7 launch, all four 7v7 play cards, all snap lanes, receiver cycling, reset behavior, and explicit 5v5 regression access.
+
+### Changed
+
+- Promoted 7v7 to the default normal playbook for plain launches, broadcast/performance presets, setup UI, and fallback playbook resolution.
+- Preserved 5v5 as an explicit legacy development and regression mode through `?playbook=5v5` and the title setup flow.
+- Updated project docs to identify 7v7 as the active default mode and 11v11 as the next roster milestone.
+
 ## [0.40.0] - 2026-06-21
 
 ### Added

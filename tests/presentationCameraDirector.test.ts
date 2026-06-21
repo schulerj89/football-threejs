@@ -34,7 +34,7 @@ describe('presentation camera director', () => {
   });
 
   it('does not delay snap input during the establishing shot', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const director = new PresentationCameraDirector();
     const camera = new THREE.PerspectiveCamera();
 
@@ -45,7 +45,7 @@ describe('presentation camera director', () => {
   });
 
   it('starts a pre-play orbit shot for a new pre-snap formation', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const director = new PresentationCameraDirector({ cinematics: 'full' });
     const debug = director.update(snapshotGameplayModel(gameplay), new THREE.PerspectiveCamera(), 0);
 
@@ -56,7 +56,7 @@ describe('presentation camera director', () => {
   });
 
   it('skips the active orbit shot without mutating gameplay state', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
     const before = JSON.stringify(snapshot);
     const director = new PresentationCameraDirector({ cinematics: 'full' });
@@ -71,7 +71,7 @@ describe('presentation camera director', () => {
   });
 
   it('does not mutate gameplay snapshots while calculating camera shots', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const snapshot = snapshotGameplayModel(gameplay);
     const before = JSON.stringify(snapshot);
     const director = new PresentationCameraDirector();
@@ -82,7 +82,7 @@ describe('presentation camera director', () => {
   });
 
   it('limits camera discontinuity when control transfers after a catch', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     selectPlay(gameplay, 'slant-flat');
     startPlay(gameplay);
     attemptPass(gameplay);
@@ -212,7 +212,7 @@ describe('presentation camera director', () => {
   });
 
   it('respects the off cinematics setting while preserving normal cinematic phases', () => {
-    const gameplay = createGameplayModel();
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
     const director = new PresentationCameraDirector({ cinematics: 'off' });
     const debug = director.update(snapshotGameplayModel(gameplay), new THREE.PerspectiveCamera(), 0);
 
@@ -247,7 +247,7 @@ function createDeadSnapshot(
   resultType: PlayResultType,
   endingBallSpot: { x: number; z: number },
 ): GameplaySnapshot {
-  const gameplay = createGameplayModel();
+  const gameplay = createGameplayModel({ playbookId: '5v5' });
   const snapshot = snapshotGameplayModel(gameplay);
 
   return {

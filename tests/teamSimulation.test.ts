@@ -14,7 +14,7 @@ import {
 
 describe('five-on-five rushing drill simulation', () => {
   it('creates five offensive and five defensive players without overlap', () => {
-    const players = createFormationPlayers(INITIAL_BALL_SPOT);
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, getPlay('inside-run'));
 
     expect(players).toHaveLength(10);
     expect(players.filter((player) => player.team === 'offense')).toHaveLength(5);
@@ -48,8 +48,8 @@ describe('five-on-five rushing drill simulation', () => {
   });
 
   it('impedes engaged defenders while unblocked defenders pursue at full speed', () => {
-    const players = createFormationPlayers(INITIAL_BALL_SPOT);
     const play = getRushingPlay('inside-run');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
     const runner = getPlayer(players, 'offense-rb');
     const blocking = createBlockingState();
 
@@ -236,7 +236,7 @@ describe('five-on-five rushing drill simulation', () => {
   });
 
   it('disengages blockers and defenders after they separate', () => {
-    const players = createFormationPlayers(INITIAL_BALL_SPOT);
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, getPlay('inside-run'));
     const blocker = getPlayer(players, 'offense-blocker-left');
     const defender = getPlayer(players, 'defense-rusher-left');
     const blocking = createBlockingState();

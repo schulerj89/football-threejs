@@ -102,7 +102,15 @@ interface GameplaySnapshot {
   playbookId: '5v5' | '7v7';
   selectedPlay: {
     displayName: string;
-    id: 'inside-run' | 'outside-run' | 'quick-pass' | 'slant-flat' | 'twin-slants-flat';
+    id:
+      | 'inside-run'
+      | 'inside-zone-7'
+      | 'outside-run'
+      | 'outside-zone-7'
+      | 'quick-pass'
+      | 'quick-pass-7'
+      | 'slant-flat'
+      | 'twin-slants-flat';
     kind: 'run' | 'pass';
     initialMovementDirection: FootballSpot;
   };
@@ -607,11 +615,16 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   const experience = await getGameExperienceSnapshot(page);
   expect(started).toMatchObject({
     playState: 'preSnap',
-    playbookId: '5v5',
+    playbookId: '7v7',
     scoreAttack: {
       remainingSeconds: 120,
       state: 'ready',
     },
+  });
+  expect(started.players).toHaveLength(14);
+  expect(started.selectedPlay).toMatchObject({
+    displayName: 'Inside Zone 7',
+    id: 'inside-zone-7',
   });
   expect(experience.finalSettings).toMatchObject({
     cinematics: 'brief',
@@ -639,31 +652,31 @@ test('starts the performance preset without visual crowd or cinematics', async (
   expect(await getOptionalCrowdPresentationSnapshot(page)).toBeNull();
 });
 
-test('selects the 7v7 passing prototype from the title screen', async ({ page }) => {
+test('selects the 5v5 legacy development mode from the title screen', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
-  await page.getByLabel('Game mode').selectOption('7v7');
+  await page.getByLabel('Game mode').selectOption('5v5');
   await page.getByRole('button', { name: 'Start Game' }).click();
 
   await expect(page.locator('.title-screen')).toBeHidden();
   const gameplay = await getGameplaySnapshot(page);
-  expect(gameplay.playbookId).toBe('7v7');
-  expect(gameplay.players).toHaveLength(14);
-  expect(gameplay.selectedPlay.displayName).toBe('Twin Slants Flat');
-  await expect(page.locator('.play-card')).toHaveCount(1);
+  expect(gameplay.playbookId).toBe('5v5');
+  expect(gameplay.players).toHaveLength(10);
+  expect(gameplay.selectedPlay.displayName).toBe('Inside Run');
+  await expect(page.locator('.play-card')).toHaveCount(4);
 });
 
 test('persists title-screen settings across reloads', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.locator('.title-screen').getByLabel('Presentation preset').selectOption('performance');
-  await page.locator('.title-screen').getByLabel('Game mode').selectOption('7v7');
+  await page.locator('.title-screen').getByLabel('Game mode').selectOption('5v5');
 
   await page.reload();
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.title-screen')).toBeVisible();
   await expect(page.locator('.title-screen').getByLabel('Presentation preset')).toHaveValue('performance');
-  await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveValue('7v7');
+  await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveValue('5v5');
 });
 
 test('starts the Three.js graybox field scene', async ({ page }) => {
@@ -681,7 +694,7 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   });
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical');
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.game-clock')).toHaveText('Time 2:00');
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
@@ -825,7 +838,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     crowdVisualsEnabled: true,
     gameplayCamera: 'offense',
     playerMotionEnabled: true,
-    playbookId: '5v5',
+    playbookId: '7v7',
     preset: 'broadcast',
     routeArtEnabled: true,
   });
@@ -924,7 +937,7 @@ test('supports the box player body comparison URL option', async ({ page }) => {
 
   const bodySnapshots = await getPlayerBodyVisualSnapshots(page);
 
-  expect(bodySnapshots).toHaveLength(10);
+  expect(bodySnapshots).toHaveLength(14);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'box')).toBe(true);
   await expect(page.locator('.debug-overlay')).toContainText('BODY box');
   await expectNonBlankCanvas(page);
@@ -1046,7 +1059,7 @@ test('supports football visual and appearance audit presentation options', async
   expect(football.meshCount).toBeGreaterThan(1);
 
   const appearanceAudit = await getAppearanceAuditSnapshot(page);
-  expect(appearanceAudit.playerCount).toBe(10);
+  expect(appearanceAudit.playerCount).toBe(14);
   expect(appearanceAudit.skinToneCount).toBeGreaterThanOrEqual(3);
   expect(
     appearanceAudit.entries.every(
@@ -1119,7 +1132,7 @@ test('starts field and formation audit modes without render errors', async ({ pa
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toContainText('FPS');
   await expect(page.locator('.formation-audit-overlay')).toContainText('FORMATION AUDIT');
-  await expect(page.locator('.formation-audit-overlay')).toContainText('PLAY Inside Run');
+  await expect(page.locator('.formation-audit-overlay')).toContainText('PLAY Inside Zone 7');
   await expect(page.locator('.formation-audit-overlay')).toContainText('ISSUES none');
   await expectNonBlankCanvas(page);
 
@@ -1142,7 +1155,7 @@ test('stages a static 7v7 formation preview across snap lanes and camera modes',
   });
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical&formationPreview=7v7&formationAudit=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical&playbook=5v5&formationPreview=7v7&formationAudit=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.play-call-ui')).toBeHidden();
   await expect(page.locator('.play-call')).toHaveText('7v7 Formation Preview');
@@ -1356,35 +1369,35 @@ test('runs 7v7 presentation audit scenarios with screenshots', async ({ page }, 
 
 test('renders graphical play cards and selects plays through the shared request path', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&experience=performance');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=7v7');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   const cards = page.locator('.play-card');
   await expect(page.locator('.play-call-ui')).toBeVisible();
   await expect(cards).toHaveCount(4);
   await expect(cards.locator('.play-card-title')).toHaveText([
-    'Inside Run',
-    'Outside Run',
-    'Quick Pass',
-    'Slant Flat',
+    'Inside Zone 7',
+    'Outside Zone 7',
+    'Quick Pass 7',
+    'Twin Slants Flat',
   ]);
-  await expect(page.locator('.play-card[data-play-id="inside-run"] .play-card-run-direction')).toHaveCount(1);
-  await expect(page.locator('.play-card[data-play-id="outside-run"] .play-card-run-direction')).toHaveCount(1);
-  await expect(page.locator('.play-card[data-play-id="quick-pass"] .play-card-receiver-route')).toHaveCount(1);
-  await expect(page.locator('.play-card[data-play-id="slant-flat"] .play-card-receiver-route')).toHaveCount(2);
-  await expect(page.locator('.play-card[data-play-id="inside-run"]')).toHaveAttribute('data-selected', 'true');
+  await expect(page.locator('.play-card[data-play-id="inside-zone-7"] .play-card-run-direction')).toHaveCount(1);
+  await expect(page.locator('.play-card[data-play-id="outside-zone-7"] .play-card-run-direction')).toHaveCount(1);
+  await expect(page.locator('.play-card[data-play-id="quick-pass-7"] .play-card-receiver-route')).toHaveCount(3);
+  await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-receiver-route')).toHaveCount(3);
+  await expect(page.locator('.play-card[data-play-id="inside-zone-7"]')).toHaveAttribute('data-selected', 'true');
 
-  await page.locator('.play-card[data-play-id="outside-run"]').click();
+  await page.locator('.play-card[data-play-id="outside-zone-7"]').click();
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
-    selectedPlay: { id: 'outside-run', displayName: 'Outside Run' },
+    selectedPlay: { id: 'outside-zone-7', displayName: 'Outside Zone 7' },
   });
-  await expect(page.locator('.play-card[data-play-id="outside-run"]')).toHaveAttribute('data-selected', 'true');
+  await expect(page.locator('.play-card[data-play-id="outside-zone-7"]')).toHaveAttribute('data-selected', 'true');
 
   await page.keyboard.press('3');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
-    selectedPlay: { id: 'quick-pass', displayName: 'Quick Pass' },
+    selectedPlay: { id: 'quick-pass-7', displayName: 'Quick Pass 7' },
   });
-  await expect(page.locator('.play-card[data-play-id="quick-pass"]')).toHaveAttribute('data-selected', 'true');
+  await expect(page.locator('.play-card[data-play-id="quick-pass-7"]')).toHaveAttribute('data-selected', 'true');
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(cards).toHaveCount(4);
@@ -1396,12 +1409,12 @@ test('renders graphical play cards and selects plays through the shared request 
 
   await page.keyboard.press('1');
   await page.waitForTimeout(100);
-  expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('quick-pass');
+  expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('quick-pass-7');
 });
 
 test('shows on-field receiver routes before snap and supports route audit mode', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&experience=performance&routeArt=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&routeArt=1&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('4');
@@ -1423,7 +1436,7 @@ test('shows on-field receiver routes before snap and supports route audit mode',
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({ visible: false });
 
-  await page.goto('/?debug=1&readback=1&experience=performance&routeArt=0');
+  await page.goto('/?debug=1&readback=1&experience=performance&routeArt=0&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.keyboard.press('3');
   await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({
@@ -1431,7 +1444,7 @@ test('shows on-field receiver routes before snap and supports route audit mode',
     visible: false,
   });
 
-  await page.goto('/?debug=1&readback=1&experience=performance&routeAudit=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&routeAudit=1&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.keyboard.press('3');
   await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({
@@ -1446,7 +1459,7 @@ test('shows on-field receiver routes before snap and supports route audit mode',
 
 test('shows pass audit data for a route-aware throw', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&experience=performance&passAudit=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&passAudit=1&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.pass-audit-overlay')).toContainText('no active pass');
 
@@ -1481,21 +1494,36 @@ test('starts playable 7v7 Twin Slants Flat and throws to the selected target', a
   const initial = await getGameplaySnapshot(page);
   expect(initial.playbookId).toBe('7v7');
   expect(initial.selectedPlay).toMatchObject({
-    displayName: 'Twin Slants Flat',
-    id: 'twin-slants-flat',
-    kind: 'pass',
+    displayName: 'Inside Zone 7',
+    id: 'inside-zone-7',
+    kind: 'run',
   });
   expect(initial.players).toHaveLength(14);
   expect(initial.players.filter((player) => player.team === 'offense')).toHaveLength(7);
   expect(initial.players.filter((player) => player.team === 'defense')).toHaveLength(7);
-  expect(initial.selectedReceiver).toEqual({
+  expect(initial.selectedReceiver).toBeNull();
+  await expect(page.locator('.play-card')).toHaveCount(4);
+  await expect(page.locator('.play-card-title')).toHaveText([
+    'Inside Zone 7',
+    'Outside Zone 7',
+    'Quick Pass 7',
+    'Twin Slants Flat',
+  ]);
+  await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-receiver-route')).toHaveCount(3);
+  await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-blocker-assignment')).toHaveCount(3);
+
+  await page.keyboard.press('4');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { displayName: 'Twin Slants Flat', id: 'twin-slants-flat' },
+    selectedReceiver: {
+      displayName: 'Receiver Left',
+      id: 'offense-wr-left',
+    },
+  });
+  expect((await getGameplaySnapshot(page)).selectedReceiver).toEqual({
     displayName: 'Receiver Left',
     id: 'offense-wr-left',
   });
-  await expect(page.locator('.play-card')).toHaveCount(1);
-  await expect(page.locator('.play-card-title')).toHaveText('Twin Slants Flat');
-  await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-receiver-route')).toHaveCount(3);
-  await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-blocker-assignment')).toHaveCount(3);
 
   await page.keyboard.press('e');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
@@ -1526,7 +1554,7 @@ test('starts playable 7v7 Twin Slants Flat and throws to the selected target', a
 
 test('selects offense perspective camera and toggles modes without resetting gameplay', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&experience=performance&camera=offense');
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=offense&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
@@ -1684,7 +1712,7 @@ test('moves the placeholder player with WASD and arrow keys', async ({ page }) =
   });
 
   for (const movementCase of movementCases) {
-    await page.goto('/?debug=1&readback=1&experience=performance');
+    await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
     await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
     await page.keyboard.press('Space');
     await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
@@ -1704,7 +1732,7 @@ test('moves the placeholder player with WASD and arrow keys', async ({ page }) =
 });
 
 test('keeps D reserved for movement instead of debug toggling', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toBeVisible();
   await page.keyboard.press('Space');
@@ -1721,7 +1749,7 @@ test('keeps D reserved for movement instead of debug toggling', async ({ page })
 });
 
 test('selects plays before snap and locks selection while live', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('2');
@@ -1795,7 +1823,7 @@ test('selects plays before snap and locks selection while live', async ({ page }
 });
 
 test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   const initial = await getGameplaySnapshot(page);
 
@@ -1850,7 +1878,7 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
 });
 
 test('selects Quick Pass, starts the route after snap, and throws once', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('3');
@@ -1885,7 +1913,7 @@ test('selects Quick Pass, starts the route after snap, and throws once', async (
 });
 
 test('selects Slant Flat, cycles the target, and throws to the selected receiver', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('4');
@@ -1936,7 +1964,7 @@ test('selects Slant Flat, cycles the target, and throws to the selected receiver
 });
 
 test('offense perspective tracks an in-flight pass', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance&camera=offense');
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=offense&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('4');
@@ -1954,7 +1982,7 @@ test('offense perspective tracks an in-flight pass', async ({ page }) => {
 });
 
 test('rejects Quick Pass after the quarterback crosses the line of scrimmage', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance&routeArt=0&playerMotion=0');
+  await page.goto('/?debug=1&readback=1&experience=performance&routeArt=0&playbook=5v5&playerMotion=0');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('3');
@@ -1980,7 +2008,7 @@ test('rejects Quick Pass after the quarterback crosses the line of scrimmage', a
 });
 
 test('scores touchdown by avoiding the defender and auto-resets', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
 
@@ -2028,7 +2056,7 @@ test('scores touchdown by avoiding the defender and auto-resets', async ({ page 
 });
 
 test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
 
@@ -2074,7 +2102,7 @@ test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
 });
 
 test('going out of bounds ends the play and resets at the resolved snap spot', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('Space');
@@ -2106,7 +2134,7 @@ test('going out of bounds ends the play and resets at the resolved snap spot', a
 });
 
 test('failed fourth down shows turnover and starts a new drill', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&experience=performance');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   const firstDownFailure = await runOutOfBoundsPlay(page);
