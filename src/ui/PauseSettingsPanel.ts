@@ -15,6 +15,8 @@ export class PauseSettingsPanel {
     this.root.hidden = true;
     this.root.setAttribute('role', 'dialog');
     this.root.setAttribute('aria-modal', 'true');
+    this.root.addEventListener('wheel', (event) => event.stopPropagation(), { passive: true });
+    this.root.addEventListener('touchmove', (event) => event.stopPropagation(), { passive: true });
 
     const panel = document.createElement('div');
     panel.className = 'pause-settings-card';

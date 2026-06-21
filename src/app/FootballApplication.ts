@@ -246,8 +246,10 @@ export class FootballApplication {
       return;
     }
 
+    const pauseSettingsVisible = this.lifecycle.isPauseSettingsVisible();
     const gameplayActive =
-      this.lifecycle.phase === 'gameplay' && !this.lifecycle.isPauseSettingsVisible();
+      this.lifecycle.phase === 'gameplay' && !pauseSettingsVisible;
+    const presentationDelta = pauseSettingsVisible ? 0 : delta;
     this.gameplay.update(delta, gameplayActive, this.performanceProfiler);
     if (gameplayActive) {
       this.performanceScenarioRunner?.update(delta);
@@ -278,7 +280,7 @@ export class FootballApplication {
       crowdCutawaysEnabled: !!this.presentation.crowdPresentation &&
         this.gameExperience.crowdPresentationSettings.crowdVisualsEnabled &&
         this.gameExperience.crowdPresentationSettings.crowdReactionsEnabled,
-      deltaSeconds: delta,
+      deltaSeconds: presentationDelta,
       gameplaySnapshot,
       playerVisuals: this.playerVisuals.visuals,
       profiler: this.performanceProfiler,

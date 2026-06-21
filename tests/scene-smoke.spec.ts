@@ -869,6 +869,31 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   await expect(page.locator('.pause-settings-panel')).toBeHidden();
 });
 
+test('keeps the gameplay camera still while scrolling pause settings', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 620 });
+  await page.goto('/?debug=1&readback=1&camera=cinematic&cinematics=brief');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect.poll(() => getGameplaySnapshot(page).then((snapshot) => snapshot.playState)).toBe('preSnap');
+
+  await page.keyboard.press('Escape');
+  const panel = page.locator('.pause-settings-panel');
+  const card = page.locator('.pause-settings-card');
+  await expect(panel).toBeVisible();
+  await expect(card).toBeVisible();
+
+  const before = await getCameraSnapshot(page);
+  const initialScrollTop = await card.evaluate((element) => element.scrollTop);
+  await card.hover();
+  await page.mouse.wheel(0, 620);
+  await page.waitForTimeout(500);
+
+  const after = await getCameraSnapshot(page);
+  const finalScrollTop = await card.evaluate((element) => element.scrollTop);
+  expect(finalScrollTop).toBeGreaterThan(initialScrollTop);
+  expect(vector3Distance(after.cameraPosition, before.cameraPosition)).toBeLessThan(0.001);
+  expect(vector3Distance(after.targetPosition, before.targetPosition)).toBeLessThan(0.001);
+});
+
 test('starts the performance preset without visual crowd or cinematics', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -3183,6 +3208,14 @@ function getPreviewPlayer(
 
 function vectorLength(vector: { x: number; z: number }): number {
   return Math.hypot(vector.x, vector.z);
+}
+
+function vector3Distance(first: Vector3Snapshot, second: Vector3Snapshot): number {
+  return Math.hypot(
+    first.x - second.x,
+    first.y - second.y,
+    first.z - second.z,
+  );
 }
 
 async function getPlayerSnapshot(page: Page): Promise<PlayerSnapshot> {

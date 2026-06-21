@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.3] - 2026-06-21
+
+### Fixed
+
+- Froze presentation/camera delta while the pause settings panel is visible so scrolling settings no longer advances pre-snap cinematics or jitters the background camera.
+- Stopped wheel and touch-scroll events from propagating out of the pause settings modal.
+
+### Tests
+
+- Added browser smoke coverage that opens pause settings, scrolls the settings card, and verifies the gameplay camera position and target remain stable.
+
 ## [0.51.2] - 2026-06-21
 
 ### Fixed
