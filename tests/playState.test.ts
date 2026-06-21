@@ -48,6 +48,134 @@ describe('play state transitions', () => {
     });
   });
 
+  it('creates the optional 11v11 Inside Zone play with twenty-two active players', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+
+    expect(gameplay.playbookId).toBe('11v11');
+    expect(gameplay.availablePlays.map((play) => play.id)).toEqual(['inside-zone-11']);
+    expect(gameplay.selectedPlay).toMatchObject({
+      displayName: 'Inside Zone 11',
+      id: 'inside-zone-11',
+      kind: 'run',
+    });
+    expect(gameplay.players).toHaveLength(22);
+    expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(11);
+    expect(gameplay.players.filter((player) => player.team === 'defense')).toHaveLength(11);
+    expect(gameplay.player).toMatchObject({
+      id: 'offense-rb',
+      role: 'runner',
+    });
+    expect(getPlayer(gameplay.players, 'offense-qb')).toMatchObject({
+      role: 'quarterback',
+      currentState: 'idle',
+    });
+  });
+
+  it('starts Inside Zone 11 with running back possession and the quarterback as a decoy', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+
+    expect(startPlay(gameplay)).toBe(true);
+
+    expect(gameplay.playState).toBe('live');
+    expect(gameplay.player).toMatchObject({
+      id: 'offense-rb',
+      currentState: 'userControlled',
+      role: 'runner',
+    });
+    expect(getPlayer(gameplay.players, 'offense-qb')).toMatchObject({
+      currentState: 'idle',
+      role: 'quarterback',
+    });
+    expect(gameplay.ball.possession).toEqual({
+      kind: 'player',
+      playerId: 'offense-rb',
+    });
+    expect(gameplay.ball.state).toMatchObject({
+      kind: 'possessed',
+      playerId: 'offense-rb',
+    });
+    expect(gameplay.players.filter((player) => player.team === 'offense' && player.role === 'blocker')).toHaveLength(9);
+    expect(gameplay.players.filter((player) => player.team === 'defense' && player.currentState === 'pursuing')).toHaveLength(11);
+  });
+
+  it('resets Inside Zone 11 with all twenty-two players and no stale engagements', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+    const initialPositions = Object.fromEntries(
+      gameplay.players.map((player) => [player.id, { ...player.position }]),
+    );
+
+    startPlay(gameplay);
+    gameplay.blocking.engagements.push({
+      blockerId: 'offense-center',
+      defenderId: 'defense-line-middle',
+    });
+    gameplay.player.position.x += 3;
+    gameplay.player.position.z += 8;
+
+    resetPlay(gameplay);
+
+    expect(gameplay.playState).toBe('preSnap');
+    expect(gameplay.players).toHaveLength(22);
+    expect(gameplay.blocking.engagements).toEqual([]);
+    expect(gameplay.player.id).toBe('offense-rb');
+    expect(gameplay.players.map((player) => player.id).sort()).toEqual(
+      Object.keys(initialPositions).sort(),
+    );
+    for (const player of gameplay.players) {
+      expect(player.position).toEqual(initialPositions[player.id]);
+      expect(player.velocity).toEqual({ x: 0, z: 0 });
+      expect(player.currentState).toBe('idle');
+    }
+  });
+
+  it('records Inside Zone 11 tackle, first-down, touchdown, and out-of-bounds results', () => {
+    const tackle = createGameplayModel({ playbookId: '11v11' });
+    startPlay(tackle);
+    tackle.player.position = { ...tackle.currentBallSpot };
+    getPlayer(tackle.players, 'defense-safety').position = { ...tackle.player.position };
+    updateGameplayModel(tackle, 0);
+
+    expect(tackle.playState).toBe('dead');
+    expect(tackle.lastPlayResult).toMatchObject({
+      type: 'tackle',
+      yardsGained: 0,
+    });
+
+    const firstDown = createGameplayModel({ playbookId: '11v11' });
+    startPlay(firstDown);
+    firstDown.player.position.z = firstDown.currentBallSpot.z + 11;
+    getPlayer(firstDown.players, 'defense-safety').position = { ...firstDown.player.position };
+    updateGameplayModel(firstDown, 0);
+
+    expect(firstDown.lastPlayResult).toMatchObject({
+      type: 'tackle',
+      yardsGained: 11,
+    });
+    expect(firstDown.drive.currentDown).toBe(1);
+    expect(firstDown.drive.yardsToFirstDown).toBe(10);
+
+    const touchdown = createGameplayModel({ playbookId: '11v11' });
+    startPlay(touchdown);
+    touchdown.player.position.z = GAMEPLAY_CONFIG.opposingGoalLineZ;
+    updateGameplayModel(touchdown, 0);
+
+    expect(touchdown.lastPlayResult).toMatchObject({
+      scoringTeam: 'offense',
+      type: 'touchdown',
+    });
+    expect(touchdown.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
+
+    const outOfBounds = createGameplayModel({ playbookId: '11v11' });
+    startPlay(outOfBounds);
+    outOfBounds.player.position.x = PLAYABLE_FIELD_BOUNDS.maxX + outOfBounds.player.collisionRadius + 0.1;
+    updateGameplayModel(outOfBounds, 0);
+
+    expect(outOfBounds.lastPlayResult).toMatchObject({
+      type: 'outOfBounds',
+    });
+    expect(outOfBounds.nextSnapSpot.x).toBeLessThanOrEqual(PLAYABLE_FIELD_BOUNDS.maxX);
+  });
+
   it('starts in preSnap at the line of scrimmage without ball possession', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
 

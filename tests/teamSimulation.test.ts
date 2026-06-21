@@ -155,6 +155,39 @@ describe('five-on-five rushing drill simulation', () => {
     );
   });
 
+  it('uses explicit Inside Zone 11 blocking assignments without blocking either safety', () => {
+    const play = getPlay('inside-zone-11');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+    const blocking = createBlockingState();
+
+    for (const [blockerId, defenderId] of Object.entries(play.protectionAssignments ?? {})) {
+      const blocker = getPlayer(players, blockerId);
+      const defender = getPlayer(players, defenderId);
+      blocker.position = { x: defender.position.x, z: defender.position.z - 0.5 };
+    }
+
+    acquireBlockingEngagements(players, blocking, play);
+
+    expect(blocking.engagements).toHaveLength(9);
+    expect(new Set(blocking.engagements.map((engagement) => engagement.blockerId)).size).toBe(9);
+    expect(new Set(blocking.engagements.map((engagement) => engagement.defenderId)).size).toBe(9);
+    expect(blocking.engagements).toEqual(
+      expect.arrayContaining([
+        { blockerId: 'offense-center', defenderId: 'defense-line-middle' },
+        { blockerId: 'offense-line-left', defenderId: 'defense-line-left' },
+        { blockerId: 'offense-line-right', defenderId: 'defense-line-right' },
+        { blockerId: 'offense-tackle-left', defenderId: 'defense-linebacker-left' },
+        { blockerId: 'offense-tackle-right', defenderId: 'defense-linebacker-right' },
+        { blockerId: 'offense-tight-end', defenderId: 'defense-linebacker-inside' },
+        { blockerId: 'offense-slot', defenderId: 'defense-linebacker' },
+        { blockerId: 'offense-wr-left', defenderId: 'defense-corner-left' },
+        { blockerId: 'offense-wr-right', defenderId: 'defense-corner-right' },
+      ]),
+    );
+    expect(blocking.engagements.map((engagement) => engagement.defenderId)).not.toContain('defense-safety');
+    expect(blocking.engagements.map((engagement) => engagement.defenderId)).not.toContain('defense-safety-strong');
+  });
+
   it('runs all Twin Slants Flat routes after the snap and keeps coverage on assignments', () => {
     const play = getPlay('twin-slants-flat');
     const players = createFormationPlayers(INITIAL_BALL_SPOT, play);

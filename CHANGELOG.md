@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.44.0] - 2026-06-21
+
+### Added
+
+- Added the optional `?playbook=11v11` development playbook with the first playable twenty-two-player `Inside Zone 11` rushing play while preserving 7v7 as the default.
+- Added 11v11 run-play data using `ELEVEN_ON_ELEVEN_ROSTER`, the validated static formation, running-back possession, quarterback decoy behavior, deterministic one-to-one blocking assignments, lane targets, and unblocked safeties.
+- Added unit and browser smoke coverage for optional 11v11 playbook selection, twenty-two-player creation, 11-per-team counts, RB possession, reset restoration, snap lanes, blocking assignments, tackle, first-down, touchdown, out-of-bounds, play-card generation, and browser rendering.
+
+### Changed
+
+- Extended playbook settings and query override handling to accept `11v11` without promoting it to the normal default.
+- Updated README and AGENTS to document the optional Inside Zone 11 development path and keep broader 11v11 passing/additional-play work in future scope.
+
 ## [0.43.0] - 2026-06-21
 
 ### Added

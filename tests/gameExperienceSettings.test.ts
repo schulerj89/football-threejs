@@ -135,6 +135,24 @@ describe('game experience settings', () => {
     expect(storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY)).toBe(storedBefore);
   });
 
+  it('allows the optional 11v11 playbook as a query-only development override', () => {
+    const storage = createMemoryStorage();
+
+    const resolved = resolveGameExperienceSettings({
+      searchParams: new URLSearchParams('playbook=11v11'),
+      storage,
+    });
+
+    expect(resolved.settings).toMatchObject({
+      playbookId: '11v11',
+      preset: 'broadcast',
+    });
+    expect(resolved.queryOverrides).toEqual({
+      playbookId: '11v11',
+    });
+    expect(storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY)).toBeNull();
+  });
+
   it('keeps preview and audit modes opt-in development flags', () => {
     expect(resolveDevelopmentModeFlags(new URLSearchParams())).toEqual({
       appearanceAudit: false,

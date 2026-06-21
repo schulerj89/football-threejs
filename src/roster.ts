@@ -4,7 +4,7 @@ export interface RosterContract {
   offensePlayerIds: readonly string[];
 }
 
-export type PlaybookId = '5v5' | '7v7';
+export type PlaybookId = '11v11' | '5v5' | '7v7';
 
 export const FIVE_ON_FIVE_OFFENSE_PLAYER_IDS = [
   'offense-qb',

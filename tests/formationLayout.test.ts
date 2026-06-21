@@ -12,6 +12,9 @@ import {
 } from '../src/formationLayout';
 import { getPlay } from '../src/playbook';
 import {
+  ELEVEN_ON_ELEVEN_DEFENSE_PLAYER_IDS,
+  ELEVEN_ON_ELEVEN_OFFENSE_PLAYER_IDS,
+  ELEVEN_ON_ELEVEN_PLAYER_IDS,
   SEVEN_ON_SEVEN_DEFENSE_PLAYER_IDS,
   SEVEN_ON_SEVEN_OFFENSE_PLAYER_IDS,
   SEVEN_ON_SEVEN_PLAYER_IDS,
@@ -50,6 +53,24 @@ describe('formationLayout', () => {
           [...SEVEN_ON_SEVEN_DEFENSE_PLAYER_IDS].sort(),
         );
       }
+    }
+  });
+
+  it('resolves Inside Zone 11 at every snap lane with the full twenty-two-player roster', () => {
+    for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+      const formation = resolveFormation(getPlay('inside-zone-11'), {
+        lane,
+        spot: { x: SNAP_LANE_X[lane], z: INITIAL_BALL_SPOT.z },
+      });
+
+      expect(formation.issues).toEqual([]);
+      expect(formation.slots.map((slot) => slot.id).sort()).toEqual([...ELEVEN_ON_ELEVEN_PLAYER_IDS].sort());
+      expect(formation.slots.filter((slot) => slot.team === 'offense').map((slot) => slot.id).sort()).toEqual(
+        [...ELEVEN_ON_ELEVEN_OFFENSE_PLAYER_IDS].sort(),
+      );
+      expect(formation.slots.filter((slot) => slot.team === 'defense').map((slot) => slot.id).sort()).toEqual(
+        [...ELEVEN_ON_ELEVEN_DEFENSE_PLAYER_IDS].sort(),
+      );
     }
   });
 

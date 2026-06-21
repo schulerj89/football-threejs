@@ -18,7 +18,10 @@ import {
 } from '../src/playbook';
 import { createSnapPlacementForLane } from '../src/formationPreview';
 import { resolveFormation } from '../src/formationLayout';
-import { SEVEN_ON_SEVEN_PLAYER_IDS } from '../src/roster';
+import {
+  ELEVEN_ON_ELEVEN_PLAYER_IDS,
+  SEVEN_ON_SEVEN_PLAYER_IDS,
+} from '../src/roster';
 
 describe('playbook', () => {
   it('looks up the stable rushing and passing plays', () => {
@@ -349,6 +352,92 @@ describe('playbook', () => {
 
       expect(formation.issues).toEqual([]);
       expect(safety.position.x).toBeCloseTo(expectedX);
+    }
+  });
+
+  it('defines Inside Zone 11 as the only optional 11v11 playbook play', () => {
+    const plays = getAvailablePlays('11v11');
+    const play = getPlay('inside-zone-11');
+
+    expect(getDefaultPlayId('11v11')).toBe('inside-zone-11');
+    expect(plays.map((candidate) => candidate.id)).toEqual(['inside-zone-11']);
+    expect(play).toMatchObject({
+      ballCarrierRole: 'runner',
+      displayName: 'Inside Zone 11',
+      id: 'inside-zone-11',
+      kind: 'run',
+      playbookId: '11v11',
+      roster: { id: '11v11' },
+    });
+  });
+
+  it('places Inside Zone 11 with twenty-two players and running back possession role', () => {
+    const play = getPlay('inside-zone-11');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+
+    expect(players.map((player) => player.id).sort()).toEqual([...ELEVEN_ON_ELEVEN_PLAYER_IDS].sort());
+    expect(players).toHaveLength(22);
+    expect(players.filter((player) => player.team === 'offense')).toHaveLength(11);
+    expect(players.filter((player) => player.team === 'defense')).toHaveLength(11);
+    expect(getPlayer(players, 'offense-rb')).toMatchObject({
+      role: 'runner',
+      team: 'offense',
+    });
+    expect(getPlayer(players, 'offense-qb')).toMatchObject({
+      role: 'quarterback',
+      team: 'offense',
+    });
+  });
+
+  it('declares one-to-one Inside Zone 11 blocking assignments and leaves safeties unblocked', () => {
+    const play = getPlay('inside-zone-11');
+    const assignments = play.protectionAssignments ?? {};
+    const assignedDefenders = Object.values(assignments);
+
+    expect(Object.keys(assignments).sort()).toEqual([
+      'offense-center',
+      'offense-line-left',
+      'offense-line-right',
+      'offense-slot',
+      'offense-tackle-left',
+      'offense-tackle-right',
+      'offense-tight-end',
+      'offense-wr-left',
+      'offense-wr-right',
+    ]);
+    expect(assignedDefenders).toHaveLength(9);
+    expect(new Set(assignedDefenders).size).toBe(assignedDefenders.length);
+    expect(assignedDefenders).not.toContain('defense-safety');
+    expect(assignedDefenders).not.toContain('defense-safety-strong');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-center')).toBe('defense-line-middle');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-left')).toBe('defense-linebacker-left');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-tight-end')).toBe('defense-linebacker-inside');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-slot')).toBe('defense-linebacker');
+  });
+
+  it('resolves Inside Zone 11 at every snap lane without corrupting assignments', () => {
+    const play = getPlay('inside-zone-11');
+
+    for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+      const snapPlacement = createSnapPlacementForLane(lane);
+      const snapSpot = { x: snapPlacement.spot.x, z: INITIAL_BALL_SPOT.z };
+      const formation = resolveFormation(play, snapPlacement);
+      const players = createFormationPlayers(snapSpot, play);
+
+      expect(formation.issues).toEqual([]);
+      expect(players).toHaveLength(22);
+      for (const [blockerId, defenderId] of Object.entries(play.protectionAssignments ?? {})) {
+        const blocker = getPlayer(players, blockerId);
+        const defender = getPlayer(players, defenderId);
+        const laneTarget = getBlockingLaneTarget(blocker, snapSpot, play);
+
+        expect(blocker.team).toBe('offense');
+        expect(defender.team).toBe('defense');
+        expect(defender.role).toBe('defender');
+        expect(laneTarget.x).toBeGreaterThanOrEqual(PLAYABLE_FIELD_BOUNDS.minX);
+        expect(laneTarget.x).toBeLessThanOrEqual(PLAYABLE_FIELD_BOUNDS.maxX);
+        expect(laneTarget.z).toBeGreaterThan(INITIAL_BALL_SPOT.z);
+      }
     }
   });
 });

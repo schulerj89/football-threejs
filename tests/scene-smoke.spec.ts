@@ -99,11 +99,12 @@ interface GameplaySnapshot {
   nextBallSpot: FootballSpot;
   player: PlayerSnapshot;
   players: PlayerSnapshot[];
-  playbookId: '5v5' | '7v7';
+  playbookId: '11v11' | '5v5' | '7v7';
   selectedPlay: {
     displayName: string;
     id:
       | 'inside-run'
+      | 'inside-zone-11'
       | 'inside-zone-7'
       | 'outside-run'
       | 'outside-zone-7'
@@ -622,7 +623,7 @@ interface GameExperienceSettingsSnapshot {
   crowdVisualsEnabled: boolean;
   gameplayCamera: 'cinematic' | 'offense' | 'tactical';
   playerMotionEnabled: boolean;
-  playbookId: '5v5' | '7v7';
+  playbookId: '11v11' | '5v5' | '7v7';
   preset: 'broadcast' | 'custom' | 'performance';
   routeArtEnabled: boolean;
 }
@@ -1819,6 +1820,64 @@ test('starts playable 7v7 Twin Slants Flat and throws to the selected target', a
   expect(['inFlight', 'caught', 'incomplete', 'dead']).toContain(
     (await getGameplaySnapshot(page)).ball.state.kind,
   );
+  await expectNonBlankCanvas(page);
+});
+
+test('starts optional playable 11v11 Inside Zone with running back possession', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical&playbook=11v11&audio=0&crowdVisuals=0&cinematics=off');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  const initial = await getGameplaySnapshot(page);
+  expect(initial.playbookId).toBe('11v11');
+  expect(initial.selectedPlay).toMatchObject({
+    displayName: 'Inside Zone 11',
+    id: 'inside-zone-11',
+    kind: 'run',
+  });
+  expect(initial.players).toHaveLength(22);
+  expect(initial.players.filter((player) => player.team === 'offense')).toHaveLength(11);
+  expect(initial.players.filter((player) => player.team === 'defense')).toHaveLength(11);
+  expect(getPlayer(initial, 'offense-rb')).toMatchObject({
+    currentState: 'idle',
+    role: 'runner',
+  });
+  expect(getPlayer(initial, 'offense-qb')).toMatchObject({
+    currentState: 'idle',
+    role: 'quarterback',
+  });
+  await expect(page.locator('.play-card')).toHaveCount(1);
+  await expect(page.locator('.play-card-title')).toHaveText(['Inside Zone 11']);
+  await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-run-direction')).toHaveCount(1);
+  await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-blocker-assignment')).toHaveCount(9);
+  await expectNonBlankCanvas(page);
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    ball: {
+      possession: {
+        kind: 'player',
+        playerId: 'offense-rb',
+      },
+      state: {
+        kind: 'possessed',
+        playerId: 'offense-rb',
+      },
+    },
+    playState: 'live',
+  });
+  await expect(page.locator('.play-call-ui')).toBeHidden();
+
+  const live = await getGameplaySnapshot(page);
+  expect(getPlayer(live, 'offense-rb')).toMatchObject({
+    currentState: 'userControlled',
+    role: 'runner',
+  });
+  expect(getPlayer(live, 'offense-qb')).toMatchObject({
+    currentState: 'idle',
+    role: 'quarterback',
+  });
+  expect(live.blocking.engagements.length).toBeLessThanOrEqual(9);
   await expectNonBlankCanvas(page);
 });
 

@@ -281,7 +281,7 @@ export function resolveGameExperienceQueryOverrides(
     overrides.preset = presetValue;
   }
 
-  if (playbookValue === '5v5' || playbookValue === '7v7') {
+  if (playbookValue === '5v5' || playbookValue === '7v7' || playbookValue === '11v11') {
     overrides.playbookId = playbookValue;
   }
 
@@ -470,7 +470,7 @@ function isCrowdDensity(value: unknown): value is CrowdDensity {
 }
 
 function isPlaybookId(value: unknown): value is PlaybookId {
-  return value === '5v5' || value === '7v7';
+  return value === '5v5' || value === '7v7' || value === '11v11';
 }
 
 function getLocalStorage(): StorageLike | null {

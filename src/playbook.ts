@@ -14,6 +14,11 @@ import {
   type PreSnapFacingDefinition,
 } from './formationLayout';
 import {
+  ELEVEN_ON_ELEVEN_ELIGIBLE_RECEIVER_IDS,
+  ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS,
+  createElevenOnElevenPreviewFormation,
+} from './elevenOnElevenFormation';
+import {
   PLAYER_MOVEMENT_CONFIG,
   createPlayerModel,
   type PlayerModel,
@@ -28,6 +33,8 @@ import {
 } from './receiverRoutes';
 import {
   FIVE_ON_FIVE_ROSTER,
+  ELEVEN_ON_ELEVEN_PLAYER_IDS,
+  ELEVEN_ON_ELEVEN_ROSTER,
   SEVEN_ON_SEVEN_PLAYER_IDS,
   SEVEN_ON_SEVEN_ROSTER,
   type PlaybookId,
@@ -37,6 +44,7 @@ import { SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS } from './sevenOnSevenFormation';
 
 export type PlayId =
   | 'inside-run'
+  | 'inside-zone-11'
   | 'inside-zone-7'
   | 'outside-run'
   | 'outside-zone-7'
@@ -96,6 +104,7 @@ const {
 } = FORMATION_MEASUREMENTS;
 
 const SEVEN = SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS;
+const ELEVEN = ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS;
 const PLAY_SIDE: PreferredFormationSide = 'right';
 
 export const FIVE_ON_FIVE_PLAYS: PlayDefinition[] = [
@@ -465,22 +474,76 @@ export const SEVEN_ON_SEVEN_PLAYS: PlayDefinition[] = [
   },
 ];
 
+export const ELEVEN_ON_ELEVEN_PLAYS: PlayDefinition[] = [
+  {
+    ballCarrierRole: 'runner',
+    blockerLaneTargets: {
+      'offense-center': point(alignedTo('defense-line-middle'), defenseDepth(interiorLaneDepth)),
+      'offense-line-left': point(alignedTo('defense-line-left'), defenseDepth(interiorLaneDepth)),
+      'offense-line-right': point(alignedTo('defense-line-right'), defenseDepth(interiorLaneDepth)),
+      'offense-slot': point(alignedTo('defense-linebacker'), defenseDepth(ELEVEN.linebackerDepth)),
+      'offense-tackle-left': point(alignedTo('defense-linebacker-left'), defenseDepth(ELEVEN.linebackerDepth)),
+      'offense-tackle-right': point(alignedTo('defense-linebacker-right'), defenseDepth(ELEVEN.linebackerDepth)),
+      'offense-tight-end': point(alignedTo('defense-linebacker-inside'), defenseDepth(ELEVEN.linebackerDepth)),
+      'offense-wr-left': point(alignedTo('defense-corner-left'), defenseDepth(ELEVEN.cornerCushion)),
+      'offense-wr-right': point(alignedTo('defense-corner-right'), defenseDepth(ELEVEN.cornerCushion)),
+    },
+    displayName: 'Inside Zone 11',
+    formation: createElevenOnElevenRunFormation(),
+    id: 'inside-zone-11',
+    initialMovementDirection: { x: 0, z: 1 },
+    kind: 'run',
+    playbookId: '11v11',
+    preferredSide: PLAY_SIDE,
+    protectionAssignments: {
+      'offense-center': 'defense-line-middle',
+      'offense-line-left': 'defense-line-left',
+      'offense-line-right': 'defense-line-right',
+      'offense-slot': 'defense-linebacker',
+      'offense-tackle-left': 'defense-linebacker-left',
+      'offense-tackle-right': 'defense-linebacker-right',
+      'offense-tight-end': 'defense-linebacker-inside',
+      'offense-wr-left': 'defense-corner-left',
+      'offense-wr-right': 'defense-corner-right',
+    },
+    roster: ELEVEN_ON_ELEVEN_ROSTER,
+    validation: elevenOnElevenValidation(),
+  },
+];
+
 export const PLAYS = SEVEN_ON_SEVEN_PLAYS;
-export const ALL_PLAYS = [...FIVE_ON_FIVE_PLAYS, ...SEVEN_ON_SEVEN_PLAYS] as const;
+export const ALL_PLAYS = [
+  ...FIVE_ON_FIVE_PLAYS,
+  ...SEVEN_ON_SEVEN_PLAYS,
+  ...ELEVEN_ON_ELEVEN_PLAYS,
+] as const;
 export const RUSHING_PLAYS = ALL_PLAYS.filter((play) => play.kind === 'run');
 
 export const DEFAULT_PLAY_ID: PlayId = 'inside-run';
 export const DEFAULT_SEVEN_ON_SEVEN_PLAY_ID: PlayId = 'inside-zone-7';
+export const DEFAULT_ELEVEN_ON_ELEVEN_PLAY_ID: PlayId = 'inside-zone-11';
 
 export function resolvePlaybookId(value: string | null): PlaybookId {
+  if (value === '11v11') {
+    return '11v11';
+  }
+
   return value === '5v5' ? '5v5' : '7v7';
 }
 
 export function getAvailablePlays(playbookId: PlaybookId = '7v7'): PlayDefinition[] {
+  if (playbookId === '11v11') {
+    return [...ELEVEN_ON_ELEVEN_PLAYS];
+  }
+
   return playbookId === '7v7' ? [...SEVEN_ON_SEVEN_PLAYS] : [...FIVE_ON_FIVE_PLAYS];
 }
 
 export function getDefaultPlayId(playbookId: PlaybookId = '7v7'): PlayId {
+  if (playbookId === '11v11') {
+    return DEFAULT_ELEVEN_ON_ELEVEN_PLAY_ID;
+  }
+
   return playbookId === '7v7' ? DEFAULT_SEVEN_ON_SEVEN_PLAY_ID : DEFAULT_PLAY_ID;
 }
 
@@ -739,6 +802,63 @@ function sevenOnSevenValidation(): PlayDefinition['validation'] {
     },
     stablePlayerIds: SEVEN_ON_SEVEN_PLAYER_IDS,
   };
+}
+
+function elevenOnElevenValidation(): PlayDefinition['validation'] {
+  return {
+    coverageAlignmentToleranceYards: ELEVEN.lineOfScrimmageTolerance,
+    defensiveGapOffsets: {
+      'defense-line-left': -ELEVEN.defensiveLineGap,
+      'defense-line-middle': 0,
+      'defense-line-right': ELEVEN.defensiveLineGap,
+    },
+    expectedDefenseCount: 11,
+    expectedOffenseCount: 11,
+    offensiveLineIds: [
+      'offense-tackle-left',
+      'offense-line-left',
+      'offense-center',
+      'offense-line-right',
+      'offense-tackle-right',
+    ],
+    receiverSidelineInsetYards: {
+      'offense-wr-left': ELEVEN.receiverSidelineInset,
+      'offense-wr-right': ELEVEN.receiverSidelineInset,
+    },
+    stablePlayerIds: ELEVEN_ON_ELEVEN_PLAYER_IDS,
+  };
+}
+
+function createElevenOnElevenRunFormation(): FormationSlot[] {
+  const baseFormation = createElevenOnElevenPreviewFormation(PLAY_SIDE);
+  const runBlockerIds = new Set<string>([
+    ...ELEVEN_ON_ELEVEN_ELIGIBLE_RECEIVER_IDS,
+    'offense-center',
+    'offense-line-left',
+    'offense-line-right',
+    'offense-tackle-left',
+    'offense-tackle-right',
+  ]);
+
+  return baseFormation.formation.map((slot) => {
+    if (slot.id === 'offense-rb') {
+      return { ...slot, role: 'runner' };
+    }
+
+    if (slot.id === 'offense-qb') {
+      return { ...slot, role: 'quarterback' };
+    }
+
+    if (slot.team === 'offense' && runBlockerIds.has(slot.id)) {
+      return { ...slot, role: 'blocker' };
+    }
+
+    if (slot.team === 'defense') {
+      return { ...slot, role: 'defender' };
+    }
+
+    return slot;
+  });
 }
 
 function slantTarget(side: 'left' | 'right'): FormationPoint {
