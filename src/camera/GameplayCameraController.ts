@@ -2,11 +2,20 @@ import * as THREE from 'three';
 import { PLAYABLE_FIELD_BOUNDS } from '../field';
 import type { GameplaySnapshot } from '../playState';
 import type { PlayerSnapshot, Vector2 } from '../playerModel';
+import {
+  PresentationCameraDirector,
+  type FieldPlaneBounds,
+  type PresentationCameraPhase,
+} from './PresentationCameraDirector';
 
-export type GameplayCameraMode = 'offensePerspective' | 'tacticalOrthographic';
+export type GameplayCameraMode =
+  | 'cinematicBroadcast'
+  | 'offensePerspective'
+  | 'tacticalOrthographic';
 
 export type GameplayCameraState =
   | 'carrierFollow'
+  | 'cinematicBroadcast'
   | 'deadBall'
   | 'gameOver'
   | 'passFlight'
@@ -16,8 +25,11 @@ export type GameplayCameraState =
 
 export interface GameplayCameraDebugSnapshot {
   cameraPosition: { x: number; y: number; z: number };
+  formationBounds?: FieldPlaneBounds;
   focusPosition: { x: number; y: number; z: number };
+  lookTargetPosition?: { x: number; y: number; z: number };
   mode: GameplayCameraMode;
+  presentationPhase?: PresentationCameraPhase;
   state: GameplayCameraState;
   targetPosition: { x: number; y: number; z: number };
 }
@@ -81,9 +93,11 @@ export class GameplayCameraController {
     500,
   );
   private readonly playDirection = normalizeDirection(GAMEPLAY_CAMERA_CONFIG.playDirection);
+  private readonly presentationDirector = new PresentationCameraDirector();
   private readonly smoothedFocus = new THREE.Vector3();
   private readonly smoothedTarget = new THREE.Vector3();
   private cameraState: GameplayCameraState = 'tacticalOverview';
+  private cinematicDebug = this.presentationDirector.getDebugSnapshot();
   private height: number;
   private isPerspectiveInitialized = false;
   private mode: GameplayCameraMode;
@@ -117,13 +131,21 @@ export class GameplayCameraController {
       this.isPerspectiveInitialized = false;
     }
 
+    if (mode === 'cinematicBroadcast') {
+      this.presentationDirector.reset();
+    }
+
     if (snapshot) {
       this.update(snapshot, 0);
     }
   }
 
   toggleMode(snapshot?: GameplaySnapshot): GameplayCameraMode {
-    const nextMode = this.mode === 'tacticalOrthographic' ? 'offensePerspective' : 'tacticalOrthographic';
+    const nextMode = this.mode === 'tacticalOrthographic'
+      ? 'offensePerspective'
+      : this.mode === 'offensePerspective'
+        ? 'cinematicBroadcast'
+        : 'tacticalOrthographic';
     this.setMode(nextMode, snapshot);
     return nextMode;
   }
@@ -143,6 +165,8 @@ export class GameplayCameraController {
     if (this.mode === 'tacticalOrthographic') {
       this.cameraState = 'tacticalOverview';
       this.positionTacticalCamera();
+    } else if (this.mode === 'cinematicBroadcast') {
+      this.updateCinematicBroadcastCamera(snapshot, deltaSeconds);
     } else {
       this.updateOffensePerspectiveCamera(snapshot, deltaSeconds);
     }
@@ -153,12 +177,25 @@ export class GameplayCameraController {
   getDebugSnapshot(): GameplayCameraDebugSnapshot {
     const activeCamera = this.camera;
 
-    return {
+    const baseSnapshot: GameplayCameraDebugSnapshot = {
       cameraPosition: toPlainVector(activeCamera.position),
       focusPosition: toPlainVector(this.smoothedFocus),
       mode: this.mode,
       state: this.cameraState,
       targetPosition: toPlainVector(this.smoothedTarget),
+    };
+
+    if (this.mode !== 'cinematicBroadcast') {
+      return baseSnapshot;
+    }
+
+    return {
+      ...baseSnapshot,
+      formationBounds: this.cinematicDebug.formationBounds,
+      focusPosition: this.cinematicDebug.focusTarget,
+      lookTargetPosition: this.cinematicDebug.lookTarget,
+      presentationPhase: this.cinematicDebug.phase,
+      targetPosition: this.cinematicDebug.lookTarget,
     };
   }
 
@@ -215,6 +252,25 @@ export class GameplayCameraController {
     this.perspectiveCamera.lookAt(this.smoothedTarget);
     this.cameraState = framing.state;
     this.isPerspectiveInitialized = true;
+  }
+
+  private updateCinematicBroadcastCamera(snapshot: GameplaySnapshot, deltaSeconds: number): void {
+    this.cinematicDebug = this.presentationDirector.update(
+      snapshot,
+      this.perspectiveCamera,
+      deltaSeconds,
+    );
+    this.cameraState = 'cinematicBroadcast';
+    this.smoothedFocus.set(
+      this.cinematicDebug.focusTarget.x,
+      this.cinematicDebug.focusTarget.y,
+      this.cinematicDebug.focusTarget.z,
+    );
+    this.smoothedTarget.set(
+      this.cinematicDebug.lookTarget.x,
+      this.cinematicDebug.lookTarget.y,
+      this.cinematicDebug.lookTarget.z,
+    );
   }
 
   private calculateOffensePerspectiveFocus(
@@ -312,6 +368,10 @@ export class GameplayCameraController {
 }
 
 export function resolveGameplayCameraMode(value: string | null): GameplayCameraMode {
+  if (value === 'cinematic' || value === 'cinematicBroadcast') {
+    return 'cinematicBroadcast';
+  }
+
   if (value === 'offense' || value === 'offensePerspective') {
     return 'offensePerspective';
   }

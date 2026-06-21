@@ -4,7 +4,7 @@ Low-poly 3D American football prototype built with Three.js, Vite, and TypeScrip
 
 The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness for validating controls, play states, formations, ball spotting, passing, tackling, downs, and camera language before the full game structure arrives.
 
-The current milestone adds a development-only `?formationPreview=7v7` staging mode to prove fourteen-player formation resolution, mannequin rendering, helmet cloning, camera framing, and validation before active 7v7 gameplay exists. The active playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay data, visual-only procedural player poses and locomotion, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
+The current milestone adds an optional `cinematicBroadcast` presentation camera that reads gameplay snapshots for modern football-style establishing, live, pass-flight, dead-ball, touchdown, and reset shots without changing gameplay outcomes. The active playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay data, visual-only procedural player poses and locomotion, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, a development-only `?formationPreview=7v7` staging mode, the preserved orthographic three-quarter camera, the behind-the-offense perspective camera, and the optional cinematic broadcast camera.
 
 ## World Scale
 
@@ -45,8 +45,8 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Press `F` during a passing play to throw once toward the selected eligible receiver.
 - Press `R` to reset the play to pre-snap.
 - Press `Enter` from game over to restart the two-minute score attack.
-- Press `C` in development or with `?debug=1` to toggle between the tactical orthographic camera and the behind-the-offense perspective camera.
-- Use `?camera=tactical` or `?camera=offense` to choose the starting camera mode.
+- Press `C` in development or with `?debug=1` to cycle through tactical orthographic, behind-the-offense perspective, and cinematic broadcast cameras.
+- Use `?camera=tactical`, `?camera=offense`, or `?camera=cinematic` to choose the starting camera mode.
 - The graphical play cards are visible only during pre-snap and are generated from the same play definitions, resolved formation positions, routes, and blocker assignments used by gameplay.
 - Play selection is locked while a play is live; reset preserves the selected play.
 - The HUD shows the selected target for passing plays.
@@ -77,7 +77,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 
 ## Debug Overlay
 
-Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, triangle count, frame time, geometry and texture counts, scene/player mesh counts, material counts, camera mode, camera state, focus position, camera position, exact dead-ball spot, resolved next snap spot, snap lane, hash X positions, and formation origin.
+Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, triangle count, frame time, geometry and texture counts, scene/player mesh counts, material counts, camera mode, camera state, focus position, camera position, cinematic presentation phase, cinematic look target, cinematic formation bounds, exact dead-ball spot, resolved next snap spot, snap lane, hash X positions, and formation origin.
 
 Add `?poseDebug=1` to show every player's current visual pose intent and locomotion phase.
 
@@ -94,5 +94,5 @@ Add `?formationAudit=1` to show the resolved semantic formation: snap lane, fiel
 - Passing and ball outcomes: no interceptions, fumbles, loose-ball physics, manual aiming, pass-type selection, pump fake, illegal-forward-pass penalty, referee logic, user-controlled catch mechanic, contested-catch ratings, or quarterback ratings.
 - Blocking and tackling: no offensive linemen rules, holding penalties, pancake blocks, double-team blocks, pulling guards, diving tackles, advanced pursuit/pathfinding library, or physics-driven contact.
 - Game structure: no quarters, opponent score, halftime, timeouts, NFL clock-stoppage rules, play clock, punts, field goals, penalties, defensive possessions, full game rules, season modes, or franchise systems.
-- Controls and camera: no sprinting, stamina, freely rotating camera, camera-relative controls, cinematic replay system, or camera redesign beyond the current tactical and offense-perspective modes.
+- Controls and camera: no sprinting, stamina, freely rotating camera, camera-relative controls, instant replay, replay recording, camera collision, or camera redesign beyond the current tactical, offense-perspective, and cinematic broadcast modes.
 - Simulation architecture: no force-based physics, ragdoll physics, general-purpose physics engine, advanced AI rewrite, or unrelated refactoring.

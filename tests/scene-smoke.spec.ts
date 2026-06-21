@@ -101,10 +101,27 @@ interface HelmetAssetSnapshot {
 
 interface CameraSnapshot {
   cameraPosition: { x: number; y: number; z: number };
+  formationBounds?: {
+    center: { x: number; z: number };
+    max: { x: number; z: number };
+    min: { x: number; z: number };
+    playerIds: string[];
+    size: { x: number; z: number };
+  };
   focusPosition: { x: number; y: number; z: number };
-  mode: 'offensePerspective' | 'tacticalOrthographic';
+  lookTargetPosition?: { x: number; y: number; z: number };
+  mode: 'cinematicBroadcast' | 'offensePerspective' | 'tacticalOrthographic';
+  presentationPhase?:
+    | 'deadBallResult'
+    | 'liveCarrier'
+    | 'passFlight'
+    | 'preSnapEstablish'
+    | 'returnToPreSnap'
+    | 'touchdownResult'
+    | 'transitionToGameplay';
   state:
     | 'carrierFollow'
+    | 'cinematicBroadcast'
     | 'deadBall'
     | 'gameOver'
     | 'passFlight'
@@ -463,6 +480,19 @@ test('stages a static 7v7 formation preview across snap lanes and camera modes',
   });
   await expectNonBlankCanvas(page);
 
+  await page.keyboard.press('c');
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'cinematicBroadcast',
+    presentationPhase: 'preSnapEstablish',
+    state: 'cinematicBroadcast',
+  });
+  await expect(page.locator('.debug-overlay')).toContainText('PRESENT preSnapEstablish');
+  await expect(page.locator('.debug-overlay')).toContainText('FORM_BOUNDS');
+  await expect.poll(() => getCameraFramingSnapshot(page)).toMatchObject({
+    unframedPlayerIds: [],
+  });
+  await expectNonBlankCanvas(page);
+
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
 });
@@ -546,11 +576,12 @@ test('selects offense perspective camera and toggles modes without resetting gam
 
   await page.keyboard.press('c');
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
-    mode: 'tacticalOrthographic',
-    state: 'tacticalOverview',
+    mode: 'cinematicBroadcast',
+    state: 'cinematicBroadcast',
   });
   expect((await getGameplaySnapshot(page)).playState).toBe(beforeToggle.playState);
   expect((await getGameplaySnapshot(page)).score).toBe(beforeToggle.score);
+  await expect(page.locator('.debug-overlay')).toContainText('PRESENT');
   await expectNonBlankCanvas(page);
 
   await page.setViewportSize({ width: 1024, height: 768 });
@@ -562,8 +593,44 @@ test('selects offense perspective camera and toggles modes without resetting gam
 
   await page.keyboard.press('c');
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
-    mode: 'offensePerspective',
+    mode: 'tacticalOrthographic',
+    state: 'tacticalOverview',
   });
+});
+
+test('runs cinematic broadcast camera without delaying gameplay snap', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?debug=1&readback=1&camera=cinematic');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'cinematicBroadcast',
+    presentationPhase: 'preSnapEstablish',
+    state: 'cinematicBroadcast',
+  });
+  await expect(page.locator('.debug-overlay')).toContainText('CAM cinematicBroadcast');
+  await expect(page.locator('.debug-overlay')).toContainText('PRESENT preSnapEstablish');
+  await expect(page.locator('.debug-overlay')).toContainText('FORM_BOUNDS');
+  await expectNonBlankCanvas(page);
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await expect.poll(async () => {
+    const camera = await getCameraSnapshot(page);
+
+    return (
+      camera.mode === 'cinematicBroadcast' &&
+      ['transitionToGameplay', 'liveCarrier'].includes(camera.presentationPhase ?? '')
+    );
+  }).toBe(true);
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'cinematicBroadcast',
+    presentationPhase: 'liveCarrier',
+  });
+
+  await page.keyboard.down('w');
+  await page.waitForTimeout(150);
+  await page.keyboard.up('w');
+  await expectNonBlankCanvas(page);
 });
 
 test('moves the placeholder player with WASD and arrow keys', async ({ page }) => {
@@ -911,6 +978,19 @@ test('scores touchdown by avoiding the defender and auto-resets', async ({ page 
   await expect.poll(async () => (await getGameplaySnapshot(page)).playState, {
     timeout: 9000,
   }).toBe('dead');
+  await expect.poll(async () => {
+    const snapshot = await getGameplaySnapshot(page);
+    const touchdownMessageVisible = await page.locator('.touchdown-message').evaluate((element) => !element.hasAttribute('hidden'));
+
+    return (
+      snapshot.playState === 'dead' &&
+      snapshot.lastPlayResult?.type === 'touchdown' &&
+      snapshot.score === 6 &&
+      touchdownMessageVisible
+    );
+  }, {
+    timeout: 1000,
+  }).toBe(true);
   await page.keyboard.up('w');
 
   const touchdown = await getGameplaySnapshot(page);
@@ -920,7 +1000,6 @@ test('scores touchdown by avoiding the defender and auto-resets', async ({ page 
   expect(touchdown.drive.lastDriveResult?.type).toBe('touchdown');
   expect(touchdown.score).toBe(6);
   await expect(page.locator('.score-counter')).toHaveText('Score 6');
-  await expect(page.locator('.touchdown-message')).toBeVisible();
 
   await page.keyboard.down('w');
   await page.waitForTimeout(250);

@@ -23,6 +23,8 @@ describe('gameplay camera controller', () => {
     expect(resolveGameplayCameraMode('tactical')).toBe('tacticalOrthographic');
     expect(resolveGameplayCameraMode('offense')).toBe('offensePerspective');
     expect(resolveGameplayCameraMode('offensePerspective')).toBe('offensePerspective');
+    expect(resolveGameplayCameraMode('cinematic')).toBe('cinematicBroadcast');
+    expect(resolveGameplayCameraMode('cinematicBroadcast')).toBe('cinematicBroadcast');
   });
 
   it('uses the tactical orthographic camera by default', () => {
@@ -106,6 +108,65 @@ describe('gameplay camera controller', () => {
 
     expect(getUnframedPlayerIds(tactical.camera, snapshot.players)).toEqual([]);
     expect(getUnframedPlayerIds(offense.camera, snapshot.players)).toEqual([]);
+  });
+
+  it('runs cinematic mode through presentation phases and frames 7v7 preview players', () => {
+    const preview = createFormationPreviewModel('7v7', 'middle');
+    const snapshot = snapshotFormationPreviewAsGameplay(preview);
+    const cinematic = new GameplayCameraController({
+      height: 900,
+      initialMode: 'cinematicBroadcast',
+      width: 1440,
+    });
+
+    cinematic.update(snapshot, 0);
+
+    const debug = cinematic.getDebugSnapshot();
+    expect(cinematic.camera).toBeInstanceOf(THREE.PerspectiveCamera);
+    expect(debug).toMatchObject({
+      mode: 'cinematicBroadcast',
+      presentationPhase: 'preSnapEstablish',
+      state: 'cinematicBroadcast',
+    });
+    expect(debug.formationBounds?.playerIds).toEqual(snapshot.players.map((player) => player.id).sort());
+    expect(getUnframedPlayerIds(cinematic.camera, snapshot.players)).toEqual([]);
+  });
+
+  it('cycles development camera modes without replacing existing modes', () => {
+    const gameplay = createGameplayModel();
+    const snapshot = snapshotGameplayModel(gameplay);
+    const controller = new GameplayCameraController({ height: 900, width: 1440 });
+
+    expect(controller.getMode()).toBe('tacticalOrthographic');
+    expect(controller.toggleMode(snapshot)).toBe('offensePerspective');
+    expect(controller.toggleMode(snapshot)).toBe('cinematicBroadcast');
+    expect(controller.toggleMode(snapshot)).toBe('tacticalOrthographic');
+  });
+
+  it('resizes every camera mode without invalid projection data', () => {
+    const gameplay = createGameplayModel();
+    const snapshot = snapshotGameplayModel(gameplay);
+
+    for (const mode of ['tacticalOrthographic', 'offensePerspective', 'cinematicBroadcast'] as const) {
+      const controller = new GameplayCameraController({
+        height: 720,
+        initialMode: mode,
+        width: 1280,
+      });
+
+      controller.resize(390, 844);
+      controller.update(snapshot, 0);
+
+      const camera = controller.camera;
+      if (camera instanceof THREE.PerspectiveCamera) {
+        expect(camera.aspect).toBeCloseTo(390 / 844);
+        expect(camera.projectionMatrix.elements.every(Number.isFinite)).toBe(true);
+      } else if (camera instanceof THREE.OrthographicCamera) {
+        expect(camera.left).toBeLessThan(camera.right);
+        expect(camera.bottom).toBeLessThan(camera.top);
+        expect(camera.projectionMatrix.elements.every(Number.isFinite)).toBe(true);
+      }
+    }
   });
 });
 

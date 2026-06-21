@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.24.0] - 2026-06-21
+
+### Added
+
+- Added optional `cinematicBroadcast` camera mode, selectable with `?camera=cinematic`.
+- Added `PresentationCameraDirector` for snapshot-driven pre-snap establishing, transition, live-carrier, pass-flight, dead-ball, touchdown, and return-to-pre-snap presentation phases.
+- Added cinematic camera debug output for presentation phase, focus target, formation bounds, camera position, and look target.
+- Added unit coverage for formation bounds, snap immediacy, catch-transfer smoothing, dead-ball and touchdown focus, reset focus, snapshot immutability, camera mode cycling, and resize handling.
+- Added browser smoke coverage for cinematic URL selection, snap immediacy, live-carrier phase, debug output, and 7v7 preview framing.
+
+### Changed
+
+- Expanded the development camera toggle to cycle through tactical orthographic, offense perspective, and cinematic broadcast modes.
+- Documented the cinematic camera controls and presentation-camera implementation boundaries in README and AGENTS.
+
 ## [0.23.0] - 2026-06-21
 
 ### Added

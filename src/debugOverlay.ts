@@ -75,6 +75,14 @@ export class DebugOverlay {
         `FOCUS ${formatVector(camera.focusPosition)}`,
         `CAM_POS ${formatVector(camera.cameraPosition)}`,
       );
+
+      if (camera.presentationPhase) {
+        lines.push(
+          `PRESENT ${camera.presentationPhase}`,
+          `LOOK ${formatVector(camera.lookTargetPosition ?? camera.targetPosition)}`,
+          `FORM_BOUNDS ${formatPlaneBounds(camera.formationBounds)}`,
+        );
+      }
     }
 
     if (gameplay) {
@@ -126,4 +134,19 @@ function formatSpot(spot: FootballSpot | null): string {
   }
 
   return `${spot.x.toFixed(1)}, ${spot.z.toFixed(1)}`;
+}
+
+function formatPlaneBounds(
+  bounds:
+    | {
+        center: { x: number; z: number };
+        size: { x: number; z: number };
+      }
+    | undefined,
+): string {
+  if (!bounds) {
+    return 'none';
+  }
+
+  return `center ${bounds.center.x.toFixed(1)}, ${bounds.center.z.toFixed(1)} size ${bounds.size.x.toFixed(1)}, ${bounds.size.z.toFixed(1)}`;
 }
