@@ -814,6 +814,32 @@ describe('play state transitions', () => {
     expect(gameplay.player.position).toEqual(expectedSpot);
   });
 
+  it('keeps receivers inside bounds after a sideline dead-ball reset', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'slant-flat');
+    startPlay(gameplay);
+    gameplay.player.position.x = PLAYABLE_FIELD_BOUNDS.maxX;
+    gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z + 2;
+
+    updateGameplayModel(gameplay, 0);
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds);
+
+    expect(gameplay.playState).toBe('preSnap');
+    expect(gameplay.currentBallSpot.x).toBeCloseTo(
+      PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.halfWidth,
+    );
+
+    for (const receiver of gameplay.players.filter((player) => player.role === 'receiver')) {
+      expect(receiver.position.x).toBeLessThanOrEqual(
+        PLAYABLE_FIELD_BOUNDS.maxX - receiver.collisionRadius,
+      );
+      expect(receiver.position.x).toBeGreaterThanOrEqual(
+        PLAYABLE_FIELD_BOUNDS.minX + receiver.collisionRadius,
+      );
+    }
+  });
+
   it('auto-resets after the configured touchdown delay without clearing score', () => {
     const gameplay = createGameplayModel();
     startPlay(gameplay);

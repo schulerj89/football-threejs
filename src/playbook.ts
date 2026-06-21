@@ -1,4 +1,4 @@
-import { OPPOSING_GOAL_LINE_Z } from './field';
+import { OPPOSING_GOAL_LINE_Z, PLAYABLE_FIELD_BOUNDS } from './field';
 import type { FootballSpot } from './fieldScale';
 import {
   PLAYER_MOVEMENT_CONFIG,
@@ -456,8 +456,20 @@ export function getCoverageAssignmentReceiverId(
 }
 
 function calculateFormationSpot(ballSpot: FootballSpot, offset: Vector2): FootballSpot {
+  const minX = PLAYABLE_FIELD_BOUNDS.minX + PLAYER_MOVEMENT_CONFIG.collisionRadius;
+  const maxX = PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.collisionRadius;
+  const minZ = PLAYABLE_FIELD_BOUNDS.minZ + PLAYER_MOVEMENT_CONFIG.collisionRadius;
+  const maxZ = Math.min(
+    OPPOSING_GOAL_LINE_Z - 2,
+    PLAYABLE_FIELD_BOUNDS.maxZ - PLAYER_MOVEMENT_CONFIG.collisionRadius,
+  );
+
   return {
-    x: ballSpot.x + offset.x,
-    z: Math.min(OPPOSING_GOAL_LINE_Z - 2, ballSpot.z + offset.z),
+    x: clamp(ballSpot.x + offset.x, minX, maxX),
+    z: clamp(ballSpot.z + offset.z, minZ, maxZ),
   };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFENDER_CONFIG, isTackleContact } from '../src/defenderModel';
 import { INITIAL_BALL_SPOT, PLAYABLE_FIELD_BOUNDS } from '../src/field';
 import { createFormationPlayers, getPlay, getRushingPlay } from '../src/playbook';
-import { createPlayerModel, type PlayerModel } from '../src/playerModel';
+import { PLAYER_MOVEMENT_CONFIG, createPlayerModel, type PlayerModel } from '../src/playerModel';
 import {
   BLOCKING_CONFIG,
   acquireBlockingEngagements,
@@ -127,6 +127,33 @@ describe('three-on-three rushing drill simulation', () => {
     expect(rightCoverage.velocity.x).toBeGreaterThan(0);
     expect(passRusher.currentState).toBe('pursuing');
     expect(passRusher.velocity.z).toBeLessThan(0);
+  });
+
+  it('keeps AI receivers inside the sideline while routes run from a sideline spot', () => {
+    const play = getPlay('slant-flat');
+    const sidelineSpot = {
+      x: PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.collisionRadius,
+      z: INITIAL_BALL_SPOT.z,
+    };
+    const players = createFormationPlayers(sidelineSpot, play);
+    const quarterback = getPlayer(players, 'runner');
+    const rightReceiver = getPlayer(players, 'blocker-right');
+
+    for (let frame = 0; frame < 20; frame += 1) {
+      updateRushingDrillAi(players, createBlockingState(), quarterback, {
+        bounds: PLAYABLE_FIELD_BOUNDS,
+        deltaSeconds: 0.1,
+        lineOfScrimmage: sidelineSpot,
+        play,
+      });
+    }
+
+    expect(rightReceiver.position.x).toBeLessThanOrEqual(
+      PLAYABLE_FIELD_BOUNDS.maxX - rightReceiver.collisionRadius,
+    );
+    expect(rightReceiver.position.x).toBeGreaterThanOrEqual(
+      PLAYABLE_FIELD_BOUNDS.minX + rightReceiver.collisionRadius,
+    );
   });
 
   it('disengages blockers and defenders after they separate', () => {

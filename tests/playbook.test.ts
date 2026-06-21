@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { INITIAL_BALL_SPOT } from '../src/field';
+import { INITIAL_BALL_SPOT, PLAYABLE_FIELD_BOUNDS } from '../src/field';
+import { PLAYER_MOVEMENT_CONFIG } from '../src/playerModel';
 import {
   createFormationPlayers,
   getBlockingLaneTarget,
@@ -119,6 +120,31 @@ describe('playbook', () => {
     });
     expect(getReceiverDisplayName(slantFlat, 'blocker-left')).toBe('Slant');
     expect(getReceiverDisplayName(slantFlat, 'blocker-right')).toBe('Flat');
+  });
+
+  it('keeps sideline formation positions and route targets inside the playable field', () => {
+    const slantFlat = getPlay('slant-flat');
+    const sidelineSpot = {
+      x: PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.collisionRadius,
+      z: INITIAL_BALL_SPOT.z,
+    };
+    const players = createFormationPlayers(sidelineSpot, slantFlat);
+    const rightReceiver = getPlayer(players, 'blocker-right');
+    const routeTarget = getReceiverRouteTarget(rightReceiver, sidelineSpot, slantFlat);
+
+    for (const player of players) {
+      expect(player.position.x).toBeLessThanOrEqual(
+        PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.collisionRadius,
+      );
+      expect(player.position.x).toBeGreaterThanOrEqual(
+        PLAYABLE_FIELD_BOUNDS.minX + PLAYER_MOVEMENT_CONFIG.collisionRadius,
+      );
+    }
+
+    expect(routeTarget).toEqual(expect.any(Object));
+    expect(routeTarget?.x).toBeLessThanOrEqual(
+      PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.collisionRadius,
+    );
   });
 
   it('resets stable player IDs into the newly selected play roles', () => {

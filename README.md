@@ -48,6 +48,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 - AI blockers move toward lane targets and can engage one defender each to slow pursuit.
 - Coverage defenders track their assigned receivers while ordinary defenders use the existing simple pursuit or pass-rush behavior.
 - Crossing a sideline during a live play ends the play out of bounds.
+- AI-controlled non-carriers stay inside the playable field while the active ball carrier may cross a sideline to end the play.
 - Sack, tackle, completed pass, and out-of-bounds results display signed yards gained or lost, then reset the next play at the dead-ball spot.
 - Incomplete passes end the play at the original line of scrimmage and advance the down.
 - The drill tracks down, distance, ball position, and score.

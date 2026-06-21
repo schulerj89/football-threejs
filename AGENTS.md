@@ -83,6 +83,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Keep conversion between world units and football yards centralized.
 - Goal-line detection and scoring must use gameplay coordinates, not mesh positions.
 - Sideline and dead-ball spotting must use gameplay coordinates, not mesh positions.
+- AI-controlled non-carriers should remain inside playable field bounds; only the active ball carrier may cross a sideline to create an out-of-bounds result.
 - Defender AI must use gameplay positions and stay deliberately simple.
 - Blocking is deterministic gameplay state, not force-based physics.
 - Passing uses deterministic gameplay state and a controlled arc, not a general-purpose physics engine.

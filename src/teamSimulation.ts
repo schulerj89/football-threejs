@@ -55,8 +55,9 @@ export function updateRushingDrillAi(
   updateReceivers(players, options.lineOfScrimmage, options.play, delta);
   acquireBlockingEngagements(players, blocking);
   updateDefenders(players, blocking, runner, options.play, delta);
-  keepPlayersInFieldDepth(players, options.bounds);
+  keepNonCarriersInsidePlayableField(players, runner.id, options.bounds);
   resolvePlayerOverlaps(players);
+  keepNonCarriersInsidePlayableField(players, runner.id, options.bounds);
   releaseSeparatedEngagements(players, blocking);
 }
 
@@ -289,11 +290,27 @@ function movePlayerToward(
   player.facingRadians = Math.atan2(normalX, normalZ);
 }
 
-function keepPlayersInFieldDepth(players: PlayerModel[], bounds: PlayableFieldBounds): void {
+function keepNonCarriersInsidePlayableField(
+  players: PlayerModel[],
+  carrierId: string,
+  bounds: PlayableFieldBounds,
+): void {
   for (const player of players) {
+    if (player.id === carrierId) {
+      continue;
+    }
+
+    const minX = bounds.minX + player.collisionRadius;
+    const maxX = bounds.maxX - player.collisionRadius;
     const minZ = bounds.minZ + player.collisionRadius;
     const maxZ = bounds.maxZ - player.collisionRadius;
+    const clampedX = Math.min(maxX, Math.max(minX, player.position.x));
     const clampedZ = Math.min(maxZ, Math.max(minZ, player.position.z));
+
+    if (clampedX !== player.position.x) {
+      player.position.x = clampedX;
+      player.velocity.x = 0;
+    }
 
     if (clampedZ !== player.position.z) {
       player.position.z = clampedZ;

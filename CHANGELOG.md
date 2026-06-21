@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.1] - 2026-06-21
+
+### Fixed
+
+- Kept formation and receiver route targets inside playable field bounds when the ball is spotted near a sideline.
+- Kept AI-controlled non-carriers, including receivers running routes, inside the field while preserving ball-carrier sideline crossings as out-of-bounds results.
+- Added regression tests for sideline formation placement, sideline receiver routes, and sideline dead-ball resets.
+
 ## [0.13.0] - 2026-06-21
 
 ### Added
