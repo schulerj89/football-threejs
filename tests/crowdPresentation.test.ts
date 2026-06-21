@@ -51,9 +51,9 @@ describe('crowd presentation controller', () => {
     const snapshot = controller.getSnapshot();
 
     expect(snapshot.actualSpectatorCount).toBe(500);
-    expect(snapshot.crowdDrawCalls).toBe(6);
-    expect(snapshot.geometryCount).toBe(5);
-    expect(snapshot.materialCount).toBe(4);
+    expect(snapshot.crowdDrawCalls).toBe(5);
+    expect(snapshot.geometryCount).toBe(4);
+    expect(snapshot.materialCount).toBe(3);
     expect(snapshot.noPerSpectatorObject3D).toBe(true);
     expect(snapshot.nearInstanceCount + snapshot.farInstanceCount).toBe(500);
     expect(countObjects(controller.group)).toBeLessThan(20);

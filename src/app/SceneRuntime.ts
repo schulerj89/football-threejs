@@ -181,5 +181,6 @@ function getMaterials(material: THREE.Material | THREE.Material[]): THREE.Materi
 }
 
 function isStadiumObject(object: THREE.Object3D): boolean {
-  return /stadium|stand|seating|crowd-seating-shell/i.test(object.name);
+  return object.userData.stadium === true ||
+    /stadium|stand|seating|crowd-seating-shell/i.test(object.name);
 }

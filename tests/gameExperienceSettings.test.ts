@@ -29,6 +29,7 @@ describe('game experience settings', () => {
       crowdVisualsEnabled: true,
     });
     expect(resolved.settings.playbookId).toBe('11v11');
+    expect(resolved.settings.stadiumEnabled).toBe(true);
     expect(toGameplayCameraMode(resolved.settings.gameplayCamera)).toBe('offensePerspective');
   });
 
@@ -47,6 +48,7 @@ describe('game experience settings', () => {
       gameplayCamera: 'offense',
       playerMotionEnabled: true,
       playbookId: '11v11',
+      stadiumEnabled: true,
     });
   });
 
@@ -109,7 +111,7 @@ describe('game experience settings', () => {
     const storedBefore = storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY);
 
     const resolved = resolveGameExperienceSettings({
-      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&announcer=0&captions=1&playbook=5v5'),
+      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&announcer=0&captions=1&playbook=5v5&stadium=0'),
       storage,
     });
 
@@ -122,6 +124,7 @@ describe('game experience settings', () => {
       gameplayCamera: 'cinematic',
       playbookId: '5v5',
       preset: 'performance',
+      stadiumEnabled: false,
     });
     expect(resolved.hasQueryOverrides).toBe(true);
     expect(resolved.queryOverrides).toMatchObject({
@@ -131,6 +134,7 @@ describe('game experience settings', () => {
       crowdVisualsEnabled: true,
       gameplayCamera: 'cinematic',
       playbookId: '5v5',
+      stadiumEnabled: false,
     });
     expect(storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY)).toBe(storedBefore);
   });

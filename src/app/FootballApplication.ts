@@ -86,6 +86,7 @@ export class FootballApplication {
       gameExperience: this.gameExperience,
       initialPlays: this.gameplay.availablePlays,
       routeAuditEnabled: searchParams.has('routeAudit'),
+      renderer: this.sceneRuntime.renderer,
       scene: this.sceneRuntime.scene,
       searchParams,
       warn: (message) => {

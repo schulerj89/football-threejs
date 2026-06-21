@@ -39,6 +39,7 @@ describe('crowd preview', () => {
       'sidelineLeft',
       'sidelineRight',
     ]));
+    expect(first.every((placement) => placement.row >= 0 && placement.seatIndex >= 0)).toBe(true);
   });
 
   it('uses bounded instanced resources for ten thousand spectators', () => {
@@ -57,9 +58,9 @@ describe('crowd preview', () => {
     expect(snapshot.nearInstanceCount).toBe(2500);
     expect(snapshot.farInstanceCount).toBe(7500);
     expect(snapshot.nearInstanceCount + snapshot.farInstanceCount).toBe(10_000);
-    expect(snapshot.crowdDrawCalls).toBe(6);
-    expect(snapshot.geometryCount).toBe(5);
-    expect(snapshot.materialCount).toBe(4);
+    expect(snapshot.crowdDrawCalls).toBe(5);
+    expect(snapshot.geometryCount).toBe(4);
+    expect(snapshot.materialCount).toBe(3);
     expect(snapshot.textureCount).toBe(0);
     expect(instancedMeshCount).toBe(5);
     expect(sceneObjectCount).toBeLessThan(20);
@@ -107,7 +108,7 @@ describe('crowd preview', () => {
       5000,
       10_000,
     ]);
-    expect(snapshot.benchmark.reports.every((report) => report.crowdDrawCalls === 6)).toBe(true);
+    expect(snapshot.benchmark.reports.every((report) => report.crowdDrawCalls === 5)).toBe(true);
     expect(snapshot.benchmark.reports[0]).toMatchObject({
       actualSpectatorCount: 500,
       requestedSpectatorCount: 500,
@@ -143,8 +144,8 @@ describe('crowd preview', () => {
 
     controller.dispose();
 
-    expect(geometrySpies).toHaveLength(5);
-    expect(materialSpies).toHaveLength(4);
+    expect(geometrySpies).toHaveLength(4);
+    expect(materialSpies).toHaveLength(3);
     expect(geometrySpies.every((spy) => spy.mock.calls.length === 1)).toBe(true);
     expect(materialSpies.every((spy) => spy.mock.calls.length === 1)).toBe(true);
   });

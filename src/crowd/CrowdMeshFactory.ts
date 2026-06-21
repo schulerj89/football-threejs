@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { FIELD_DIMENSIONS } from '../fieldSpec';
 import { CROWD_PREVIEW_CONFIG } from './CrowdConfiguration';
 import { createCrowdPlacements } from './CrowdLayout';
 import {
@@ -19,8 +17,6 @@ export function createCrowdResources(requestedCount: number): CrowdResources {
 
   const geometries = createSharedCrowdGeometries();
   const materials = createSharedCrowdMaterials();
-  const seatingShell = createSeatingShellMesh(materials.seating);
-  group.add(seatingShell);
 
   const detailedTorso = new THREE.InstancedMesh(geometries.torso, materials.uniform, nearPlacements.length);
   const detailedHead = new THREE.InstancedMesh(geometries.head, materials.skin, nearPlacements.length);
@@ -44,9 +40,8 @@ export function createCrowdResources(requestedCount: number): CrowdResources {
     geometries.head,
     geometries.arm,
     geometries.farBody,
-    seatingShell.geometry,
   ];
-  const ownedMaterials = [materials.uniform, materials.skin, materials.farBody, materials.seating];
+  const ownedMaterials = [materials.uniform, materials.skin, materials.farBody];
 
   return {
     detailedArmLeft,
@@ -59,7 +54,6 @@ export function createCrowdResources(requestedCount: number): CrowdResources {
     group,
     materials: ownedMaterials,
     nearPlacements,
-    seatingShell,
     snapshotBase: {
       actualSpectatorCount: placements.length,
       crowdDrawCalls: countCrowdDrawCalls(group),
@@ -72,61 +66,6 @@ export function createCrowdResources(requestedCount: number): CrowdResources {
       textureCount: 0,
     },
   };
-}
-
-function createSeatingShellMesh(material: THREE.Material): THREE.Mesh {
-  const boxes: THREE.BufferGeometry[] = [];
-  addSidelineSeatingBoxes(boxes, -1);
-  addSidelineSeatingBoxes(boxes, 1);
-  addEndZoneSeatingBoxes(boxes, -1);
-  addEndZoneSeatingBoxes(boxes, 1);
-
-  const geometry = mergeGeometries(boxes, false);
-  for (const box of boxes) {
-    box.dispose();
-  }
-
-  if (!geometry) {
-    throw new Error('Unable to create crowd seating shell geometry.');
-  }
-
-  geometry.name = 'crowd-seating-shell';
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = 'crowd-seating-shell';
-  mesh.userData.crowdPreview = true;
-  return mesh;
-}
-
-function addSidelineSeatingBoxes(boxes: THREE.BufferGeometry[], sideSign: -1 | 1): void {
-  const config = CROWD_PREVIEW_CONFIG.sideline;
-  const width = FIELD_DIMENSIONS.fieldLength + 18;
-  const baseX = sideSign * (FIELD_DIMENSIONS.fieldWidth / 2 + config.xOffset - 0.4);
-
-  for (let row = 0; row < config.rowCount; row += 1) {
-    const geometry = new THREE.BoxGeometry(width, 0.12, config.rowDepth);
-    geometry.rotateY(Math.PI / 2);
-    geometry.translate(
-      baseX + sideSign * row * config.rowDepth,
-      0.05 + row * config.rowRise,
-      0,
-    );
-    boxes.push(geometry);
-  }
-}
-
-function addEndZoneSeatingBoxes(boxes: THREE.BufferGeometry[], endSign: -1 | 1): void {
-  const config = CROWD_PREVIEW_CONFIG.endZone;
-  const baseZ = endSign * (FIELD_DIMENSIONS.fieldLength / 2 + config.zOffset - 0.4);
-
-  for (let row = 0; row < config.rowCount; row += 1) {
-    const geometry = new THREE.BoxGeometry(config.width, 0.12, config.rowDepth);
-    geometry.translate(
-      0,
-      0.05 + row * config.rowRise,
-      baseZ + endSign * row * config.rowDepth,
-    );
-    boxes.push(geometry);
-  }
 }
 
 function createSharedCrowdGeometries(): {
@@ -153,13 +92,11 @@ function createSharedCrowdGeometries(): {
 
 function createSharedCrowdMaterials(): {
   farBody: THREE.Material;
-  seating: THREE.Material;
   skin: THREE.Material;
   uniform: THREE.Material;
 } {
   return {
     farBody: new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }),
-    seating: new THREE.MeshLambertMaterial({ color: 0x2a3237 }),
     skin: new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }),
     uniform: new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }),
   };

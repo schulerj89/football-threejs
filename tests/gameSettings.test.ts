@@ -30,6 +30,7 @@ describe('game settings facade', () => {
       playbookId: '11v11',
       preset: 'broadcast',
       routeArtEnabled: true,
+      stadiumEnabled: true,
     });
   });
 
@@ -43,6 +44,7 @@ describe('game settings facade', () => {
       masterVolume: 0.62,
       muted: true,
       officialsEnabled: true,
+      stadiumEnabled: false,
       preset: 'custom',
     }, storage);
 
@@ -56,6 +58,7 @@ describe('game settings facade', () => {
         masterVolume: 0.62,
         muted: true,
         officialsEnabled: true,
+        stadiumEnabled: false,
       },
     });
 
@@ -65,6 +68,7 @@ describe('game settings facade', () => {
       settings: {
         debugToolsEnabled: true,
         officialsEnabled: true,
+        stadiumEnabled: false,
       },
     });
   });

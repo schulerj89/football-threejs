@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import type { StadiumSectionId } from '../stadium/StadiumTypes';
 
 export type CrowdPreviewCameraView = 'close' | 'endZone' | 'sideline' | 'wide';
 
@@ -48,8 +49,11 @@ export interface CrowdPreviewPlacement {
   colorSeed: number;
   facingRadians: number;
   lod: 'far' | 'near';
+  row: number;
   scale: number;
-  stand: 'endZoneFar' | 'endZoneNear' | 'sidelineLeft' | 'sidelineRight';
+  seatIndex: number;
+  stand: StadiumSectionId;
+  tier: number;
   x: number;
   y: number;
   z: number;
@@ -105,6 +109,5 @@ export interface CrowdResources {
   group: THREE.Group;
   materials: THREE.Material[];
   nearPlacements: readonly CrowdPreviewPlacement[];
-  seatingShell: THREE.Mesh;
   snapshotBase: CrowdResourceSnapshotBase;
 }

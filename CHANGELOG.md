@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.50.0] - 2026-06-21
+
+### Added
+
+- Added the first normal-game mathematical stadium bowl with centralized stadium spec values, rounded-rectangle path sampling, tiered row layout, seat transforms, prototype SVG image materials, simple fallback materials, scoreboard, tunnels, fascia, concourse wall, and exterior wall.
+- Added stadium controller integration through the normal presentation runtime and game experience settings, with broadcast enabling the stadium and performance simplifying it by disabling upper-tier/image-material presentation.
+- Added stadium seat-layout-derived crowd placement so normal crowd instances and crowd preview use real stadium seat transforms rather than a separate crowd placement formula.
+
+### Changed
+
+- Split crowd resources so the crowd owner contains only instanced spectators while stadium seating and bowl geometry are owned by the new stadium system.
+- Extended runtime settings, smoke debug readback, memory subsystem classification, README, and AGENTS guidance for normal-game stadium presentation.
+
+### Tests
+
+- Added stadium path, row, seat layout, tunnel exclusion, crowd-seat derivation, geometry containment, resource disposal, and controller snapshot coverage.
+- Updated crowd, settings, memory, and browser smoke coverage for the stadium/crowd ownership split.
+
 ## [0.49.0] - 2026-06-21
 
 ### Added

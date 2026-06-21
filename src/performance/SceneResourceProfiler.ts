@@ -234,7 +234,12 @@ function createSubsystemLookup(
       name.includes('crowd')
     ) {
       assignSubsystem(object, 'crowd', lookup);
-    } else if (name.includes('stadium') || name.includes('stand') || name.includes('seating')) {
+    } else if (
+      object.userData.stadium ||
+      name.includes('stadium') ||
+      name.includes('stand') ||
+      name.includes('seating')
+    ) {
       assignSubsystem(object, 'stadium', lookup);
     }
   });
@@ -272,7 +277,12 @@ function classifyObject(object: THREE.Object3D): MemorySubsystemId {
   if (name.includes('crowd')) {
     return 'crowd';
   }
-  if (name.includes('stadium') || name.includes('stand') || name.includes('seating')) {
+  if (
+    object.userData.stadium ||
+    name.includes('stadium') ||
+    name.includes('stand') ||
+    name.includes('seating')
+  ) {
     return 'stadium';
   }
   return 'other';

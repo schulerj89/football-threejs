@@ -686,6 +686,20 @@ interface GameExperienceSettingsSnapshot {
   preset: 'broadcast' | 'custom' | 'performance';
   qualityMode: 'adaptive60' | 'lockedBroadcast' | 'lockedPerformance';
   routeArtEnabled: boolean;
+  stadiumEnabled: boolean;
+}
+
+interface StadiumSnapshot {
+  drawCalls: number;
+  enabled: boolean;
+  geometryCount: number;
+  imageMaterialsEnabled: boolean;
+  lowerTierRows: number;
+  materialCount: number;
+  seatCount: number;
+  textureCount: number;
+  triangles: number;
+  upperTierEnabled: boolean;
 }
 
 interface QualityDebugSnapshot {
@@ -1053,12 +1067,20 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     playbookId: '11v11',
     preset: 'broadcast',
     routeArtEnabled: true,
+    stadiumEnabled: true,
   });
   expect(experience.assetReadiness).toMatchObject({
     audioEnabled: true,
     crowdSpectatorCount: 500,
     crowdVisualsAllocated: true,
   });
+  const stadium = await getStadiumSnapshot(page);
+  expect(stadium).toMatchObject({
+    enabled: true,
+    upperTierEnabled: true,
+  });
+  expect(stadium.drawCalls).toBeGreaterThan(0);
+  expect(stadium.seatCount).toBeGreaterThanOrEqual(500);
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
   });
@@ -1076,9 +1098,9 @@ test('renders the development crowd preview with bounded instanced resources', a
   expect(initial.actualSpectatorCount).toBe(5000);
   expect(initial.nearInstanceCount + initial.farInstanceCount).toBe(5000);
   expect(initial.gameplayPlayerCount).toBe(0);
-  expect(initial.crowdDrawCalls).toBe(6);
-  expect(initial.geometryCount).toBe(5);
-  expect(initial.materialCount).toBe(4);
+  expect(initial.crowdDrawCalls).toBe(5);
+  expect(initial.geometryCount).toBe(4);
+  expect(initial.materialCount).toBe(3);
   expect(initial.textureCount).toBe(0);
   expect((await getGameplaySnapshot(page)).players).toHaveLength(0);
   expect(initial.perInstanceStorage).toMatchObject({
@@ -1110,7 +1132,7 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
   const crowd = await getCrowdPresentationSnapshot(page);
   expect(crowd).toMatchObject({
     actualSpectatorCount: 500,
-    crowdDrawCalls: 6,
+    crowdDrawCalls: 5,
     density: 'low',
     deterministicSubsets: true,
     noPerSpectatorObject3D: true,
@@ -3038,6 +3060,24 @@ async function getGameExperienceSnapshot(page: Page): Promise<GameExperienceSnap
     }
 
     return debugApi.getGameExperienceSnapshot();
+  });
+}
+
+async function getStadiumSnapshot(page: Page): Promise<StadiumSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getStadiumSnapshot: () => StadiumSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getStadiumSnapshot();
   });
 }
 

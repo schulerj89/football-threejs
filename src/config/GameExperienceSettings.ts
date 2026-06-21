@@ -57,6 +57,7 @@ export interface GameExperienceSettings {
   preset: ExperiencePreset;
   qualityMode: QualityMode;
   routeArtEnabled: boolean;
+  stadiumEnabled: boolean;
 }
 
 export interface PersistedGameExperienceSettings {
@@ -87,6 +88,7 @@ export interface GameExperienceQueryOverrides {
   preset?: ExperiencePreset;
   qualityMode?: QualityMode;
   routeArtEnabled?: boolean;
+  stadiumEnabled?: boolean;
 }
 
 export interface DevelopmentModeFlags {
@@ -160,6 +162,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   preset: 'broadcast',
   qualityMode: DEFAULT_QUALITY_MODE,
   routeArtEnabled: true,
+  stadiumEnabled: true,
 } as const;
 
 export const PERFORMANCE_EXPERIENCE_SETTINGS: GameExperienceSettings = {
@@ -169,6 +172,7 @@ export const PERFORMANCE_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   crowdVisualsEnabled: false,
   preset: 'performance',
   qualityMode: DEFAULT_QUALITY_MODE,
+  stadiumEnabled: true,
 } as const;
 
 export function resolveGameExperienceSettings({
@@ -306,6 +310,7 @@ export function normalizeGameExperienceSettings(
       ? normalizeQualityMode(settings.qualityMode)
       : presetDefaults.qualityMode,
     routeArtEnabled: settings.routeArtEnabled ?? presetDefaults.routeArtEnabled,
+    stadiumEnabled: settings.stadiumEnabled ?? presetDefaults.stadiumEnabled,
   };
 }
 
@@ -361,6 +366,7 @@ export function resolveGameExperienceQueryOverrides(
   applyBooleanOverride(overrides, 'officialsEnabled', searchParams, 'officials');
   applyBooleanOverride(overrides, 'routeArtEnabled', searchParams, 'routeArt');
   applyBooleanOverride(overrides, 'playerMotionEnabled', searchParams, 'playerMotion');
+  applyBooleanOverride(overrides, 'stadiumEnabled', searchParams, 'stadium');
   applyVolumeOverride(overrides, 'announcerVolume', searchParams, 'announcerVolume');
   applyVolumeOverride(overrides, 'crowdVolume', searchParams, 'crowdVolume');
   applyVolumeOverride(overrides, 'masterVolume', searchParams, 'masterVolume');
@@ -506,6 +512,7 @@ function applyBooleanOverride(
     | 'officialsEnabled'
     | 'playerMotionEnabled'
     | 'routeArtEnabled'
+    | 'stadiumEnabled'
   >,
   searchParams: URLSearchParams,
   queryKey: string,

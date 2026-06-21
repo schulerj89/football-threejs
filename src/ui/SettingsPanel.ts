@@ -31,6 +31,7 @@ export class SettingsPanel {
   private readonly cameraSelect = document.createElement('select');
   private readonly cinematicsSelect = document.createElement('select');
   private readonly crowdVisualsInput = document.createElement('input');
+  private readonly stadiumInput = document.createElement('input');
   private readonly crowdDensitySelect = document.createElement('select');
   private readonly crowdReactionsInput = document.createElement('input');
   private readonly audioEnabledInput = document.createElement('input');
@@ -116,6 +117,7 @@ export class SettingsPanel {
         ['full', 'Full'],
       ]),
       this.createCheckboxRow('Crowd visuals', this.crowdVisualsInput),
+      this.createCheckboxRow('Stadium', this.stadiumInput),
       this.createSelectRow('Crowd density', this.crowdDensitySelect, [
         ['low', 'Low'],
         ['medium', 'Medium'],
@@ -232,6 +234,9 @@ export class SettingsPanel {
     this.crowdVisualsInput.addEventListener('change', () => {
       this.updateCustomSettings({ crowdVisualsEnabled: this.crowdVisualsInput.checked });
     });
+    this.stadiumInput.addEventListener('change', () => {
+      this.updateCustomSettings({ stadiumEnabled: this.stadiumInput.checked });
+    });
     this.crowdDensitySelect.addEventListener('change', () => {
       this.updateCustomSettings({ crowdDensity: this.crowdDensitySelect.value as CrowdDensity });
     });
@@ -295,6 +300,7 @@ export class SettingsPanel {
     this.cameraSelect.value = this.settings.gameplayCamera;
     this.cinematicsSelect.value = this.settings.cinematics;
     this.crowdVisualsInput.checked = this.settings.crowdVisualsEnabled;
+    this.stadiumInput.checked = this.settings.stadiumEnabled;
     this.crowdDensitySelect.value = this.settings.crowdDensity;
     this.crowdReactionsInput.checked = this.settings.crowdReactionsEnabled;
     this.audioEnabledInput.checked = this.settings.audioEnabled;

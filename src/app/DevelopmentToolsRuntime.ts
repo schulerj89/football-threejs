@@ -99,6 +99,7 @@ import type {
   CrowdCapacityReport,
   SceneResourceProfileSnapshot,
 } from '../performance/MemoryTypes';
+import type { StadiumControllerSnapshot } from '../stadium/StadiumController';
 import {
   createSevenAuditOverlay,
   syncSevenAuditOverlay,
@@ -168,6 +169,7 @@ export interface FootballDebugApi {
   getPresentationHoldSnapshot: () => PresentationHoldSnapshot;
   getPresentationAuditSnapshot: () => PresentationAuditSnapshot | null;
   getSevenAuditSnapshot: () => SevenAuditSnapshot | null;
+  getStadiumSnapshot: () => StadiumControllerSnapshot;
   getPlayerBodyVisualSnapshots: () => PlayerBodyVisualSnapshot[];
   getPlayerPoseSnapshots: () => PlayerPoseSnapshot[];
   getPlayerSnapshot: () => PlayerSnapshot;

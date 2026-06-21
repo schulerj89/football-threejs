@@ -73,6 +73,10 @@ import {
   getQualityProfile,
   type QualityProfileSnapshot,
 } from '../performance/QualityProfile';
+import {
+  StadiumController,
+  type StadiumControllerSnapshot,
+} from '../stadium/StadiumController';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -81,6 +85,7 @@ export interface PresentationRuntimeOptions {
   routeAuditEnabled: boolean;
   scene: THREE.Scene;
   searchParams: URLSearchParams;
+  renderer: THREE.WebGLRenderer;
   warn?: (message: string) => void;
 }
 
@@ -107,6 +112,7 @@ export class PresentationRuntime {
   readonly gameplayHud = createGameplayHud();
   readonly playerPoseController: PlayerPoseController;
   readonly routeArtRenderer: RouteArtRenderer;
+  readonly stadiumController: StadiumController;
 
   private readonly scene: THREE.Scene;
   private cameraController: GameplayCameraController;
@@ -128,6 +134,7 @@ export class PresentationRuntime {
     initialPlays,
     routeAuditEnabled,
     scene,
+    renderer,
     searchParams,
     warn,
   }: PresentationRuntimeOptions) {
@@ -158,6 +165,19 @@ export class PresentationRuntime {
       : null;
     if (this.crowdPreviewController) {
       this.scene.add(this.crowdPreviewController.group);
+    }
+
+    this.stadiumController = new StadiumController({
+      enabled: !this.crowdPreviewController && gameExperience.settings.stadiumEnabled,
+      imageMaterialsEnabled: shouldUseStadiumImageMaterials(
+        gameExperience,
+        this.qualityProfile,
+      ),
+      renderer,
+      upperTierEnabled: shouldUseStadiumUpperTier(gameExperience, this.qualityProfile),
+    });
+    if (!this.crowdPreviewController) {
+      this.scene.add(this.stadiumController.group);
     }
 
     this.crowdPresentationController =
@@ -381,6 +401,7 @@ export class PresentationRuntime {
     this.audioMixer.setSettings(gameExperience.audioSettings);
     this.routeArtRenderer.setEnabled(gameExperience.settings.routeArtEnabled);
     this.playerPoseController.setEnabled(gameExperience.settings.playerMotionEnabled);
+    this.applyStadiumSettings();
     this.broadcastCommentaryDirector.setAnnouncerEnabled(
       gameExperience.settings.announcerEnabled,
     );
@@ -413,6 +434,7 @@ export class PresentationRuntime {
     if (!areCrowdSettingsEqual(previousCrowdSettings, this.crowdPresentationSettings)) {
       this.rebuildCrowdPresentationController();
     }
+    this.applyStadiumSettings();
   }
 
   getRuntimeAudioSnapshot(): RuntimeAudioDebugSnapshot {
@@ -450,6 +472,10 @@ export class PresentationRuntime {
     return this.crowdPresentationController?.getSnapshot() ?? null;
   }
 
+  getStadiumSnapshot(): StadiumControllerSnapshot {
+    return this.stadiumController.getSnapshot();
+  }
+
   getGamePresentationRuntimeSnapshot(): GamePresentationRuntimeSnapshot {
     return this.gamePresentationRuntime.getSnapshot();
   }
@@ -482,6 +508,8 @@ export class PresentationRuntime {
       this.scene.remove(this.crowdPresentationController.group);
       this.crowdPresentationController.dispose();
     }
+    this.scene.remove(this.stadiumController.group);
+    this.stadiumController.dispose();
     this.playCallUi?.dispose();
     this.gameplayHud.root.remove();
     this.broadcastCaptions.remove();
@@ -519,6 +547,17 @@ export class PresentationRuntime {
     this.crowdPresentationController.setPageActive(!document.hidden && document.hasFocus());
     this.scene.add(this.crowdPresentationController.group);
   }
+
+  private applyStadiumSettings(): void {
+    this.stadiumController.applySettings({
+      enabled: !this.crowdPreviewController && this.gameExperience.settings.stadiumEnabled,
+      imageMaterialsEnabled: shouldUseStadiumImageMaterials(
+        this.gameExperience,
+        this.qualityProfile,
+      ),
+      upperTierEnabled: shouldUseStadiumUpperTier(this.gameExperience, this.qualityProfile),
+    });
+  }
 }
 
 function areCrowdSettingsEqual(
@@ -552,4 +591,22 @@ function minCrowdDensity(
   };
 
   return order[a] <= order[b] ? a : b;
+}
+
+function shouldUseStadiumImageMaterials(
+  gameExperience: ResolvedGameExperienceSettings,
+  quality: QualityProfileSnapshot,
+): boolean {
+  return gameExperience.settings.stadiumEnabled &&
+    gameExperience.settings.preset !== 'performance' &&
+    quality.tier !== 'performance';
+}
+
+function shouldUseStadiumUpperTier(
+  gameExperience: ResolvedGameExperienceSettings,
+  quality: QualityProfileSnapshot,
+): boolean {
+  return gameExperience.settings.stadiumEnabled &&
+    gameExperience.settings.preset !== 'performance' &&
+    quality.tier !== 'performance';
 }

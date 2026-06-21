@@ -301,6 +301,7 @@ export class ApplicationDiagnostics {
       getPresentationHoldSnapshot: () => this.options.presentation.holdSnapshot,
       getPresentationAuditSnapshot: () => this.getPresentationAuditSnapshot(),
       getSevenAuditSnapshot: () => this.getSevenAuditSnapshot(),
+      getStadiumSnapshot: () => this.options.presentation.getStadiumSnapshot(),
       getPlayerBodyVisualSnapshots: () => this.options.playerVisuals.getBodySnapshots(),
       getPlayerPoseSnapshots: () => this.options.presentation.getPlayerPoseSnapshots(),
       getPlayerSnapshot: () =>
