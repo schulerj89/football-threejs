@@ -46,6 +46,7 @@ import {
   updateGameplayModel,
   type GameplaySnapshot,
 } from './playState';
+import { resolvePlaybookId } from './playbook';
 import {
   PlayerPoseController,
   createPlayerPoseDebugOverlay,
@@ -107,6 +108,7 @@ const playerVisualOptions = {
 };
 const playerMotionEnabled = searchParams.get('playerMotion') !== '0';
 const formationPreviewMode = resolveFormationPreviewMode(searchParams.get('formationPreview'));
+const playbookId = resolvePlaybookId(searchParams.get('playbook') ?? searchParams.get('roster'));
 const presentationAuditEnabled = searchParams.has('presentationAudit');
 let presentationAuditState: PresentationAuditState = resolvePresentationAuditState(
   searchParams.get('presentationState'),
@@ -116,7 +118,7 @@ const field = createFootballField({
 });
 scene.add(field.group);
 
-const gameplayModel = createGameplayModel();
+const gameplayModel = createGameplayModel({ playbookId });
 const formationPreviewModel = formationPreviewMode
   ? createFormationPreviewModel(formationPreviewMode)
   : null;
@@ -156,10 +158,13 @@ directionalLight.position.set(-20, 45, -25);
 scene.add(directionalLight);
 
 const keyboardInput = new KeyboardMovementInput(window);
-const playControls = new KeyboardPlayControls(window);
+const playControls = new KeyboardPlayControls(
+  window,
+  gameplayModel.availablePlays.map((play) => play.id),
+);
 const debugOverlay = new DebugOverlay({ renderer, player: getActivePrimaryPlayer() });
 const gameplayHud = createGameplayHud();
-const playCallUi = formationPreviewModel ? null : createPlayCallUi();
+const playCallUi = formationPreviewModel ? null : createPlayCallUi(gameplayModel.availablePlays);
 const playerPoseController = new PlayerPoseController(undefined, {
   enabled: playerMotionEnabled,
 });

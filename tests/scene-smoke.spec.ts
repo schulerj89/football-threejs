@@ -70,9 +70,10 @@ interface GameplaySnapshot {
   nextBallSpot: FootballSpot;
   player: PlayerSnapshot;
   players: PlayerSnapshot[];
+  playbookId: '5v5' | '7v7';
   selectedPlay: {
     displayName: string;
-    id: 'inside-run' | 'outside-run' | 'quick-pass' | 'slant-flat';
+    id: 'inside-run' | 'outside-run' | 'quick-pass' | 'slant-flat' | 'twin-slants-flat';
     kind: 'run' | 'pass';
     initialMovementDirection: FootballSpot;
   };
@@ -686,6 +687,57 @@ test('renders graphical play cards and selects plays through the shared request 
   await page.keyboard.press('1');
   await page.waitForTimeout(100);
   expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('quick-pass');
+});
+
+test('starts playable 7v7 Twin Slants Flat and throws to the selected target', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?debug=1&readback=1&playbook=7v7');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  const initial = await getGameplaySnapshot(page);
+  expect(initial.playbookId).toBe('7v7');
+  expect(initial.selectedPlay).toMatchObject({
+    displayName: 'Twin Slants Flat',
+    id: 'twin-slants-flat',
+    kind: 'pass',
+  });
+  expect(initial.players).toHaveLength(14);
+  expect(initial.players.filter((player) => player.team === 'offense')).toHaveLength(7);
+  expect(initial.players.filter((player) => player.team === 'defense')).toHaveLength(7);
+  expect(initial.selectedReceiver).toEqual({
+    displayName: 'Receiver Left',
+    id: 'offense-wr-left',
+  });
+  await expect(page.locator('.play-card')).toHaveCount(1);
+  await expect(page.locator('.play-card-title')).toHaveText('Twin Slants Flat');
+  await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-receiver-route')).toHaveCount(3);
+  await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-blocker-assignment')).toHaveCount(3);
+
+  await page.keyboard.press('e');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedReceiver: { displayName: 'Receiver Right', id: 'offense-wr-right' },
+  });
+  await page.keyboard.press('e');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedReceiver: { displayName: 'Running Back', id: 'offense-rb' },
+  });
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    ball: { state: { kind: 'possessed' } },
+    playState: 'live',
+  });
+  await expect(page.locator('.play-call-ui')).toBeHidden();
+
+  await page.keyboard.press('f');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    passAttempted: true,
+    selectedReceiver: { id: 'offense-rb' },
+  });
+  expect(['inFlight', 'caught', 'incomplete', 'dead']).toContain(
+    (await getGameplaySnapshot(page)).ball.state.kind,
+  );
+  await expectNonBlankCanvas(page);
 });
 
 test('selects offense perspective camera and toggles modes without resetting gameplay', async ({ page }) => {

@@ -4,14 +4,19 @@ import { STABLE_PLAYER_IDS } from '../src/formationLayout';
 import { PLAYER_MOVEMENT_CONFIG } from '../src/playerModel';
 import {
   createFormationPlayers,
+  getAvailablePlays,
   getBlockingLaneTarget,
+  getCoverageAssignmentReceiverId,
   getEligibleReceiverIds,
   getPlay,
+  getProtectionAssignmentDefenderId,
   getReceiverDisplayName,
   getReceiverRouteTarget,
   getRushingPlay,
   resetFormationPlayers,
 } from '../src/playbook';
+import { createSnapPlacementForLane } from '../src/formationPreview';
+import { resolveFormation } from '../src/formationLayout';
 
 describe('playbook', () => {
   it('looks up the stable rushing and passing plays', () => {
@@ -170,6 +175,81 @@ describe('playbook', () => {
     expect(getPlayer(players, 'offense-wr').role).toBe('receiver');
     expect(getPlayer(players, 'offense-rb').role).toBe('blocker');
     expect(getPlayer(players, 'defense-cover-wr').role).toBe('coverageDefender');
+  });
+
+  it('defines Twin Slants Flat as the only 7v7 play with three ordered receivers', () => {
+    const plays = getAvailablePlays('7v7');
+    const play = getPlay('twin-slants-flat');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+
+    expect(plays.map((candidate) => candidate.id)).toEqual(['twin-slants-flat']);
+    expect(play).toMatchObject({
+      ballCarrierRole: 'quarterback',
+      displayName: 'Twin Slants Flat',
+      id: 'twin-slants-flat',
+      kind: 'pass',
+      playbookId: '7v7',
+      roster: { id: '7v7' },
+    });
+    expect(players).toHaveLength(14);
+    expect(players.filter((player) => player.team === 'offense')).toHaveLength(7);
+    expect(players.filter((player) => player.team === 'defense')).toHaveLength(7);
+    expect(getEligibleReceiverIds(play)).toEqual([
+      'offense-wr-left',
+      'offense-wr-right',
+      'offense-rb',
+    ]);
+    expect(getReceiverDisplayName(play, 'offense-wr-left')).toBe('Receiver Left');
+    expect(getReceiverDisplayName(play, 'offense-wr-right')).toBe('Receiver Right');
+    expect(getReceiverDisplayName(play, 'offense-rb')).toBe('Running Back');
+  });
+
+  it('resolves Twin Slants Flat routes from semantic field-side formation data', () => {
+    const play = getPlay('twin-slants-flat');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+    const leftReceiver = getPlayer(players, 'offense-wr-left');
+    const rightReceiver = getPlayer(players, 'offense-wr-right');
+    const runningBack = getPlayer(players, 'offense-rb');
+    const leftRoute = getReceiverRouteTarget(leftReceiver, INITIAL_BALL_SPOT, play);
+    const rightRoute = getReceiverRouteTarget(rightReceiver, INITIAL_BALL_SPOT, play);
+    const flatRoute = getReceiverRouteTarget(runningBack, INITIAL_BALL_SPOT, play);
+
+    expect(leftRoute?.x).toBeGreaterThan(leftReceiver.position.x);
+    expect(leftRoute?.z).toBe(INITIAL_BALL_SPOT.z + 12);
+    expect(rightRoute?.x).toBeLessThan(rightReceiver.position.x);
+    expect(rightRoute?.z).toBe(INITIAL_BALL_SPOT.z + 12);
+    expect(flatRoute?.x).toBeGreaterThan(runningBack.position.x);
+    expect(flatRoute?.z).toBe(INITIAL_BALL_SPOT.z + 4.5);
+    expect(flatRoute?.x).toBeLessThanOrEqual(
+      PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.collisionRadius,
+    );
+  });
+
+  it('declares distinct pass-protection and coverage assignments for Twin Slants Flat', () => {
+    const play = getPlay('twin-slants-flat');
+
+    expect(getProtectionAssignmentDefenderId(play, 'offense-center')).toBe('defense-line-middle');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-line-left')).toBe('defense-line-left');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-line-right')).toBe('defense-line-right');
+    expect(new Set(Object.values(play.protectionAssignments ?? {})).size).toBe(3);
+    expect(getCoverageAssignmentReceiverId(play, 'defense-corner-left')).toBe('offense-wr-left');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-corner-right')).toBe('offense-wr-right');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-rb');
+  });
+
+  it('aligns the Twin Slants Flat safety to the wide receiver midpoint at every snap lane', () => {
+    const play = getPlay('twin-slants-flat');
+
+    for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+      const formation = resolveFormation(play, createSnapPlacementForLane(lane));
+      const leftReceiver = getPlayer(formation.slots, 'offense-wr-left');
+      const rightReceiver = getPlayer(formation.slots, 'offense-wr-right');
+      const safety = getPlayer(formation.slots, 'defense-safety');
+      const expectedX = (leftReceiver.position.x + rightReceiver.position.x) / 2;
+
+      expect(formation.issues).toEqual([]);
+      expect(safety.position.x).toBeCloseTo(expectedX);
+    }
   });
 });
 

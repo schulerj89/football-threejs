@@ -36,9 +36,10 @@ import {
   hasCrossedOriginalLineOfScrimmage,
 } from './passRules';
 import {
-  DEFAULT_PLAY_ID,
   createFormationPlayers,
+  getAvailablePlays,
   getDefaultEligibleReceiverId,
+  getDefaultPlayId,
   getPlay,
   getNextEligibleReceiverId,
   getReceiverRouteTarget,
@@ -77,6 +78,7 @@ import {
   type BlockingEngagement,
   type BlockingState,
 } from './teamSimulation';
+import type { PlaybookId } from './roster';
 
 export type PlayState = 'preSnap' | 'live' | 'dead' | 'gameOver';
 export type PlayResultType = 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete' | 'sack';
@@ -106,6 +108,7 @@ export const GAMEPLAY_CONFIG = {
 
 export interface GameplayModel {
   activePlayStartSpot: FootballSpot | null;
+  availablePlays: PlayDefinition[];
   ball: BallModel;
   blocking: BlockingState;
   currentBallSpot: FootballSpot;
@@ -120,6 +123,7 @@ export interface GameplayModel {
   forwardPassEligible: boolean;
   player: PlayerModel;
   players: PlayerModel[];
+  playbookId: PlaybookId;
   selectedPlay: PlayDefinition;
   playState: PlayState;
   playResetTimerSeconds: number | null;
@@ -147,6 +151,7 @@ export interface GameplaySnapshot {
   nextSnapSpot: FootballSpot;
   player: PlayerSnapshot;
   players: PlayerSnapshot[];
+  playbookId: PlaybookId;
   selectedPlay: {
     displayName: string;
     id: PlayId;
@@ -166,9 +171,15 @@ export interface GameplaySnapshot {
   passFeedback: 'pastLineOfScrimmage' | null;
 }
 
-export function createGameplayModel(): GameplayModel {
+export interface CreateGameplayModelOptions {
+  playbookId?: PlaybookId;
+}
+
+export function createGameplayModel(options: CreateGameplayModelOptions = {}): GameplayModel {
+  const playbookId = options.playbookId ?? '5v5';
+  const availablePlays = getAvailablePlays(playbookId);
   const initialSpot = cloneFootballSpot(INITIAL_BALL_SPOT);
-  const selectedPlay = getPlay(DEFAULT_PLAY_ID);
+  const selectedPlay = getPlay(getDefaultPlayId(playbookId));
   const drive = createDriveModel(initialSpot);
   const initialSnapSpot = cloneFootballSpot(drive.lineOfScrimmage);
   const players = createFormationPlayers(initialSnapSpot, selectedPlay);
@@ -176,6 +187,7 @@ export function createGameplayModel(): GameplayModel {
 
   return {
     activePlayStartSpot: null,
+    availablePlays,
     ball: createBallModel(initialSnapSpot),
     blocking: createBlockingState(),
     currentBallSpot: cloneFootballSpot(initialSnapSpot),
@@ -190,6 +202,7 @@ export function createGameplayModel(): GameplayModel {
     forwardPassEligible: true,
     player: ballCarrier,
     players,
+    playbookId,
     selectedPlay,
     playState: 'preSnap',
     playResetTimerSeconds: null,
@@ -205,6 +218,10 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
   }
 
   const play = getPlay(playId);
+  if (!gameplay.availablePlays.some((availablePlay) => availablePlay.id === play.id)) {
+    return false;
+  }
+
   gameplay.selectedPlay = play;
   gameplay.passAttempted = false;
   gameplay.forwardPassEligible = true;
@@ -363,7 +380,7 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
   }
 
   const initialSpot = cloneFootballSpot(INITIAL_BALL_SPOT);
-  const defaultPlay = getPlay(DEFAULT_PLAY_ID);
+  const defaultPlay = getPlay(getDefaultPlayId(gameplay.playbookId));
 
   resetScoreAttack(gameplay.scoreAttack);
   resetDriveModel(gameplay.drive, initialSpot);
@@ -477,6 +494,7 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     passAttempted: gameplay.passAttempted,
     player: snapshotPlayerModel(gameplay.player),
     players: gameplay.players.map(snapshotPlayerModel),
+    playbookId: gameplay.playbookId,
     selectedPlay: {
       displayName: gameplay.selectedPlay.displayName,
       id: gameplay.selectedPlay.id,

@@ -132,6 +132,82 @@ describe('five-on-five rushing drill simulation', () => {
     expect(passRusher.velocity.z).toBeLessThan(0);
   });
 
+  it('uses explicit Twin Slants Flat pass-protection assignments before falling back to proximity', () => {
+    const play = getPlay('twin-slants-flat');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+    const blocking = createBlockingState();
+
+    getPlayer(players, 'offense-center').position = { x: 0, z: 0 };
+    getPlayer(players, 'defense-line-middle').position = { x: 0, z: 1 };
+    getPlayer(players, 'offense-line-left').position = { x: -5, z: 0 };
+    getPlayer(players, 'defense-line-left').position = { x: -5, z: 1 };
+    getPlayer(players, 'offense-line-right').position = { x: 5, z: 0 };
+    getPlayer(players, 'defense-line-right').position = { x: 5, z: 1 };
+
+    acquireBlockingEngagements(players, blocking, play);
+
+    expect(blocking.engagements).toEqual(
+      expect.arrayContaining([
+        { blockerId: 'offense-center', defenderId: 'defense-line-middle' },
+        { blockerId: 'offense-line-left', defenderId: 'defense-line-left' },
+        { blockerId: 'offense-line-right', defenderId: 'defense-line-right' },
+      ]),
+    );
+  });
+
+  it('runs all Twin Slants Flat routes after the snap and keeps coverage on assignments', () => {
+    const play = getPlay('twin-slants-flat');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+    const quarterback = getPlayer(players, 'offense-qb');
+    const leftReceiver = getPlayer(players, 'offense-wr-left');
+    const rightReceiver = getPlayer(players, 'offense-wr-right');
+    const runningBack = getPlayer(players, 'offense-rb');
+    const leftCoverage = getPlayer(players, 'defense-corner-left');
+    const rightCoverage = getPlayer(players, 'defense-corner-right');
+    const linebacker = getPlayer(players, 'defense-linebacker');
+    const leftStart = { ...leftReceiver.position };
+    const rightStart = { ...rightReceiver.position };
+    const backStart = { ...runningBack.position };
+
+    updateRushingDrillAi(players, createBlockingState(), quarterback, {
+      bounds: PLAYABLE_FIELD_BOUNDS,
+      deltaSeconds: 0.1,
+      lineOfScrimmage: INITIAL_BALL_SPOT,
+      play,
+    });
+
+    expect(leftReceiver.position.x).toBeGreaterThan(leftStart.x);
+    expect(leftReceiver.position.z).toBeGreaterThan(leftStart.z);
+    expect(rightReceiver.position.x).toBeLessThan(rightStart.x);
+    expect(rightReceiver.position.z).toBeGreaterThan(rightStart.z);
+    expect(runningBack.position.x).toBeGreaterThan(backStart.x);
+    expect(leftCoverage.currentState).toBe('pursuing');
+    expect(rightCoverage.currentState).toBe('pursuing');
+    expect(linebacker.currentState).toBe('pursuing');
+  });
+
+  it('turns coverage defenders into carrier pursuit after a Twin Slants Flat completion', () => {
+    const play = getPlay('twin-slants-flat');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+    const runningBack = getPlayer(players, 'offense-rb');
+    const assignedReceiver = getPlayer(players, 'offense-wr-left');
+    const corner = getPlayer(players, 'defense-corner-left');
+
+    runningBack.position = { x: 10, z: 0 };
+    assignedReceiver.position = { x: -10, z: 0 };
+    corner.position = { x: 0, z: 0 };
+    corner.facingRadians = 0;
+
+    updateRushingDrillAi(players, createBlockingState(), runningBack, {
+      bounds: PLAYABLE_FIELD_BOUNDS,
+      deltaSeconds: 0.1,
+      lineOfScrimmage: INITIAL_BALL_SPOT,
+      play,
+    });
+
+    expect(corner.velocity.x).toBeGreaterThan(0);
+  });
+
   it('keeps AI receivers inside the sideline while routes run from a sideline spot', () => {
     const play = getPlay('slant-flat');
     const sidelineSpot = {

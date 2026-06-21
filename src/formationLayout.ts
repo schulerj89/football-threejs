@@ -7,6 +7,11 @@ import {
 } from './fieldSpec';
 import { cloneFootballSpot, type FootballSpot } from './fieldScale';
 import type { PlayerRole, PlayerTeam } from './playerModel';
+import {
+  FIVE_ON_FIVE_DEFENSE_PLAYER_IDS,
+  FIVE_ON_FIVE_OFFENSE_PLAYER_IDS,
+  FIVE_ON_FIVE_PLAYER_IDS,
+} from './roster';
 
 export type FormationSide = 'left' | 'right' | 'field' | 'boundary';
 export type ConcreteFormationSide = 'left' | 'right';
@@ -112,24 +117,15 @@ export interface FormationValidationIssue {
 }
 
 export const OFFENSE_PLAYER_IDS = [
-  'offense-qb',
-  'offense-rb',
-  'offense-blocker-left',
-  'offense-blocker-right',
-  'offense-wr',
+  ...FIVE_ON_FIVE_OFFENSE_PLAYER_IDS,
 ] as const;
 
 export const DEFENSE_PLAYER_IDS = [
-  'defense-rusher-left',
-  'defense-rusher-right',
-  'defense-cover-wr',
-  'defense-cover-rb',
-  'defense-safety',
+  ...FIVE_ON_FIVE_DEFENSE_PLAYER_IDS,
 ] as const;
 
 export const STABLE_PLAYER_IDS = [
-  ...OFFENSE_PLAYER_IDS,
-  ...DEFENSE_PLAYER_IDS,
+  ...FIVE_ON_FIVE_PLAYER_IDS,
 ] as const;
 
 export type StablePlayerId = typeof STABLE_PLAYER_IDS[number];

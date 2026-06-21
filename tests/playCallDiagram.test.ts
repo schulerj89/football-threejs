@@ -46,6 +46,26 @@ describe('play call diagrams', () => {
     }
   });
 
+  it('renders Twin Slants Flat with three receiver routes and three protection assignments', () => {
+    const snapPlacement = createCenterSnapPlacement(INITIAL_BALL_SPOT);
+    const play = getPlay('twin-slants-flat');
+    const diagram = createPlayCallDiagramModel(play, snapPlacement);
+
+    expect(diagram.playName).toBe('Twin Slants Flat');
+    expect(diagram.runDirection).toBeNull();
+    expect(diagram.receiverRoutes).toHaveLength(3);
+    expect(diagram.receiverRoutes.map((route) => route.receiverId)).toEqual([
+      'offense-wr-left',
+      'offense-wr-right',
+      'offense-rb',
+    ]);
+    expect(diagram.blockerAssignments.map((assignment) => assignment.blockerId).sort()).toEqual([
+      'offense-center',
+      'offense-line-left',
+      'offense-line-right',
+    ]);
+  });
+
   it('mirrors pass-route directions to match the gameplay camera presentation', () => {
     const snapPlacement = createCenterSnapPlacement(INITIAL_BALL_SPOT);
     const quickPass = createPlayCallDiagramModel(getPlay('quick-pass'), snapPlacement);

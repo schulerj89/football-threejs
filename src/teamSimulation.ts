@@ -2,6 +2,8 @@ import type { PlayableFieldBounds } from './field';
 import {
   getBlockingLaneTarget,
   getCoverageAssignmentReceiverId,
+  getDeepHelpReceiverIds,
+  getProtectionAssignmentDefenderId,
   getReceiverRouteSpeed,
   getReceiverRouteTarget,
   type PlayDefinition,
@@ -53,7 +55,7 @@ export function updateRushingDrillAi(
   releaseSeparatedEngagements(players, blocking);
   updateBlockers(players, blocking, options.lineOfScrimmage, options.play, delta);
   updateReceivers(players, options.lineOfScrimmage, options.play, delta);
-  acquireBlockingEngagements(players, blocking);
+  acquireBlockingEngagements(players, blocking, options.play);
   updateDefenders(players, blocking, runner, options.play, delta);
   keepNonCarriersInsidePlayableField(players, runner.id, options.bounds);
   resolvePlayerOverlaps(players);
@@ -61,7 +63,11 @@ export function updateRushingDrillAi(
   releaseSeparatedEngagements(players, blocking);
 }
 
-export function acquireBlockingEngagements(players: PlayerModel[], blocking: BlockingState): void {
+export function acquireBlockingEngagements(
+  players: PlayerModel[],
+  blocking: BlockingState,
+  play?: PlayDefinition,
+): void {
   const blockers = players.filter((player) => player.team === 'offense' && player.role === 'blocker');
   const defenders = players.filter((player) => player.team === 'defense' && player.role === 'defender');
 
@@ -70,7 +76,8 @@ export function acquireBlockingEngagements(players: PlayerModel[], blocking: Blo
       continue;
     }
 
-    const defender = findNearestEligibleDefender(blocker, defenders, blocking);
+    const defender = findAssignedDefender(blocker, defenders, blocking, play)
+      ?? findNearestEligibleDefender(blocker, defenders, blocking);
     if (!defender) {
       continue;
     }
@@ -201,6 +208,7 @@ function updateDefenders(
   deltaSeconds: number,
 ): void {
   const engagedDefenderIds = getEngagedDefenderIds(blocking);
+  const passCompleted = play.kind === 'pass' && runner.role !== 'quarterback';
 
   for (const defender of players) {
     if (defender.team !== 'defense') {
@@ -210,10 +218,14 @@ function updateDefenders(
     const isEngaged = engagedDefenderIds.has(defender.id);
     defender.currentState = isEngaged ? 'engaged' : 'pursuing';
     const coverageTarget =
-      defender.role === 'coverageDefender'
+      defender.role === 'coverageDefender' && !passCompleted
         ? getCoverageTarget(players, play, defender.id)
         : null;
-    const target = coverageTarget ?? runner;
+    const deepHelpTarget =
+      defender.role === 'coverageDefender' && !coverageTarget && !passCompleted
+        ? getDeepHelpTarget(players, play, defender.id)
+        : null;
+    const target = coverageTarget ?? deepHelpTarget ?? runner;
     updateDefenderPursuit(
       defender,
       target,
@@ -221,6 +233,35 @@ function updateDefenders(
       isEngaged ? BLOCKING_CONFIG.engagedDefenderSpeedMultiplier : 1,
     );
   }
+}
+
+function findAssignedDefender(
+  blocker: PlayerModel,
+  defenders: PlayerModel[],
+  blocking: BlockingState,
+  play?: PlayDefinition,
+): PlayerModel | null {
+  if (!play) {
+    return null;
+  }
+
+  const defenderId = getProtectionAssignmentDefenderId(play, blocker.id);
+
+  if (!defenderId) {
+    return null;
+  }
+
+  const defender = defenders.find((candidate) => candidate.id === defenderId);
+
+  if (
+    !defender ||
+    getEngagedDefenderIds(blocking).has(defender.id) ||
+    distanceBetween(blocker, defender) > BLOCKING_CONFIG.engageDistance
+  ) {
+    return null;
+  }
+
+  return defender;
 }
 
 function getCoverageTarget(
@@ -235,6 +276,36 @@ function getCoverageTarget(
   }
 
   return players.find((player) => player.id === receiverId) ?? null;
+}
+
+function getDeepHelpTarget(
+  players: PlayerModel[],
+  play: PlayDefinition,
+  defenderId: string,
+): PlayerModel | null {
+  const receiverIds = getDeepHelpReceiverIds(play, defenderId);
+
+  if (receiverIds.length === 0) {
+    return null;
+  }
+
+  const receivers = receiverIds
+    .map((receiverId) => players.find((player) => player.id === receiverId))
+    .filter((player): player is PlayerModel => !!player);
+
+  if (receivers.length === 0) {
+    return null;
+  }
+
+  const midpoint = {
+    x: receivers.reduce((sum, receiver) => sum + receiver.position.x, 0) / receivers.length,
+    z: receivers.reduce((sum, receiver) => sum + receiver.position.z, 0) / receivers.length,
+  };
+
+  return {
+    ...receivers[0],
+    position: midpoint,
+  };
 }
 
 function findNearestEligibleDefender(

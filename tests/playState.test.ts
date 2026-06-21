@@ -499,6 +499,186 @@ describe('play state transitions', () => {
     });
   });
 
+  it('starts Twin Slants Flat in playable 7v7 mode with three deterministic targets', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+
+    expect(gameplay.playbookId).toBe('7v7');
+    expect(gameplay.availablePlays.map((play) => play.id)).toEqual(['twin-slants-flat']);
+    expect(gameplay.selectedPlay).toMatchObject({
+      displayName: 'Twin Slants Flat',
+      id: 'twin-slants-flat',
+      kind: 'pass',
+    });
+    expect(gameplay.players).toHaveLength(14);
+    expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(7);
+    expect(gameplay.players.filter((player) => player.team === 'defense')).toHaveLength(7);
+    expect(gameplay.player).toMatchObject({ id: 'offense-qb', role: 'quarterback' });
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-left');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-right');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-rb');
+    expect(cycleSelectedReceiver(gameplay)).toBe(true);
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-left');
+    expect(snapshotGameplayModel(gameplay).selectedReceiver).toEqual({
+      displayName: 'Receiver Left',
+      id: 'offense-wr-left',
+    });
+  });
+
+  it('starts Twin Slants Flat receiver routes only after the snap', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+    const leftReceiver = getPlayer(gameplay.players, 'offense-wr-left');
+    const rightReceiver = getPlayer(gameplay.players, 'offense-wr-right');
+    const runningBack = getPlayer(gameplay.players, 'offense-rb');
+    const leftStart = { ...leftReceiver.position };
+    const rightStart = { ...rightReceiver.position };
+    const backStart = { ...runningBack.position };
+
+    updateGameplayModel(gameplay, 0.3);
+    expect(leftReceiver.position).toEqual(leftStart);
+    expect(rightReceiver.position).toEqual(rightStart);
+    expect(runningBack.position).toEqual(backStart);
+
+    expect(startPlay(gameplay)).toBe(true);
+    expect(leftReceiver.currentState).toBe('runningRoute');
+    expect(rightReceiver.currentState).toBe('runningRoute');
+    expect(runningBack.currentState).toBe('runningRoute');
+
+    updateGameplayModel(gameplay, 0.1);
+
+    expect(leftReceiver.position.x).toBeGreaterThan(leftStart.x);
+    expect(leftReceiver.position.z).toBeGreaterThan(leftStart.z);
+    expect(rightReceiver.position.x).toBeLessThan(rightStart.x);
+    expect(rightReceiver.position.z).toBeGreaterThan(rightStart.z);
+    expect(runningBack.position.x).toBeGreaterThan(backStart.x);
+  });
+
+  it('throws Twin Slants Flat toward each selected receiver and locks selection after release', () => {
+    const targetExpectations = [
+      { direction: 'right', receiverId: 'offense-wr-left' },
+      { direction: 'left', receiverId: 'offense-wr-right' },
+      { direction: 'right', receiverId: 'offense-rb' },
+    ] as const;
+
+    for (const expectation of targetExpectations) {
+      const gameplay = createGameplayModel({ playbookId: '7v7' });
+      selectReceiver(gameplay, expectation.receiverId);
+      const receiver = getPlayer(gameplay.players, expectation.receiverId);
+      const receiverX = receiver.position.x;
+
+      startPlay(gameplay);
+      expect(attemptPass(gameplay)).toBe(true);
+
+      if (gameplay.ball.state.kind !== 'inFlight') {
+        throw new Error('Expected Twin Slants Flat pass to be in flight');
+      }
+
+      if (expectation.direction === 'right') {
+        expect(gameplay.ball.state.target.x).toBeGreaterThan(receiverX);
+      } else {
+        expect(gameplay.ball.state.target.x).toBeLessThan(receiverX);
+      }
+
+      expect(cycleSelectedReceiver(gameplay)).toBe(false);
+      expect(gameplay.selectedReceiverId).toBe(expectation.receiverId);
+    }
+  });
+
+  it('catches Twin Slants Flat, transfers control, and then has defenders pursue the receiver', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+
+    selectReceiver(gameplay, 'offense-rb');
+    startPlay(gameplay);
+    expect(attemptPass(gameplay)).toBe(true);
+    updateGameplayModel(gameplay, 0.2);
+    const receiver = getPlayer(gameplay.players, 'offense-rb');
+    receiver.position.x = gameplay.ball.position.x;
+    receiver.position.z = gameplay.ball.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.ball.state).toEqual({ kind: 'caught', playerId: receiver.id });
+    expect(gameplay.ball.possession).toEqual({ kind: 'player', playerId: receiver.id });
+    expect(gameplay.player.id).toBe(receiver.id);
+    expect(receiver.currentState).toBe('userControlled');
+
+    const corner = getPlayer(gameplay.players, 'defense-corner-left');
+    corner.position = { x: receiver.position.x + 10, z: receiver.position.z };
+    corner.velocity = { x: 0, z: 0 };
+    updateGameplayModel(gameplay, 0.1);
+
+    expect(corner.currentState).toBe('pursuing');
+    expect(corner.velocity.x).toBeLessThan(0);
+  });
+
+  it('keeps Twin Slants Flat incompletions at the original line of scrimmage', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+
+    startPlay(gameplay);
+    expect(attemptPass(gameplay)).toBe(true);
+    for (const receiver of gameplay.players.filter((player) => player.role === 'receiver')) {
+      receiver.position.x = PLAYABLE_FIELD_BOUNDS.minX + receiver.collisionRadius;
+      receiver.position.z = PLAYABLE_FIELD_BOUNDS.minZ + receiver.collisionRadius;
+    }
+    updateGameplayModel(gameplay, 2);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.ball.state).toEqual({ kind: 'incomplete' });
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: INITIAL_BALL_SPOT,
+      startingBallSpot: INITIAL_BALL_SPOT,
+      type: 'incomplete',
+      yardsGained: 0,
+    });
+    expect(gameplay.drive.lineOfScrimmage).toEqual(INITIAL_BALL_SPOT);
+  });
+
+  it('classifies pre-throw 7v7 quarterback contact as a sack and post-release contact as live play', () => {
+    const sack = createGameplayModel({ playbookId: '7v7' });
+
+    startPlay(sack);
+    const middleRusher = getPlayer(sack.players, 'defense-line-middle');
+    middleRusher.position.x = sack.player.position.x;
+    middleRusher.position.z = sack.player.position.z;
+    updateGameplayModel(sack, 0);
+
+    expect(sack.playState).toBe('dead');
+    expect(sack.lastPlayResult?.type).toBe('sack');
+    expect(sack.lastPlayResult?.yardsGained).toBeLessThan(0);
+
+    const postRelease = createGameplayModel({ playbookId: '7v7' });
+    startPlay(postRelease);
+    expect(attemptPass(postRelease)).toBe(true);
+    const lateRusher = getPlayer(postRelease.players, 'defense-line-middle');
+    lateRusher.position.x = postRelease.player.position.x;
+    lateRusher.position.z = postRelease.player.position.z;
+    updateGameplayModel(postRelease, 0);
+
+    expect(postRelease.playState).toBe('live');
+    expect(postRelease.lastPlayResult).toBeNull();
+    expect(postRelease.ball.state.kind).toBe('inFlight');
+  });
+
+  it('resets Twin Slants Flat to all fourteen players and the default target', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+
+    selectReceiver(gameplay, 'offense-rb');
+    startPlay(gameplay);
+    gameplay.player.position.x = 7;
+    resetPlay(gameplay);
+
+    expect(gameplay.playState).toBe('preSnap');
+    expect(gameplay.selectedPlay.id).toBe('twin-slants-flat');
+    expect(gameplay.selectedReceiverId).toBe('offense-wr-left');
+    expect(gameplay.players).toHaveLength(14);
+    expect(gameplay.players.every((player) => player.currentState === 'idle')).toBe(true);
+    expect(getPlayer(gameplay.players, 'offense-qb').position).toEqual({
+      x: 0,
+      z: LINE_OF_SCRIMMAGE_Z - 4.4,
+    });
+  });
+
   it('throws Quick Pass once and transitions the ball to inFlight state', () => {
     const gameplay = createGameplayModel();
 
@@ -1179,6 +1359,16 @@ function getPlayer(players: PlayerModel[], playerId: string): PlayerModel {
   }
 
   return player;
+}
+
+function selectReceiver(gameplay: ReturnType<typeof createGameplayModel>, receiverId: string): void {
+  for (let index = 0; index < 4 && gameplay.selectedReceiverId !== receiverId; index += 1) {
+    cycleSelectedReceiver(gameplay);
+  }
+
+  if (gameplay.selectedReceiverId !== receiverId) {
+    throw new Error(`Unable to select ${receiverId}`);
+  }
 }
 
 function snapshotBlockerFormation(player: PlayerModel): {

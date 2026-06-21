@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.25.0] - 2026-06-21
+
+### Added
+
+- Added optional playable `?playbook=7v7` mode with the new `Twin Slants Flat` passing play.
+- Added three ordered eligible receivers, readable target names, data-defined twin slant and running-back flat routes, explicit pass-protection assignments, explicit coverage assignments, and safety deep-help data for the 7v7 pass.
+- Added roster/playbook metadata for play definitions and shared 5v5/7v7 stable roster ID modules.
+- Added unit and browser smoke coverage for 7v7 receiver cycling, route starts, protection assignments, coverage validity, safety midpoint alignment, throwing to each target, catch transfer, incompletion, sack classification, post-release contact, reset behavior, play-card rendering, and the playable 7v7 browser path.
+
+### Changed
+
+- Made number-key play selection and pre-snap play cards derive from the active playbook, preserving the existing 5v5 default controls while allowing `1` to select `Twin Slants Flat` in 7v7 mode.
+- Updated defender AI so pass protectors prefer explicit rusher assignments and coverage defenders switch to carrier pursuit after a completed pass.
+
 ## [0.24.1] - 2026-06-21
 
 ### Added

@@ -78,6 +78,7 @@ export interface PlayControlRequests {
 }
 
 export class KeyboardPlayControls {
+  private readonly playSelectionIds: readonly string[];
   private readonly target: Window;
   private cycleReceiverRequested = false;
   private passRequested = false;
@@ -86,7 +87,8 @@ export class KeyboardPlayControls {
   private selectedPlayId: string | null = null;
   private startRequested = false;
 
-  constructor(target: Window) {
+  constructor(target: Window, playSelectionIds: readonly string[] = DEFAULT_PLAY_SELECTION_IDS) {
+    this.playSelectionIds = playSelectionIds;
     this.target = target;
     this.target.addEventListener('keydown', this.handleKeyDown);
   }
@@ -152,30 +154,24 @@ export class KeyboardPlayControls {
       return;
     }
 
-    if (event.key === '1') {
-      this.selectedPlayId = 'inside-run';
-      event.preventDefault();
-      return;
-    }
-
-    if (event.key === '2') {
-      this.selectedPlayId = 'outside-run';
-      event.preventDefault();
-      return;
-    }
-
-    if (event.key === '3') {
-      this.selectedPlayId = 'quick-pass';
-      event.preventDefault();
-      return;
-    }
-
-    if (event.key === '4') {
-      this.selectedPlayId = 'slant-flat';
+    const playSelectionIndex = Number(event.key) - 1;
+    if (
+      Number.isInteger(playSelectionIndex) &&
+      playSelectionIndex >= 0 &&
+      playSelectionIndex < this.playSelectionIds.length
+    ) {
+      this.selectedPlayId = this.playSelectionIds[playSelectionIndex];
       event.preventDefault();
     }
   };
 }
+
+const DEFAULT_PLAY_SELECTION_IDS = [
+  'inside-run',
+  'outside-run',
+  'quick-pass',
+  'slant-flat',
+] as const;
 
 export function normalizeMovementInput(input: Vector2): Vector2 {
   const length = Math.hypot(input.x, input.z);

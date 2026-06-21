@@ -8,7 +8,6 @@ import { DRIVE_CONFIG, type DriveSnapshot } from './driveModel';
 import { INITIAL_BALL_SPOT, OPPOSING_GOAL_LINE_Z } from './field';
 import { cloneFootballSpot, type FootballSpot } from './fieldScale';
 import {
-  FORMATION_MEASUREMENTS,
   assertValidResolvedFormation,
   resolveFormation,
   type FormationPlayDefinition,
@@ -22,6 +21,12 @@ import {
 import { createPlayerModel, snapshotPlayerModel, type PlayerModel, type PlayerRole } from './playerModel';
 import { resolvePreSnapFacing } from './playbook';
 import type { GameplaySnapshot } from './playState';
+import {
+  SEVEN_ON_SEVEN_DEFENSE_PLAYER_IDS,
+  SEVEN_ON_SEVEN_OFFENSE_PLAYER_IDS,
+  SEVEN_ON_SEVEN_PLAYER_IDS,
+} from './roster';
+import { SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS } from './sevenOnSevenFormation';
 
 export type FormationPreviewMode = '7v7';
 
@@ -43,44 +48,12 @@ export interface FormationPreviewSnapshot {
   snapPlacement: SnapPlacement;
 }
 
-export const SEVEN_ON_SEVEN_OFFENSE_PLAYER_IDS = [
-  'offense-qb',
-  'offense-rb',
-  'offense-center',
-  'offense-line-left',
-  'offense-line-right',
-  'offense-wr-left',
-  'offense-wr-right',
-] as const;
-
-export const SEVEN_ON_SEVEN_DEFENSE_PLAYER_IDS = [
-  'defense-line-left',
-  'defense-line-right',
-  'defense-line-middle',
-  'defense-corner-left',
-  'defense-corner-right',
-  'defense-linebacker',
-  'defense-safety',
-] as const;
-
-export const SEVEN_ON_SEVEN_PLAYER_IDS = [
-  ...SEVEN_ON_SEVEN_OFFENSE_PLAYER_IDS,
-  ...SEVEN_ON_SEVEN_DEFENSE_PLAYER_IDS,
-] as const;
-
-export const SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS = {
-  cornerCushion: 7.5,
-  defensiveLineDepth: 3.8,
-  defensiveLineGap: 3.2,
-  linebackerDepth: 8.5,
-  offensiveLineSetback: 0.9,
-  offensiveLineSpacing: 3.2,
-  quarterbackDepth: 4.4,
-  receiverSidelineInset: FORMATION_MEASUREMENTS.receiverSidelineInset,
-  runningBackDepth: 8.3,
-  runningBackFieldOffset: 2.8,
-  safetyDepth: 17,
-} as const;
+export {
+  SEVEN_ON_SEVEN_DEFENSE_PLAYER_IDS,
+  SEVEN_ON_SEVEN_FORMATION_MEASUREMENTS,
+  SEVEN_ON_SEVEN_OFFENSE_PLAYER_IDS,
+  SEVEN_ON_SEVEN_PLAYER_IDS,
+};
 
 const PLAY_SIDE: PreferredFormationSide = 'right';
 const OFFENSE_PRE_SNAP_FACING = { kind: 'playDirection' } as const;
@@ -224,6 +197,7 @@ export function snapshotFormationPreviewAsGameplay(
     passFeedback: null,
     player: snapshotPlayerModel(primaryPlayer),
     players: preview.players.map(snapshotPlayerModel),
+    playbookId: '7v7',
     playState: 'preSnap',
     score: 0,
     scoreAttack: {
