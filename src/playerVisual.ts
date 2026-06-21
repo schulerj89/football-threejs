@@ -3,15 +3,26 @@ import type { PlayerModel } from './playerModel';
 
 const PLAYER_CENTER_Y = 1.1;
 
-export function createPlaceholderPlayerVisual(): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'placeholder-player';
-  group.userData.testId = 'placeholder-player';
+const PLAYER_COLORS = {
+  blocker: 0x285fb8,
+  defender: 0xb83737,
+  runner: 0x2f66d8,
+} as const;
 
-  const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x2f66d8 });
+export function createPlaceholderPlayerVisual(player?: PlayerModel): THREE.Group {
+  const group = new THREE.Group();
+  group.name = player ? `player-${player.id}` : 'placeholder-player';
+  group.userData.testId = player ? `player-${player.id}` : 'placeholder-player';
+
+  const bodyMaterial = new THREE.MeshLambertMaterial({
+    color: player ? PLAYER_COLORS[player.role] : PLAYER_COLORS.runner,
+  });
   const facingMaterial = new THREE.MeshBasicMaterial({ color: 0xf3f5f8 });
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.2, 1.4), bodyMaterial);
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(player?.role === 'defender' ? 1.5 : 1.4, 2.2, 1.4),
+    bodyMaterial,
+  );
   body.name = 'placeholder-player-body';
   group.add(body);
 
@@ -32,4 +43,3 @@ export function syncPlayerVisual(playerVisual: THREE.Object3D, playerModel: Play
   playerVisual.position.set(playerModel.position.x, PLAYER_CENTER_Y, playerModel.position.z);
   playerVisual.rotation.y = playerModel.facingRadians;
 }
-

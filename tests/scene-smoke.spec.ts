@@ -1,9 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 
 interface PlayerSnapshot {
-  position: { x: number; z: number };
-  velocity: { x: number; z: number };
+  collisionRadius: number;
+  currentState: 'idle' | 'userControlled' | 'movingToLane' | 'pursuing' | 'engaged';
   facingRadians: number;
+  id: string;
+  position: { x: number; z: number };
+  role: 'runner' | 'blocker' | 'defender';
+  team: 'offense' | 'defense';
+  velocity: { x: number; z: number };
 }
 
 interface FootballSpot {
@@ -42,16 +47,15 @@ interface GameplaySnapshot {
     possession: { kind: 'none' } | { kind: 'player'; playerId: string };
     position: { x: number; y: number; z: number };
   };
-  currentBallSpot: FootballSpot;
-  defender: {
-    position: { x: number; z: number };
-    velocity: { x: number; z: number };
-    facingRadians: number;
+  blocking: {
+    engagements: Array<{ blockerId: string; defenderId: string }>;
   };
+  currentBallSpot: FootballSpot;
   drive: DriveSnapshot;
   lastPlayResult: PlayResultSnapshot | null;
   nextBallSpot: FootballSpot;
   player: PlayerSnapshot;
+  players: PlayerSnapshot[];
   playState: 'preSnap' | 'live' | 'dead';
   score: number;
 }
@@ -75,6 +79,11 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
   await expect(page.locator('.drive-status')).toHaveText('1st & 10 | Ball -15');
+  const initial = await getGameplaySnapshot(page);
+  expect(initial.players).toHaveLength(6);
+  expect(initial.players.filter((player) => player.team === 'offense')).toHaveLength(3);
+  expect(initial.players.filter((player) => player.team === 'defense')).toHaveLength(3);
+  expect(initial.players.every((player) => player.currentState === 'idle')).toBe(true);
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   await expect(page.locator('.debug-overlay')).toContainText('FPS');
@@ -165,6 +174,8 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
     lineOfScrimmage: { x: 0, z: -15 },
     yardsToFirstDown: 10,
   });
+  expect(initial.players).toHaveLength(6);
+  expect(initial.players.every((player) => player.currentState === 'idle')).toBe(true);
   expect(initial.player.position).toEqual({ x: 0, z: -15 });
 
   await page.keyboard.down('w');
@@ -190,6 +201,9 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
   expect(afterLiveMove.player.position.z).toBeGreaterThan(initial.player.position.z);
   expect(afterLiveMove.ball.possession).toMatchObject({ kind: 'player' });
   expect(afterLiveMove.ball.position.z).toBeGreaterThan(initial.player.position.z);
+  expect(afterLiveMove.player.currentState).toBe('userControlled');
+  expect(afterLiveMove.players.some((player) => player.role === 'blocker' && player.currentState !== 'idle')).toBe(true);
+  expect(afterLiveMove.players.some((player) => player.role === 'defender' && player.currentState !== 'idle')).toBe(true);
 
   await page.keyboard.press('r');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
@@ -282,7 +296,7 @@ test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
   const whileDead = await getGameplaySnapshot(page);
   if (whileDead.playState === 'dead') {
     expect(whileDead.player.position.z).toBeCloseTo(tackle.player.position.z);
-    expect(whileDead.defender.position.z).toBeCloseTo(tackle.defender.position.z);
+    expect(getDefenders(whileDead).some((defender) => vectorLength(defender.velocity) > 0)).toBe(false);
   }
 
   await expect.poll(() => getGameplaySnapshot(page), { timeout: 3000 }).toMatchObject({
@@ -455,6 +469,14 @@ async function waitForPreSnap(page: Page): Promise<GameplaySnapshot> {
   }).toBe('preSnap');
 
   return getGameplaySnapshot(page);
+}
+
+function getDefenders(gameplay: GameplaySnapshot): PlayerSnapshot[] {
+  return gameplay.players.filter((player) => player.role === 'defender');
+}
+
+function vectorLength(vector: { x: number; z: number }): number {
+  return Math.hypot(vector.x, vector.z);
 }
 
 async function getPlayerSnapshot(page: Page): Promise<PlayerSnapshot> {

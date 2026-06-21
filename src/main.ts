@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import './style.css';
 import { createBallVisual, syncBallVisual } from './ballVisual';
-import { createDefenderVisual, syncDefenderVisual } from './defenderVisual';
 import { DebugOverlay } from './debugOverlay';
 import {
   PLAYABLE_FIELD_BOUNDS,
@@ -46,17 +45,17 @@ scene.add(field.group);
 
 const gameplayModel = createGameplayModel();
 const playerModel = gameplayModel.player;
-const playerVisual = createPlaceholderPlayerVisual();
-syncPlayerVisual(playerVisual, playerModel);
-scene.add(playerVisual);
+const playerVisuals = new Map<string, THREE.Group>();
+for (const gamePlayer of gameplayModel.players) {
+  const playerVisual = createPlaceholderPlayerVisual(gamePlayer);
+  syncPlayerVisual(playerVisual, gamePlayer);
+  playerVisuals.set(gamePlayer.id, playerVisual);
+  scene.add(playerVisual);
+}
 
 const ballVisual = createBallVisual();
 syncBallVisual(ballVisual, gameplayModel.ball);
 scene.add(ballVisual);
-
-const defenderVisual = createDefenderVisual();
-syncDefenderVisual(defenderVisual, gameplayModel.defender);
-scene.add(defenderVisual);
 
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
 positionGameplayCamera(camera);
@@ -123,8 +122,12 @@ function renderFrame(delta: number): void {
     gameplayModel.drive.lineOfScrimmage,
     gameplayModel.drive.firstDownMarker,
   );
-  syncDefenderVisual(defenderVisual, gameplayModel.defender);
-  syncPlayerVisual(playerVisual, playerModel);
+  for (const gamePlayer of gameplayModel.players) {
+    const playerVisual = playerVisuals.get(gamePlayer.id);
+    if (playerVisual) {
+      syncPlayerVisual(playerVisual, gamePlayer);
+    }
+  }
   syncBallVisual(ballVisual, gameplayModel.ball);
   syncGameplayHud(gameplayHud, snapshotGameplayModel(gameplayModel));
   renderer.render(scene, camera);

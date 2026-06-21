@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a one-defender rushing drill with a basic offensive drive: a graybox American-football field, one controllable placeholder ball carrier, one simple pursuing defender, downs, yards-to-go, first-down line, touchdown scoring, tackle and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a three-on-three rushing drill with a basic offensive drive: a graybox American-football field, one controllable placeholder ball carrier, two AI blockers, three AI defenders, downs, yards-to-go, first-down line, touchdown scoring, tackle and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
 
 ## World Scale
 
@@ -32,7 +32,8 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Press `Space` from pre-snap to start the play and give the player possession.
 - Press `R` to reset the play to pre-snap.
 - Cross the opposing goal line during a live play to score a touchdown.
-- Avoid the defender to score; defender contact ends the play as a tackle.
+- Avoid defenders to score; defender contact ends the play as a tackle.
+- AI blockers move toward lane targets and can engage one defender each to slow pursuit.
 - Crossing a sideline during a live play ends the play out of bounds.
 - Tackle and out-of-bounds results display signed yards gained or lost, then reset the next play at the dead-ball spot.
 - The drill tracks down, distance, ball position, and score.
@@ -51,9 +52,11 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No imported assets
 - No throwing
 - No loose-ball physics
-- No blockers
-- No formations
-- No multiple defenders
+- No offensive linemen rules
+- No holding penalties
+- No pancake blocks
+- No double-team blocks
+- No pulling guards
 - No diving tackles
 - No tackling animations
 - No passing
@@ -72,6 +75,6 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No center or snap animation
 - No full game rules
 - No menus
-- No physics engine
-- No collision with other players
+- No force-based physics
+- No ragdoll physics
 - No unrelated refactoring

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2026-06-21
+
+### Added
+
+- Expanded the rushing drill to three offensive players versus three defensive players.
+- Added a common gameplay player model with stable ID, team, role, position, velocity, facing, collision radius, and current state.
+- Added data-driven initial formation and blocker lane targets.
+- Added deterministic blocker-defender engagements, disengagement, impeded defender pursuit, and circle-based player separation.
+- Rendered every player from gameplay roster state using shared primitive player visuals.
+- Added deterministic tests for formation assignment, engagement, disengagement, separation, and tackle detection.
+- Expanded browser smoke coverage for the six-player formation while preserving score, tackle, out-of-bounds, and turnover loops.
+
 ## [0.7.0] - 2026-06-21
 
 ### Added

@@ -8,7 +8,7 @@ import {
 } from '../src/defenderModel';
 import { INITIAL_BALL_SPOT, LINE_OF_SCRIMMAGE_Z, PLAYABLE_FIELD_BOUNDS } from '../src/field';
 import { calculateYardsGained } from '../src/fieldScale';
-import { PLAYER_MOVEMENT_CONFIG } from '../src/playerModel';
+import { PLAYER_MOVEMENT_CONFIG, type PlayerModel } from '../src/playerModel';
 import {
   GAMEPLAY_CONFIG,
   createGameplayModel,
@@ -38,8 +38,12 @@ describe('play state transitions', () => {
       state: 'active',
       yardsToFirstDown: 10,
     });
-    expect(gameplay.defender.position).toEqual(DEFENDER_CONFIG.initialPosition);
-    expect(gameplay.defender.velocity).toEqual({ x: 0, z: 0 });
+    expect(gameplay.players).toHaveLength(6);
+    expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(3);
+    expect(gameplay.players.filter((player) => player.team === 'defense')).toHaveLength(3);
+    expect(gameplay.players.every((player) => player.currentState === 'idle')).toBe(true);
+    expect(getPrimaryDefender(gameplay.players).position).toEqual(DEFENDER_CONFIG.initialPosition);
+    expect(getPrimaryDefender(gameplay.players).velocity).toEqual({ x: 0, z: 0 });
     expect(gameplay.ball.possession).toEqual({ kind: 'none' });
     expect(gameplay.lastPlayResult).toBeNull();
   });
@@ -53,6 +57,20 @@ describe('play state transitions', () => {
     expect(gameplay.activePlayStartSpot).toEqual(INITIAL_BALL_SPOT);
     expect(gameplay.drive.currentDown).toBe(1);
     expect(gameplay.drive.yardsToFirstDown).toBe(10);
+    expect(gameplay.player.currentState).toBe('userControlled');
+    expect(gameplay.players.filter((player) => player.role === 'blocker')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ currentState: 'movingToLane' }),
+        expect.objectContaining({ currentState: 'movingToLane' }),
+      ]),
+    );
+    expect(gameplay.players.filter((player) => player.role === 'defender')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ currentState: 'pursuing' }),
+        expect.objectContaining({ currentState: 'pursuing' }),
+        expect.objectContaining({ currentState: 'pursuing' }),
+      ]),
+    );
     expect(gameplay.ball.possession).toEqual({
       kind: 'player',
       playerId: gameplay.player.id,
@@ -184,10 +202,11 @@ describe('play state transitions', () => {
 
   it('records positive yards and resets the next play at a tackle spot', () => {
     const gameplay = createGameplayModel();
+    const defender = getPrimaryDefender(gameplay.players);
     startPlay(gameplay);
     gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z + 5;
-    gameplay.defender.position.x = gameplay.player.position.x;
-    gameplay.defender.position.z = gameplay.player.position.z;
+    defender.position.x = gameplay.player.position.x;
+    defender.position.z = gameplay.player.position.z;
 
     updateGameplayModel(gameplay, 0);
 
@@ -224,10 +243,11 @@ describe('play state transitions', () => {
 
   it('records negative yards when the carrier is tackled behind the starting spot', () => {
     const gameplay = createGameplayModel();
+    const defender = getPrimaryDefender(gameplay.players);
     startPlay(gameplay);
     gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z - 4;
-    gameplay.defender.position.x = gameplay.player.position.x;
-    gameplay.defender.position.z = gameplay.player.position.z;
+    defender.position.x = gameplay.player.position.x;
+    defender.position.z = gameplay.player.position.z;
 
     updateGameplayModel(gameplay, 0);
 
@@ -296,7 +316,6 @@ describe('play state transitions', () => {
         state: 'active',
         yardsToFirstDown: 10,
       },
-      defender: { position: DEFENDER_CONFIG.initialPosition, velocity: { x: 0, z: 0 } },
       lastPlayResult: null,
       nextBallSpot: INITIAL_BALL_SPOT,
       player: { position: { x: 0, z: LINE_OF_SCRIMMAGE_Z }, velocity: { x: 0, z: 0 } },
@@ -310,50 +329,54 @@ describe('play state transitions', () => {
 
     updateGameplayModel(gameplay, 1);
 
-    expect(gameplay.defender.position).toEqual(DEFENDER_CONFIG.initialPosition);
-    expect(gameplay.defender.velocity).toEqual({ x: 0, z: 0 });
+    expect(getPrimaryDefender(gameplay.players).position).toEqual(DEFENDER_CONFIG.initialPosition);
+    expect(getPrimaryDefender(gameplay.players).velocity).toEqual({ x: 0, z: 0 });
+    expect(gameplay.players.every((player) => player.velocity.x === 0 && player.velocity.z === 0)).toBe(true);
     expect(gameplay.playState).toBe('preSnap');
   });
 
   it('steers the defender toward the carrier without instantly matching direction changes', () => {
     const gameplay = createGameplayModel();
-    gameplay.defender.position.x = 0;
-    gameplay.defender.position.z = 0;
-    gameplay.defender.facingRadians = 0;
+    const defender = getPrimaryDefender(gameplay.players);
+    defender.position.x = 0;
+    defender.position.z = 0;
+    defender.facingRadians = 0;
     gameplay.player.position.x = 10;
     gameplay.player.position.z = 0;
 
-    updateDefenderPursuit(gameplay.defender, gameplay.player, 0.1);
+    updateDefenderPursuit(defender, gameplay.player, 0.1);
 
-    expect(gameplay.defender.facingRadians).toBeGreaterThan(0);
-    expect(gameplay.defender.facingRadians).toBeLessThan(Math.PI / 2);
-    expect(gameplay.defender.facingRadians).toBeCloseTo(
+    expect(defender.facingRadians).toBeGreaterThan(0);
+    expect(defender.facingRadians).toBeLessThan(Math.PI / 2);
+    expect(defender.facingRadians).toBeCloseTo(
       DEFENDER_CONFIG.steeringRateRadiansPerSecond * 0.1,
     );
-    expect(gameplay.defender.velocity.x).toBeGreaterThan(0);
+    expect(defender.velocity.x).toBeGreaterThan(0);
   });
 
   it('detects tackles using the configured tackle radius', () => {
     const gameplay = createGameplayModel();
-    gameplay.defender.position.x = 0;
-    gameplay.defender.position.z = 0;
+    const defender = getPrimaryDefender(gameplay.players);
+    defender.position.x = 0;
+    defender.position.z = 0;
     gameplay.player.position.x = DEFENDER_CONFIG.tackleRadius - 0.01;
     gameplay.player.position.z = 0;
 
     expect(DEFENDER_CONFIG.tackleRadius).toBe(
       DEFENDER_COLLISION_RADII.ballCarrier + DEFENDER_COLLISION_RADII.defender,
     );
-    expect(isTackleContact(gameplay.defender, gameplay.player)).toBe(true);
+    expect(isTackleContact(defender, gameplay.player)).toBe(true);
 
     gameplay.player.position.x = DEFENDER_CONFIG.tackleRadius + 0.01;
-    expect(isTackleContact(gameplay.defender, gameplay.player)).toBe(false);
+    expect(isTackleContact(defender, gameplay.player)).toBe(false);
   });
 
   it('changes live play to dead on tackle and resets after the configured delay', () => {
     const gameplay = createGameplayModel();
+    const defender = getPrimaryDefender(gameplay.players);
     startPlay(gameplay);
-    gameplay.defender.position.x = gameplay.player.position.x + DEFENDER_CONFIG.tackleRadius;
-    gameplay.defender.position.z = gameplay.player.position.z;
+    defender.position.x = gameplay.player.position.x + DEFENDER_CONFIG.tackleRadius;
+    defender.position.z = gameplay.player.position.z;
 
     updateGameplayModel(gameplay, 0);
 
@@ -374,10 +397,19 @@ describe('play state transitions', () => {
     updateGameplayModel(gameplay, GAMEPLAY_CONFIG.tackleResetDelaySeconds);
 
     expect(snapshotGameplayModel(gameplay)).toMatchObject({
-      defender: { position: DEFENDER_CONFIG.initialPosition, velocity: { x: 0, z: 0 } },
       lastPlayResult: null,
       playState: 'preSnap',
       score: 0,
     });
   });
 });
+
+function getPrimaryDefender(players: PlayerModel[]): PlayerModel {
+  const defender = players.find((player) => player.id === 'defender-middle');
+
+  if (!defender) {
+    throw new Error('Missing middle defender');
+  }
+
+  return defender;
+}

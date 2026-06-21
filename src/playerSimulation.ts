@@ -44,10 +44,10 @@ function keepPlayerInPlayableBounds(
   options: PlayerSimulationOptions,
 ): void {
   const clampSidelines = options.clampSidelines ?? true;
-  const minX = bounds.minX + PLAYER_MOVEMENT_CONFIG.halfWidth;
-  const maxX = bounds.maxX - PLAYER_MOVEMENT_CONFIG.halfWidth;
-  const minZ = bounds.minZ + PLAYER_MOVEMENT_CONFIG.halfDepth;
-  const maxZ = bounds.maxZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+  const minX = bounds.minX + player.collisionRadius;
+  const maxX = bounds.maxX - player.collisionRadius;
+  const minZ = bounds.minZ + player.collisionRadius;
+  const maxZ = bounds.maxZ - player.collisionRadius;
   const clampedZ = clamp(player.position.z, minZ, maxZ);
 
   if (clampSidelines) {
