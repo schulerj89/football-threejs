@@ -20,11 +20,6 @@ import {
   GameAudioDirector,
 } from './audio/GameAudioDirector';
 import {
-  applyAudioQuerySettings,
-  loadAudioSettings,
-  resolveAudioFeatureFlags,
-} from './audio/AudioSettings';
-import {
   createAppearanceAuditOverlay,
   createAppearanceAuditSnapshot,
   syncAppearanceAuditOverlay,
@@ -32,11 +27,15 @@ import {
 } from './appearanceAuditOverlay';
 import {
   GameplayCameraController,
-  resolveCinematicsSetting,
-  resolveGameplayCameraMode,
   resolvePresentationShotPreview,
   type GameplayCameraDebugSnapshot,
 } from './camera/GameplayCameraController';
+import {
+  createGameExperienceDebugSnapshot,
+  resolveGameExperienceSettings,
+  toGameplayCameraMode,
+  type GameExperienceDebugSnapshot,
+} from './config/GameExperienceSettings';
 import { DebugOverlay, type RenderMetricsSnapshot } from './debugOverlay';
 import {
   CrowdPreviewController,
@@ -51,9 +50,7 @@ import {
 } from './crowdPreview';
 import {
   CrowdPresentationController,
-  applyCrowdPresentationQuerySettings,
   createCrowdPresentationOverlay,
-  loadCrowdPresentationSettings,
   syncCrowdPresentationOverlay,
   type CrowdPresentationSnapshot,
 } from './presentation/CrowdPresentationController';
@@ -98,7 +95,6 @@ import {
   type PassAuditSnapshot,
 } from './playState';
 import { createPassAuditOverlay, syncPassAuditOverlay } from './passAuditOverlay';
-import { resolvePlaybookId } from './playbook';
 import {
   PlayerPoseController,
   createPlayerPoseDebugOverlay,
@@ -159,6 +155,7 @@ declare global {
       getCrowdPresentationSnapshot: () => CrowdPresentationSnapshot | null;
       getCrowdPreviewSnapshot: () => CrowdPreviewSnapshot | null;
       getFormationPreviewSnapshot: () => FormationPreviewSnapshot | null;
+      getGameExperienceSnapshot: () => GameExperienceDebugSnapshot;
       getGameplaySnapshot: () => GameplaySnapshot;
       getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
       getPassAuditSnapshot: () => PassAuditSnapshot | null;
@@ -201,27 +198,26 @@ const crowdBenchmarkDurationSeconds = resolveCrowdBenchmarkDurationSeconds(
 const crowdPreviewCount = resolveCrowdPreviewCount(searchParams);
 const crowdPreviewCameraView = resolveCrowdPreviewCameraView(searchParams.get('crowdCamera'));
 const cameraDebugEnabled = searchParams.has('cameraDebug');
-const cinematicsSetting = resolveCinematicsSetting(searchParams.get('cinematics'));
 const shotPreview = resolvePresentationShotPreview(searchParams.get('shotPreview'));
+const gameExperience = resolveGameExperienceSettings({ searchParams });
+const effectiveExperienceSettings = gameExperience.settings;
+const cinematicsSetting = effectiveExperienceSettings.cinematics;
 const playerVisualOptions = {
   bodyStyle: resolvePlayerBodyVisualStyle(searchParams.get('playerBody')),
   debugRoleColors: searchParams.has('debugRoleColors'),
 };
 const ballVisualStyle = resolveBallVisualStyle(searchParams.get('ballVisual'));
-const playerMotionEnabled = searchParams.get('playerMotion') !== '0';
+const playerMotionEnabled = effectiveExperienceSettings.playerMotionEnabled;
 const formationPreviewMode = resolveFormationPreviewMode(searchParams.get('formationPreview'));
-const playbookId = resolvePlaybookId(searchParams.get('playbook') ?? searchParams.get('roster'));
+const playbookId = effectiveExperienceSettings.playbookId;
 const presentationAuditEnabled = searchParams.has('presentationAudit');
 const routeAuditEnabled = searchParams.has('routeAudit');
-const routeArtEnabled = searchParams.get('routeArt') !== '0';
+const routeArtEnabled = effectiveExperienceSettings.routeArtEnabled;
 const passAuditEnabled = searchParams.has('passAudit');
 const appearanceAuditEnabled = searchParams.has('appearanceAudit');
-const audioFeatureFlags = resolveAudioFeatureFlags(searchParams);
+const audioFeatureFlags = gameExperience.audioFeatureFlags;
 const commentaryDebugEnabled = searchParams.has('commentaryDebug');
-const crowdPresentationSettings = applyCrowdPresentationQuerySettings(
-  loadCrowdPresentationSettings(),
-  searchParams,
-);
+const crowdPresentationSettings = gameExperience.crowdPresentationSettings;
 const crowdPresentationDebugEnabled =
   searchParams.has('crowdDebug') ||
   (presentationAuditEnabled && !crowdPreviewEnabled);
@@ -261,7 +257,7 @@ const cameraController = new GameplayCameraController({
   cinematics: cinematicsSetting,
   height: window.innerHeight,
   holdCinematicPreSnapEstablish: presentationAuditEnabled,
-  initialMode: resolveGameplayCameraMode(searchParams.get('camera')),
+  initialMode: toGameplayCameraMode(effectiveExperienceSettings.gameplayCamera),
   shotPreview,
   width: window.innerWidth,
 });
@@ -311,7 +307,7 @@ const playControls = new KeyboardPlayControls(
 );
 const audioMixer = new AudioMixer({
   flags: audioFeatureFlags,
-  settings: applyAudioQuerySettings(loadAudioSettings(), searchParams),
+  settings: gameExperience.audioSettings,
   warn: (message) => {
     if (import.meta.env.DEV) {
       console.warn(message);
@@ -393,6 +389,7 @@ if (
     getCrowdPreviewSnapshot: () => crowdPreviewController?.getSnapshot() ?? null,
     getFormationPreviewSnapshot: () =>
       formationPreviewModel ? snapshotFormationPreviewModel(formationPreviewModel) : null,
+    getGameExperienceSnapshot: () => getGameExperienceSnapshot(),
     getGameplaySnapshot: () => getActivePresentationSnapshot(),
     getHelmetAssetSnapshot,
     getPassAuditSnapshot: () => getActivePresentationSnapshot().passAudit,
@@ -782,6 +779,22 @@ function getRuntimeAudioSnapshot(): RuntimeAudioDebugSnapshot {
     ...gameAudioDirector.getSnapshot(),
     commentary: broadcastCommentaryDirector.getSnapshot(),
   };
+}
+
+function getGameExperienceSnapshot(): GameExperienceDebugSnapshot {
+  const audioSnapshot = getRuntimeAudioSnapshot();
+  const crowdSnapshot = crowdPresentationController?.getSnapshot() ?? null;
+
+  return createGameExperienceDebugSnapshot(gameExperience, {
+    audioEnabled: audioSnapshot.enabled,
+    crowdSpectatorCount: crowdSnapshot?.actualSpectatorCount ?? 0,
+    crowdVisualsAllocated: !!crowdPresentationController,
+    decodedAudioBytes: audioSnapshot.decodedBufferBytes,
+    loadedAudioAssetIds: audioSnapshot.loadedAssetIds,
+    loadedCompressedAudioBytes: audioSnapshot.loadedCompressedBytes,
+    missingOptionalAudioAssetIds: audioSnapshot.missingOptionalAssetIds,
+    streamedAudioAssetIds: audioSnapshot.streamedAssetIds,
+  });
 }
 
 function createRenderMetricsSnapshot(deltaSeconds: number): RenderMetricsSnapshot {

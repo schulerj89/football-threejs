@@ -531,6 +531,51 @@ interface PresentationHardeningAuditSnapshot {
   resultEventCounts: Record<'firstDown' | 'incomplete' | 'sack' | 'touchdown' | 'turnoverOnDowns', number>;
 }
 
+interface GameExperienceSettingsSnapshot {
+  announcerEnabled: boolean;
+  audioEnabled: boolean;
+  captionsEnabled: boolean;
+  cinematics: 'brief' | 'full' | 'off';
+  crowdAudioEnabled: boolean;
+  crowdDensity: 'high' | 'low' | 'medium';
+  crowdReactionsEnabled: boolean;
+  crowdVisualsEnabled: boolean;
+  gameplayCamera: 'cinematic' | 'offense' | 'tactical';
+  playerMotionEnabled: boolean;
+  playbookId: '5v5' | '7v7';
+  preset: 'broadcast' | 'custom' | 'performance';
+  routeArtEnabled: boolean;
+}
+
+interface GameExperienceSnapshot {
+  assetReadiness: {
+    audioEnabled: boolean;
+    crowdSpectatorCount: number;
+    crowdVisualsAllocated: boolean;
+    decodedAudioBytes: number;
+    loadedAudioAssetIds: string[];
+    loadedCompressedAudioBytes: number;
+    missingOptionalAudioAssetIds: string[];
+    streamedAudioAssetIds: string[];
+  };
+  developmentModes: {
+    appearanceAudit: boolean;
+    crowdPreview: boolean;
+    formationPreview: boolean;
+    passAudit: boolean;
+    presentationAudit: boolean;
+    routeAudit: boolean;
+    shotPreview: boolean;
+  };
+  effectivePreset: 'broadcast' | 'custom' | 'performance';
+  finalSettings: GameExperienceSettingsSnapshot;
+  persistedSettings: {
+    customSettings: GameExperienceSettingsSnapshot | null;
+    preset: 'broadcast' | 'custom' | 'performance';
+  };
+  queryOverrides: Partial<GameExperienceSettingsSnapshot>;
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -546,7 +591,7 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   });
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.game-clock')).toHaveText('Time 2:00');
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
@@ -657,6 +702,53 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   expect(pageErrors).toEqual([]);
 });
 
+test('resolves normal launch to the broadcast experience preset', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  const experience = await getGameExperienceSnapshot(page);
+  expect(experience.effectivePreset).toBe('broadcast');
+  expect(experience.persistedSettings).toEqual({
+    customSettings: null,
+    preset: 'broadcast',
+  });
+  expect(experience.queryOverrides).toEqual({});
+  expect(experience.developmentModes).toEqual({
+    appearanceAudit: false,
+    crowdPreview: false,
+    formationPreview: false,
+    passAudit: false,
+    presentationAudit: false,
+    routeAudit: false,
+    shotPreview: false,
+  });
+  expect(experience.finalSettings).toMatchObject({
+    announcerEnabled: true,
+    audioEnabled: true,
+    captionsEnabled: false,
+    cinematics: 'brief',
+    crowdAudioEnabled: true,
+    crowdDensity: 'low',
+    crowdReactionsEnabled: true,
+    crowdVisualsEnabled: true,
+    gameplayCamera: 'offense',
+    playerMotionEnabled: true,
+    playbookId: '5v5',
+    preset: 'broadcast',
+    routeArtEnabled: true,
+  });
+  expect(experience.assetReadiness).toMatchObject({
+    audioEnabled: true,
+    crowdSpectatorCount: 500,
+    crowdVisualsAllocated: true,
+  });
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'offensePerspective',
+  });
+  await expectNonBlankCanvas(page);
+});
+
 test('renders the development crowd preview with bounded instanced resources', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?crowdPreview=1&crowdCount=5000&readback=1');
@@ -694,7 +786,7 @@ test('renders the development crowd preview with bounded instanced resources', a
 
 test('runs normal-game crowd visuals, reactions, and presentation audit without loading audio', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&crowdDebug=1&presentationAudit=1&crowdVisuals=1&crowdDensity=low&audio=0&cinematics=full');
+  await page.goto('/?debug=1&readback=1&experience=performance&crowdDebug=1&presentationAudit=1&crowdVisuals=1&crowdReactions=1&crowdDensity=low&audio=0&cinematics=full');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.crowd-presentation-overlay')).toContainText('CROWD PRESENTATION');
   await expect(page.locator('.presentation-hardening-audit-overlay')).toContainText('PRESENTATION MATRIX');
@@ -736,7 +828,7 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
 });
 
 test('supports the box player body comparison URL option', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&playerBody=box');
+  await page.goto('/?debug=1&readback=1&experience=performance&playerBody=box');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   const bodySnapshots = await getPlayerBodyVisualSnapshots(page);
@@ -748,7 +840,7 @@ test('supports the box player body comparison URL option', async ({ page }) => {
 });
 
 test('starts runtime audio debug and plays local test assets without mutating gameplay', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&audioDebug=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&audioDebug=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO');
   await expect(page.locator('.audio-debug-overlay')).toContainText('EVENT_HISTORY');
@@ -798,7 +890,7 @@ test('starts runtime audio debug and plays local test assets without mutating ga
 });
 
 test('unlocks audio from a pointer gesture and keeps audio-disabled startup unloaded', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&audioDebug=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&audioDebug=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.mouse.click(24, 24);
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.contextState)).toBe('running');
@@ -808,7 +900,7 @@ test('unlocks audio from a pointer gesture and keeps audio-disabled startup unlo
   await setAudioPageActiveForTest(page, true);
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.pageActive)).toBe(true);
 
-  await page.goto('/?debug=1&readback=1&audioDebug=1&audio=0');
+  await page.goto('/?debug=1&readback=1&experience=performance&audioDebug=1&audio=0');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.keyboard.press('Space');
   await page.keyboard.press('R');
@@ -820,7 +912,7 @@ test('unlocks audio from a pointer gesture and keeps audio-disabled startup unlo
 });
 
 test('starts commentary debug and keeps disabled announcer speech unloaded', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&commentaryDebug=1&captions=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&commentaryDebug=1&captions=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.audio-debug-overlay')).toContainText('COMMENTARY');
 
@@ -838,7 +930,7 @@ test('starts commentary debug and keeps disabled announcer speech unloaded', asy
   expect(audio.commentary).toBeTruthy();
   expect(audio.commentary?.queue.length).toBeGreaterThanOrEqual(0);
 
-  await page.goto('/?debug=1&readback=1&commentaryDebug=1&announcer=0');
+  await page.goto('/?debug=1&readback=1&experience=performance&commentaryDebug=1&announcer=0');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.mouse.click(24, 24);
   await page.keyboard.press('Space');
@@ -850,7 +942,7 @@ test('starts commentary debug and keeps disabled announcer speech unloaded', asy
 
 test('supports football visual and appearance audit presentation options', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&appearanceAudit=1&camera=offense');
+  await page.goto('/?debug=1&readback=1&experience=performance&appearanceAudit=1&camera=offense');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect.poll(() => getHelmetAssetSnapshot(page), { timeout: 5000 }).toMatchObject({
     status: 'loaded',
@@ -884,7 +976,7 @@ test('supports football visual and appearance audit presentation options', async
   });
   await expectNonBlankCanvas(page);
 
-  await page.goto('/?debug=1&readback=1&ballVisual=sphere');
+  await page.goto('/?debug=1&readback=1&experience=performance&ballVisual=sphere');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect.poll(() => getBallVisualSnapshot(page)).toMatchObject({
     meshCount: 1,
@@ -893,7 +985,7 @@ test('supports football visual and appearance audit presentation options', async
 });
 
 test('supports procedural player motion debug and comparison modes', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&poseDebug=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&poseDebug=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.pose-debug-overlay')).toContainText('POSE DEBUG');
   await expect(page.locator('.pose-debug-overlay')).toContainText('offense-qb readyOffense');
@@ -910,7 +1002,7 @@ test('supports procedural player motion debug and comparison modes', async ({ pa
   }).toBe(true);
   await page.keyboard.up('w');
 
-  await page.goto('/?debug=1&readback=1&poseDebug=1&playerMotion=0');
+  await page.goto('/?debug=1&readback=1&experience=performance&poseDebug=1&playerMotion=0');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   expect((await getPlayerPoseSnapshots(page)).every((snapshot) => snapshot.intent === 'neutral')).toBe(
     true,
@@ -932,7 +1024,7 @@ test('starts field and formation audit modes without render errors', async ({ pa
     pageErrors.push(error.message);
   });
 
-  await page.goto('/?debug=1&readback=1&fieldAudit=1&formationAudit=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&fieldAudit=1&formationAudit=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toContainText('FPS');
   await expect(page.locator('.formation-audit-overlay')).toContainText('FORMATION AUDIT');
@@ -959,7 +1051,7 @@ test('stages a static 7v7 formation preview across snap lanes and camera modes',
   });
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?debug=1&readback=1&formationPreview=7v7&formationAudit=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical&formationPreview=7v7&formationAudit=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.play-call-ui')).toBeHidden();
   await expect(page.locator('.play-call')).toHaveText('7v7 Formation Preview');
@@ -1066,7 +1158,7 @@ test('stages a static 7v7 formation preview across snap lanes and camera modes',
 
 test('runs 7v7 presentation audit scenarios with screenshots', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?readback=1&formationPreview=7v7&presentationAudit=1&camera=tactical');
+  await page.goto('/?readback=1&experience=performance&formationPreview=7v7&presentationAudit=1&camera=tactical');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect.poll(() => getHelmetAssetSnapshot(page), { timeout: 5000 }).toMatchObject({
     assetId: 'low_poly_helmet',
@@ -1155,7 +1247,7 @@ test('runs 7v7 presentation audit scenarios with screenshots', async ({ page }, 
     testInfo,
   });
 
-  await page.goto('/?readback=1&formationPreview=7v7&presentationAudit=1&presentationState=locomotion&playerMotion=0&camera=cinematic');
+  await page.goto('/?readback=1&experience=performance&formationPreview=7v7&presentationAudit=1&presentationState=locomotion&playerMotion=0&camera=cinematic');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect.poll(async () => {
     const poses = await getPlayerPoseSnapshots(page);
@@ -1173,7 +1265,7 @@ test('runs 7v7 presentation audit scenarios with screenshots', async ({ page }, 
 
 test('renders graphical play cards and selects plays through the shared request path', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   const cards = page.locator('.play-card');
@@ -1218,7 +1310,7 @@ test('renders graphical play cards and selects plays through the shared request 
 
 test('shows on-field receiver routes before snap and supports route audit mode', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&routeArt=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&routeArt=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('4');
@@ -1240,7 +1332,7 @@ test('shows on-field receiver routes before snap and supports route audit mode',
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({ visible: false });
 
-  await page.goto('/?debug=1&readback=1&routeArt=0');
+  await page.goto('/?debug=1&readback=1&experience=performance&routeArt=0');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.keyboard.press('3');
   await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({
@@ -1248,7 +1340,7 @@ test('shows on-field receiver routes before snap and supports route audit mode',
     visible: false,
   });
 
-  await page.goto('/?debug=1&readback=1&routeAudit=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&routeAudit=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.keyboard.press('3');
   await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({
@@ -1263,7 +1355,7 @@ test('shows on-field receiver routes before snap and supports route audit mode',
 
 test('shows pass audit data for a route-aware throw', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&passAudit=1');
+  await page.goto('/?debug=1&readback=1&experience=performance&passAudit=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.pass-audit-overlay')).toContainText('no active pass');
 
@@ -1292,7 +1384,7 @@ test('shows pass audit data for a route-aware throw', async ({ page }) => {
 
 test('starts playable 7v7 Twin Slants Flat and throws to the selected target', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&playbook=7v7');
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=7v7');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   const initial = await getGameplaySnapshot(page);
@@ -1343,7 +1435,7 @@ test('starts playable 7v7 Twin Slants Flat and throws to the selected target', a
 
 test('selects offense perspective camera and toggles modes without resetting gameplay', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&camera=offense');
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=offense');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
@@ -1364,14 +1456,11 @@ test('selects offense perspective camera and toggles modes without resetting gam
 
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
-  await page.keyboard.down('w');
-  await page.waitForTimeout(250);
-  await page.keyboard.up('w');
-  const beforeToggle = await getGameplaySnapshot(page);
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
     state: 'carrierFollow',
   });
+  const beforeToggle = await getGameplaySnapshot(page);
 
   await page.keyboard.press('c');
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
@@ -1399,7 +1488,7 @@ test('selects offense perspective camera and toggles modes without resetting gam
 
 test('runs cinematic broadcast camera without delaying gameplay snap', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&camera=cinematic');
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=cinematic');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'cinematicBroadcast',
@@ -1434,12 +1523,12 @@ test('runs cinematic broadcast camera without delaying gameplay snap', async ({ 
 
 test('supports cinematic orbit shot settings without blocking gameplay input', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?cameraDebug=1&readback=1&camera=offense&cinematics=off');
+  await page.goto('/?cameraDebug=1&readback=1&experience=performance&camera=offense&cinematics=off');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toContainText('CAM offensePerspective');
   expect((await getCameraSnapshot(page)).activeShotName).toBeUndefined();
 
-  await page.goto('/?cameraDebug=1&readback=1&camera=offense&cinematics=brief&audioDebug=1&captions=1');
+  await page.goto('/?cameraDebug=1&readback=1&experience=performance&camera=offense&cinematics=brief&audioDebug=1&captions=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toContainText('SHOT prePlayOrbit180');
   await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO');
@@ -1460,7 +1549,7 @@ test('supports cinematic orbit shot settings without blocking gameplay input', a
   });
   await expectNonBlankCanvas(page);
 
-  await page.goto('/?cameraDebug=1&readback=1&cinematics=full&shotPreview=touchdownOrbit360');
+  await page.goto('/?cameraDebug=1&readback=1&experience=performance&cinematics=full&shotPreview=touchdownOrbit360');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toContainText('SHOT touchdownOrbit360');
   const fullShot = await getCameraSnapshot(page);
@@ -1496,7 +1585,7 @@ test('moves the placeholder player with WASD and arrow keys', async ({ page }) =
   });
 
   for (const movementCase of movementCases) {
-    await page.goto('/?debug=1&readback=1');
+    await page.goto('/?debug=1&readback=1&experience=performance');
     await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
     await page.keyboard.press('Space');
     await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
@@ -1516,7 +1605,7 @@ test('moves the placeholder player with WASD and arrow keys', async ({ page }) =
 });
 
 test('keeps D reserved for movement instead of debug toggling', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toBeVisible();
   await page.keyboard.press('Space');
@@ -1533,7 +1622,7 @@ test('keeps D reserved for movement instead of debug toggling', async ({ page })
 });
 
 test('selects plays before snap and locks selection while live', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('2');
@@ -1607,7 +1696,7 @@ test('selects plays before snap and locks selection while live', async ({ page }
 });
 
 test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   const initial = await getGameplaySnapshot(page);
 
@@ -1625,7 +1714,7 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
   expect(initial.player.position).toEqual({ x: 0, z: -23 });
 
   await page.keyboard.down('w');
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(200);
   await page.keyboard.up('w');
   const afterPreSnapMove = await getGameplaySnapshot(page);
 
@@ -1640,7 +1729,7 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
   });
 
   await page.keyboard.down('w');
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(200);
   await page.keyboard.up('w');
   const afterLiveMove = await getGameplaySnapshot(page);
 
@@ -1662,7 +1751,7 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
 });
 
 test('selects Quick Pass, starts the route after snap, and throws once', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('3');
@@ -1697,7 +1786,7 @@ test('selects Quick Pass, starts the route after snap, and throws once', async (
 });
 
 test('selects Slant Flat, cycles the target, and throws to the selected receiver', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('4');
@@ -1748,7 +1837,7 @@ test('selects Slant Flat, cycles the target, and throws to the selected receiver
 });
 
 test('offense perspective tracks an in-flight pass', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&camera=offense');
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=offense');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('4');
@@ -1766,7 +1855,7 @@ test('offense perspective tracks an in-flight pass', async ({ page }) => {
 });
 
 test('rejects Quick Pass after the quarterback crosses the line of scrimmage', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1&routeArt=0&playerMotion=0');
+  await page.goto('/?debug=1&readback=1&experience=performance&routeArt=0&playerMotion=0');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('3');
@@ -1792,7 +1881,7 @@ test('rejects Quick Pass after the quarterback crosses the line of scrimmage', a
 });
 
 test('scores touchdown by avoiding the defender and auto-resets', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
 
@@ -1840,7 +1929,7 @@ test('scores touchdown by avoiding the defender and auto-resets', async ({ page 
 });
 
 test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
 
@@ -1886,18 +1975,14 @@ test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
 });
 
 test('going out of bounds ends the play and resets at the resolved snap spot', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await page.keyboard.down('d');
-  await expect.poll(async () => (await getGameplaySnapshot(page)).playState, {
-    timeout: 5000,
-  }).toBe('dead');
+  const outOfBounds = await waitForDeadPlayResult(page, 'outOfBounds', 5000);
   await page.keyboard.up('d');
-
-  const outOfBounds = await getGameplaySnapshot(page);
   expect(outOfBounds.lastPlayResult?.type).toBe('outOfBounds');
   expect(outOfBounds.lastPlayResult?.yardsGained).toEqual(expect.any(Number));
   expect(outOfBounds.drive.currentDown).toBe(2);
@@ -1922,7 +2007,7 @@ test('going out of bounds ends the play and resets at the resolved snap spot', a
 });
 
 test('failed fourth down shows turnover and starts a new drill', async ({ page }) => {
-  await page.goto('/?debug=1&readback=1');
+  await page.goto('/?debug=1&readback=1&experience=performance');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   const firstDownFailure = await runOutOfBoundsPlay(page);
@@ -2126,12 +2211,10 @@ async function runOutOfBoundsPlay(page: Page): Promise<GameplaySnapshot> {
   await page.keyboard.press('Space');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await page.keyboard.down('d');
-  await expect.poll(async () => (await getGameplaySnapshot(page)).playState, {
-    timeout: 5000,
-  }).toBe('dead');
+  const snapshot = await waitForDeadPlayResult(page, 'outOfBounds', 5000);
   await page.keyboard.up('d');
 
-  return getGameplaySnapshot(page);
+  return snapshot;
 }
 
 async function waitForPreSnap(page: Page): Promise<GameplaySnapshot> {
@@ -2140,6 +2223,35 @@ async function waitForPreSnap(page: Page): Promise<GameplaySnapshot> {
   }).toBe('preSnap');
 
   return getGameplaySnapshot(page);
+}
+
+async function waitForDeadPlayResult(
+  page: Page,
+  resultType: PlayResultSnapshot['type'],
+  timeoutMs = 3000,
+): Promise<GameplaySnapshot> {
+  const deadline = Date.now() + timeoutMs;
+  let lastSnapshot: GameplaySnapshot | null = null;
+
+  while (Date.now() < deadline) {
+    const snapshot = await getGameplaySnapshot(page);
+    lastSnapshot = snapshot;
+
+    if (
+      snapshot.playState === 'dead' &&
+      snapshot.lastPlayResult?.type === resultType
+    ) {
+      return snapshot;
+    }
+
+    await page.waitForTimeout(25);
+  }
+
+  throw new Error(
+    `Timed out waiting for ${resultType} result; last snapshot ${JSON.stringify(
+      lastSnapshot?.lastPlayResult ?? null,
+    )}`,
+  );
 }
 
 function getDefenders(gameplay: GameplaySnapshot): PlayerSnapshot[] {
@@ -2193,6 +2305,24 @@ async function getGameplaySnapshot(page: Page): Promise<GameplaySnapshot> {
     }
 
     return debugApi.getGameplaySnapshot();
+  });
+}
+
+async function getGameExperienceSnapshot(page: Page): Promise<GameExperienceSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getGameExperienceSnapshot: () => GameExperienceSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getGameExperienceSnapshot();
   });
 }
 

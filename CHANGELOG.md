@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.38.0] - 2026-06-21
+
+### Added
+
+- Added `src/config/GameExperienceSettings.ts` as the authoritative normal-game experience facade composing camera, cinematics, playbook, route art, player motion, crowd, audio, announcer, and caption settings.
+- Added the default `broadcast` preset for plain launches: 5v5 playbook, offense camera, brief cinematics, low-density visual crowd, crowd reactions, runtime audio, crowd audio, announcer, route art, and player motion.
+- Added a `performance` preset that keeps gameplay usable while disabling expensive visual presentation, plus persisted custom settings and non-persistent query overrides.
+- Added debug readback for effective preset, persisted settings, query overrides, final resolved settings, development-only mode flags, and audio/crowd asset readiness.
+- Added unit and browser smoke coverage for plain-launch broadcast defaults, performance behavior, custom persistence, query override precedence, and development-only audit/preview flags.
+
 ## [0.37.0] - 2026-06-21
 
 ### Added
