@@ -21,6 +21,12 @@ import {
   type Vector2,
 } from './playerModel';
 import {
+  getRouteFinalPoint,
+  resolveReceiverRoute,
+  type ReceiverRouteDefinition,
+  type RouteWaypointDefinition,
+} from './receiverRoutes';
+import {
   FIVE_ON_FIVE_ROSTER,
   SEVEN_ON_SEVEN_PLAYER_IDS,
   SEVEN_ON_SEVEN_ROSTER,
@@ -37,11 +43,6 @@ export type PlayId =
   | 'twin-slants-flat';
 export type PlayKind = 'run' | 'pass';
 export type FormationPlayer = FormationSlot;
-
-export interface ReceiverRouteDefinition {
-  speed: number;
-  target: FormationPoint;
-}
 
 export interface PlayDefinition {
   ballCarrierRole: PlayerRole;
@@ -189,10 +190,10 @@ export const FIVE_ON_FIVE_PLAYS: PlayDefinition[] = [
     playbookId: '5v5',
     preferredSide: PLAY_SIDE,
     receiverRoutes: {
-      'offense-wr': {
-        speed: 9.5,
-        target: point(fieldCenter(), defenseDepth(11)),
-      },
+      'offense-wr': route('quick-pass-receiver', 9.5, [
+        waypoint('stem', point(alignedTo('offense-wr'), defenseDepth(4))),
+        waypoint('break', point(fieldCenter(), defenseDepth(11))),
+      ]),
     },
     roster: FIVE_ON_FIVE_ROSTER,
   },
@@ -232,14 +233,14 @@ export const FIVE_ON_FIVE_PLAYS: PlayDefinition[] = [
     playbookId: '5v5',
     preferredSide: PLAY_SIDE,
     receiverRoutes: {
-      'offense-rb': {
-        speed: 8.5,
-        target: point(sidelineInset('boundary', outsideTrailInset), defenseDepth(5)),
-      },
-      'offense-wr': {
-        speed: 9.5,
-        target: point(fieldCenter(), defenseDepth(11)),
-      },
+      'offense-rb': route('flat', 8.5, [
+        waypoint('backfield-release', point(snapSide('boundary', 4), offenseDepth(3.5))),
+        waypoint('out', point(sidelineInset('boundary', outsideTrailInset), defenseDepth(5))),
+      ]),
+      'offense-wr': route('slant', 9.5, [
+        waypoint('stem', point(alignedTo('offense-wr'), defenseDepth(4))),
+        waypoint('break', point(fieldCenter(), defenseDepth(11))),
+      ]),
     },
     roster: FIVE_ON_FIVE_ROSTER,
   },
@@ -297,18 +298,15 @@ export const SEVEN_ON_SEVEN_PLAYS: PlayDefinition[] = [
       'offense-line-right': 'defense-line-right',
     },
     receiverRoutes: {
-      'offense-rb': {
-        speed: 8.5,
-        target: point(sidelineInset('field', SEVEN.receiverSidelineInset + 3), defenseDepth(4.5)),
-      },
-      'offense-wr-left': {
-        speed: 9.5,
-        target: slantTarget('left'),
-      },
-      'offense-wr-right': {
-        speed: 9.5,
-        target: slantTarget('right'),
-      },
+      'offense-rb': route('twin-slants-flat-rb', 8.5, [
+        waypoint('flat', point(sidelineInset('field', SEVEN.receiverSidelineInset + 3), defenseDepth(4.5))),
+      ]),
+      'offense-wr-left': route('twin-slants-left', 9.5, [
+        waypoint('slant', slantTarget('left')),
+      ]),
+      'offense-wr-right': route('twin-slants-right', 9.5, [
+        waypoint('slant', slantTarget('right')),
+      ]),
     },
     roster: SEVEN_ON_SEVEN_ROSTER,
     validation: {
@@ -440,17 +438,17 @@ export function getReceiverRouteTarget(
   ballSpot: FootballSpot,
   play: PlayDefinition,
 ): FootballSpot | null {
-  const route = play.receiverRoutes?.[receiver.id];
+  const route = resolveReceiverRoute(play, receiver.id, resolveSnapPlacement(ballSpot));
 
   if (!route) {
     return null;
   }
 
-  return resolveFormationTarget(play, route.target, resolveSnapPlacement(ballSpot));
+  return getRouteFinalPoint(route);
 }
 
 export function getReceiverRouteSpeed(receiver: PlayerModel, play: PlayDefinition): number {
-  return play.receiverRoutes?.[receiver.id]?.speed ?? 0;
+  return play.receiverRoutes?.[receiver.id]?.speedYardsPerSecond ?? 0;
 }
 
 export function hasReceiverRoute(playerId: string, play: PlayDefinition): boolean {
@@ -595,6 +593,25 @@ function slantTarget(side: 'left' | 'right'): FormationPoint {
 
 function point(lateral: LateralAnchor, longitudinal: LongitudinalAnchor): FormationPoint {
   return { lateral, longitudinal };
+}
+
+function route(
+  id: string,
+  speedYardsPerSecond: number,
+  waypoints: readonly RouteWaypointDefinition[],
+): ReceiverRouteDefinition {
+  return {
+    id,
+    speedYardsPerSecond,
+    waypoints,
+  };
+}
+
+function waypoint(id: string, pointDefinition: FormationPoint): RouteWaypointDefinition {
+  return {
+    id,
+    point: pointDefinition,
+  };
 }
 
 function snap(offsetYards = 0): LateralAnchor {

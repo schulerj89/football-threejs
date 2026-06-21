@@ -1,16 +1,24 @@
 import type { PlayableFieldBounds } from './field';
+import { resolveSnapPlacement } from './ballSpotting';
 import {
   getBlockingLaneTarget,
   getCoverageAssignmentReceiverId,
   getDeepHelpReceiverIds,
   getProtectionAssignmentDefenderId,
-  getReceiverRouteSpeed,
-  getReceiverRouteTarget,
   type PlayDefinition,
 } from './playbook';
 import type { FootballSpot } from './fieldScale';
 import { DEFENDER_CONFIG, updateDefenderPursuit } from './defenderModel';
 import type { PlayerModel, Vector2 } from './playerModel';
+import {
+  advanceRouteState,
+  createReceiverRouteState,
+  getRouteDefinition,
+  getRouteTangentAtDistance,
+  resolveReceiverRoute,
+  sampleRouteAtDistance,
+  type ReceiverRouteState,
+} from './receiverRoutes';
 
 export interface BlockingEngagement {
   blockerId: string;
@@ -26,6 +34,7 @@ export interface RushingDrillAiOptions {
   deltaSeconds: number;
   lineOfScrimmage: FootballSpot;
   play: PlayDefinition;
+  receiverRouteStates?: Record<string, ReceiverRouteState>;
 }
 
 export const BLOCKING_CONFIG = {
@@ -34,6 +43,10 @@ export const BLOCKING_CONFIG = {
   disengageDistance: 3.4,
   engagedDefenderSpeedMultiplier: 0.35,
   minimumSeparationPadding: 0,
+} as const;
+
+export const RECEIVER_ROUTE_FOLLOWING_CONFIG = {
+  maxRecoverySpeedYardsPerSecond: 5,
 } as const;
 
 export function createBlockingState(): BlockingState {
@@ -54,7 +67,13 @@ export function updateRushingDrillAi(
 
   releaseSeparatedEngagements(players, blocking);
   updateBlockers(players, blocking, options.lineOfScrimmage, options.play, delta);
-  updateReceivers(players, options.lineOfScrimmage, options.play, delta);
+  updateReceivers(
+    players,
+    options.lineOfScrimmage,
+    options.play,
+    delta,
+    options.receiverRouteStates,
+  );
   acquireBlockingEngagements(players, blocking, options.play);
   updateDefenders(players, blocking, runner, options.play, delta);
   keepNonCarriersInsidePlayableField(players, runner.id, options.bounds);
@@ -176,27 +195,41 @@ function updateReceivers(
   lineOfScrimmage: FootballSpot,
   play: PlayDefinition,
   deltaSeconds: number,
+  receiverRouteStates?: Record<string, ReceiverRouteState>,
 ): void {
+  const localRouteStates: Record<string, ReceiverRouteState> = {};
+  const routeStates = receiverRouteStates ?? localRouteStates;
+  const snapPlacement = resolveSnapPlacement(lineOfScrimmage);
+
   for (const receiver of players) {
     if (receiver.team !== 'offense' || receiver.role !== 'receiver') {
       continue;
     }
 
-    const routeTarget = getReceiverRouteTarget(receiver, lineOfScrimmage, play);
-    const routeSpeed = getReceiverRouteSpeed(receiver, play);
+    if (receiver.currentState === 'userControlled') {
+      continue;
+    }
 
-    if (!routeTarget || routeSpeed <= 0) {
+    const routeDefinition = getRouteDefinition(play, receiver.id);
+    const route = resolveReceiverRoute(play, receiver.id, snapPlacement);
+
+    if (!routeDefinition || !route || routeDefinition.speedYardsPerSecond <= 0) {
       receiver.velocity.x = 0;
       receiver.velocity.z = 0;
       continue;
     }
 
-    receiver.currentState = receiver.currentState === 'userControlled'
-      ? 'userControlled'
-      : 'runningRoute';
-    if (receiver.currentState === 'runningRoute') {
-      movePlayerToward(receiver, routeTarget, routeSpeed, deltaSeconds);
-    }
+    const routeState = routeStates[receiver.id] ??
+      createReceiverRouteState(routeDefinition, receiver.id);
+    const nextRouteState = advanceRouteState(
+      routeState,
+      route,
+      deltaSeconds,
+      routeDefinition.speedYardsPerSecond,
+    );
+    routeStates[receiver.id] = nextRouteState;
+    receiver.currentState = 'runningRoute';
+    moveReceiverAlongRoute(receiver, route, nextRouteState, routeDefinition.speedYardsPerSecond, deltaSeconds);
   }
 }
 
@@ -359,6 +392,40 @@ function movePlayerToward(
   player.position.x += normalX * stepDistance;
   player.position.z += normalZ * stepDistance;
   player.facingRadians = Math.atan2(normalX, normalZ);
+}
+
+function moveReceiverAlongRoute(
+  receiver: PlayerModel,
+  route: NonNullable<ReturnType<typeof resolveReceiverRoute>>,
+  routeState: ReceiverRouteState,
+  routeSpeedYardsPerSecond: number,
+  deltaSeconds: number,
+): void {
+  const target = sampleRouteAtDistance(route, routeState.distanceAlongRoute);
+  const tangent = getRouteTangentAtDistance(route, routeState.distanceAlongRoute);
+  const deltaX = target.x - receiver.position.x;
+  const deltaZ = target.z - receiver.position.z;
+  const distance = Math.hypot(deltaX, deltaZ);
+  const maxStepDistance =
+    (routeSpeedYardsPerSecond + RECEIVER_ROUTE_FOLLOWING_CONFIG.maxRecoverySpeedYardsPerSecond) *
+    Math.max(0, deltaSeconds);
+
+  receiver.facingRadians = Math.atan2(tangent.x, tangent.z);
+
+  if (distance === 0 || deltaSeconds <= 0) {
+    receiver.velocity.x = 0;
+    receiver.velocity.z = 0;
+    return;
+  }
+
+  const stepDistance = Math.min(distance, maxStepDistance);
+  const normalX = deltaX / distance;
+  const normalZ = deltaZ / distance;
+
+  receiver.position.x += normalX * stepDistance;
+  receiver.position.z += normalZ * stepDistance;
+  receiver.velocity.x = normalX * (stepDistance / deltaSeconds);
+  receiver.velocity.z = normalZ * (stepDistance / deltaSeconds);
 }
 
 function keepNonCarriersInsidePlayableField(

@@ -499,6 +499,51 @@ describe('play state transitions', () => {
     });
   });
 
+  it('resets receiver route progress when the play resets', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'slant-flat');
+    startPlay(gameplay);
+    updateGameplayModel(gameplay, 0.25);
+
+    expect(gameplay.receiverRouteStates['offense-wr'].distanceAlongRoute).toBeGreaterThan(0);
+    expect(gameplay.receiverRouteStates['offense-rb'].distanceAlongRoute).toBeGreaterThan(0);
+
+    resetPlay(gameplay);
+
+    expect(gameplay.receiverRouteStates['offense-wr'].distanceAlongRoute).toBe(0);
+    expect(gameplay.receiverRouteStates['offense-wr'].segmentIndex).toBe(0);
+    expect(gameplay.receiverRouteStates['offense-wr'].completed).toBe(false);
+    expect(gameplay.receiverRouteStates['offense-rb'].distanceAlongRoute).toBe(0);
+  });
+
+  it('stops automatic route following after catch control transfers to the receiver', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    expect(attemptPass(gameplay)).toBe(true);
+    updateGameplayModel(gameplay, 0.2);
+    const receiver = getPlayer(gameplay.players, 'offense-wr');
+    receiver.position.x = gameplay.ball.position.x;
+    receiver.position.z = gameplay.ball.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.player.id).toBe(receiver.id);
+    expect(receiver.currentState).toBe('userControlled');
+
+    const caughtPosition = { ...receiver.position };
+    for (const defender of gameplay.players.filter((player) => player.team === 'defense')) {
+      defender.position.x = PLAYABLE_FIELD_BOUNDS.maxX - defender.collisionRadius;
+      defender.position.z = PLAYABLE_FIELD_BOUNDS.maxZ - defender.collisionRadius;
+    }
+
+    updateGameplayModel(gameplay, 0.25);
+
+    expect(receiver.position).toEqual(caughtPosition);
+  });
+
   it('starts Twin Slants Flat in playable 7v7 mode with three deterministic targets', () => {
     const gameplay = createGameplayModel({ playbookId: '7v7' });
 

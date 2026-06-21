@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.26.0] - 2026-06-21
+
+### Added
+
+- Added pure `src/receiverRoutes.ts` route math for ordered receiver-route waypoints, segment lengths, cumulative distance, sampling, tangents, projection, cross-track error, and deterministic route-state advancement.
+- Added gameplay-owned receiver route state so route progress, active segment, and completion reset with play selection, snap, reset, and challenge restart.
+- Added multi-segment route definitions for Quick Pass, Slant, and Flat while preserving current final pass destinations.
+- Added configurable route recovery speed so receivers can recover toward the active route segment after collision separation without moving route progress backward.
+- Added focused unit coverage for route resolution, waypoint order, route sampling, segment math, frame-rate independent progress, route mirroring, waypoint bounds, reset behavior, and catch-control transfer.
+
+### Changed
+
+- Receiver AI now follows sampled route paths in order instead of steering directly at one final target.
+
 ## [0.25.0] - 2026-06-21
 
 ### Added

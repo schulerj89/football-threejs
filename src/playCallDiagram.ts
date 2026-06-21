@@ -10,6 +10,10 @@ import {
   getEligibleReceiverIds,
   type PlayDefinition,
 } from './playbook';
+import {
+  getRouteFinalPoint,
+  resolveReceiverRoute,
+} from './receiverRoutes';
 
 export interface SvgPoint {
   x: number;
@@ -255,10 +259,11 @@ function resolveReceiverRouteTargets(
   snapPlacement: SnapPlacement,
 ): Record<string, FootballSpot> {
   return Object.fromEntries(
-    Object.entries(play.receiverRoutes ?? {}).map(([receiverId, route]) => [
-      receiverId,
-      resolveFormationTarget(play, route.target, snapPlacement),
-    ]),
+    Object.keys(play.receiverRoutes ?? {}).flatMap((receiverId) => {
+      const route = resolveReceiverRoute(play, receiverId, snapPlacement);
+
+      return route ? [[receiverId, getRouteFinalPoint(route)]] : [];
+    }),
   );
 }
 

@@ -198,6 +198,7 @@ export function snapshotFormationPreviewAsGameplay(
     player: snapshotPlayerModel(primaryPlayer),
     players: preview.players.map(snapshotPlayerModel),
     playbookId: '7v7',
+    receiverRouteStates: [],
     playState: 'preSnap',
     score: 0,
     scoreAttack: {

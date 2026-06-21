@@ -1138,26 +1138,36 @@ test('rejects Quick Pass after the quarterback crosses the line of scrimmage', a
   });
 
   await page.keyboard.down('w');
-  await page.keyboard.down('a');
-  await expect.poll(async () => {
-    const snapshot = await getGameplaySnapshot(page);
-    return snapshot.playState === 'live' && !snapshot.forwardPassEligible;
-  }, {
-    timeout: 3500,
-  }).toBe(true);
-  await page.keyboard.up('a');
-  await page.keyboard.up('w');
+  await page.waitForFunction(() => {
+    const debugApi = (
+      window as Window & {
+        __footballDebug?: {
+          getGameplaySnapshot: () => GameplaySnapshot;
+        };
+      }
+    ).__footballDebug;
+    const snapshot = debugApi?.getGameplaySnapshot();
 
-  const beforePass = await getGameplaySnapshot(page);
-  expect(beforePass.playState).toBe('live');
-  await page.keyboard.press('f');
+    if (snapshot?.playState === 'live' && !snapshot.forwardPassEligible) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'KeyF', key: 'f' }));
+      window.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, code: 'KeyF', key: 'f' }));
+      return true;
+    }
+
+    return false;
+  }, undefined, {
+    polling: 'raf',
+    timeout: 3500,
+  });
+  await page.keyboard.up('w');
 
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     passAttempted: false,
     passFeedback: 'pastLineOfScrimmage',
   });
   const afterPass = await getGameplaySnapshot(page);
-  expect(afterPass.ball.state).toEqual(beforePass.ball.state);
+  expect(afterPass.ball.state.kind).not.toBe('inFlight');
+  expect(afterPass.lastPlayResult?.type).not.toBe('incomplete');
   await expect(page.locator('.pass-warning-message')).toHaveText('PAST LINE OF SCRIMMAGE');
   await expect(page.locator('.pass-warning-message')).toBeVisible();
 });

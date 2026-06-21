@@ -51,6 +51,10 @@ import {
   type PlayDefinition,
 } from './playbook';
 import {
+  createReceiverRouteStateMap,
+  type ReceiverRouteState,
+} from './receiverRoutes';
+import {
   snapshotPlayerModel,
   type PlayerModel,
   type PlayerSnapshot,
@@ -124,6 +128,7 @@ export interface GameplayModel {
   player: PlayerModel;
   players: PlayerModel[];
   playbookId: PlaybookId;
+  receiverRouteStates: Record<string, ReceiverRouteState>;
   selectedPlay: PlayDefinition;
   playState: PlayState;
   playResetTimerSeconds: number | null;
@@ -152,6 +157,7 @@ export interface GameplaySnapshot {
   player: PlayerSnapshot;
   players: PlayerSnapshot[];
   playbookId: PlaybookId;
+  receiverRouteStates: ReceiverRouteState[];
   selectedPlay: {
     displayName: string;
     id: PlayId;
@@ -203,6 +209,7 @@ export function createGameplayModel(options: CreateGameplayModelOptions = {}): G
     player: ballCarrier,
     players,
     playbookId,
+    receiverRouteStates: createReceiverRouteStateMap(selectedPlay),
     selectedPlay,
     playState: 'preSnap',
     playResetTimerSeconds: null,
@@ -227,6 +234,7 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
   gameplay.forwardPassEligible = true;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(play);
+  gameplay.receiverRouteStates = createReceiverRouteStateMap(play);
   resetBlockingState(gameplay.blocking);
   resetFormationAt(gameplay, gameplay.currentBallSpot, play);
   gameplay.player = getBallCarrier(gameplay.players, play);
@@ -255,6 +263,7 @@ export function startPlay(gameplay: GameplayModel): boolean {
   gameplay.playResetTimerSeconds = null;
   gameplay.playState = 'live';
   resetBlockingState(gameplay.blocking);
+  gameplay.receiverRouteStates = createReceiverRouteStateMap(gameplay.selectedPlay);
   gameplay.player = getBallCarrier(gameplay.players, gameplay.selectedPlay);
   for (const player of gameplay.players) {
     if (player.id === gameplay.player.id) {
@@ -366,6 +375,7 @@ export function resetPlay(gameplay: GameplayModel): void {
   gameplay.passAttempted = false;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(gameplay.selectedPlay);
+  gameplay.receiverRouteStates = createReceiverRouteStateMap(gameplay.selectedPlay);
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
   resetBlockingState(gameplay.blocking);
@@ -395,6 +405,7 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
   gameplay.passAttempted = false;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(defaultPlay);
+  gameplay.receiverRouteStates = createReceiverRouteStateMap(defaultPlay);
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
   resetBlockingState(gameplay.blocking);
@@ -424,6 +435,7 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
         deltaSeconds: delta,
         lineOfScrimmage: gameplay.currentBallSpot,
         play: gameplay.selectedPlay,
+        receiverRouteStates: gameplay.receiverRouteStates,
       });
       updateForwardPassEligibility(gameplay);
       updatePassFlight(gameplay, delta);
@@ -495,6 +507,9 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     player: snapshotPlayerModel(gameplay.player),
     players: gameplay.players.map(snapshotPlayerModel),
     playbookId: gameplay.playbookId,
+    receiverRouteStates: Object.values(gameplay.receiverRouteStates).map((routeState) => ({
+      ...routeState,
+    })),
     selectedPlay: {
       displayName: gameplay.selectedPlay.displayName,
       id: gameplay.selectedPlay.id,
