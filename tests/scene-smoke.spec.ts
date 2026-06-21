@@ -114,6 +114,20 @@ interface CameraSnapshot {
   targetPosition: { x: number; y: number; z: number };
 }
 
+interface PlayerBodyVisualSnapshot {
+  bodyBounds: {
+    max: { x: number; y: number; z: number };
+    min: { x: number; y: number; z: number };
+    size: { x: number; y: number; z: number };
+  };
+  bodyStyle: 'box' | 'mannequin';
+  bodyTriangleCount: number;
+  meshesPerPlayer: number;
+  playerId: string;
+  shoulderWidth: number;
+  totalHeight: number;
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -164,11 +178,21 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
     shellMeshNames: expect.arrayContaining(['Mesh10']),
     status: 'loaded',
   });
+  const bodySnapshots = await getPlayerBodyVisualSnapshots(page);
+  expect(bodySnapshots).toHaveLength(10);
+  expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'mannequin')).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.meshesPerPlayer === 8)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.bodyTriangleCount >= 300)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.bodyTriangleCount <= 700)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.bodyBounds.min.y >= -0.001)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.totalHeight === 2)).toBe(true);
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   await expect(page.locator('.debug-overlay')).toContainText('FPS');
   await expect(page.locator('.debug-overlay')).toContainText('CAM tacticalOrthographic');
-  await expect.poll(() => getDebugOverlayNumber(page, 'CALLS')).toBeLessThan(120);
+  await expect(page.locator('.debug-overlay')).toContainText('BODY mannequin');
+  await expect(page.locator('.debug-overlay')).toContainText('BODY_TRIS');
+  await expect.poll(() => getDebugOverlayNumber(page, 'CALLS')).toBeLessThan(190);
   await expectNonBlankCanvas(page);
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -180,6 +204,18 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
 
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test('supports the box player body comparison URL option', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1&playerBody=box');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  const bodySnapshots = await getPlayerBodyVisualSnapshots(page);
+
+  expect(bodySnapshots).toHaveLength(10);
+  expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'box')).toBe(true);
+  await expect(page.locator('.debug-overlay')).toContainText('BODY box');
+  await expectNonBlankCanvas(page);
 });
 
 test('starts field and formation audit modes without render errors', async ({ page }) => {
@@ -998,5 +1034,23 @@ async function getHelmetAssetSnapshot(page: Page): Promise<HelmetAssetSnapshot> 
     }
 
     return debugApi.getHelmetAssetSnapshot();
+  });
+}
+
+async function getPlayerBodyVisualSnapshots(page: Page): Promise<PlayerBodyVisualSnapshot[]> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getPlayerBodyVisualSnapshots: () => PlayerBodyVisualSnapshot[];
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getPlayerBodyVisualSnapshots();
   });
 }

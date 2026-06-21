@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.0] - 2026-06-21
+
+### Added
+
+- Added a procedural low-poly football-player mannequin body with torso, shoulder pads, arm pivots, leg pivots, feet, and the existing helmet head anchor.
+- Added `?playerBody=box` / `?playerBody=mannequin` comparison support and `?debugRoleColors=1` for role-color visual debugging.
+- Added player body debug measurements for style, configured height, shoulder width, body bounds, body triangle count, and body mesh count.
+- Added unit and browser smoke coverage for mannequin hierarchy, shared geometry, team colors, debug role colors, body budget, helmet-anchor preservation, and the box comparison mode.
+
+### Changed
+
+- Updated README and AGENTS to describe the long-term low-poly 11v11 target, cinematic/broadcast presentation direction, and current silhouette milestone.
+- Reframed stadium, crowd, animation, and larger formations as deferred future scope instead of permanent non-goals.
+- Replaced the default rectangular player body with the low-poly mannequin while preserving gameplay-owned position, facing, collision, AI, possession, and helmet recoloring.
+
 ## [0.20.0] - 2026-06-21
 
 ### Added

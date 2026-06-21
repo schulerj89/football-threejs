@@ -3,6 +3,7 @@ import { SNAP_LANE_X } from './ballSpotting';
 import type { GameplayCameraDebugSnapshot } from './camera/GameplayCameraController';
 import type { FootballSpot } from './fieldScale';
 import type { GameplaySnapshot } from './playState';
+import type { PlayerBodyVisualSnapshot } from './playerVisual';
 import type { PlayerModel } from './playerModel';
 
 interface DebugOverlayOptions {
@@ -31,6 +32,7 @@ export class DebugOverlay {
     player: PlayerModel,
     camera?: GameplayCameraDebugSnapshot,
     gameplay?: GameplaySnapshot,
+    playerBody?: PlayerBodyVisualSnapshot,
   ): void {
     this.frameCount += 1;
     this.elapsed += deltaSeconds;
@@ -65,6 +67,17 @@ export class DebugOverlay {
         `LANE ${gameplay.snapLane}`,
         `HASH_X ${SNAP_LANE_X.leftHash.toFixed(2)}, ${SNAP_LANE_X.rightHash.toFixed(2)}`,
         `FORM ${formatSpot(gameplay.formationOrigin)}`,
+      );
+    }
+
+    if (playerBody) {
+      lines.push(
+        `BODY ${playerBody.bodyStyle}`,
+        `BODY_H ${playerBody.totalHeight.toFixed(2)}`,
+        `SHOULDER_W ${playerBody.shoulderWidth.toFixed(2)}`,
+        `BODY_BOUNDS ${formatVector(playerBody.bodyBounds.size)}`,
+        `BODY_TRIS ${playerBody.bodyTriangleCount}`,
+        `BODY_MESHES ${playerBody.meshesPerPlayer}`,
       );
     }
 

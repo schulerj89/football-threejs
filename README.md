@@ -2,7 +2,9 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for two rushing plays and two passing plays, graphical pre-snap SVG play cards generated from gameplay data, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
+The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness for validating controls, play states, formations, ball spotting, passing, tackling, downs, and camera language before the full game structure arrives.
+
+The current milestone is an intentional procedural low-poly player silhouette that keeps the reusable `low_poly_helmet.glb` helmet while replacing the rectangular body with a recognizable football-player shape. The active playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay data, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
 
 ## World Scale
 
@@ -60,7 +62,9 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Coverage defenders track their assigned receivers while ordinary defenders use the existing simple pursuit or pass-rush behavior.
 - Crossing a sideline during a live play ends the play out of bounds.
 - AI-controlled non-carriers stay inside the playable field while the active ball carrier may cross a sideline to end the play.
-- Each primitive player body keeps its gameplay-driven collision and movement while displaying a cloned `low_poly_helmet.glb` helmet attached to a head anchor.
+- Each procedural low-poly player body keeps its gameplay-driven collision and movement while displaying a cloned `low_poly_helmet.glb` helmet attached to a head anchor.
+- Use `?playerBody=mannequin` for the current low-poly silhouette or `?playerBody=box` for comparison with the earlier rectangular placeholder body.
+- Use `?debugRoleColors=1` to restore role-colored player bodies for visual debugging.
 - Sack, tackle, completed pass, and out-of-bounds results display signed yards gained or lost from the exact dead-ball spot, then reset the next play at the nearest snap lane: left hash, middle, or right hash.
 - Incomplete passes end the play at the original line of scrimmage and advance the down.
 - The drill tracks down, distance, ball position, and score.
@@ -77,11 +81,11 @@ Add `?fieldAudit=1` to show field geometry validation helpers: authoritative fie
 
 Add `?formationAudit=1` to show the resolved semantic formation: snap lane, field/boundary side, player positions, lateral/depth offsets, and any validation issues highlighted in red.
 
-## Current Non-Goals
+## Current Non-Goals And Future Scope
 
-- Presentation: no stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, or stadium presentation.
-- Roster scope: no 7v7, 11v11, full special teams, additional offensive or defensive players beyond the current five-on-five drill, player switching, or formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data.
-- Assets and animation: no imported assets beyond the current reusable low-poly helmet, no full player models replacing primitive bodies, no imported animations, no quarterback animation, no scramble animation, no tackling animation, no celebration animation, and no center or snap animation.
+- Presentation future scope: stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, and broader stadium presentation are planned later, not permanent exclusions.
+- Roster future scope: larger formations, 7v7, 11v11, full special teams, additional offensive or defensive players beyond the current five-on-five drill, player switching, and formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data are deferred.
+- Assets and animation future scope: imported full-body player models, skeletal animation, quarterback animation, scramble animation, tackling animation, celebration animation, and center or snap animation are deferred. The current milestone intentionally uses procedural low-poly silhouettes plus the reusable low-poly helmet.
 - Play calling: no large playbook menu, title screen, audibles, defensive play selection, route editor, procedural play generation, hot routes, or menus beyond the current pre-snap play cards and minimal HUD/debug displays.
 - Passing and ball outcomes: no interceptions, fumbles, loose-ball physics, manual aiming, pass-type selection, pump fake, illegal-forward-pass penalty, referee logic, user-controlled catch mechanic, contested-catch ratings, or quarterback ratings.
 - Blocking and tackling: no offensive linemen rules, holding penalties, pancake blocks, double-team blocks, pulling guards, diving tackles, advanced pursuit/pathfinding library, or physics-driven contact.

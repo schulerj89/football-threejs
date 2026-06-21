@@ -6,14 +6,21 @@ import {
   findHelmetPartMeshes,
 } from '../src/helmetVisual';
 import { createPlayerModel } from '../src/playerModel';
-import { PLAYER_HEAD_ANCHOR_NAME, createPlaceholderPlayerVisual } from '../src/playerVisual';
+import {
+  PLAYER_BODY_ROOT_NAME,
+  PLAYER_HEAD_ANCHOR_NAME,
+  createPlaceholderPlayerVisual,
+} from '../src/playerVisual';
 
 describe('helmet visual integration', () => {
-  it('keeps a dedicated head anchor on the primitive player body', () => {
+  it('keeps a dedicated head anchor on the procedural player body', () => {
     const playerVisual = createPlaceholderPlayerVisual(createPlayerModel());
+    const bodyRoot = playerVisual.getObjectByName(PLAYER_BODY_ROOT_NAME);
 
-    expect(playerVisual.getObjectByName(PLAYER_HEAD_ANCHOR_NAME)).toBeInstanceOf(THREE.Group);
-    expect(playerVisual.getObjectByName('placeholder-player-body')).toBeInstanceOf(THREE.Mesh);
+    expect(bodyRoot).toBeInstanceOf(THREE.Group);
+    expect(bodyRoot?.getObjectByName(PLAYER_HEAD_ANCHOR_NAME)).toBeInstanceOf(THREE.Group);
+    expect(bodyRoot?.getObjectByName('torso')).toBeInstanceOf(THREE.Mesh);
+    expect(bodyRoot?.getObjectByName('shoulderPads')).toBeInstanceOf(THREE.Mesh);
   });
 
   it('finds shell and faceguard meshes by mesh or material name', () => {

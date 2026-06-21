@@ -40,7 +40,13 @@ import {
 } from './playState';
 import { snapshotPlayerModel, type PlayerSnapshot } from './playerModel';
 import { updatePlayerSimulation } from './playerSimulation';
-import { createPlaceholderPlayerVisual, syncPlayerVisual } from './playerVisual';
+import {
+  createPlaceholderPlayerVisual,
+  getPlayerBodyVisualSnapshot,
+  resolvePlayerBodyVisualStyle,
+  syncPlayerVisual,
+  type PlayerBodyVisualSnapshot,
+} from './playerVisual';
 
 declare global {
   interface Window {
@@ -48,6 +54,7 @@ declare global {
       getCameraSnapshot: () => GameplayCameraDebugSnapshot;
       getGameplaySnapshot: () => GameplaySnapshot;
       getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
+      getPlayerBodyVisualSnapshots: () => PlayerBodyVisualSnapshot[];
       getPlayerSnapshot: () => PlayerSnapshot;
     };
   }
@@ -63,6 +70,10 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x101920);
 
 const searchParams = new URLSearchParams(window.location.search);
+const playerVisualOptions = {
+  bodyStyle: resolvePlayerBodyVisualStyle(searchParams.get('playerBody')),
+  debugRoleColors: searchParams.has('debugRoleColors'),
+};
 const field = createFootballField({
   fieldAudit: searchParams.has('fieldAudit'),
 });
@@ -71,8 +82,8 @@ scene.add(field.group);
 const gameplayModel = createGameplayModel();
 const playerVisuals = new Map<string, THREE.Group>();
 for (const gamePlayer of gameplayModel.players) {
-  const playerVisual = createPlaceholderPlayerVisual(gamePlayer);
-  syncPlayerVisual(playerVisual, gamePlayer);
+  const playerVisual = createPlaceholderPlayerVisual(gamePlayer, playerVisualOptions);
+  syncPlayerVisual(playerVisual, gamePlayer, playerVisualOptions);
   playerVisuals.set(gamePlayer.id, playerVisual);
   scene.add(playerVisual);
 }
@@ -119,6 +130,8 @@ if (import.meta.env.DEV || searchParams.has('debug')) {
     getCameraSnapshot: () => cameraController.getDebugSnapshot(),
     getGameplaySnapshot: () => snapshotGameplayModel(gameplayModel),
     getHelmetAssetSnapshot,
+    getPlayerBodyVisualSnapshots: () =>
+      [...playerVisuals.values()].map((playerVisual) => getPlayerBodyVisualSnapshot(playerVisual)),
     getPlayerSnapshot: () => snapshotPlayerModel(gameplayModel.player),
   };
   window.addEventListener('keydown', handleDevelopmentCameraToggle);
@@ -161,7 +174,7 @@ function renderFrame(delta: number): void {
   for (const gamePlayer of gameplayModel.players) {
     const playerVisual = playerVisuals.get(gamePlayer.id);
     if (playerVisual) {
-      syncPlayerVisual(playerVisual, gamePlayer);
+      syncPlayerVisual(playerVisual, gamePlayer, playerVisualOptions);
       syncHelmetTeamMaterials(playerVisual, gamePlayer);
     }
   }
@@ -180,6 +193,9 @@ function renderFrame(delta: number): void {
     gameplayModel.player,
     cameraController.getDebugSnapshot(),
     gameplaySnapshot,
+    playerVisuals.has(gameplayModel.player.id)
+      ? getPlayerBodyVisualSnapshot(playerVisuals.get(gameplayModel.player.id)!)
+      : undefined,
   );
 
   if (!hasRenderedFirstFrame) {

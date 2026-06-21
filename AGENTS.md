@@ -2,13 +2,15 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay play data, primitive player bodies with cloned low-poly helmet visuals, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable primitive ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness, not the final product identity. The current milestone is an intentional procedural low-poly player silhouette that preserves the reusable helmet GLB while replacing rectangular placeholder bodies.
 
-## Current Non-Goals
+The active playable prototype is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay play data, low-poly procedural player bodies with cloned low-poly helmet visuals, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera.
 
-- Presentation: no stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, or stadium presentation.
-- Roster scope: no 7v7, 11v11, full special teams, additional offensive or defensive players beyond the current five-on-five drill, player switching, or formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data.
-- Assets and animation: no imported assets beyond the current reusable low-poly helmet, no full player models replacing primitive bodies, no imported animations, no quarterback animation, no scramble animation, no tackling animation, no celebration animation, and no center or snap animation.
+## Current Non-Goals And Future Scope
+
+- Presentation future scope: stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, and broader stadium presentation are deferred product work, not permanent exclusions.
+- Roster future scope: larger formations, 7v7, 11v11, full special teams, additional offensive or defensive players beyond the current five-on-five drill, player switching, and formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data are deferred.
+- Assets and animation future scope: imported full-body player models, skeletal animation, quarterback animation, scramble animation, tackling animation, celebration animation, and center or snap animation are deferred. The current milestone intentionally uses procedural low-poly silhouettes plus the reusable low-poly helmet.
 - Play calling: no large playbook menu, title screen, audibles, defensive play selection, route editor, procedural play generation, hot routes, or menus beyond the current pre-snap play cards and minimal HUD/debug displays.
 - Passing and ball outcomes: no interceptions, fumbles, loose-ball physics, manual aiming, pass-type selection, pump fake, illegal-forward-pass penalty, referee logic, user-controlled catch mechanic, contested-catch ratings, or quarterback ratings.
 - Blocking and tackling: no offensive linemen rules, holding penalties, pancake blocks, double-team blocks, pulling guards, diving tackles, advanced pursuit/pathfinding library, or physics-driven contact.
@@ -64,7 +66,9 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Blocking is deterministic gameplay state, not force-based physics.
 - Passing uses deterministic gameplay state and a controlled arc, not a general-purpose physics engine.
 - Passing play definitions use ordered eligible receiver IDs; selected receiver state belongs to the gameplay model, not the HUD or mesh layer.
-- Imported player art should remain visual-only; gameplay collision stays in the gameplay player model and primitive body replacements are out of scope unless requested.
+- Imported player art and procedural player silhouettes must remain visual-only; gameplay collision stays in the gameplay player model.
+- Player visuals should preserve the root object used by gameplay synchronization, keep the helmet attached through the stable head anchor, and expose comparison/debug URL options when replacing major placeholder geometry.
+- Normal player body colors should emphasize team identity; role-specific body colors belong behind explicit debug options.
 - Repeated GLB assets should be loaded once and cloned or instanced, with material clones created before team-specific tinting.
 - Forward-pass eligibility is gameplay state reset per play; crossing the original line of scrimmage disables it permanently for that play using the documented epsilon in `src/passRules.ts`.
 - Sack classification belongs in gameplay rules and must depend on possession, pass attempt state, line of scrimmage, and defender contact.
@@ -80,21 +84,13 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- Inside Run, Outside Run, Quick Pass, and Slant Flat can be selected before the snap.
-- The pre-snap play-call UI renders one SVG card per available offensive play and hides during live/dead play.
-- Play-card diagrams show play name, line of scrimmage, ball, offensive formation, run direction or receiver routes, and blocker assignments from gameplay data.
-- The selected play card is visually highlighted, pointer/tap selection works, and number-key shortcuts remain available.
-- Each play has a stable ID, display name, formation, ball-carrier role, initial direction, and blocker lane or route data.
-- Selecting a play resets players into valid positions and visibly changes formation or blocking direction.
-- Selection cannot change during live play.
-- Reset preserves the current selected play.
-- Rushing plays work with downs, yardage, tackles, touchdowns, and resets.
-- Passing plays work with quarterback possession, scrambling, line-of-scrimmage pass eligibility, pass rush, sacks before throws, route-running receivers, deterministic target selection, one pass attempt, catch transfer, incompletions, completed-pass yardage, tackles, touchdowns, and resets.
-- Score attack starts at 120 seconds, begins on the first snap, ticks continuously after that, allows a live play to finish at zero, prevents another snap after expiry, records final score, and restarts from game over with Enter.
+- Every player receives the procedural low-poly body silhouette by default, with the previous box body available only as a comparison URL option.
+- The existing player root, gameplay position sync, facing sync, collision radius, movement, blocking, tackling, possession, AI, and helmet attachment remain unchanged.
+- The body hierarchy is `bodyRoot` with torso, shoulder pads, arm pivots, leg pivots, feet, and the stable head anchor for the helmet.
+- The mannequin uses shared primitive geometry and simple shared materials, stays within the body triangle budget, and uses no textures or imported body model.
+- Team identity drives normal body colors; role colors are available only through explicit debug mode.
+- The body exposes development measurements for height, shoulder width, body bounds, body triangles, and body mesh count.
 - The low-poly helmet GLB loads once, clones to every player, attaches to the player head anchor, tints shell colors by team, and leaves gameplay collision unchanged.
-- The tactical orthographic camera and optional offense perspective camera can both render, resize, and be compared through URL selection or the development/debug `C` toggle without resetting gameplay.
-- Field dimensions and painted-line containment are validated through pure layout tests plus a Three.js `Box3` integration test.
-- Static field markings are batched into a small bounded set of draw calls, and the browser smoke test checks the debug-overlay renderer call budget.
-- Play lookup, formation placement, invalid IDs, selection restrictions, pass eligibility, rejected throws, pass transitions, catch eligibility, incomplete passes, sacks, selected-target cycling, control transfer, and duplicate throw prevention have deterministic tests.
-- Existing tests pass.
-- The browser smoke test proves play selection plus five-on-five formation, movement, score, tackle, out-of-bounds, and turnover-on-downs outcomes work.
+- The mannequin works from both tactical orthographic and offense-perspective cameras.
+- Existing gameplay and helmet tests pass.
+- Browser smoke tests pass, including startup, debug measurements, camera rendering, and comparison body mode.
