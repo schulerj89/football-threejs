@@ -113,6 +113,7 @@ describe('runtime audio mixer', () => {
       audioEnabled: false,
       crowdAudioEnabled: false,
     });
+    expect(loadAudioSettings(storage).captionsEnabled).toBe(false);
   });
 
   it('warns once for a missing optional decoded asset and keeps startup non-fatal', async () => {

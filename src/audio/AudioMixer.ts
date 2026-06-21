@@ -22,7 +22,10 @@ export interface AudioMixerSnapshot {
   activeLoops: string[];
   activeOneShots: number;
   activeSourceCount: number;
+  announcerEnabled: boolean;
   busGains: Record<AudioBusName, number>;
+  captionsEnabled: boolean;
+  crowdDuckingGain: number;
   contextState: AudioContextState | 'unavailable';
   decodedAssetIds: string[];
   decodedBufferBytes: number;
@@ -61,6 +64,12 @@ interface ActiveLoop {
   stopTimer: ReturnType<typeof setTimeout> | null;
 }
 
+interface ActiveOneShot {
+  asset: LocalAudioAsset;
+  gain: GainNode;
+  source: AudioBufferSourceNode;
+}
+
 const DEFAULT_AUDIO_FLAGS: AudioFeatureFlags = {
   announcerEnabled: true,
   audioDebug: false,
@@ -87,11 +96,9 @@ export class AudioMixer {
     master: 0,
     ui: 0,
   };
-  private readonly activeOneShotNodes = new Set<{
-    gain: GainNode;
-    source: AudioBufferSourceNode;
-  }>();
+  private readonly activeOneShotNodes = new Set<ActiveOneShot>();
   private readonly storage: StorageLike | null;
+  private crowdDuckingGain = 1;
   private lastUnlockError: string | null = null;
   private settings: AudioSettings;
   private unlockListenersInstalled = false;
@@ -197,21 +204,43 @@ export class AudioMixer {
     source.connect(gain);
     gain.connect(this.getBusForCategory(asset.category));
     this.activeOneShotsByAsset.set(asset.assetId, activeCount + 1);
-    const oneShotNodes = { gain, source };
+    const oneShotNodes = { asset, gain, source };
     this.activeOneShotNodes.add(oneShotNodes);
     source.onended = (): void => {
-      const nextCount = Math.max(0, (this.activeOneShotsByAsset.get(asset.assetId) ?? 1) - 1);
-      if (nextCount === 0) {
-        this.activeOneShotsByAsset.delete(asset.assetId);
-      } else {
-        this.activeOneShotsByAsset.set(asset.assetId, nextCount);
-      }
-      source.disconnect();
-      gain.disconnect();
-      this.activeOneShotNodes.delete(oneShotNodes);
+      this.releaseOneShot(oneShotNodes);
     };
     source.start();
     return true;
+  }
+
+  stopOneShotsByCategory(category: AudioPlaybackCategory): number {
+    let stoppedCount = 0;
+
+    for (const node of [...this.activeOneShotNodes]) {
+      if (node.asset.category !== category) {
+        continue;
+      }
+
+      stoppedCount += 1;
+      scheduleGain(node.gain.gain, 0, this.context.currentTime, ONE_SHOT_ATTACK_SECONDS);
+
+      if (typeof node.source.stop === 'function') {
+        try {
+          node.source.stop(this.context.currentTime + ONE_SHOT_ATTACK_SECONDS);
+        } catch {
+          this.releaseOneShot(node);
+        }
+      } else {
+        this.releaseOneShot(node);
+      }
+    }
+
+    return stoppedCount;
+  }
+
+  setCrowdDuckingGain(gain: number): void {
+    this.crowdDuckingGain = clampGain(gain);
+    this.applySettings();
   }
 
   async startLoop(assetId: string, options: AudioLoopStartOptions = {}): Promise<boolean> {
@@ -331,7 +360,10 @@ export class AudioMixer {
         0,
       ),
       activeSourceCount: this.activeLoops.size + this.activeOneShotNodes.size,
+      announcerEnabled: this.flags.announcerEnabled && this.settings.announcerEnabled,
       busGains: { ...this.reportedBusGains },
+      captionsEnabled: this.settings.captionsEnabled,
+      crowdDuckingGain: this.crowdDuckingGain,
       contextState: this.context.state,
       decodedAssetIds: loaderSnapshot.decodedAssetIds,
       decodedBufferBytes: loaderSnapshot.decodedBufferBytes,
@@ -361,8 +393,16 @@ export class AudioMixer {
       'master',
       this.flags.audioEnabled && !this.settings.muted ? this.settings.masterVolume : 0,
     );
-    this.setBusGain('crowd', this.flags.crowdAudioEnabled ? this.settings.crowdVolume : 0);
-    this.setBusGain('announcer', this.flags.announcerEnabled ? this.settings.announcerVolume : 0);
+    this.setBusGain(
+      'crowd',
+      this.flags.crowdAudioEnabled ? this.settings.crowdVolume * this.crowdDuckingGain : 0,
+    );
+    this.setBusGain(
+      'announcer',
+      this.flags.announcerEnabled && this.settings.announcerEnabled
+        ? this.settings.announcerVolume
+        : 0,
+    );
     this.setBusGain('gameplaySfx', this.settings.effectsVolume);
     this.setBusGain('ui', this.settings.effectsVolume);
     saveAudioSettings(this.settings, this.storage);
@@ -407,10 +447,26 @@ export class AudioMixer {
     }
 
     if (category === 'announcer') {
-      return this.flags.announcerEnabled;
+      return this.flags.announcerEnabled && this.settings.announcerEnabled;
     }
 
     return true;
+  }
+
+  private releaseOneShot(node: ActiveOneShot): void {
+    if (!this.activeOneShotNodes.has(node)) {
+      return;
+    }
+
+    const nextCount = Math.max(0, (this.activeOneShotsByAsset.get(node.asset.assetId) ?? 1) - 1);
+    if (nextCount === 0) {
+      this.activeOneShotsByAsset.delete(node.asset.assetId);
+    } else {
+      this.activeOneShotsByAsset.set(node.asset.assetId, nextCount);
+    }
+    node.source.disconnect();
+    node.gain.disconnect();
+    this.activeOneShotNodes.delete(node);
   }
 }
 

@@ -343,8 +343,28 @@ interface AudioRuntimeSnapshot {
   activeLoops: string[];
   activeOneShots: number;
   activeSourceCount: number;
+  announcerEnabled: boolean;
   busGains: Record<string, number>;
+  captionsEnabled: boolean;
+  commentary?: {
+    captionsEnabled: boolean;
+    crowdDuckState: {
+      ducked: boolean;
+      duckingGain: number;
+    };
+    currentCaption: string | null;
+    currentClip: null | {
+      assetId: string;
+      caption: string;
+      category: string;
+      eventId: string;
+      priority: number;
+    };
+    enabled: boolean;
+    queue: Array<{ assetId: string; category: string; priority: number }>;
+  };
   contextState: 'closed' | 'running' | 'suspended' | 'unavailable';
+  crowdDuckingGain: number;
   decodedAssetIds: string[];
   decodedBufferBytes: number;
   enabled: boolean;
@@ -577,6 +597,35 @@ test('unlocks audio from a pointer gesture and keeps audio-disabled startup unlo
   expect(disabledAudio.loadedAssetIds).toEqual([]);
   expect(disabledAudio.streamedAssetIds).toEqual([]);
   expect(disabledAudio.decodedAssetIds).toEqual([]);
+});
+
+test('starts commentary debug and keeps disabled announcer speech unloaded', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1&commentaryDebug=1&captions=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.audio-debug-overlay')).toContainText('COMMENTARY');
+
+  let audio = await getAudioSnapshot(page);
+  expect(audio.commentary?.captionsEnabled).toBe(true);
+  expect(audio.commentary?.enabled).toBe(true);
+  expect(audio.crowdDuckingGain).toBe(1);
+
+  await page.mouse.click(24, 24);
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.contextState)).toBe('running');
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page).then((snapshot) => snapshot.playState)).toBe('live');
+
+  audio = await getAudioSnapshot(page);
+  expect(audio.commentary).toBeTruthy();
+  expect(audio.commentary?.queue.length).toBeGreaterThanOrEqual(0);
+
+  await page.goto('/?debug=1&readback=1&commentaryDebug=1&announcer=0');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.mouse.click(24, 24);
+  await page.keyboard.press('Space');
+  const disabledAnnouncer = await getAudioSnapshot(page);
+  expect(disabledAnnouncer.announcerEnabled).toBe(false);
+  expect(disabledAnnouncer.commentary?.enabled).toBe(false);
+  expect(disabledAnnouncer.loadedAssetIds.some((assetId) => assetId.startsWith('ann_'))).toBe(false);
 });
 
 test('supports football visual and appearance audit presentation options', async ({ page }) => {

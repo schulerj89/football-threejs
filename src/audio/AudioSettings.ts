@@ -1,5 +1,7 @@
 export interface AudioSettings {
+  announcerEnabled: boolean;
   announcerVolume: number;
+  captionsEnabled: boolean;
   cinematicsAudioEnabled: boolean;
   crowdVolume: number;
   effectsVolume: number;
@@ -22,7 +24,9 @@ export interface StorageLike {
 export const AUDIO_SETTINGS_STORAGE_KEY = 'football-threejs.audioSettings.v1';
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
+  announcerEnabled: true,
   announcerVolume: 0.85,
+  captionsEnabled: false,
   cinematicsAudioEnabled: true,
   crowdVolume: 0.45,
   effectsVolume: 0.85,
@@ -57,6 +61,19 @@ export function loadAudioSettings(storage = getLocalStorage()): AudioSettings {
   }
 }
 
+export function applyAudioQuerySettings(
+  settings: AudioSettings,
+  searchParams: URLSearchParams,
+): AudioSettings {
+  return normalizeAudioSettings({
+    ...settings,
+    announcerEnabled: searchParams.get('announcer') === '0' ? false : settings.announcerEnabled,
+    captionsEnabled: searchParams.has('captions')
+      ? searchParams.get('captions') !== '0'
+      : settings.captionsEnabled,
+  });
+}
+
 export function saveAudioSettings(
   settings: AudioSettings,
   storage = getLocalStorage(),
@@ -80,7 +97,9 @@ export function updateAudioSettings(
 
 export function normalizeAudioSettings(settings: Partial<AudioSettings>): AudioSettings {
   return {
+    announcerEnabled: settings.announcerEnabled ?? DEFAULT_AUDIO_SETTINGS.announcerEnabled,
     announcerVolume: clampVolume(settings.announcerVolume ?? DEFAULT_AUDIO_SETTINGS.announcerVolume),
+    captionsEnabled: settings.captionsEnabled ?? DEFAULT_AUDIO_SETTINGS.captionsEnabled,
     cinematicsAudioEnabled:
       settings.cinematicsAudioEnabled ?? DEFAULT_AUDIO_SETTINGS.cinematicsAudioEnabled,
     crowdVolume: clampVolume(settings.crowdVolume ?? DEFAULT_AUDIO_SETTINGS.crowdVolume),

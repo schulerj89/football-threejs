@@ -377,6 +377,7 @@ class FakeAudioPlaybackPort implements AudioPlaybackPort {
     activeLoops: [],
     activeOneShots: 0,
     activeSourceCount: 0,
+    announcerEnabled: true,
     busGains: {
       announcer: 0.85,
       crowd: 0.45,
@@ -384,7 +385,9 @@ class FakeAudioPlaybackPort implements AudioPlaybackPort {
       master: 0.85,
       ui: 0.85,
     },
+    captionsEnabled: false,
     contextState: 'running',
+    crowdDuckingGain: 1,
     decodedAssetIds: [],
     decodedBufferBytes: 0,
     enabled: true,

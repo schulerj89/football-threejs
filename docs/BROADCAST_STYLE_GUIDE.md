@@ -1,6 +1,6 @@
 # Broadcast Style Guide
 
-Broadcast writing is planned product scope. Current implementation scope is the prototype announcer identity, typed script catalog, exact captions, audition artifacts, and offline generation tooling. Runtime announcer playback and live text generation are future work.
+Broadcast writing is planned product scope. Current implementation scope is the prototype announcer identity, typed script catalog, exact captions, audition artifacts, offline generation tooling, and runtime playback of pre-rendered local announcer clips. Live text generation remains future work.
 
 ## Voice
 

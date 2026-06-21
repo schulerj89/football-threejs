@@ -50,3 +50,7 @@ Allowed output roots:
 When generation is executed, each output receives a sidecar JSON next to the audio file. The sidecar records prompt or script, model, voice ID where applicable, generation date, output format, and content hash.
 
 The sidecar must not contain API keys, request headers, or secret-bearing data.
+
+## Runtime Commentary
+
+Runtime commentary reads local announcer MP3s from `public/audio/announcer` through the browser audio manifest. It does not call ElevenLabs, generate text, or depend on request-time API access. Missing optional announcer files warn in development and suppress that line without stopping gameplay.

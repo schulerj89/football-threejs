@@ -2,7 +2,7 @@
 
 Audio is now planned product scope for the low-poly football game, including football sound effects, announcer presentation, crowd ambience, and cinematic presentation support.
 
-Current implementation scope includes offline generation planning, a typed prototype announcer script catalog, caption and audition artifacts, a local-file runtime mixer foundation, and event-driven crowd/SFX playback from local starter-pack asset IDs. Runtime playback is explicitly user-gesture gated, uses scheduled gain ramps for buses and loops, suppresses stale cues while hidden or unfocused, and exposes debug memory/node diagnostics. Generated asset approval, announcer playback, live text generation, spatial audio, music, visual crowd rendering, and camera changes remain future work.
+Current implementation scope includes offline generation planning, a typed prototype announcer script catalog, caption and audition artifacts, a local-file runtime mixer foundation, event-driven crowd/SFX playback from local starter-pack asset IDs, and serialized broadcast-commentary playback from pre-rendered local announcer clips. Runtime playback is explicitly user-gesture gated, uses scheduled gain ramps for buses and loops, suppresses stale cues while hidden or unfocused, ducks the crowd bus during announcer speech, and exposes debug memory/node/commentary diagnostics. Generated asset approval, live text generation, spatial audio, music, visual crowd rendering, and camera changes remain future work.
 
 ## Production Roles
 
@@ -40,3 +40,5 @@ Project-specific direction lives in:
 - Approved generated files should be preserved rather than regenerated.
 
 Runtime crowd and football-event cues are mapped through the presentation event bridge. Missing optional generated files must warn in development without stopping gameplay.
+
+Runtime commentary uses the same presentation event bridge. It must not speak on every ordinary play, must not overlap clips, and must keep captions matched to the generated script text.

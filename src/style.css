@@ -487,6 +487,30 @@ canvas {
   white-space: pre-wrap;
 }
 
+.broadcast-captions {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 27;
+  max-width: min(720px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(8, 12, 14, 0.82);
+  color: #f3f5f6;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.broadcast-captions[hidden] {
+  display: none;
+}
+
 @media (max-width: 760px) {
   .play-call-ui {
     right: 12px;

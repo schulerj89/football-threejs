@@ -2,6 +2,7 @@ import type { GameplaySnapshot, PlayResult } from '../playState';
 
 export type PresentationAudioEventType =
   | 'ballSnapped'
+  | 'challengeEnding'
   | 'firstDown'
   | 'incomplete'
   | 'outOfBounds'
@@ -59,6 +60,13 @@ export function derivePresentationAudioEvents(
     previous.lastPlayResult?.id !== current.lastPlayResult.id
   ) {
     events.push(...createResultEvents(previous, current, current.lastPlayResult));
+  }
+
+  if (
+    previous.scoreAttack.state !== 'gameOver' &&
+    current.scoreAttack.state === 'gameOver'
+  ) {
+    events.push(createEvent('challengeEnding', `challengeEnding:${current.scoreAttack.finalScore ?? current.score}`, current));
   }
 
   if (previous.playState === 'dead' && current.playState === 'preSnap') {

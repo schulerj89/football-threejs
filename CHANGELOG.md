@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.34.0] - 2026-06-21
+
+### Added
+
+- Added a runtime broadcast commentary director that consumes immutable presentation events, selects pre-rendered announcer clips by context, serializes speech playback, prevents immediate variant repetition, and applies per-category cooldowns.
+- Added a runtime commentary catalog and optional local announcer assets to the audio manifest without adding any runtime ElevenLabs calls.
+- Added priority handling so high-value commentary can cancel obsolete lower-priority queued lines, with touchdown commentary taking precedence over first-down commentary.
+- Added crowd-bus ducking while announcer speech is active, with safe restoration on speech completion, mute, reset, and hidden-page suppression while preserving gameplay SFX.
+- Added accessible optional broadcast captions, `?captions=1`, `?commentaryDebug=1`, and commentary state in the audio debug overlay.
+- Added announcer on/off, announcer volume, and captions on/off settings/control hooks.
+- Added deterministic unit coverage for priority suppression, no overlapping speech, variant repetition, cooldowns, crowd duck/restore, mute safety, caption/catalog matching, audio-disabled loading suppression, and snapshot immutability.
+
 ## [0.33.0] - 2026-06-21
 
 ### Added

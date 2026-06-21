@@ -1,4 +1,9 @@
 import type { GameAudioDirectorSnapshot } from './GameAudioDirector';
+import type { BroadcastCommentarySnapshot } from './BroadcastCommentaryDirector';
+
+export type RuntimeAudioDebugSnapshot = GameAudioDirectorSnapshot & {
+  commentary?: BroadcastCommentarySnapshot;
+};
 
 export function createAudioDebugOverlay(): HTMLDivElement {
   const element = document.createElement('div');
@@ -9,7 +14,7 @@ export function createAudioDebugOverlay(): HTMLDivElement {
 
 export function syncAudioDebugOverlay(
   element: HTMLElement,
-  snapshot: GameAudioDirectorSnapshot,
+  snapshot: RuntimeAudioDebugSnapshot,
 ): void {
   element.textContent = [
     'AUDIO',
@@ -34,6 +39,7 @@ export function syncAudioDebugOverlay(
     `MISSING ${snapshot.missingOptionalAssetIds.join(',') || 'none'}`,
     `EVENTS ${snapshot.recentEvents.map((event) => event.type).join(',') || 'none'}`,
     `EVENT_HISTORY ${formatEventHistory(snapshot.eventHistory)}`,
+    `COMMENTARY ${formatCommentary(snapshot.commentary)}`,
     `UNLOCK_ERROR ${snapshot.lastUnlockError ?? 'none'}`,
   ].join('\n');
 }
@@ -57,4 +63,34 @@ function formatEventHistory(eventHistory: GameAudioDirectorSnapshot['eventHistor
       return `${entry.eventType}:${entry.eventId}:${asset}:${entry.triggerTimeSeconds.toFixed(2)}:${entry.status}:${reason}`;
     })
     .join(' | ');
+}
+
+function formatCommentary(snapshot: BroadcastCommentarySnapshot | undefined): string {
+  if (!snapshot) {
+    return 'none';
+  }
+
+  const current = snapshot.currentClip
+    ? `${snapshot.currentClip.category}:${snapshot.currentClip.assetId}`
+    : 'none';
+  const queue = snapshot.queue
+    .map((entry) => `${entry.category}:${entry.assetId}`)
+    .join(',') || 'none';
+  const cooldown = snapshot.remainingCooldowns
+    .map((entry) => `${entry.category}:${entry.remainingSeconds.toFixed(1)}`)
+    .join(',') || 'none';
+  const duck = snapshot.crowdDuckState.ducked
+    ? `ducked:${snapshot.crowdDuckState.duckingGain.toFixed(2)}`
+    : 'restored';
+
+  return [
+    `enabled:${snapshot.enabled}`,
+    `captions:${snapshot.captionsEnabled}`,
+    `current:${current}`,
+    `source:${snapshot.lastEventSource ?? 'none'}`,
+    `priority:${snapshot.lastPriority ?? 'none'}`,
+    `cooldown:${cooldown}`,
+    `queue:${queue}`,
+    `crowd:${duck}`,
+  ].join(' ');
 }

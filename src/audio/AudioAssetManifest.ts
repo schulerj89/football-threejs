@@ -1,3 +1,5 @@
+import { COMMENTARY_CATALOG } from './CommentaryCatalog';
+
 export type AudioBusName = 'announcer' | 'crowd' | 'gameplaySfx' | 'master' | 'ui';
 export type AudioPlaybackCategory = 'announcer' | 'crowd' | 'gameplaySfx' | 'ui';
 export type AudioLoadingStrategy = 'buffer' | 'stream';
@@ -12,6 +14,17 @@ export interface LocalAudioAsset {
   optional: boolean;
   url: string;
 }
+
+const ANNOUNCER_AUDIO_ASSETS: readonly LocalAudioAsset[] = COMMENTARY_CATALOG.map((clip) => ({
+  assetId: clip.assetId,
+  category: 'announcer',
+  defaultGain: 1,
+  loadingStrategy: 'buffer',
+  loop: false,
+  maxSimultaneousInstances: 1,
+  optional: true,
+  url: `/audio/announcer/${clip.assetId}.mp3`,
+}));
 
 export const LOCAL_AUDIO_ASSET_MANIFEST: readonly LocalAudioAsset[] = [
   {
@@ -184,6 +197,7 @@ export const LOCAL_AUDIO_ASSET_MANIFEST: readonly LocalAudioAsset[] = [
     optional: true,
     url: '/audio/crowd/runtime-test-crowd-loop.wav',
   },
+  ...ANNOUNCER_AUDIO_ASSETS,
 ] as const;
 
 export function getAudioAsset(
