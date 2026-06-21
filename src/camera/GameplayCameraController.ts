@@ -6,6 +6,7 @@ import { normalizeDirection, toPlainVector } from './CameraMath';
 import { GameplayCameraRig } from './CameraRig';
 import type {
   CinematicsSetting,
+  GameplayCameraFocus,
   GameplayCameraDebugSnapshot,
   GameplayCameraMode,
   GameplayCameraState,
@@ -35,6 +36,7 @@ export class GameplayCameraController {
   private readonly playDirection = normalizeDirection(GAMEPLAY_CAMERA_CONFIG.playDirection);
   private readonly presentationDirector: PresentationCameraDirector;
   private presentationOverrideActive = false;
+  private lastGameplayFocus: GameplayCameraFocus | null = null;
   private previousPlayState: GameplaySnapshot['playState'] | null = null;
   private resetLineOfScrimmageSeconds = 0;
   private readonly rig: GameplayCameraRig;
@@ -132,6 +134,7 @@ export class GameplayCameraController {
 
     if (this.mode === 'tacticalOrthographic') {
       this.cameraState = 'tacticalOverview';
+      this.lastGameplayFocus = null;
       this.rig.positionTacticalCamera();
     } else if (this.mode === 'cinematicBroadcast') {
       this.updateCinematicBroadcastCamera(snapshot, deltaSeconds, options);
@@ -144,13 +147,18 @@ export class GameplayCameraController {
 
   getDebugSnapshot(): GameplayCameraDebugSnapshot {
     const activeCamera = this.camera;
+    const lookTargetPosition = toPlainVector(this.rig.smoothedTarget);
 
     const baseSnapshot: GameplayCameraDebugSnapshot = {
       cameraPosition: toPlainVector(activeCamera.position),
+      focusLookAhead: this.lastGameplayFocus?.lookAhead,
+      focusPhase: this.lastGameplayFocus?.phase,
       focusPosition: toPlainVector(this.rig.smoothedFocus),
+      focusSource: this.lastGameplayFocus?.focusSource,
+      lookTargetPosition,
       mode: this.mode,
       state: this.cameraState,
-      targetPosition: toPlainVector(this.rig.smoothedTarget),
+      targetPosition: this.lastGameplayFocus?.framingTargetPosition ?? lookTargetPosition,
     };
 
     if (this.mode !== 'cinematicBroadcast' && !this.presentationOverrideActive) {
@@ -179,6 +187,7 @@ export class GameplayCameraController {
       snapshot,
     });
     this.resetLineOfScrimmageSeconds = framing.nextResetLineOfScrimmageSeconds;
+    this.lastGameplayFocus = framing;
     this.rig.applyOffensePerspective(
       framing,
       this.playDirection,
@@ -206,6 +215,7 @@ export class GameplayCameraController {
       },
     );
     this.cameraState = 'cinematicBroadcast';
+    this.lastGameplayFocus = null;
     this.rig.usePresentationTargets(this.cinematicDebug.focusTarget, this.cinematicDebug.lookTarget);
   }
 
@@ -240,6 +250,7 @@ export class GameplayCameraController {
     }
 
     this.cameraState = 'cinematicBroadcast';
+    this.lastGameplayFocus = null;
     this.rig.usePresentationTargets(this.cinematicDebug.focusTarget, this.cinematicDebug.lookTarget);
 
     if (this.mode === 'offensePerspective') {

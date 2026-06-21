@@ -19,6 +19,28 @@ export type GameplayCameraState =
   | 'resetLineOfScrimmage'
   | 'tacticalOverview';
 
+export type GameplayCameraFocusPhase =
+  | 'deadBall'
+  | 'gameOver'
+  | 'livePossession'
+  | 'passFlight'
+  | 'preSnap'
+  | 'resetLineOfScrimmage';
+
+export type GameplayCameraFocusSource =
+  | 'ball'
+  | 'carrierFallback'
+  | 'currentBallSpotFallback'
+  | 'deadBallSpot'
+  | 'inFlightStartFallback'
+  | 'nextSnapSpot'
+  | 'snapBall';
+
+export interface GameplayCameraLookAhead {
+  direction: Vector2;
+  distance: number;
+}
+
 export type PresentationOrbitShotName =
   | 'firstDownCrowdCutaway'
   | 'prePlayOrbit180'
@@ -46,7 +68,10 @@ export interface GameplayCameraDebugSnapshot {
   activeShotName?: PresentationOrbitShotName | null;
   cameraPosition: { x: number; y: number; z: number };
   formationBounds?: FieldPlaneBounds;
+  focusLookAhead?: GameplayCameraLookAhead;
+  focusPhase?: GameplayCameraFocusPhase;
   focusPosition: { x: number; y: number; z: number };
+  focusSource?: GameplayCameraFocusSource;
   lookTargetPosition?: { x: number; y: number; z: number };
   mode: GameplayCameraMode;
   orbitCenter?: { x: number; y: number; z: number } | null;
@@ -144,14 +169,30 @@ export interface PresentationCameraUpdateOptions {
 }
 
 export interface GameplayCameraFocus {
+  focusPosition: { x: number; y: number; z: number };
+  focusSource: GameplayCameraFocusSource;
   focus: { x: number; y: number; z: number };
+  framingTargetPosition?: { x: number; y: number; z: number };
+  lookAhead?: GameplayCameraLookAhead;
   nextResetLineOfScrimmageSeconds: number;
+  phase: GameplayCameraFocusPhase;
   state: GameplayCameraState;
   target: { x: number; y: number; z: number };
+  targetPosition: { x: number; y: number; z: number };
 }
 
 export interface GameplayFocusRequest {
   deltaSeconds: number;
   resetLineOfScrimmageSeconds: number;
   snapshot: GameplaySnapshot;
+}
+
+export interface CameraFocusResult {
+  focusPosition: { x: number; y: number; z: number };
+  focusSource: GameplayCameraFocusSource;
+  framingTargetPosition?: { x: number; y: number; z: number };
+  lookAhead?: GameplayCameraLookAhead;
+  phase: GameplayCameraFocusPhase;
+  state: GameplayCameraState;
+  targetPosition: { x: number; y: number; z: number };
 }

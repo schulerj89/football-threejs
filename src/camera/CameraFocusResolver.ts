@@ -1,8 +1,16 @@
 import type { GameplaySnapshot } from '../playState';
 import type { PlayerSnapshot, Vector2 } from '../playerModel';
 import { GAMEPLAY_CAMERA_CONFIG } from './CameraConfiguration';
-import type { FieldPlaneBounds, GameplayCameraFocus, GameplayFocusRequest } from './CameraTypes';
-import { clamp } from './CameraMath';
+import type {
+  CameraFocusResult,
+  FieldPlaneBounds,
+  GameplayCameraFocus,
+  GameplayCameraLookAhead,
+  GameplayFocusRequest,
+} from './CameraTypes';
+import { clamp, normalizeDirection } from './CameraMath';
+
+const DEFAULT_GAMEPLAY_FOCUS_HEIGHT = 1.1;
 
 export function resolveOffensePerspectiveFocus({
   deltaSeconds,
@@ -13,74 +21,267 @@ export function resolveOffensePerspectiveFocus({
     ? Math.max(0, resetLineOfScrimmageSeconds - deltaSeconds)
     : resetLineOfScrimmageSeconds;
 
-  if (snapshot.playState === 'dead') {
-    const deadBallSpot = snapshot.lastPlayResult?.endingBallSpot ?? snapshot.nextSnapSpot;
-    const focus = createGameplayFieldFocus(deadBallSpot.x, deadBallSpot.z, 1.1);
+  const result = resolveGameplayCameraFocus(snapshot, {
+    resetLineOfScrimmageSeconds: nextResetLineOfScrimmageSeconds,
+  });
 
-    return {
-      focus,
-      nextResetLineOfScrimmageSeconds,
-      state: 'deadBall',
-      target: createGameplayForwardTarget(focus),
-    };
+  return {
+    ...result,
+    focus: result.focusPosition,
+    nextResetLineOfScrimmageSeconds,
+    target: result.targetPosition,
+  };
+}
+
+export function resolveGameplayCameraFocus(
+  snapshot: GameplaySnapshot,
+  options: { resetLineOfScrimmageSeconds?: number } = {},
+): CameraFocusResult {
+  const ballState = snapshot.ball?.state;
+  const ballPossession = snapshot.ball?.possession;
+
+  if (snapshot.playState === 'dead') {
+    return resolveDeadBallFocus(snapshot);
   }
 
   if (snapshot.playState === 'gameOver') {
-    const focus = createGameplayFieldFocus(
-      snapshot.currentBallSpot.x,
-      snapshot.currentBallSpot.z,
-      1.1,
-    );
+    return resolveGameOverFocus(snapshot);
+  }
 
-    return {
-      focus,
-      nextResetLineOfScrimmageSeconds,
+  if (snapshot.playState === 'live' && ballState?.kind === 'inFlight') {
+    return resolvePassFlightFocus(snapshot);
+  }
+
+  if (snapshot.playState === 'live' && ballPossession?.kind === 'player') {
+    return resolveLivePossessionFocus(snapshot);
+  }
+
+  return resolvePreSnapFocus(snapshot, (options.resetLineOfScrimmageSeconds ?? 0) > 0);
+}
+
+// Missing or non-finite ball coordinates fall back in snapshot order only:
+// pre-snap/reset -> nextSnapSpot; live possession -> carrier/player/current spot;
+// pass flight -> in-flight start/current spot; dead -> exactDeadBallSpot/result/ball/current spot.
+function resolveDeadBallFocus(snapshot: GameplaySnapshot): CameraFocusResult {
+  const deadBallSpot =
+    toFiniteFocus(snapshot.exactDeadBallSpot) ??
+    toFiniteFocus(snapshot.lastPlayResult?.endingBallSpot);
+  if (deadBallSpot) {
+    return createCameraFocusResult({
+      focusPosition: deadBallSpot,
+      focusSource: 'deadBallSpot',
+      phase: 'deadBall',
+      state: 'deadBall',
+    });
+  }
+
+  const ballFocus = toFiniteFocus(snapshot.ball?.position);
+  if (ballFocus) {
+    return createCameraFocusResult({
+      focusPosition: ballFocus,
+      focusSource: 'ball',
+      phase: 'deadBall',
+      state: 'deadBall',
+    });
+  }
+
+  return createCameraFocusResult({
+    focusPosition: requireFallbackFocus(snapshot.nextBallSpot, snapshot.currentBallSpot, snapshot.nextSnapSpot),
+    focusSource: 'currentBallSpotFallback',
+    phase: 'deadBall',
+    state: 'deadBall',
+  });
+}
+
+function resolveGameOverFocus(snapshot: GameplaySnapshot): CameraFocusResult {
+  const ballFocus = toFiniteFocus(snapshot.ball?.position);
+  if (ballFocus) {
+    return createCameraFocusResult({
+      focusPosition: ballFocus,
+      focusSource: 'ball',
+      phase: 'gameOver',
       state: 'gameOver',
-      target: createGameplayForwardTarget(focus),
-    };
+    });
   }
 
-  if (snapshot.playState === 'live' && snapshot.ball.state.kind === 'inFlight') {
-    const focus = createGameplayFieldFocus(
-      snapshot.ball.position.x,
-      snapshot.ball.position.z,
-      Math.max(1.1, snapshot.ball.position.y),
-    );
-    const target = createGameplayFieldFocus(
-      snapshot.ball.state.target.x,
-      snapshot.ball.state.target.z,
-      Math.max(1.1, snapshot.ball.state.target.y),
-    );
+  return createCameraFocusResult({
+    focusPosition: requireFallbackFocus(snapshot.currentBallSpot, snapshot.nextSnapSpot),
+    focusSource: 'currentBallSpotFallback',
+    phase: 'gameOver',
+    state: 'gameOver',
+  });
+}
 
-    return {
-      focus,
-      nextResetLineOfScrimmageSeconds,
-      state: 'passFlight',
-      target,
-    };
-  }
+function resolvePassFlightFocus(snapshot: GameplaySnapshot): CameraFocusResult {
+  const inFlightState = snapshot.ball.state.kind === 'inFlight' ? snapshot.ball.state : null;
+  const focusPosition =
+    toFiniteFocus(snapshot.ball.position) ??
+    toFiniteFocus(inFlightState?.start) ??
+    requireFallbackFocus(snapshot.currentBallSpot, snapshot.nextSnapSpot);
+  const focusSource = toFiniteFocus(snapshot.ball.position)
+    ? 'ball'
+    : toFiniteFocus(inFlightState?.start)
+      ? 'inFlightStartFallback'
+      : 'currentBallSpotFallback';
+  const lookAhead = createLookAhead(
+    GAMEPLAY_CAMERA_CONFIG.offensePerspective.passFlightLookAhead,
+    resolvePassFlightDirection(inFlightState),
+  );
+  const framingTargetPosition = toFiniteFocus(inFlightState?.target) ?? undefined;
 
-  if (snapshot.playState === 'live' && snapshot.ball.possession.kind === 'player') {
-    const carrier = findPlayer(snapshot.players, snapshot.ball.possession.playerId) ?? snapshot.player;
-    const focus = createGameplayFieldFocus(carrier.position.x, carrier.position.z, 1.25);
+  return createCameraFocusResult({
+    focusPosition,
+    focusSource,
+    framingTargetPosition,
+    lookAhead,
+    phase: 'passFlight',
+    state: 'passFlight',
+  });
+}
 
-    return {
-      focus,
-      nextResetLineOfScrimmageSeconds,
+function resolveLivePossessionFocus(snapshot: GameplaySnapshot): CameraFocusResult {
+  const ballFocus = toFiniteFocus(snapshot.ball?.position);
+  if (ballFocus) {
+    return createCameraFocusResult({
+      focusPosition: ballFocus,
+      focusSource: 'ball',
+      lookAhead: createLookAhead(
+        GAMEPLAY_CAMERA_CONFIG.offensePerspective.liveBallLookAhead,
+        GAMEPLAY_CAMERA_CONFIG.playDirection,
+      ),
+      phase: 'livePossession',
       state: 'carrierFollow',
-      target: createGameplayForwardTarget(focus),
-    };
+    });
   }
 
-  const formationFocusX = calculateFormationFocusX(snapshot.players);
-  const focus = createGameplayFieldFocus(formationFocusX, snapshot.drive.lineOfScrimmage.z, 1.15);
+  const carrierId = snapshot.ball?.possession.kind === 'player'
+    ? snapshot.ball.possession.playerId
+    : null;
+  const carrier = carrierId ? findPlayer(snapshot.players, carrierId) : null;
+  const carrierFocus = toFiniteFocus(carrier?.position ?? snapshot.player?.position, 1.25);
+  if (carrierFocus) {
+    return createCameraFocusResult({
+      focusPosition: carrierFocus,
+      focusSource: 'carrierFallback',
+      lookAhead: createLookAhead(
+        GAMEPLAY_CAMERA_CONFIG.offensePerspective.liveBallLookAhead,
+        GAMEPLAY_CAMERA_CONFIG.playDirection,
+      ),
+      phase: 'livePossession',
+      state: 'carrierFollow',
+    });
+  }
+
+  return createCameraFocusResult({
+    focusPosition: requireFallbackFocus(snapshot.currentBallSpot, snapshot.nextSnapSpot),
+    focusSource: 'currentBallSpotFallback',
+    lookAhead: createLookAhead(
+      GAMEPLAY_CAMERA_CONFIG.offensePerspective.liveBallLookAhead,
+      GAMEPLAY_CAMERA_CONFIG.playDirection,
+    ),
+    phase: 'livePossession',
+    state: 'carrierFollow',
+  });
+}
+
+function resolvePreSnapFocus(snapshot: GameplaySnapshot, isResettingLineOfScrimmage: boolean): CameraFocusResult {
+  const focusPosition = requireFallbackFocus(snapshot.nextSnapSpot, snapshot.currentBallSpot);
+
+  return createCameraFocusResult({
+    focusPosition,
+    focusSource: isResettingLineOfScrimmage ? 'nextSnapSpot' : 'snapBall',
+    phase: isResettingLineOfScrimmage ? 'resetLineOfScrimmage' : 'preSnap',
+    state: isResettingLineOfScrimmage ? 'resetLineOfScrimmage' : 'preSnapFormation',
+  });
+}
+
+interface CameraFocusResultInput {
+  focusPosition: { x: number; y: number; z: number };
+  focusSource: CameraFocusResult['focusSource'];
+  framingTargetPosition?: { x: number; y: number; z: number };
+  lookAhead?: GameplayCameraLookAhead;
+  phase: CameraFocusResult['phase'];
+  state: CameraFocusResult['state'];
+}
+
+function createCameraFocusResult(input: CameraFocusResultInput): CameraFocusResult {
+  const targetLookAhead = input.lookAhead ??
+    createLookAhead(
+      GAMEPLAY_CAMERA_CONFIG.offensePerspective.forwardLookAhead,
+      GAMEPLAY_CAMERA_CONFIG.playDirection,
+    );
 
   return {
-    focus,
-    nextResetLineOfScrimmageSeconds,
-    state: nextResetLineOfScrimmageSeconds > 0 ? 'resetLineOfScrimmage' : 'preSnapFormation',
-    target: createGameplayForwardTarget(focus),
+    ...input,
+    targetPosition: createGameplayLookTarget(input.focusPosition, targetLookAhead),
   };
+}
+
+function createLookAhead(distance: number, direction: Vector2): GameplayCameraLookAhead {
+  return {
+    direction: normalizeDirection(direction),
+    distance,
+  };
+}
+
+function resolvePassFlightDirection(
+  inFlightState: Extract<GameplaySnapshot['ball']['state'], { kind: 'inFlight' }> | null,
+): Vector2 {
+  const start = toFiniteFocus(inFlightState?.start);
+  const target = toFiniteFocus(inFlightState?.target);
+
+  if (!start || !target) {
+    return GAMEPLAY_CAMERA_CONFIG.playDirection;
+  }
+
+  return normalizeDirection({
+    x: target.x - start.x,
+    z: target.z - start.z,
+  });
+}
+
+function createGameplayLookTarget(
+  focus: { x: number; y: number; z: number },
+  lookAhead: GameplayCameraLookAhead,
+): { x: number; y: number; z: number } {
+  return createGameplayFieldFocus(
+    focus.x + lookAhead.direction.x * lookAhead.distance,
+    focus.z + lookAhead.direction.z * lookAhead.distance,
+    focus.y,
+  );
+}
+
+function toFiniteFocus(
+  point: { x?: unknown; y?: unknown; z?: unknown } | null | undefined,
+  fallbackY = DEFAULT_GAMEPLAY_FOCUS_HEIGHT,
+): { x: number; y: number; z: number } | null {
+  if (!isFiniteNumber(point?.x) || !isFiniteNumber(point?.z)) {
+    return null;
+  }
+
+  return createGameplayFieldFocus(
+    point.x,
+    point.z,
+    isFiniteNumber(point.y) ? point.y : fallbackY,
+  );
+}
+
+function requireFallbackFocus(
+  ...spots: ({ x?: unknown; y?: unknown; z?: unknown } | null | undefined)[]
+): { x: number; y: number; z: number } {
+  for (const spot of spots) {
+    const focus = toFiniteFocus(spot);
+
+    if (focus) {
+      return focus;
+    }
+  }
+
+  return createGameplayFieldFocus(0, 0, DEFAULT_GAMEPLAY_FOCUS_HEIGHT);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
 export function calculateFormationBounds(players: PlayerSnapshot[]): FieldPlaneBounds {
@@ -186,34 +387,12 @@ export function createForwardTarget(
   );
 }
 
-function createGameplayForwardTarget(
-  focus: { x: number; y: number; z: number },
-): { x: number; y: number; z: number } {
-  return {
-    x: focus.x + GAMEPLAY_CAMERA_CONFIG.playDirection.x *
-      GAMEPLAY_CAMERA_CONFIG.offensePerspective.forwardLookAhead,
-    y: 1.1,
-    z: focus.z + GAMEPLAY_CAMERA_CONFIG.playDirection.z *
-      GAMEPLAY_CAMERA_CONFIG.offensePerspective.forwardLookAhead,
-  };
-}
-
 function createGameplayFieldFocus(
   x: number,
   z: number,
   y: number,
 ): { x: number; y: number; z: number } {
   return createFieldFocus(x, z, y, GAMEPLAY_CAMERA_CONFIG.offensePerspective);
-}
-
-function calculateFormationFocusX(players: PlayerSnapshot[]): number {
-  if (players.length === 0) {
-    return 0;
-  }
-
-  const playerXs = players.map((player) => player.position.x);
-
-  return (Math.min(...playerXs) + Math.max(...playerXs)) / 2;
 }
 
 function findPlayer(players: PlayerSnapshot[], playerId: string): PlayerSnapshot | null {
