@@ -189,7 +189,7 @@ export class PresentationShotFactory {
     };
   }
 
-  private createPrePlayOrbitCenter(snapshot: GameplaySnapshot): THREE.Vector3 {
+  createPrePlayOrbitCenter(snapshot: GameplaySnapshot): THREE.Vector3 {
     const snap = snapshot.nextSnapSpot ?? snapshot.currentBallSpot;
 
     return new THREE.Vector3(snap.x, 1.45, snap.z);

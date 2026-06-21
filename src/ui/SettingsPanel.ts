@@ -29,6 +29,7 @@ export class SettingsPanel {
   private readonly qualityModeSelect = document.createElement('select');
   private readonly debugToolsInput = document.createElement('input');
   private readonly cameraSelect = document.createElement('select');
+  private readonly cameraDescription = document.createElement('p');
   private readonly cinematicsSelect = document.createElement('select');
   private readonly crowdVisualsInput = document.createElement('input');
   private readonly stadiumInput = document.createElement('input');
@@ -105,13 +106,16 @@ export class SettingsPanel {
     custom.className = 'game-setup-custom';
     const customTitle = document.createElement('h3');
     customTitle.textContent = 'Custom Settings';
+    const cameraRow = this.createSelectRow('Gameplay camera', this.cameraSelect, [
+      ['offense', 'Offense'],
+      ['tactical', 'Tactical'],
+      ['cinematic', 'Cinematic'],
+    ]);
+    this.cameraDescription.className = 'settings-note';
     custom.append(
       customTitle,
-      this.createSelectRow('Gameplay camera', this.cameraSelect, [
-        ['offense', 'Offense'],
-        ['tactical', 'Tactical'],
-        ['cinematic', 'Cinematic'],
-      ]),
+      cameraRow,
+      this.cameraDescription,
       this.createSelectRow('Cinematics', this.cinematicsSelect, [
         ['off', 'Off'],
         ['brief', 'Brief'],
@@ -305,6 +309,7 @@ export class SettingsPanel {
     this.qualityModeSelect.value = this.settings.qualityMode;
     this.debugToolsInput.checked = this.settings.debugToolsEnabled;
     this.cameraSelect.value = this.settings.gameplayCamera;
+    this.cameraDescription.textContent = getGameplayCameraDescription(this.settings.gameplayCamera);
     this.cinematicsSelect.value = this.settings.cinematics;
     this.crowdVisualsInput.checked = this.settings.crowdVisualsEnabled;
     this.stadiumInput.checked = this.settings.stadiumEnabled;
@@ -337,4 +342,16 @@ export class SettingsPanel {
     }
     this.root.dataset.preset = this.settings.preset;
   }
+}
+
+function getGameplayCameraDescription(mode: ExperienceCameraMode): string {
+  if (mode === 'tactical') {
+    return 'Fixed tactical overview; cinematic camera cuts disabled.';
+  }
+
+  if (mode === 'cinematic') {
+    return 'Broadcast gameplay and full presentation camera language.';
+  }
+
+  return 'Behind-offense gameplay camera; post-score presentation optional.';
 }

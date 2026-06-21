@@ -4,7 +4,9 @@ import { GAMEPLAY_CAMERA_CONFIG, PRESENTATION_CAMERA_CONFIG } from './CameraConf
 import { resolveOffensePerspectiveFocus } from './CameraFocusResolver';
 import { normalizeDirection, toPlainVector } from './CameraMath';
 import { GameplayCameraRig } from './CameraRig';
+import { resolveCameraShotPolicy } from './CameraShotPolicy';
 import type {
+  CameraShotPolicy,
   CameraTargetChangeReason,
   CinematicsSetting,
   GameplayCameraFocus,
@@ -84,13 +86,12 @@ export class GameplayCameraController {
     }
 
     this.mode = mode;
+    this.presentationOverrideActive = false;
+    this.presentationDirector.reset();
+    this.cinematicDebug = this.presentationDirector.getDebugSnapshot();
 
     if (mode === 'offensePerspective') {
       this.isPerspectiveInitialized = false;
-    }
-
-    if (mode === 'cinematicBroadcast') {
-      this.presentationDirector.reset();
     }
 
     if (snapshot) {
@@ -224,6 +225,7 @@ export class GameplayCameraController {
       deltaSeconds,
       {
         aspectRatio: this.rig.activeAspectRatio,
+        cameraShotPolicy: this.getCameraShotPolicy(),
         crowdCutawaysEnabled: options.crowdCutawaysEnabled,
         presentationEvents: options.presentationEvents,
         restoreCameraMode: this.mode,
@@ -239,10 +241,17 @@ export class GameplayCameraController {
     deltaSeconds: number,
     options: GameplayCameraUpdateOptions,
   ): boolean {
+    const policy = this.getCameraShotPolicy();
+    const allowDebugPreview = this.shotPreview !== null;
+
     if (
       this.mode === 'cinematicBroadcast' ||
-      (this.cinematics === 'off' && !this.shotPreview)
+      (!policy.allowPerspectiveOverride && !allowDebugPreview)
     ) {
+      if (this.presentationOverrideActive) {
+        this.presentationDirector.reset();
+        this.cinematicDebug = this.presentationDirector.getDebugSnapshot();
+      }
       this.presentationOverrideActive = false;
       return false;
     }
@@ -253,6 +262,7 @@ export class GameplayCameraController {
       deltaSeconds,
       {
         aspectRatio: this.rig.activeAspectRatio,
+        cameraShotPolicy: policy,
         crowdCutawaysEnabled: options.crowdCutawaysEnabled,
         presentationEvents: options.presentationEvents,
         restoreCameraMode: this.mode,
@@ -273,6 +283,10 @@ export class GameplayCameraController {
     }
 
     return true;
+  }
+
+  private getCameraShotPolicy(): CameraShotPolicy {
+    return resolveCameraShotPolicy(this.mode, this.cinematics);
   }
 
   private createStabilityDebugSnapshot(): GameplayCameraDebugSnapshot['stability'] {

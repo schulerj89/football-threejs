@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.5] - 2026-06-21
+
+### Fixed
+
+- Added an explicit camera-shot policy so tactical, offense, and cinematic camera modes each allow only the cinematic shots that match their presentation role.
+- Prevented tactical orthographic mode from activating presentation-camera overrides, perspective camera swaps, automatic pre-play orbits, and crowd cutaways.
+- Limited offense perspective mode to normal behind-offense gameplay framing plus optional post-score presentation, with no automatic pre-play formation orbit.
+- Restored full pre-play orbit eligibility only for cinematic broadcast mode with full cinematics enabled, while keeping explicit shot-preview debugging available.
+- Reset incompatible presentation-shot state when camera modes change so switching into tactical immediately returns to the orthographic overview.
+- Clarified gameplay-camera descriptions in the settings panel.
+
+### Tests
+
+- Added camera-policy coverage for tactical, offense, and cinematic camera modes across cinematics settings.
+- Added regression coverage proving tactical remains orthographic under touchdown presentation conditions, cinematic full can still run the pre-play orbit, and switching into tactical cancels an active override.
+
 ## [0.51.4] - 2026-06-21
 
 ### Fixed

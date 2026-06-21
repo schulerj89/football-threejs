@@ -7,6 +7,7 @@ import {
   resolveGameplayCameraMode,
   resolvePresentationShotPreview,
 } from '../src/camera/GameplayCameraController';
+import { resolveCameraShotPolicy } from '../src/camera/CameraShotPolicy';
 import { PRESENTATION_CAMERA_CONFIG } from '../src/camera/PresentationCameraDirector';
 import {
   attemptPass,
@@ -14,6 +15,8 @@ import {
   selectPlay,
   snapshotGameplayModel,
   startPlay,
+  type GameplaySnapshot,
+  type PlayResultType,
 } from '../src/playState';
 import {
   createFormationPreviewModel,
@@ -38,6 +41,35 @@ describe('gameplay camera controller', () => {
     expect(resolvePresentationShotPreview('prePlayOrbit180')).toBe('prePlayOrbit180');
     expect(resolvePresentationShotPreview('touchdownOrbit360')).toBe('touchdownOrbit360');
     expect(resolvePresentationShotPreview('bad')).toBeNull();
+  });
+
+  it('resolves camera shot eligibility by camera mode', () => {
+    expect(resolveCameraShotPolicy('tacticalOrthographic', 'full')).toMatchObject({
+      allowCrowdCutaway: false,
+      allowPerspectiveOverride: false,
+      allowPostPlayOrbit: false,
+      allowPrePlayOrbit: false,
+    });
+    expect(resolveCameraShotPolicy('offensePerspective', 'brief')).toMatchObject({
+      allowCrowdCutaway: false,
+      allowPerspectiveOverride: true,
+      allowPostPlayOrbit: true,
+      allowPrePlayOrbit: false,
+    });
+    expect(resolveCameraShotPolicy('offensePerspective', 'full')).toMatchObject({
+      allowCrowdCutaway: true,
+      allowPrePlayOrbit: false,
+    });
+    expect(resolveCameraShotPolicy('cinematicBroadcast', 'off')).toMatchObject({
+      allowCrowdCutaway: false,
+      allowPostPlayOrbit: false,
+      allowPrePlayOrbit: false,
+    });
+    expect(resolveCameraShotPolicy('cinematicBroadcast', 'full')).toMatchObject({
+      allowCrowdCutaway: true,
+      allowPostPlayOrbit: true,
+      allowPrePlayOrbit: true,
+    });
   });
 
   it('uses the tactical orthographic camera by default', () => {
@@ -184,6 +216,28 @@ describe('gameplay camera controller', () => {
     });
   });
 
+  it('keeps tactical mode orthographic under every cinematics setting', () => {
+    const touchdownSnapshot = createDeadSnapshot('touchdown', { x: 2, z: 50 });
+
+    for (const cinematics of ['off', 'brief', 'full'] as const) {
+      const controller = new GameplayCameraController({
+        cinematics,
+        height: 900,
+        initialMode: 'tacticalOrthographic',
+        width: 1440,
+      });
+
+      controller.update(touchdownSnapshot, 0);
+
+      expect(controller.camera).toBeInstanceOf(THREE.OrthographicCamera);
+      expect(controller.getDebugSnapshot()).toMatchObject({
+        mode: 'tacticalOrthographic',
+        state: 'tacticalOverview',
+      });
+      expect(controller.getDebugSnapshot().activeShotName ?? null).toBeNull();
+    }
+  });
+
   it('does not start the pre-play orbit during normal pre-snap play selection', () => {
     const gameplay = createGameplayModel({ playbookId: '7v7' });
     const controller = new GameplayCameraController({
@@ -199,6 +253,68 @@ describe('gameplay camera controller', () => {
     expect(selectPlay(gameplay, 'quick-pass-7')).toBe(true);
     controller.update(snapshotGameplayModel(gameplay), 0.016);
 
+    expect(controller.getDebugSnapshot().activeShotName ?? null).toBeNull();
+  });
+
+  it('permits the pre-play orbit only for cinematic full mode', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+    const snapshot = snapshotGameplayModel(gameplay);
+    const tactical = new GameplayCameraController({
+      cinematics: 'full',
+      height: 900,
+      initialMode: 'tacticalOrthographic',
+      width: 1440,
+    });
+    const offense = new GameplayCameraController({
+      cinematics: 'full',
+      height: 900,
+      initialMode: 'offensePerspective',
+      width: 1440,
+    });
+    const cinematicBrief = new GameplayCameraController({
+      cinematics: 'brief',
+      height: 900,
+      initialMode: 'cinematicBroadcast',
+      width: 1440,
+    });
+    const cinematicFull = new GameplayCameraController({
+      cinematics: 'full',
+      height: 900,
+      initialMode: 'cinematicBroadcast',
+      width: 1440,
+    });
+
+    tactical.update(snapshot, 0);
+    offense.update(snapshot, 0);
+    cinematicBrief.update(snapshot, 0);
+    cinematicFull.update(snapshot, 0);
+
+    expect(tactical.getDebugSnapshot().activeShotName ?? null).toBeNull();
+    expect(offense.getDebugSnapshot().activeShotName ?? null).toBeNull();
+    expect(cinematicBrief.getDebugSnapshot().activeShotName ?? null).toBeNull();
+    expect(cinematicFull.getDebugSnapshot().activeShotName).toBe('prePlayOrbit180');
+  });
+
+  it('cancels a presentation override when switching into tactical mode', () => {
+    const snapshot = createDeadSnapshot('touchdown', { x: -1, z: 50 });
+    const controller = new GameplayCameraController({
+      cinematics: 'full',
+      height: 900,
+      initialMode: 'offensePerspective',
+      width: 1440,
+    });
+
+    controller.update(snapshot, 0);
+    expect(controller.camera).toBeInstanceOf(THREE.PerspectiveCamera);
+    expect(controller.getDebugSnapshot().activeShotName).toBe('touchdownOrbit360');
+
+    controller.setMode('tacticalOrthographic', snapshot);
+
+    expect(controller.camera).toBeInstanceOf(THREE.OrthographicCamera);
+    expect(controller.getDebugSnapshot()).toMatchObject({
+      mode: 'tacticalOrthographic',
+      state: 'tacticalOverview',
+    });
     expect(controller.getDebugSnapshot().activeShotName ?? null).toBeNull();
   });
 
@@ -445,4 +561,27 @@ function moveGameplayToSnapLane(
   gameplay.nextSnapSpot = { x, z: gameplay.nextSnapSpot.z };
   gameplay.drive.lineOfScrimmage = { x, z: gameplay.drive.lineOfScrimmage.z };
   gameplay.drive.snapLane = lane;
+}
+
+function createDeadSnapshot(
+  resultType: PlayResultType,
+  endingBallSpot: { x: number; z: number },
+): GameplaySnapshot {
+  const gameplay = createGameplayModel({ playbookId: '5v5' });
+  const snapshot = snapshotGameplayModel(gameplay);
+
+  return {
+    ...snapshot,
+    exactDeadBallSpot: endingBallSpot,
+    lastPlayResult: {
+      endingBallSpot,
+      id: 71,
+      reason: resultType,
+      scoringTeam: resultType === 'touchdown' ? 'offense' : null,
+      startingBallSpot: snapshot.currentBallSpot,
+      type: resultType,
+      yardsGained: endingBallSpot.z - snapshot.currentBallSpot.z,
+    },
+    playState: 'dead',
+  };
 }

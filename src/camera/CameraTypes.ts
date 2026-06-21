@@ -47,6 +47,14 @@ export type PresentationOrbitShotName =
   | 'touchdownCrowdCutaway'
   | 'touchdownOrbit360';
 
+export interface CameraShotPolicy {
+  allowCrowdCutaway: boolean;
+  allowPerspectiveOverride: boolean;
+  allowPostPlayOrbit: boolean;
+  allowPrePlayOrbit: boolean;
+  allowSubtleSettle: boolean;
+}
+
 export type PresentationCameraPhase =
   | 'deadBallResult'
   | 'liveCarrier'
@@ -194,6 +202,7 @@ export interface PresentationCameraDirectorOptions {
 export interface PresentationCameraUpdateOptions {
   aspectRatio?: number;
   crowdCutawaysEnabled?: boolean;
+  cameraShotPolicy?: CameraShotPolicy;
   presentationEvents?: readonly PresentationAudioEvent[];
   restoreCameraMode?: string;
 }

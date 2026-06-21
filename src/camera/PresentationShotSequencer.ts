@@ -1,6 +1,7 @@
 import type { PresentationAudioEvent } from '../audio/PresentationEventBridge';
 import type { GameplaySnapshot, PlayState } from '../playState';
 import type {
+  CameraShotPolicy,
   CinematicsSetting,
   FieldPlaneBounds,
   PresentationCameraConfig,
@@ -8,6 +9,7 @@ import type {
   PresentationCameraUpdateOptions,
   PresentationOrbitShotName,
 } from './CameraTypes';
+import { isPresentationShotAllowed } from './CameraShotPolicy';
 import type { ActiveOrbitShot, PresentationCameraShot } from './PresentationShotDefinitions';
 import { PresentationShotFactory } from './PresentationShotDefinitions';
 
@@ -96,13 +98,23 @@ export class PresentationShotSequencer {
     deltaSeconds: number,
     options: PresentationCameraUpdateOptions,
   ): PresentationCameraShot | null {
+    const policy = this.resolveShotPolicy(options);
+
+    if (
+      this.activeOrbitShot &&
+      !this.activeOrbitShot.preview &&
+      !isPresentationShotAllowed(this.activeOrbitShot.name, policy)
+    ) {
+      this.activeOrbitShot = null;
+    }
+
     if (this.activeOrbitShot?.name === 'prePlayOrbit180' && snapshot.playState !== 'preSnap') {
       this.markOrbitShotCompleted(this.activeOrbitShot);
       this.activeOrbitShot = null;
     }
 
     if (!this.activeOrbitShot) {
-      this.maybeStartOrbitShot(snapshot, formationBounds, options);
+      this.maybeStartOrbitShot(snapshot, formationBounds, options, policy);
     }
 
     if (!this.activeOrbitShot) {
@@ -219,6 +231,7 @@ export class PresentationShotSequencer {
     snapshot: GameplaySnapshot,
     _formationBounds: FieldPlaneBounds,
     options: PresentationCameraUpdateOptions,
+    policy: CameraShotPolicy,
   ): void {
     if (this.shotPreview) {
       if (this.completedPreviewShotName === this.shotPreview) {
@@ -239,7 +252,8 @@ export class PresentationShotSequencer {
       cutawayEvent &&
       snapshot.playState === 'dead' &&
       this.cinematics === 'full' &&
-      options.crowdCutawaysEnabled !== false
+      options.crowdCutawaysEnabled !== false &&
+      policy.allowCrowdCutaway
     ) {
       const cutawayName = cutawayEvent.type === 'touchdown'
         ? 'touchdownCrowdCutaway'
@@ -265,6 +279,20 @@ export class PresentationShotSequencer {
     }
 
     if (snapshot.playState === 'preSnap') {
+      if (!policy.allowPrePlayOrbit) {
+        return;
+      }
+
+      const prePlayKey = `prePlayOrbit180:${createPreSnapAnchorKey(snapshot)}`;
+      if (!this.completedEventShotKeys.has(prePlayKey)) {
+        this.activeOrbitShot = {
+          elapsedSeconds: 0,
+          key: prePlayKey,
+          lockedCenter: this.shotFactory.createPrePlayOrbitCenter(snapshot),
+          name: 'prePlayOrbit180',
+          preview: false,
+        };
+      }
       return;
     }
 
@@ -273,6 +301,7 @@ export class PresentationShotSequencer {
       : null;
     if (
       snapshot.playState === 'dead' &&
+      policy.allowPostPlayOrbit &&
       touchdownResultId !== null &&
       touchdownResultId !== this.lastCompletedTouchdownResultId
     ) {
@@ -287,6 +316,16 @@ export class PresentationShotSequencer {
     }
   }
 
+  private resolveShotPolicy(options: PresentationCameraUpdateOptions): CameraShotPolicy {
+    return options.cameraShotPolicy ?? {
+      allowCrowdCutaway: this.cinematics === 'full',
+      allowPerspectiveOverride: this.cinematics !== 'off',
+      allowPostPlayOrbit: this.cinematics !== 'off',
+      allowPrePlayOrbit: false,
+      allowSubtleSettle: true,
+    };
+  }
+
   private markOrbitShotCompleted(activeShot: ActiveOrbitShot): void {
     if (activeShot.preview) {
       this.completedPreviewShotName = activeShot.name;
@@ -297,6 +336,11 @@ export class PresentationShotSequencer {
       activeShot.name === 'firstDownCrowdCutaway' ||
       activeShot.name === 'touchdownCrowdCutaway'
     ) {
+      this.completedEventShotKeys.add(activeShot.key);
+      return;
+    }
+
+    if (activeShot.name === 'prePlayOrbit180') {
       this.completedEventShotKeys.add(activeShot.key);
       return;
     }
