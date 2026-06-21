@@ -1,4 +1,10 @@
 import * as THREE from 'three';
+import {
+  SKIN_TONE_PALETTE,
+  resolvePlayerAppearance,
+  type PlayerAppearance,
+  type SkinToneId,
+} from './playerAppearance';
 import type { PlayerModel, PlayerRole, PlayerTeam } from './playerModel';
 
 const PLAYER_CENTER_Y = 1.1;
@@ -34,6 +40,13 @@ export interface PlayerBodyDimensions {
   helmetOffsetY: number;
   helmetOffsetZ: number;
   helmetScale: number;
+  headCenterY: number;
+  headCenterZ: number;
+  headRadius: number;
+  neckCenterY: number;
+  neckCenterZ: number;
+  neckHeight: number;
+  neckRadius: number;
   radialSegments: number;
   limbHeightSegments: number;
   torsoHeightSegments: number;
@@ -56,10 +69,14 @@ export interface PlayerBodyVisualSnapshot {
   bodyStyle: PlayerBodyVisualStyle;
   bodyTriangleCount: number;
   combinedBounds: PlayerVisualBoundsSnapshot;
+  headBounds: PlayerVisualBoundsSnapshot | null;
+  headHelmetClearance: number | null;
+  appearance: PlayerAppearance;
   helmetBounds: PlayerVisualBoundsSnapshot | null;
   helmetShoulderVerticalGap: number | null;
   meshesPerPlayer: number;
   minimumBodyY: number;
+  neckBounds: PlayerVisualBoundsSnapshot | null;
   playerId: string;
   shoulderWidth: number;
   totalHeight: number;
@@ -92,18 +109,27 @@ export const PLAYER_BODY_DIMENSIONS: PlayerBodyDimensions = {
   helmetOffsetY: 0.84,
   helmetOffsetZ: 0,
   helmetScale: 0.38,
+  headCenterY: -0.12,
+  headCenterZ: 0.06,
+  headRadius: 0.16,
+  neckCenterY: -0.225,
+  neckCenterZ: 0.025,
+  neckHeight: 0.14,
+  neckRadius: 0.075,
   radialSegments: 8,
   limbHeightSegments: 3,
   torsoHeightSegments: 2,
 };
 
 const BODY_PART_NAMES = {
+  head: 'head',
   headAnchor: PLAYER_HEAD_ANCHOR_NAME,
   leftArm: 'leftArm',
   leftArmPivot: 'leftArmPivot',
   leftFoot: 'leftFoot',
   leftLeg: 'leftLeg',
   leftLegPivot: 'leftLegPivot',
+  neck: 'neck',
   rightArm: 'rightArm',
   rightArmPivot: 'rightArmPivot',
   rightFoot: 'rightFoot',
@@ -125,21 +151,20 @@ const PLAYER_ROLE_COLORS: Record<PlayerRole, number> = {
 const PLAYER_UNIFORM_COLORS = {
   defense: {
     jersey: 0xf2f4f6,
-    limbs: 0x9a6f55,
     pants: 0xb83737,
     shoes: 0x1c2228,
     trim: 0x24282e,
   },
   offense: {
     jersey: 0x2f66d8,
-    limbs: 0x9a6f55,
     pants: 0xf2f4f6,
     shoes: 0x1c2228,
     trim: 0xdfe8f5,
   },
 } as const;
 
-type UniformPart = 'jersey' | 'limbs' | 'pants' | 'shoes' | 'trim';
+type UniformClothPart = keyof typeof PLAYER_UNIFORM_COLORS.offense;
+type UniformPart = UniformClothPart | 'skin';
 
 const ARM_X = PLAYER_BODY_DIMENSIONS.shoulderWidth / 2 - PLAYER_BODY_DIMENSIONS.armInsetX;
 const FOOT_DEPTH = PLAYER_BODY_DIMENSIONS.footLength;
@@ -164,12 +189,20 @@ const sharedGeometry = {
     PLAYER_BODY_DIMENSIONS.footHeight,
     FOOT_DEPTH,
   ),
+  head: new THREE.IcosahedronGeometry(PLAYER_BODY_DIMENSIONS.headRadius, 1),
   leg: new THREE.CylinderGeometry(
     PLAYER_BODY_DIMENSIONS.legRadius * 0.85,
     PLAYER_BODY_DIMENSIONS.legRadius,
     PLAYER_BODY_DIMENSIONS.legLength,
     PLAYER_BODY_DIMENSIONS.radialSegments,
     PLAYER_BODY_DIMENSIONS.limbHeightSegments,
+  ),
+  neck: new THREE.CylinderGeometry(
+    PLAYER_BODY_DIMENSIONS.neckRadius * 0.9,
+    PLAYER_BODY_DIMENSIONS.neckRadius,
+    PLAYER_BODY_DIMENSIONS.neckHeight,
+    PLAYER_BODY_DIMENSIONS.radialSegments,
+    1,
   ),
   shoulderPads: new THREE.BoxGeometry(
     PLAYER_BODY_DIMENSIONS.shoulderWidth,
@@ -200,6 +233,7 @@ export function createPlaceholderPlayerVisual(
   const group = new THREE.Group();
   group.name = player ? `player-${player.id}` : 'placeholder-player';
   group.userData.testId = player ? `player-${player.id}` : 'placeholder-player';
+  group.userData.sourcePlayerId = player?.id ?? 'placeholder-player';
   group.userData.playerBodyStyle = bodyStyle;
   group.userData.debugRoleColors = debugRoleColors;
 
@@ -217,6 +251,7 @@ export function syncPlayerVisual(
   playerModel: PlayerModel,
   options: Pick<PlayerVisualOptions, 'debugRoleColors'> = {},
 ): void {
+  playerVisual.userData.sourcePlayerId = playerModel.id;
   playerVisual.position.set(playerModel.position.x, PLAYER_CENTER_Y, playerModel.position.z);
   playerVisual.rotation.y = playerModel.facingRadians;
   syncPlayerBodyMaterials(playerVisual, playerModel, options);
@@ -258,19 +293,29 @@ export function getPlayerBodyVisualSnapshot(playerVisual: THREE.Object3D): Playe
   const combinedBounds = new THREE.Box3().setFromObject(playerVisual);
   const helmet = playerVisual.getObjectByName('low-poly-helmet');
   const helmetBounds = helmet ? new THREE.Box3().setFromObject(helmet) : null;
+  const head = playerVisual.getObjectByName(BODY_PART_NAMES.head);
+  const headBounds = head ? new THREE.Box3().setFromObject(head) : null;
+  const neck = playerVisual.getObjectByName(BODY_PART_NAMES.neck);
+  const neckBounds = neck ? new THREE.Box3().setFromObject(neck) : null;
   const shoulderPads = playerVisual.getObjectByName(BODY_PART_NAMES.shoulderPads);
   const shoulderBounds = shoulderPads ? new THREE.Box3().setFromObject(shoulderPads) : null;
+  const playerId = String(playerVisual.userData.sourcePlayerId ?? playerVisual.userData.testId ?? playerVisual.name);
 
   return {
+    appearance: resolvePlayerAppearance(playerId),
     bodyBounds: boundsToPlain(bounds),
     bodyStyle: readBodyStyle(playerVisual),
     bodyTriangleCount,
     combinedBounds: boundsToPlain(combinedBounds),
+    headBounds: headBounds ? boundsToPlain(headBounds) : null,
+    headHelmetClearance:
+      headBounds && helmetBounds ? calculateContainedBoundsClearance(headBounds, helmetBounds) : null,
     helmetBounds: helmetBounds ? boundsToPlain(helmetBounds) : null,
     helmetShoulderVerticalGap:
       helmetBounds && shoulderBounds ? helmetBounds.min.y - shoulderBounds.max.y : null,
     meshesPerPlayer,
     minimumBodyY,
+    neckBounds: neckBounds ? boundsToPlain(neckBounds) : null,
     playerId: String(playerVisual.userData.testId ?? playerVisual.name),
     shoulderWidth: PLAYER_BODY_DIMENSIONS.shoulderWidth,
     totalHeight: PLAYER_BODY_DIMENSIONS.totalHeight,
@@ -326,7 +371,7 @@ function createMannequinBodyRoot(
     ),
   );
 
-  bodyRoot.add(createHeadAnchor());
+  bodyRoot.add(createHeadAnchor(player, debugRoleColors));
   return bodyRoot;
 }
 
@@ -346,7 +391,7 @@ function createBoxBodyRoot(player: PlayerModel | undefined, debugRoleColors: boo
   scaleReference.name = 'placeholder-player-scale-reference';
   bodyRoot.add(scaleReference);
 
-  bodyRoot.add(createHeadAnchor());
+  bodyRoot.add(createHeadAnchor(player, debugRoleColors));
   return bodyRoot;
 }
 
@@ -367,7 +412,7 @@ function createArmPivot(
   pivot.name = pivotName;
   pivot.position.set(x, PLAYER_BODY_DIMENSIONS.armPivotY, 0);
 
-  const arm = createBodyMesh(meshName, sharedGeometry.arm, 'limbs', player, debugRoleColors);
+  const arm = createBodyMesh(meshName, sharedGeometry.arm, 'skin', player, debugRoleColors);
   arm.position.set(0, -PLAYER_BODY_DIMENSIONS.armLength / 2, 0);
   pivot.add(arm);
   return pivot;
@@ -399,7 +444,10 @@ function createLegPivot(
   return pivot;
 }
 
-function createHeadAnchor(): THREE.Group {
+function createHeadAnchor(
+  player: PlayerModel | undefined,
+  debugRoleColors: boolean,
+): THREE.Group {
   const headAnchor = new THREE.Group();
   headAnchor.name = PLAYER_HEAD_ANCHOR_NAME;
   headAnchor.position.set(
@@ -407,6 +455,23 @@ function createHeadAnchor(): THREE.Group {
     PLAYER_BODY_DIMENSIONS.helmetOffsetY,
     PLAYER_BODY_DIMENSIONS.helmetOffsetZ * PLAYER_FORWARD_Z,
   );
+
+  const neck = createBodyMesh(BODY_PART_NAMES.neck, sharedGeometry.neck, 'skin', player, debugRoleColors);
+  neck.position.set(
+    0,
+    PLAYER_BODY_DIMENSIONS.neckCenterY,
+    PLAYER_BODY_DIMENSIONS.neckCenterZ * PLAYER_FORWARD_Z,
+  );
+  headAnchor.add(neck);
+
+  const head = createBodyMesh(BODY_PART_NAMES.head, sharedGeometry.head, 'skin', player, debugRoleColors);
+  head.position.set(
+    0,
+    PLAYER_BODY_DIMENSIONS.headCenterY,
+    PLAYER_BODY_DIMENSIONS.headCenterZ * PLAYER_FORWARD_Z,
+  );
+  headAnchor.add(head);
+
   return headAnchor;
 }
 
@@ -419,10 +484,19 @@ function createBodyMesh(
 ): THREE.Mesh {
   const mesh = new THREE.Mesh(
     geometry,
-    getUniformMaterial(uniformPart, player?.team ?? 'offense', player?.role ?? 'runner', debugRoleColors),
+    getUniformMaterial(
+      uniformPart,
+      player?.team ?? 'offense',
+      player?.role ?? 'runner',
+      player?.id ?? 'placeholder-player',
+      debugRoleColors,
+    ),
   );
   mesh.name = name;
   mesh.userData.uniformPart = uniformPart;
+  if (uniformPart === 'skin') {
+    mesh.userData.skinToneId = resolvePlayerAppearance(player?.id ?? 'placeholder-player').skinToneId;
+  }
   return mesh;
 }
 
@@ -449,8 +523,12 @@ function syncPlayerBodyMaterials(
       uniformPart,
       playerModel.team,
       playerModel.role,
+      playerModel.id,
       debugRoleColors,
     );
+    if (uniformPart === 'skin') {
+      object.userData.skinToneId = resolvePlayerAppearance(playerModel.id).skinToneId;
+    }
   });
 }
 
@@ -458,8 +536,13 @@ function getUniformMaterial(
   uniformPart: UniformPart,
   team: PlayerTeam,
   role: PlayerRole,
+  playerId: string,
   debugRoleColors: boolean,
 ): THREE.MeshLambertMaterial {
+  if (uniformPart === 'skin') {
+    return getSkinToneMaterial(resolvePlayerAppearance(playerId).skinToneId);
+  }
+
   const materialKey = debugRoleColors
     ? `debug:${uniformPart}:${role}`
     : `uniform:${uniformPart}:${team}`;
@@ -481,6 +564,34 @@ function getUniformMaterial(
   return material;
 }
 
+function getSkinToneMaterial(skinToneId: SkinToneId): THREE.MeshLambertMaterial {
+  const materialKey = `skin:${skinToneId}`;
+  const cached = materialCache.get(materialKey);
+
+  if (cached instanceof THREE.MeshLambertMaterial) {
+    return cached;
+  }
+
+  const paletteAppearance = resolveSkinToneAppearance(skinToneId);
+  const material = new THREE.MeshLambertMaterial({
+    color: paletteAppearance.skinColor,
+    flatShading: true,
+  });
+  material.name = materialKey;
+  materialCache.set(materialKey, material);
+  return material;
+}
+
+function resolveSkinToneAppearance(skinToneId: SkinToneId): PlayerAppearance {
+  const appearance = SKIN_TONE_PALETTE.find((candidate) => candidate.skinToneId === skinToneId);
+
+  if (!appearance) {
+    throw new Error(`Unknown skin tone ${skinToneId}`);
+  }
+
+  return appearance;
+}
+
 function getBasicMaterial(name: string, color: number): THREE.MeshBasicMaterial {
   const cached = materialCache.get(name);
 
@@ -495,7 +606,7 @@ function getBasicMaterial(name: string, color: number): THREE.MeshBasicMaterial 
 }
 
 function isUniformPart(value: unknown): value is UniformPart {
-  return value === 'jersey' || value === 'limbs' || value === 'pants' || value === 'shoes' || value === 'trim';
+  return value === 'jersey' || value === 'pants' || value === 'shoes' || value === 'skin' || value === 'trim';
 }
 
 function isHelmetDescendant(object: THREE.Object3D): boolean {
@@ -540,6 +651,17 @@ function unionMeshBounds(bounds: THREE.Box3, mesh: THREE.Mesh): void {
 
   const meshBounds = mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld);
   bounds.union(meshBounds);
+}
+
+function calculateContainedBoundsClearance(inner: THREE.Box3, outer: THREE.Box3): number {
+  return Math.min(
+    inner.min.x - outer.min.x,
+    outer.max.x - inner.max.x,
+    inner.min.y - outer.min.y,
+    outer.max.y - inner.max.y,
+    inner.min.z - outer.min.z,
+    outer.max.z - inner.max.z,
+  );
 }
 
 function vectorToPlain(vector: THREE.Vector3): { x: number; y: number; z: number } {

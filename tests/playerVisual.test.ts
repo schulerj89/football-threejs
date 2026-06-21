@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import {
+  SKIN_TONE_PALETTE,
+  resolvePlayerAppearance,
+} from '../src/playerAppearance';
 import { createPlayerModel } from '../src/playerModel';
 import {
   PLAYER_BODY_DIMENSIONS,
@@ -10,6 +14,7 @@ import {
   resolvePlayerBodyVisualStyle,
   syncPlayerVisual,
 } from '../src/playerVisual';
+import { FIVE_ON_FIVE_PLAYER_IDS } from '../src/roster';
 
 describe('player visual', () => {
   it('creates the low-poly mannequin hierarchy under the existing player root', () => {
@@ -33,7 +38,10 @@ describe('player visual', () => {
     expect(bodyRoot?.getObjectByName('rightLegPivot')).toBeInstanceOf(THREE.Group);
     expect(bodyRoot?.getObjectByName('leftFoot')).toBeInstanceOf(THREE.Mesh);
     expect(bodyRoot?.getObjectByName('rightFoot')).toBeInstanceOf(THREE.Mesh);
-    expect(bodyRoot?.getObjectByName(PLAYER_HEAD_ANCHOR_NAME)).toBeInstanceOf(THREE.Group);
+    const headAnchor = bodyRoot?.getObjectByName(PLAYER_HEAD_ANCHOR_NAME);
+    expect(headAnchor).toBeInstanceOf(THREE.Group);
+    expect(headAnchor?.getObjectByName('head')).toBeInstanceOf(THREE.Mesh);
+    expect(headAnchor?.getObjectByName('neck')).toBeInstanceOf(THREE.Mesh);
   });
 
   it('keeps the mannequin inexpensive while measuring the football silhouette', () => {
@@ -51,15 +59,18 @@ describe('player visual', () => {
     expect(snapshot.bodyStyle).toBe('mannequin');
     expect(snapshot.totalHeight).toBe(PLAYER_BODY_DIMENSIONS.totalHeight);
     expect(snapshot.shoulderWidth).toBe(PLAYER_BODY_DIMENSIONS.shoulderWidth);
-    expect(snapshot.meshesPerPlayer).toBe(8);
+    expect(snapshot.meshesPerPlayer).toBe(10);
     expect(snapshot.bodyTriangleCount).toBeGreaterThanOrEqual(300);
     expect(snapshot.bodyTriangleCount).toBeLessThanOrEqual(700);
     expect(snapshot.bodyBounds.min.y).toBeGreaterThanOrEqual(-0.001);
     expect(snapshot.minimumBodyY).toBeGreaterThanOrEqual(-0.001);
     expect(snapshot.bodyBounds.size.y).toBeGreaterThan(1.45);
     expect(snapshot.bodyBounds.size.y).toBeLessThanOrEqual(PLAYER_BODY_DIMENSIONS.totalHeight);
-    expect(snapshot.uniqueBodyGeometryCount).toBe(5);
+    expect(snapshot.uniqueBodyGeometryCount).toBe(7);
     expect(snapshot.uniqueBodyMaterialCount).toBe(4);
+    expect(snapshot.headBounds).not.toBeNull();
+    expect(snapshot.neckBounds).not.toBeNull();
+    expect(snapshot.appearance).toEqual(resolvePlayerAppearance(player.id));
   });
 
   it('mirrors left and right limbs and keeps both feet on the field surface', () => {
@@ -175,6 +186,54 @@ describe('player visual', () => {
     );
   });
 
+  it('resolves deterministic skin tones from stable player identity only', () => {
+    const first = resolvePlayerAppearance('offense-qb');
+    const second = resolvePlayerAppearance('offense-qb');
+    const sameIdDifferentRole = createPlaceholderPlayerVisual(
+      createPlayerModel(undefined, {
+        id: 'stable-identity',
+        role: 'quarterback',
+        team: 'offense',
+      }),
+    );
+    const sameIdDifferentTeam = createPlaceholderPlayerVisual(
+      createPlayerModel(undefined, {
+        id: 'stable-identity',
+        role: 'defender',
+        team: 'defense',
+      }),
+    );
+    const rosterSkinToneIds = new Set(
+      FIVE_ON_FIVE_PLAYER_IDS.map((playerId) => resolvePlayerAppearance(playerId).skinToneId),
+    );
+
+    expect(first).toEqual(second);
+    expect(SKIN_TONE_PALETTE.map((tone) => tone.skinToneId)).toContain(first.skinToneId);
+    expect(getMeshSkinToneId(sameIdDifferentRole, 'head')).toBe(
+      getMeshSkinToneId(sameIdDifferentTeam, 'head'),
+    );
+    expect(rosterSkinToneIds.size).toBeGreaterThanOrEqual(3);
+  });
+
+  it('shares skin materials by palette entry and applies one tone to exposed skin meshes', () => {
+    const [firstId, secondId] = findMatchingSkinToneIds();
+    const firstVisual = createPlaceholderPlayerVisual(
+      createPlayerModel(undefined, { id: firstId, role: 'runner', team: 'offense' }),
+    );
+    const secondVisual = createPlaceholderPlayerVisual(
+      createPlayerModel(undefined, { id: secondId, role: 'receiver', team: 'defense' }),
+    );
+    const skinMeshes = ['head', 'neck', 'leftArm', 'rightArm'];
+    const firstSkinMaterial = getMeshMaterial(firstVisual, 'head');
+
+    for (const meshName of skinMeshes) {
+      expect(getMeshSkinToneId(firstVisual, meshName)).toBe(resolvePlayerAppearance(firstId).skinToneId);
+      expect(getMeshMaterial(firstVisual, meshName)).toBe(firstSkinMaterial);
+    }
+
+    expect(getMeshMaterial(secondVisual, 'head')).toBe(firstSkinMaterial);
+  });
+
   it('supports the box comparison option without changing the root sync path', () => {
     const player = createPlayerModel(undefined, {
       id: 'box-player',
@@ -205,6 +264,44 @@ function getMeshColorHex(playerVisual: THREE.Object3D, meshName: string): number
   }
 
   return mesh.material.color.getHex();
+}
+
+function getMeshMaterial(playerVisual: THREE.Object3D, meshName: string): THREE.Material {
+  const mesh = playerVisual.getObjectByName(meshName);
+
+  if (!(mesh instanceof THREE.Mesh) || !(mesh.material instanceof THREE.Material)) {
+    throw new Error(`Missing mesh material ${meshName}`);
+  }
+
+  return mesh.material;
+}
+
+function getMeshSkinToneId(playerVisual: THREE.Object3D, meshName: string): string {
+  const mesh = playerVisual.getObjectByName(meshName);
+
+  if (!(mesh instanceof THREE.Mesh)) {
+    throw new Error(`Missing skin mesh ${meshName}`);
+  }
+
+  return String(mesh.userData.skinToneId);
+}
+
+function findMatchingSkinToneIds(): [string, string] {
+  const byTone = new Map<string, string>();
+
+  for (let index = 0; index < 100; index += 1) {
+    const playerId = `skin-test-${index}`;
+    const toneId = resolvePlayerAppearance(playerId).skinToneId;
+    const existingPlayerId = byTone.get(toneId);
+
+    if (existingPlayerId) {
+      return [existingPlayerId, playerId];
+    }
+
+    byTone.set(toneId, playerId);
+  }
+
+  throw new Error('Unable to find matching deterministic skin tone IDs');
 }
 
 function getGroup(playerVisual: THREE.Object3D, groupName: string): THREE.Group {

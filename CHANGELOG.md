@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.28.0] - 2026-06-21
+
+### Added
+
+- Replaced the default round ball visual with a shared procedural low-poly football including a brown shell, contrasting seam, low-cost laces, carried orientation, in-flight travel alignment, and visual-only spiral rotation.
+- Added `?ballVisual=sphere` / `?ballVisual=football` comparison support while preserving existing ball visibility and gameplay-owned trajectory rules.
+- Added deterministic player appearance resolution with six shared skin-tone materials derived only from stable player IDs.
+- Added low-poly heads and necks under the existing player head anchor so every mannequin has visible skin inside the separately cloned helmet GLB.
+- Added development-only `?appearanceAudit=1` for player ID, skin-tone ID, head bounds, helmet bounds, and head-to-helmet clearance.
+- Added unit and browser coverage for football shape metrics, shared football resources, in-flight visual alignment, deterministic skin tones, shared skin materials, head/neck hierarchy, and appearance audit output.
+
 ## [0.27.1] - 2026-06-21
 
 ### Fixed

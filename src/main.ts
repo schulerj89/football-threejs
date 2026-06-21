@@ -1,6 +1,18 @@
 import * as THREE from 'three';
 import './style.css';
-import { createBallVisual, syncBallVisual } from './ballVisual';
+import {
+  createBallVisual,
+  getBallVisualSnapshot,
+  resolveBallVisualStyle,
+  syncBallVisual,
+  type BallVisualSnapshot,
+} from './ballVisual';
+import {
+  createAppearanceAuditOverlay,
+  createAppearanceAuditSnapshot,
+  syncAppearanceAuditOverlay,
+  type AppearanceAuditSnapshot,
+} from './appearanceAuditOverlay';
 import {
   GameplayCameraController,
   resolveGameplayCameraMode,
@@ -87,6 +99,8 @@ declare global {
   interface Window {
     __footballDebug?: {
       forceQuarterbackPastLineForTest: () => boolean;
+      getAppearanceAuditSnapshot: () => AppearanceAuditSnapshot;
+      getBallVisualSnapshot: () => BallVisualSnapshot;
       getCameraSnapshot: () => GameplayCameraDebugSnapshot;
       getCameraFramingSnapshot: () => CameraFramingSnapshot;
       getFormationPreviewSnapshot: () => FormationPreviewSnapshot | null;
@@ -117,6 +131,7 @@ const playerVisualOptions = {
   bodyStyle: resolvePlayerBodyVisualStyle(searchParams.get('playerBody')),
   debugRoleColors: searchParams.has('debugRoleColors'),
 };
+const ballVisualStyle = resolveBallVisualStyle(searchParams.get('ballVisual'));
 const playerMotionEnabled = searchParams.get('playerMotion') !== '0';
 const formationPreviewMode = resolveFormationPreviewMode(searchParams.get('formationPreview'));
 const playbookId = resolvePlaybookId(searchParams.get('playbook') ?? searchParams.get('roster'));
@@ -124,6 +139,7 @@ const presentationAuditEnabled = searchParams.has('presentationAudit');
 const routeAuditEnabled = searchParams.has('routeAudit');
 const routeArtEnabled = searchParams.get('routeArt') !== '0';
 const passAuditEnabled = searchParams.has('passAudit');
+const appearanceAuditEnabled = searchParams.has('appearanceAudit');
 let presentationAuditState: PresentationAuditState = resolvePresentationAuditState(
   searchParams.get('presentationState'),
 );
@@ -145,7 +161,7 @@ for (const gamePlayer of getActivePlayers()) {
 }
 attachHelmetsToPlayerVisuals(playerVisuals, getActivePlayers());
 
-const ballVisual = createBallVisual();
+const ballVisual = createBallVisual({ style: ballVisualStyle });
 syncBallVisual(ballVisual, gameplayModel.ball);
 scene.add(ballVisual);
 
@@ -197,11 +213,17 @@ const presentationAuditOverlay = presentationAuditEnabled
   : null;
 const routeAuditOverlay = routeAuditEnabled ? createRouteAuditOverlay() : null;
 const passAuditOverlay = passAuditEnabled ? createPassAuditOverlay() : null;
+const appearanceAuditOverlay = appearanceAuditEnabled ? createAppearanceAuditOverlay() : null;
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 let latestRenderMetrics: RenderMetricsSnapshot | null = null;
 
-if (import.meta.env.DEV || searchParams.has('debug') || presentationAuditEnabled) {
+if (
+  import.meta.env.DEV ||
+  searchParams.has('debug') ||
+  presentationAuditEnabled ||
+  appearanceAuditEnabled
+) {
   window.__footballDebug = {
     forceQuarterbackPastLineForTest: () => {
       if (
@@ -216,6 +238,8 @@ if (import.meta.env.DEV || searchParams.has('debug') || presentationAuditEnabled
       gameplayModel.player.velocity.z = 0;
       return true;
     },
+    getAppearanceAuditSnapshot: () => createAppearanceAuditSnapshot(playerVisuals),
+    getBallVisualSnapshot: () => getBallVisualSnapshot(ballVisual),
     getCameraSnapshot: () => cameraController.getDebugSnapshot(),
     getCameraFramingSnapshot: () => getCameraFramingSnapshot(),
     getFormationPreviewSnapshot: () =>
@@ -322,6 +346,12 @@ function renderFrame(delta: number): void {
   }
   if (passAuditOverlay) {
     syncPassAuditOverlay(passAuditOverlay, gameplaySnapshot.passAudit);
+  }
+  if (appearanceAuditOverlay) {
+    syncAppearanceAuditOverlay(
+      appearanceAuditOverlay,
+      createAppearanceAuditSnapshot(playerVisuals),
+    );
   }
   const renderMetrics = debugOverlay.isVisible() ? latestRenderMetrics ?? undefined : undefined;
   debugOverlay.update(
@@ -526,7 +556,12 @@ function getPresentationAuditSnapshot(): PresentationAuditSnapshot | null {
 }
 
 function shouldCollectPresentationDiagnostics(): boolean {
-  return debugOverlay.isVisible() || !!poseDebugOverlay || !!presentationAuditOverlay || !!routeAuditOverlay || !!passAuditOverlay;
+  return debugOverlay.isVisible() ||
+    !!poseDebugOverlay ||
+    !!presentationAuditOverlay ||
+    !!routeAuditOverlay ||
+    !!passAuditOverlay ||
+    !!appearanceAuditOverlay;
 }
 
 function createEmptyPresentationAuditSnapshot(): PresentationAuditSnapshot {

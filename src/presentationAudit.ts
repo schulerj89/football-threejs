@@ -4,6 +4,7 @@ import type { RenderMetricsSnapshot } from './debugOverlay';
 import type { FormationPreviewSnapshot } from './formationPreview';
 import type { GameplaySnapshot } from './playState';
 import type { PlayerSnapshot } from './playerModel';
+import { resolvePlayerAppearance } from './playerAppearance';
 import {
   PLAYER_HEAD_ANCHOR_NAME,
   getPlayerBodyVisualSnapshot,
@@ -461,10 +462,14 @@ function createMissingBodySnapshot(playerId: string): PlayerBodyVisualSnapshot {
     bodyStyle: 'mannequin',
     bodyTriangleCount: 0,
     combinedBounds: emptyBounds,
+    appearance: resolvePlayerAppearance(playerId),
+    headBounds: null,
+    headHelmetClearance: null,
     helmetBounds: null,
     helmetShoulderVerticalGap: null,
     meshesPerPlayer: 0,
     minimumBodyY: 0,
+    neckBounds: null,
     playerId,
     shoulderWidth: 0,
     totalHeight: 0,

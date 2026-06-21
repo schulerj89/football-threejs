@@ -163,6 +163,10 @@ interface CameraSnapshot {
 }
 
 interface PlayerBodyVisualSnapshot {
+  appearance: {
+    skinColor: number;
+    skinToneId: string;
+  };
   bodyBounds: {
     center: { x: number; y: number; z: number };
     max: { x: number; y: number; z: number };
@@ -177,6 +181,13 @@ interface PlayerBodyVisualSnapshot {
     min: { x: number; y: number; z: number };
     size: { x: number; y: number; z: number };
   };
+  headBounds: null | {
+    center: { x: number; y: number; z: number };
+    max: { x: number; y: number; z: number };
+    min: { x: number; y: number; z: number };
+    size: { x: number; y: number; z: number };
+  };
+  headHelmetClearance: number | null;
   helmetBounds: null | {
     center: { x: number; y: number; z: number };
     max: { x: number; y: number; z: number };
@@ -186,11 +197,46 @@ interface PlayerBodyVisualSnapshot {
   helmetShoulderVerticalGap: number | null;
   meshesPerPlayer: number;
   minimumBodyY: number;
+  neckBounds: null | {
+    center: { x: number; y: number; z: number };
+    max: { x: number; y: number; z: number };
+    min: { x: number; y: number; z: number };
+    size: { x: number; y: number; z: number };
+  };
   playerId: string;
   shoulderWidth: number;
   totalHeight: number;
   uniqueBodyGeometryCount: number;
   uniqueBodyMaterialCount: number;
+}
+
+interface BallVisualSnapshot {
+  bounds: {
+    center: Vector3Snapshot;
+    max: Vector3Snapshot;
+    min: Vector3Snapshot;
+    size: Vector3Snapshot;
+  };
+  diameter: number;
+  length: number;
+  longAxisWorld: Vector3Snapshot;
+  materialCount: number;
+  meshCount: number;
+  style: 'football' | 'sphere';
+  triangleCount: number;
+  visible: boolean;
+}
+
+interface AppearanceAuditSnapshot {
+  entries: Array<{
+    headBounds: PlayerBodyVisualSnapshot['headBounds'];
+    headHelmetClearance: number | null;
+    helmetBounds: PlayerBodyVisualSnapshot['helmetBounds'];
+    playerId: string;
+    skinToneId: string;
+  }>;
+  playerCount: number;
+  skinToneCount: number;
 }
 
 interface PlayerPoseSnapshot {
@@ -344,14 +390,24 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   const bodySnapshots = await getPlayerBodyVisualSnapshots(page);
   expect(bodySnapshots).toHaveLength(10);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'mannequin')).toBe(true);
-  expect(bodySnapshots.every((snapshot) => snapshot.meshesPerPlayer === 8)).toBe(true);
-  expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyGeometryCount === 5)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.meshesPerPlayer === 10)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyGeometryCount === 7)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyMaterialCount === 4)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyTriangleCount >= 300)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyTriangleCount <= 700)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyBounds.min.y >= -0.001)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.minimumBodyY >= -0.001)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.helmetBounds !== null)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.headBounds !== null)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.neckBounds !== null)).toBe(true);
+  expect(
+    bodySnapshots.every(
+      (snapshot) =>
+        snapshot.headHelmetClearance !== null &&
+        snapshot.headHelmetClearance >= -0.001,
+    ),
+  ).toBe(true);
+  expect(new Set(bodySnapshots.map((snapshot) => snapshot.appearance.skinToneId)).size).toBeGreaterThanOrEqual(3);
   expect(
     bodySnapshots.every(
       (snapshot) =>
@@ -417,6 +473,50 @@ test('supports the box player body comparison URL option', async ({ page }) => {
   expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'box')).toBe(true);
   await expect(page.locator('.debug-overlay')).toContainText('BODY box');
   await expectNonBlankCanvas(page);
+});
+
+test('supports football visual and appearance audit presentation options', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?debug=1&readback=1&appearanceAudit=1&camera=offense');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect.poll(() => getHelmetAssetSnapshot(page), { timeout: 5000 }).toMatchObject({
+    status: 'loaded',
+  });
+
+  const football = await getBallVisualSnapshot(page);
+  expect(football.style).toBe('football');
+  expect(football.length).toBeGreaterThan(football.diameter);
+  expect(football.bounds.size.z).toBeGreaterThan(football.bounds.size.x);
+  expect(football.meshCount).toBeGreaterThan(1);
+
+  const appearanceAudit = await getAppearanceAuditSnapshot(page);
+  expect(appearanceAudit.playerCount).toBe(10);
+  expect(appearanceAudit.skinToneCount).toBeGreaterThanOrEqual(3);
+  expect(
+    appearanceAudit.entries.every(
+      (entry) =>
+        entry.headBounds !== null &&
+        entry.helmetBounds !== null &&
+        entry.headHelmetClearance !== null &&
+        entry.headHelmetClearance >= -0.001,
+    ),
+  ).toBe(true);
+  await expect(page.locator('.appearance-audit-overlay')).toContainText('APPEARANCE AUDIT');
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
+  await expect.poll(() => getBallVisualSnapshot(page)).toMatchObject({
+    style: 'football',
+    visible: true,
+  });
+  await expectNonBlankCanvas(page);
+
+  await page.goto('/?debug=1&readback=1&ballVisual=sphere');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect.poll(() => getBallVisualSnapshot(page)).toMatchObject({
+    meshCount: 1,
+    style: 'sphere',
+  });
 });
 
 test('supports procedural player motion debug and comparison modes', async ({ page }) => {
@@ -1755,6 +1855,42 @@ async function getHelmetAssetSnapshot(page: Page): Promise<HelmetAssetSnapshot> 
     }
 
     return debugApi.getHelmetAssetSnapshot();
+  });
+}
+
+async function getBallVisualSnapshot(page: Page): Promise<BallVisualSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getBallVisualSnapshot: () => BallVisualSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getBallVisualSnapshot();
+  });
+}
+
+async function getAppearanceAuditSnapshot(page: Page): Promise<AppearanceAuditSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getAppearanceAuditSnapshot: () => AppearanceAuditSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getAppearanceAuditSnapshot();
   });
 }
 
