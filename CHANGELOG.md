@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0] - 2026-06-21
+
+### Added
+
+- Added per-play forward-pass eligibility for Quick Pass.
+- Allowed the quarterback to scramble normally after the snap while still enforcing the original line-of-scrimmage passing rule.
+- Added a documented line-of-scrimmage epsilon in `src/passRules.ts` to prevent floating-point noise from changing eligibility.
+- Added `PAST LINE OF SCRIMMAGE` feedback for rejected ineligible pass attempts without changing ball state or marking `passAttempted`.
+- Added deterministic tests for allowed passes behind the line, eligibility loss after crossing, permanent ineligibility after retreating, rejected throws, post-line tackles, rushing touchdowns, and reset restoration.
+- Expanded browser smoke coverage for the rejected-pass HUD warning.
+
 ## [0.11.0] - 2026-06-21
 
 ### Added

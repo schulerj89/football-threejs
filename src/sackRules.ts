@@ -1,6 +1,7 @@
 import type { BallModel } from './ballModel';
 import { isTackleContact } from './defenderModel';
 import type { FootballSpot } from './fieldScale';
+import { hasCrossedOriginalLineOfScrimmage } from './passRules';
 import type { PlayDefinition } from './playbook';
 import type { PlayerModel } from './playerModel';
 
@@ -46,5 +47,5 @@ export function hasQuarterbackCrossedLineOfScrimmage(
   quarterback: PlayerModel,
   lineOfScrimmage: FootballSpot,
 ): boolean {
-  return quarterback.position.z > lineOfScrimmage.z;
+  return hasCrossedOriginalLineOfScrimmage(quarterback, lineOfScrimmage);
 }

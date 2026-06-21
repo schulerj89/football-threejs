@@ -4,6 +4,7 @@ export interface GameplayHud {
   driveStatus: HTMLDivElement;
   incompleteMessage: HTMLDivElement;
   outOfBoundsMessage: HTMLDivElement;
+  passWarningMessage: HTMLDivElement;
   playCall: HTMLDivElement;
   resultMessage: HTMLDivElement;
   root: HTMLDivElement;
@@ -55,6 +56,11 @@ export function createGameplayHud(): GameplayHud {
   incompleteMessage.textContent = 'INCOMPLETE';
   root.appendChild(incompleteMessage);
 
+  const passWarningMessage = document.createElement('div');
+  passWarningMessage.className = 'pass-warning-message';
+  passWarningMessage.textContent = 'PAST LINE OF SCRIMMAGE';
+  root.appendChild(passWarningMessage);
+
   const resultMessage = document.createElement('div');
   resultMessage.className = 'result-message';
   root.appendChild(resultMessage);
@@ -70,6 +76,7 @@ export function createGameplayHud(): GameplayHud {
     driveStatus,
     incompleteMessage,
     outOfBoundsMessage,
+    passWarningMessage,
     playCall,
     resultMessage,
     root,
@@ -95,6 +102,7 @@ export function syncGameplayHud(hud: GameplayHud, gameplay: GameplaySnapshot): v
   hud.touchdownMessage.hidden = lastPlayResult?.type !== 'touchdown';
   hud.outOfBoundsMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'outOfBounds';
   hud.incompleteMessage.hidden = isTurnoverOnDowns || lastPlayResult?.type !== 'incomplete';
+  hud.passWarningMessage.hidden = gameplay.passFeedback !== 'pastLineOfScrimmage';
   hud.turnoverMessage.hidden = !isTurnoverOnDowns;
   hud.resultMessage.hidden =
     !lastPlayResult || !['tackle', 'outOfBounds', 'incomplete', 'sack'].includes(lastPlayResult.type);

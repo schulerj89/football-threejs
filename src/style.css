@@ -80,6 +80,7 @@ canvas {
 .tackle-message,
 .incomplete-message,
 .out-of-bounds-message,
+.pass-warning-message,
 .sack-message,
 .turnover-message,
 .touchdown-message {
@@ -119,6 +120,13 @@ canvas {
   border-color: rgba(243, 245, 246, 0.4);
 }
 
+.pass-warning-message {
+  top: calc(18% + 118px);
+  color: #f3f5f6;
+  border-color: rgba(243, 245, 246, 0.4);
+  font-size: 18px;
+}
+
 .turnover-message {
   color: #f3f5f6;
   border-color: rgba(243, 245, 246, 0.4);
@@ -142,6 +150,7 @@ canvas {
 .tackle-message[hidden],
 .incomplete-message[hidden],
 .out-of-bounds-message[hidden],
+.pass-warning-message[hidden],
 .result-message[hidden],
 .sack-message[hidden],
 .turnover-message[hidden],

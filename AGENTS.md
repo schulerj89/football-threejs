@@ -2,7 +2,7 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a three-on-three offensive drill with two data-defined rushing plays, one Quick Pass play, a controllable primitive ball carrier or quarterback, one eligible receiver on the pass play, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, and delayed reset.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a three-on-three offensive drill with two data-defined rushing plays, one Quick Pass play, a controllable primitive ball carrier or scrambling quarterback, one eligible receiver on the pass play, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, and delayed reset.
 
 ## Current Non-Goals
 
@@ -17,6 +17,9 @@ This repository is a low-poly 3D American football game prototype built with Thr
 - No multiple receivers
 - No bullet/lob selection
 - No pump fake
+- No illegal-forward-pass penalty
+- No referee logic
+- No scramble animation
 - No blitz selection
 - No user-controlled catch mechanic
 - No contested-catch ratings
@@ -81,6 +84,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Defender AI must use gameplay positions and stay deliberately simple.
 - Blocking is deterministic gameplay state, not force-based physics.
 - Passing uses deterministic gameplay state and a controlled arc, not a general-purpose physics engine.
+- Forward-pass eligibility is gameplay state reset per play; crossing the original line of scrimmage disables it permanently for that play using the documented epsilon in `src/passRules.ts`.
 - Sack classification belongs in gameplay rules and must depend on possession, pass attempt state, line of scrimmage, and defender contact.
 - Tackling must use explicit configurable collision radii.
 - Preserve the fixed three-quarter gameplay camera unless the user asks for a camera system.
@@ -97,7 +101,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Selection cannot change during live play.
 - Reset preserves the current selected play.
 - Rushing plays work with downs, yardage, tackles, touchdowns, and resets.
-- Quick Pass works with quarterback possession, pass rush, sacks before throws, a route-running receiver, one pass attempt, catch transfer, incompletions, completed-pass yardage, tackles, touchdowns, and resets.
-- Play lookup, formation placement, invalid IDs, selection restrictions, pass transitions, catch eligibility, incomplete passes, sacks, control transfer, and duplicate throw prevention have deterministic tests.
+- Quick Pass works with quarterback possession, scrambling, line-of-scrimmage pass eligibility, pass rush, sacks before throws, a route-running receiver, one pass attempt, catch transfer, incompletions, completed-pass yardage, tackles, touchdowns, and resets.
+- Play lookup, formation placement, invalid IDs, selection restrictions, pass eligibility, rejected throws, pass transitions, catch eligibility, incomplete passes, sacks, control transfer, and duplicate throw prevention have deterministic tests.
 - Existing tests pass.
 - The browser smoke test proves play selection plus formation, movement, score, tackle, out-of-bounds, and turnover-on-downs outcomes work.

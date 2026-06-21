@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a three-on-three offensive drill with two data-defined rushing plays, one Quick Pass play, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, and Quick Pass play calls, route-running receiver behavior, single-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
+The current milestone is a three-on-three offensive drill with two data-defined rushing plays, one Quick Pass play, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, and Quick Pass play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, single-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, and a fixed orthographic three-quarter gameplay camera.
 
 ## World Scale
 
@@ -37,6 +37,8 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Press `R` to reset the play to pre-snap.
 - Play selection is locked while a play is live; reset preserves the selected play.
 - Quick Pass starts with the quarterback in possession; after a catch, possession and user control transfer to the receiver.
+- The quarterback may scramble before throwing.
+- Crossing the original line of scrimmage permanently disables forward passing for that play; pressing `F` after crossing shows `PAST LINE OF SCRIMMAGE` and does not throw.
 - Before a throw, ordinary defenders rush the quarterback; contact behind the line of scrimmage ends the play as a sack.
 - Cross the opposing goal line during a live play to score a touchdown.
 - Avoid defenders to score; defender contact ends the play as a tackle.
@@ -67,6 +69,9 @@ Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, plac
 - No multiple receivers
 - No bullet/lob selection
 - No pump fake
+- No illegal-forward-pass penalty
+- No referee logic
+- No scramble animation
 - No blitz selection
 - No user-controlled catch mechanic
 - No contested-catch ratings

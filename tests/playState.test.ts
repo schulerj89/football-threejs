@@ -8,6 +8,7 @@ import {
 } from '../src/defenderModel';
 import { INITIAL_BALL_SPOT, LINE_OF_SCRIMMAGE_Z, PLAYABLE_FIELD_BOUNDS } from '../src/field';
 import { calculateYardsGained } from '../src/fieldScale';
+import { FORWARD_PASS_CONFIG } from '../src/passRules';
 import { PLAYER_MOVEMENT_CONFIG, type PlayerModel } from '../src/playerModel';
 import { PRE_SNAP_FACING_RADIANS } from '../src/playbook';
 import {
@@ -237,6 +238,71 @@ describe('play state transitions', () => {
     expect(attemptPass(gameplay)).toBe(false);
   });
 
+  it('allows a forward pass while the quarterback is behind the original line', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z - 0.5;
+
+    expect(gameplay.forwardPassEligible).toBe(true);
+    expect(attemptPass(gameplay)).toBe(true);
+
+    expect(gameplay.forwardPassEligible).toBe(true);
+    expect(gameplay.passAttempted).toBe(true);
+    expect(gameplay.ball.state).toMatchObject({ kind: 'inFlight' });
+  });
+
+  it('does not remove forward-pass eligibility inside the line epsilon', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    gameplay.player.position.z =
+      LINE_OF_SCRIMMAGE_Z + FORWARD_PASS_CONFIG.lineOfScrimmageEpsilon / 2;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.forwardPassEligible).toBe(true);
+  });
+
+  it('permanently disables forward passing after the quarterback crosses the original line', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    gameplay.player.position.z =
+      LINE_OF_SCRIMMAGE_Z + FORWARD_PASS_CONFIG.lineOfScrimmageEpsilon * 2;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.forwardPassEligible).toBe(false);
+
+    gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z - 3;
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.forwardPassEligible).toBe(false);
+  });
+
+  it('rejects an ineligible pass without changing ball state or passAttempted', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z + 2;
+    updateGameplayModel(gameplay, 0);
+    const ballState = { ...gameplay.ball.state };
+    const ballPossession = { ...gameplay.ball.possession };
+
+    expect(attemptPass(gameplay)).toBe(false);
+
+    expect(gameplay.forwardPassEligible).toBe(false);
+    expect(gameplay.passAttempted).toBe(false);
+    expect(gameplay.ball.state).toEqual(ballState);
+    expect(gameplay.ball.possession).toEqual(ballPossession);
+    expect(snapshotGameplayModel(gameplay).passFeedback).toBe('pastLineOfScrimmage');
+  });
+
   it('records a sack when an ordinary defender contacts the quarterback before a pass', () => {
     const gameplay = createGameplayModel();
 
@@ -300,6 +366,7 @@ describe('play state transitions', () => {
       type: 'tackle',
     });
     expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(2);
+    expect(gameplay.forwardPassEligible).toBe(false);
   });
 
   it('catches a pass, transfers possession and control to the receiver, and records completed-pass yardage', () => {
@@ -385,6 +452,39 @@ describe('play state transitions', () => {
     expect(gameplay.playState).toBe('dead');
     expect(gameplay.lastPlayResult?.type).toBe('touchdown');
     expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
+  });
+
+  it('lets the quarterback score a rushing touchdown after crossing the line', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    gameplay.player.position.z = GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.forwardPassEligible).toBe(false);
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult?.type).toBe('touchdown');
+    expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
+  });
+
+  it('restores forward-pass eligibility on reset', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'quick-pass');
+    startPlay(gameplay);
+    gameplay.player.position.z = LINE_OF_SCRIMMAGE_Z + 2;
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.forwardPassEligible).toBe(false);
+
+    resetPlay(gameplay);
+
+    expect(gameplay.playState).toBe('preSnap');
+    expect(gameplay.forwardPassEligible).toBe(true);
+    expect(gameplay.passAttempted).toBe(false);
+    expect(snapshotGameplayModel(gameplay).passFeedback).toBeNull();
   });
 
   it('rejects invalid start and dead transitions', () => {

@@ -77,6 +77,8 @@ interface GameplaySnapshot {
     initialMovementDirection: FootballSpot;
   };
   passAttempted: boolean;
+  forwardPassEligible: boolean;
+  passFeedback: 'pastLineOfScrimmage' | null;
   playState: 'preSnap' | 'live' | 'dead';
   score: number;
 }
@@ -318,6 +320,37 @@ test('selects Quick Pass, starts the route after snap, and throws once', async (
   await page.keyboard.press('f');
   await page.waitForTimeout(100);
   expect((await getGameplaySnapshot(page)).passAttempted).toBe(true);
+});
+
+test('rejects Quick Pass after the quarterback crosses the line of scrimmage', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  await page.keyboard.press('3');
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    ball: { state: { kind: 'possessed' } },
+    forwardPassEligible: true,
+    playState: 'live',
+  });
+
+  await page.keyboard.down('w');
+  await expect.poll(async () => (await getGameplaySnapshot(page)).forwardPassEligible, {
+    timeout: 2500,
+  }).toBe(false);
+  await page.keyboard.up('w');
+
+  const beforePass = await getGameplaySnapshot(page);
+  await page.keyboard.press('f');
+
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    passAttempted: false,
+    passFeedback: 'pastLineOfScrimmage',
+  });
+  const afterPass = await getGameplaySnapshot(page);
+  expect(afterPass.ball.state).toEqual(beforePass.ball.state);
+  await expect(page.locator('.pass-warning-message')).toHaveText('PAST LINE OF SCRIMMAGE');
+  await expect(page.locator('.pass-warning-message')).toBeVisible();
 });
 
 test('scores touchdown by avoiding the defender and auto-resets', async ({ page }) => {

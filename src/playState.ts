@@ -31,6 +31,10 @@ import {
   type FootballSpot,
 } from './fieldScale';
 import {
+  FORWARD_PASS_CONFIG,
+  hasCrossedOriginalLineOfScrimmage,
+} from './passRules';
+import {
   DEFAULT_PLAY_ID,
   createFormationPlayers,
   getPlay,
@@ -91,7 +95,9 @@ export interface GameplayModel {
   lastPlayResult: PlayResult | null;
   nextBallSpot: FootballSpot;
   nextPlayResultId: number;
+  passFeedbackTimerSeconds: number;
   passAttempted: boolean;
+  forwardPassEligible: boolean;
   player: PlayerModel;
   players: PlayerModel[];
   selectedPlay: PlayDefinition;
@@ -125,6 +131,8 @@ export interface GameplaySnapshot {
   playState: PlayState;
   score: number;
   passAttempted: boolean;
+  forwardPassEligible: boolean;
+  passFeedback: 'pastLineOfScrimmage' | null;
 }
 
 export function createGameplayModel(): GameplayModel {
@@ -142,7 +150,9 @@ export function createGameplayModel(): GameplayModel {
     lastPlayResult: null,
     nextBallSpot: cloneFootballSpot(initialSpot),
     nextPlayResultId: 1,
+    passFeedbackTimerSeconds: 0,
     passAttempted: false,
+    forwardPassEligible: true,
     player: ballCarrier,
     players,
     selectedPlay,
@@ -160,6 +170,8 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
   const play = getPlay(playId);
   gameplay.selectedPlay = play;
   gameplay.passAttempted = false;
+  gameplay.forwardPassEligible = true;
+  gameplay.passFeedbackTimerSeconds = 0;
   resetBlockingState(gameplay.blocking);
   resetFormationPlayers(gameplay.players, gameplay.currentBallSpot, play);
   gameplay.player = getBallCarrier(gameplay.players, play);
@@ -176,7 +188,9 @@ export function startPlay(gameplay: GameplayModel): boolean {
   gameplay.activePlayStartSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
   gameplay.lastPlayResult = null;
   gameplay.nextBallSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
+  gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
+  gameplay.passFeedbackTimerSeconds = 0;
   gameplay.playResetTimerSeconds = null;
   gameplay.playState = 'live';
   resetBlockingState(gameplay.blocking);
@@ -205,6 +219,13 @@ export function attemptPass(gameplay: GameplayModel): boolean {
     gameplay.ball.possession.kind !== 'player' ||
     gameplay.ball.possession.playerId !== gameplay.player.id
   ) {
+    return false;
+  }
+
+  updateForwardPassEligibility(gameplay);
+
+  if (!gameplay.forwardPassEligible) {
+    gameplay.passFeedbackTimerSeconds = FORWARD_PASS_CONFIG.pastLineWarningSeconds;
     return false;
   }
 
@@ -251,7 +272,9 @@ export function resetPlay(gameplay: GameplayModel): void {
   gameplay.currentBallSpot = cloneFootballSpot(resetSpot);
   gameplay.lastPlayResult = null;
   gameplay.nextBallSpot = cloneFootballSpot(resetSpot);
+  gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
+  gameplay.passFeedbackTimerSeconds = 0;
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
   resetBlockingState(gameplay.blocking);
@@ -261,7 +284,10 @@ export function resetPlay(gameplay: GameplayModel): void {
 }
 
 export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): void {
+  updatePassFeedback(gameplay, deltaSeconds);
+
   if (gameplay.playState === 'live') {
+    updateForwardPassEligibility(gameplay);
     detectSack(gameplay);
 
     if (gameplay.playState === 'live') {
@@ -275,6 +301,7 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
         lineOfScrimmage: gameplay.currentBallSpot,
         play: gameplay.selectedPlay,
       });
+      updateForwardPassEligibility(gameplay);
       updatePassFlight(gameplay, deltaSeconds);
       detectSack(gameplay);
       if (gameplay.playState === 'live') {
@@ -317,6 +344,8 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     drive: snapshotDriveModel(gameplay.drive),
     lastPlayResult: clonePlayResult(gameplay.lastPlayResult),
     nextBallSpot: cloneFootballSpot(gameplay.nextBallSpot),
+    passFeedback: gameplay.passFeedbackTimerSeconds > 0 ? 'pastLineOfScrimmage' : null,
+    forwardPassEligible: gameplay.forwardPassEligible,
     passAttempted: gameplay.passAttempted,
     player: snapshotPlayerModel(gameplay.player),
     players: gameplay.players.map(snapshotPlayerModel),
@@ -364,6 +393,34 @@ function detectTouchdown(gameplay: GameplayModel): void {
     cloneFootballSpot(INITIAL_BALL_SPOT),
     GAMEPLAY_CONFIG.touchdownResetDelaySeconds,
     'offense',
+  );
+}
+
+function updateForwardPassEligibility(gameplay: GameplayModel): void {
+  if (
+    !gameplay.forwardPassEligible ||
+    gameplay.playState !== 'live' ||
+    gameplay.selectedPlay.kind !== 'pass' ||
+    gameplay.player.role !== 'quarterback'
+  ) {
+    return;
+  }
+
+  const lineOfScrimmage = gameplay.activePlayStartSpot ?? gameplay.currentBallSpot;
+
+  if (hasCrossedOriginalLineOfScrimmage(gameplay.player, lineOfScrimmage)) {
+    gameplay.forwardPassEligible = false;
+  }
+}
+
+function updatePassFeedback(gameplay: GameplayModel, deltaSeconds: number): void {
+  if (gameplay.passFeedbackTimerSeconds <= 0) {
+    return;
+  }
+
+  gameplay.passFeedbackTimerSeconds = Math.max(
+    0,
+    gameplay.passFeedbackTimerSeconds - Math.max(0, deltaSeconds),
   );
 }
 
