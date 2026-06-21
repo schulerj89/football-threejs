@@ -5,6 +5,7 @@ import {
   assertValidAudioPlan,
   isDirectCli,
   parseGenerateOptions,
+  readAudioDurationSeconds,
   requireElevenLabsApiKey,
   writeAudioStreamToFile,
   writeProvenanceSidecar,
@@ -72,7 +73,7 @@ export async function generateSoundEffects(
         text: asset.prompt ?? '',
       });
       const content = await writeAudioStreamToFile(audio, asset.outputPath);
-      writeProvenanceSidecar(asset, content);
+      writeProvenanceSidecar(asset, content, undefined, readAudioDurationSeconds(asset.outputPath));
       generated.push(asset.assetId);
     });
   }

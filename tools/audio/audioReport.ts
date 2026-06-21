@@ -1,9 +1,9 @@
-import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { FOOTBALL_AUDIO_PLAN } from './audioPlan';
 import {
   isDirectCli,
+  readAudioDurationSeconds,
   resolveRepoPath,
   toRepoRelativePath,
   validateAudioPlan,
@@ -130,28 +130,6 @@ if (isDirectCli(import.meta.url)) {
     console.log(JSON.stringify({ ...written, report }, null, 2));
   } else {
     console.log(JSON.stringify(report, null, 2));
-  }
-}
-
-function readAudioDurationSeconds(absoluteOutputPath: string): number | null {
-  try {
-    const output = execFileSync(
-      'ffprobe',
-      [
-        '-v',
-        'error',
-        '-show_entries',
-        'format=duration',
-        '-of',
-        'default=noprint_wrappers=1:nokey=1',
-        absoluteOutputPath,
-      ],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
-    ).trim();
-    const duration = Number(output);
-    return Number.isFinite(duration) ? duration : null;
-  } catch {
-    return null;
   }
 }
 

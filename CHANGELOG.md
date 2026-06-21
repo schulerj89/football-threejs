@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.33.0] - 2026-06-21
+
+### Added
+
+- Added an original fictional prototype broadcast identity and a typed 27-line announcer script catalog covering game opening, play-ready, first down, touchdown, sack, tackle-for-loss, big-gain, incomplete, out-of-bounds, turnover-on-downs, and challenge-ending events.
+- Added exact caption metadata for every announcer script plus a generated announcer caption manifest and HTML audition page under `public/audio/announcer`.
+- Added a Node-only ElevenLabs text-to-speech workflow that can generate and preserve three voice-design previews, promote the first acceptable preview to a configurable prototype voice, and render complete MP3 speech assets with provenance sidecars.
+- Added idempotent speech-generation behavior that skips unchanged script/voice combinations, protects existing files unless `--force` is supplied, and defaults to dry-run.
+- Added audio pipeline coverage for script-catalog validation, caption matching, announcer artifact generation, voice-preview preservation, prototype voice creation, and duplicate speech-generation skipping.
+
+### Changed
+
+- Expanded the audio plan and reports to include announcer speech assets alongside the existing crowd and football SFX plan.
+- Updated README, AGENTS, and audio docs to clarify that announcer playback and live runtime text generation remain future work while offline ElevenLabs speech generation is planned product scope.
+
 ## [0.32.1] - 2026-06-21
 
 ### Fixed

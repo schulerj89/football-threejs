@@ -1,10 +1,15 @@
 import type { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import { FOOTBALL_AUDIO_PLAN } from './audioPlan';
+import { writeAnnouncerArtifacts } from './announcerArtifacts';
+import { ensureAnnouncerVoice } from './announcerVoice';
 import {
+  assetOutputExists,
+  assetOutputMatchesProvenance,
   assertCanWriteAsset,
   assertValidAudioPlan,
   isDirectCli,
   parseGenerateOptions,
+  readAudioDurationSeconds,
   requireElevenLabsApiKey,
   selectAssetsForGeneration,
   writeAudioStreamToFile,
@@ -27,44 +32,78 @@ export async function generateSpeech(
   dependencies: SpeechGenerationDependencies = {},
 ): Promise<GenerateSummary> {
   assertValidAudioPlan(plan);
-  const assets = selectAssetsForGeneration(plan, 'announcer', options)
+  const allSpeechAssets = plan.filter((asset) => asset.category === 'announcer' && asset.kind === 'speech');
+  const selectedAssets = selectAssetsForGeneration(plan, 'announcer', options)
     .filter((asset) => asset.kind === 'speech');
 
   if (!options.execute) {
+    writeAnnouncerArtifacts(allSpeechAssets);
     return {
       dryRun: true,
       generated: [],
-      skipped: assets.map((asset) => asset.assetId),
+      skipped: selectedAssets.map((asset) => asset.assetId),
     };
-  }
-
-  for (const asset of assets) {
-    assertCanWriteAsset(asset, options.force);
   }
 
   const apiKey = requireElevenLabsApiKey();
   const client = dependencies.clientFactory
     ? await dependencies.clientFactory(apiKey)
     : await createDefaultClient(apiKey);
+  const announcerVoice = await ensureAnnouncerVoice(client, { execute: options.execute });
+  const allMaterializedSpeechAssets = allSpeechAssets.map((asset) => ({
+    ...asset,
+    voiceId: announcerVoice?.selectedVoiceId ?? asset.voiceId,
+  }));
+  const selectedAssetIds = new Set(selectedAssets.map((asset) => asset.assetId));
+  const assets = allMaterializedSpeechAssets.filter((asset) => selectedAssetIds.has(asset.assetId));
+  const skipped = assets
+    .filter((asset) => !options.force && assetOutputMatchesProvenance(asset))
+    .map((asset) => asset.assetId);
+  const assetsToGenerate = assets.filter((asset) => options.force || !assetOutputMatchesProvenance(asset));
+
+  for (const asset of assetsToGenerate) {
+    if (!options.force && assetOutputExists(asset)) {
+      assertCanWriteAsset(asset, options.force);
+    }
+  }
+
+  if (assetsToGenerate.length === 0) {
+    writeAnnouncerArtifacts(allMaterializedSpeechAssets);
+    return {
+      dryRun: false,
+      generated: [],
+      skipped,
+    };
+  }
+
   const generated: string[] = [];
 
-  for (const asset of assets) {
+  for (const asset of assetsToGenerate) {
     await withSingleRetry(options.retryCount, async () => {
       const audio = await client.textToSpeech.convert(asset.voiceId ?? '', {
         modelId: asset.modelId,
         outputFormat: asset.outputFormat,
         text: asset.script ?? '',
+        voiceSettings: asset.voiceSettings
+          ? {
+              similarityBoost: asset.voiceSettings.similarityBoost,
+              stability: asset.voiceSettings.stability,
+              style: asset.voiceSettings.style,
+              useSpeakerBoost: asset.voiceSettings.useSpeakerBoost,
+            }
+          : undefined,
       });
       const content = await writeAudioStreamToFile(audio, asset.outputPath);
-      writeProvenanceSidecar(asset, content);
+      writeProvenanceSidecar(asset, content, undefined, readAudioDurationSeconds(asset.outputPath));
       generated.push(asset.assetId);
     });
   }
+  writeAnnouncerArtifacts(allMaterializedSpeechAssets);
 
   return {
     dryRun: false,
     generated,
-    skipped: [],
+    skipped,
   };
 }
 

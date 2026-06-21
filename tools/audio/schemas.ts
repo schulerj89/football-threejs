@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { createWriteStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -12,12 +13,21 @@ export type AudioRuntimeLoadingStrategy = 'buffer' | 'stream';
 
 export interface AudioAssetPlan {
   assetId: string;
+  caption?: string;
   category: AudioAssetCategory;
+  eventCategory?: string;
   kind: AudioAssetKind;
   prompt?: string;
   script?: string;
+  scriptId?: string;
   modelId: string;
   voiceId?: string;
+  voiceSettings?: {
+    similarityBoost?: number;
+    stability?: number;
+    style?: number;
+    useSpeakerBoost?: boolean;
+  };
   requestedDurationSeconds: number;
   loop: boolean;
   outputFormat: AudioOutputFormat;
@@ -30,8 +40,12 @@ export interface AudioAssetPlan {
 
 export interface AudioProvenance {
   assetId: string;
+  caption?: string;
   category: AudioAssetCategory;
+  compressedBytes: number;
   contentHash: string;
+  durationSeconds: number | null;
+  eventCategory?: string;
   generatedAt: string;
   kind: AudioAssetKind;
   modelId: string;
@@ -40,6 +54,7 @@ export interface AudioProvenance {
   requestedDurationSeconds: number;
   runtimeLoadingStrategy: AudioRuntimeLoadingStrategy;
   script?: string;
+  scriptId?: string;
   voiceId?: string;
 }
 
@@ -127,6 +142,15 @@ export function validateAudioPlan(plan: readonly AudioAssetPlan[]): string[] {
     }
     if (asset.kind === 'speech' && !asset.voiceId) {
       errors.push(`${asset.assetId}: speech assets require voiceId`);
+    }
+    if (asset.kind === 'speech' && !asset.scriptId) {
+      errors.push(`${asset.assetId}: speech assets require scriptId`);
+    }
+    if (asset.kind === 'speech' && !asset.caption) {
+      errors.push(`${asset.assetId}: speech assets require caption`);
+    }
+    if (asset.kind === 'speech' && asset.caption !== asset.script) {
+      errors.push(`${asset.assetId}: speech caption must exactly match script`);
     }
     if (asset.category === 'announcer' && asset.kind !== 'speech') {
       errors.push(`${asset.assetId}: announcer assets must be speech`);
@@ -233,11 +257,16 @@ export function createProvenance(
   asset: AudioAssetPlan,
   content: Uint8Array,
   generatedAt = new Date().toISOString(),
+  durationSeconds: number | null = null,
 ): AudioProvenance {
   return {
     assetId: asset.assetId,
+    caption: asset.caption,
     category: asset.category,
+    compressedBytes: content.byteLength,
     contentHash: createHash('sha256').update(content).digest('hex'),
+    durationSeconds,
+    eventCategory: asset.eventCategory,
     generatedAt,
     kind: asset.kind,
     modelId: asset.modelId,
@@ -246,6 +275,7 @@ export function createProvenance(
     requestedDurationSeconds: asset.requestedDurationSeconds,
     runtimeLoadingStrategy: asset.runtimeLoadingStrategy,
     script: asset.script,
+    scriptId: asset.scriptId,
     voiceId: asset.voiceId,
   };
 }
@@ -254,11 +284,12 @@ export function writeProvenanceSidecar(
   asset: AudioAssetPlan,
   content: Uint8Array,
   generatedAt?: string,
+  durationSeconds?: number | null,
 ): void {
   const sidecarPath = `${resolveRepoPath(asset.outputPath)}.json`;
   writeFileSync(
     sidecarPath,
-    `${JSON.stringify(createProvenance(asset, content, generatedAt), null, 2)}\n`,
+    `${JSON.stringify(createProvenance(asset, content, generatedAt, durationSeconds ?? null), null, 2)}\n`,
     'utf8',
   );
 }
@@ -314,6 +345,28 @@ export function assetOutputExists(asset: AudioAssetPlan): boolean {
   return existsSync(absoluteOutputPath) || existsSync(sidecarPath);
 }
 
+export function assetOutputMatchesProvenance(asset: AudioAssetPlan): boolean {
+  const absoluteOutputPath = resolveRepoPath(asset.outputPath);
+  const sidecarPath = `${absoluteOutputPath}.json`;
+
+  if (!existsSync(absoluteOutputPath) || !existsSync(sidecarPath)) {
+    return false;
+  }
+
+  try {
+    const sidecar = JSON.parse(readFileSync(sidecarPath, 'utf8')) as Partial<AudioProvenance>;
+    return sidecar.assetId === asset.assetId &&
+      sidecar.script === asset.script &&
+      sidecar.caption === asset.caption &&
+      sidecar.scriptId === asset.scriptId &&
+      sidecar.voiceId === asset.voiceId &&
+      sidecar.modelId === asset.modelId &&
+      sidecar.outputFormat === asset.outputFormat;
+  } catch {
+    return false;
+  }
+}
+
 export function createAudioPlanReport(plan: readonly AudioAssetPlan[]): AudioPlanReport {
   const validationErrors = validateAudioPlan(plan);
   const assets = plan.map((asset) => {
@@ -352,6 +405,28 @@ export function findBrowserSecretReferences(files: readonly { path: string; text
       .filter((pattern) => pattern.test(file.text))
       .map((pattern) => `${file.path}: ${pattern.source}`),
   );
+}
+
+export function readAudioDurationSeconds(relativePath: string): number | null {
+  try {
+    const output = execFileSync(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        resolveRepoPath(relativePath),
+      ],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+    ).trim();
+    const duration = Number(output);
+    return Number.isFinite(duration) ? duration : null;
+  } catch {
+    return null;
+  }
 }
 
 export function resolveRepoPath(relativePath: string): string {

@@ -4,13 +4,18 @@ import {
   isDirectCli,
   type AudioAssetPlan,
 } from './schemas';
+import {
+  ANNOUNCER_VOICE_ID_PLACEHOLDER,
+  createAnnouncerSpeechPlan,
+} from './announcerScriptCatalog';
+import { readConfiguredAnnouncerVoiceId } from './announcerVoice';
 
 const SOUND_EFFECT_MODEL = 'eleven_text_to_sound_v2';
 const WEB_OUTPUT_FORMAT = 'mp3_44100_128';
 const PROMPT_INTEGRITY =
   'No speech, no intelligible chants, no announcer, no music, no copyrighted recording, no real stadium imitation.';
 
-export const FOOTBALL_AUDIO_PLAN: readonly AudioAssetPlan[] = [
+export const FOOTBALL_SFX_AUDIO_PLAN: readonly AudioAssetPlan[] = [
   {
     assetId: 'crowd_idle_loop_01',
     category: 'crowd',
@@ -270,6 +275,11 @@ export const FOOTBALL_AUDIO_PLAN: readonly AudioAssetPlan[] = [
     maxBytes: 60_000,
     notes: 'Football snap and equipment movement one-shot.',
   },
+] as const;
+
+export const FOOTBALL_AUDIO_PLAN: readonly AudioAssetPlan[] = [
+  ...FOOTBALL_SFX_AUDIO_PLAN,
+  ...createAnnouncerSpeechPlan(readConfiguredAnnouncerVoiceId() ?? ANNOUNCER_VOICE_ID_PLACEHOLDER),
 ] as const;
 
 export function getFootballAudioPlan(): readonly AudioAssetPlan[] {
