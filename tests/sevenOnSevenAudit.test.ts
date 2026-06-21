@@ -397,8 +397,11 @@ function createAudit(snapshot: ReturnType<typeof snapshotGameplayModel>, play = 
     },
     renderMetrics: {
       calls: 0,
+      crowdInstanceCount: 0,
       frameTimeMs: 0,
+      footballMeshCount: 0,
       geometries: 0,
+      officialMeshCount: 0,
       playerBodyMeshCount: snapshot.players.length,
       playerCount: snapshot.players.length,
       sceneMaterialCount: 0,

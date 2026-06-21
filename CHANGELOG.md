@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.1] - 2026-06-21
+
+### Changed
+
+- Hardened normal-game integration across the title flow, broadcast settings, stadium, crowd, officials, audio unlock, debug tools, camera focus, and reset-cycle resource diagnostics.
+- Added runtime field-audit control to the F1 debug panel and grouped presentation officials as their own memory-profiler subsystem.
+- Cleared stale cinematic camera shot debug state when presentation shots are skipped or reset.
+
+### Tests
+
+- Extended browser smoke coverage for plain-launch broadcast startup, responsive title layout, Escape settings, F1 debug-tool lifecycle disposal, and 100-cycle 11v11 reset stability with stadium, crowd, and officials enabled.
+- Extended unit coverage for official memory ownership and cinematic-mode shot skip regression.
+
 ## [0.51.0] - 2026-06-21
 
 ### Added

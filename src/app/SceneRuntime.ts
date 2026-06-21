@@ -100,6 +100,9 @@ export class SceneRuntime {
     playerCount: number,
   ): RenderMetricsSnapshot {
     const sceneMaterials = new Set<string>();
+    let crowdInstanceCount = 0;
+    let footballMeshCount = 0;
+    let officialMeshCount = 0;
     let sceneMeshCount = 0;
     let playerBodyMeshCount = 0;
     let shadowCastingObjectCount = 0;
@@ -110,6 +113,10 @@ export class SceneRuntime {
     this.scene.traverse((object) => {
       if (object.castShadow) {
         shadowCastingObjectCount += 1;
+      }
+
+      if (object instanceof THREE.InstancedMesh && isCrowdObject(object)) {
+        crowdInstanceCount += object.count;
       }
 
       if (!(object instanceof THREE.Mesh)) {
@@ -123,6 +130,12 @@ export class SceneRuntime {
       const materials = getMaterials(object.material);
       for (const material of materials) {
         sceneMaterials.add(material.uuid);
+      }
+      if (isFootballObject(object)) {
+        footballMeshCount += 1;
+      }
+      if (isOfficialObject(object)) {
+        officialMeshCount += 1;
       }
       if (isStadiumObject(object)) {
         stadiumMeshCount += 1;
@@ -140,8 +153,11 @@ export class SceneRuntime {
 
     return {
       calls: this.renderer.info.render.calls,
+      crowdInstanceCount,
       frameTimeMs: Math.max(0, deltaSeconds) * 1000,
+      footballMeshCount,
       geometries: this.renderer.info.memory.geometries,
+      officialMeshCount,
       playerBodyMeshCount,
       playerCount,
       sceneMaterialCount: sceneMaterials.size,
@@ -183,4 +199,47 @@ function getMaterials(material: THREE.Material | THREE.Material[]): THREE.Materi
 function isStadiumObject(object: THREE.Object3D): boolean {
   return object.userData.stadium === true ||
     /stadium|stand|seating|crowd-seating-shell/i.test(object.name);
+}
+
+function isCrowdObject(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object;
+
+  while (current) {
+    if (current.userData.crowdPresentation || current.name.includes('crowd')) {
+      return true;
+    }
+    current = current.parent;
+  }
+
+  return false;
+}
+
+function isFootballObject(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object;
+
+  while (current) {
+    if (current.name === 'football-ball' || current.name.startsWith('football-')) {
+      return true;
+    }
+    current = current.parent;
+  }
+
+  return false;
+}
+
+function isOfficialObject(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object;
+
+  while (current) {
+    if (
+      current.userData.officialsPresentation ||
+      current.name.includes('official') ||
+      current.name.includes('referee')
+    ) {
+      return true;
+    }
+    current = current.parent;
+  }
+
+  return false;
 }

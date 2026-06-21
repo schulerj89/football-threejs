@@ -14,8 +14,11 @@ interface DebugOverlayOptions {
 
 export interface RenderMetricsSnapshot {
   calls: number;
+  crowdInstanceCount: number;
   frameTimeMs: number;
+  footballMeshCount: number;
   geometries: number;
+  officialMeshCount: number;
   playerBodyMeshCount: number;
   playerCount: number;
   sceneMaterialCount: number;
@@ -137,7 +140,10 @@ export class DebugOverlay {
         `GEOMS ${renderMetrics.geometries}`,
         `TEX ${renderMetrics.textures}`,
         `PLAYERS ${renderMetrics.playerCount}`,
+        `FOOTBALL_MESHES ${renderMetrics.footballMeshCount}`,
         `PLAYER_MESHES ${renderMetrics.playerBodyMeshCount}`,
+        `OFFICIAL_MESHES ${renderMetrics.officialMeshCount}`,
+        `CROWD_INSTANCES ${renderMetrics.crowdInstanceCount}`,
         `SCENE_MESHES ${renderMetrics.sceneMeshCount}`,
         `MATERIALS ${renderMetrics.sceneMaterialCount}`,
         `SHADOW_CASTERS ${renderMetrics.shadowCastingObjectCount}`,

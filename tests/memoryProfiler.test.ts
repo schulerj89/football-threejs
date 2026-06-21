@@ -75,7 +75,13 @@ describe('runtime memory profiler', () => {
     field.name = 'football-field';
     const ball = new THREE.Mesh(new THREE.SphereGeometry(1, 4, 4), new THREE.MeshBasicMaterial());
     ball.name = 'football-ball';
-    scene.add(field, ball);
+    const officials = new THREE.Group();
+    officials.name = 'officials-presentation-root';
+    officials.userData.officialsPresentation = true;
+    officials.add(
+      new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 1, 5), new THREE.MeshBasicMaterial()),
+    );
+    scene.add(field, ball, officials);
 
     const profile = createSceneResourceProfileSnapshot({
       renderer: createFakeRenderer(),
@@ -84,8 +90,10 @@ describe('runtime memory profiler', () => {
 
     const fieldTotal = profile.subsystemTotals.find((entry) => entry.subsystem === 'field');
     const footballTotal = profile.subsystemTotals.find((entry) => entry.subsystem === 'football');
+    const officialsTotal = profile.subsystemTotals.find((entry) => entry.subsystem === 'officials');
     expect(fieldTotal?.meshCount).toBe(1);
     expect(footballTotal?.meshCount).toBe(1);
+    expect(officialsTotal?.meshCount).toBe(1);
     expect(profile.disclaimer).toContain('not exact GPU VRAM');
   });
 });

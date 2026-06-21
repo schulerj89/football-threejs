@@ -3,6 +3,7 @@ export type MemorySubsystemId =
   | 'field'
   | 'football'
   | 'helmets'
+  | 'officials'
   | 'other'
   | 'players'
   | 'routeArt'

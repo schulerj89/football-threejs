@@ -164,7 +164,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Crowd preview may report frame time and FPS as machine-specific measurements, but hard acceptance should focus on bounded draw calls, bounded geometry/material counts, explicit instance-buffer estimates, and clean startup/disposal.
 - Crowd preview must not run gameplay AI, start live plays, mutate gameplay state, or activate normal-game crowd presentation.
 - Crowd benchmark reporting must include requested/actual spectator counts, crowd draw calls, triangles, geometry/material/texture counts, estimated instance-buffer bytes, frame time, minimum observed FPS, and renderer memory counters.
-- Runtime memory profiling lives under `src/performance` and `src/ui/MemoryDebugPanel.ts`. It may report renderer counters, calculated BufferGeometry/index/InstancedMesh bytes, texture estimates, browser memory API support, and subsystem ownership groups, but must label calculated texture or GPU totals as estimates rather than exact VRAM usage.
+- Runtime memory profiling lives under `src/performance` and `src/ui/MemoryDebugPanel.ts`. It may report renderer counters, calculated BufferGeometry/index/InstancedMesh bytes, texture estimates, browser memory API support, and subsystem ownership groups including crowd, stadium, and officials, but must label calculated texture or GPU totals as estimates rather than exact VRAM usage.
 - Crowd capacity benchmarking must be user-triggered from development/debug UI, must temporarily suppress the normal presentation crowd for the baseline, must dispose temporary crowd resources between major trials, must ignore hidden-tab frames, and must describe recommendations as "Recommended for this browser session" rather than universal device compatibility.
 - Applying a crowd capacity recommendation may update the existing crowd density setting, but must not automatically enable crowd visuals without user confirmation.
 - The reference production performance benchmark runs through `npm run benchmark:reference` using production `vite preview`, Chromium, `1920 x 1080`, device scale factor `1`, 11v11 broadcast settings, low-density measured crowd visuals, procedural player motion, and brief cinematics with visual debug overlays disabled.
@@ -205,9 +205,9 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 
 ## Done Criteria For This Milestone
 
-- Broadcast settings enable the presentation-only seven-official crew by default, while Performance keeps officials disabled.
-- Officials align from authoritative gameplay snapshot data, update visually during live/dead play, and reset to exact pre-snap positions without entering gameplay rosters or collision systems.
-- Official visuals use shared low-poly primitive resources, deterministic skin tones, and clean disposal with no accumulation across toggles or resets.
-- The F1 debug panel can expose official role, target, current position, ball distance, and update state.
-- README, AGENTS, package version, and CHANGELOG reflect the presentation-only officials milestone.
-- Build, unit tests, and browser smoke tests pass.
+- Plain launch shows the title screen, starts through `Start Game`, unlocks audio from that gesture, loads the selected playbook, and enters the broadcast 11v11 normal game without requiring query parameters.
+- Broadcast startup integrates stadium, low-density crowd, presentation-only officials, selected camera, ball-centered gameplay framing, HUD, play cards, and local audio systems without adding the removed yellow play-direction arrow.
+- The F1 debug panel can lazily enable and dispose general metrics, camera, field, formation, route, passing, crowd, memory, audio, presentation, and officials overlays at runtime.
+- Repeated 11v11 snap/reset diagnostics remain stable for gameplay players, player visuals, helmets, football visuals, officials, crowd instances, stadium geometry, renderer resources, audio nodes, overlays, camera shots, and presentation holds.
+- README, AGENTS, package version, and CHANGELOG reflect the normal-game integration hardening patch.
+- Build, unit tests, browser smoke tests, memory benchmark, and screenshot QA pass or report measured environment limitations.

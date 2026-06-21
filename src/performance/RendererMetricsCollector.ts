@@ -11,6 +11,7 @@ export interface RendererPerformanceMetrics {
 
 export interface SceneStructureMetrics {
   crowdInstanceCount: number;
+  footballMeshCount: number;
   helmetCount: number;
   lightCount: number;
   materialCount: number;
@@ -47,6 +48,7 @@ export function collectSceneStructureMetrics(
   const materialIds = new Set<string>();
   const playerVisualSet = new Set<THREE.Object3D>(playerVisuals);
   let crowdInstanceCount = 0;
+  let footballMeshCount = 0;
   let helmetCount = 0;
   let lightCount = 0;
   let object3DCount = 0;
@@ -91,6 +93,10 @@ export function collectSceneStructureMetrics(
       officialMeshCount += 1;
     }
 
+    if (isFootballObject(object)) {
+      footballMeshCount += 1;
+    }
+
     if (isStadiumObject(object)) {
       stadiumMeshCount += 1;
     }
@@ -102,6 +108,7 @@ export function collectSceneStructureMetrics(
 
   return {
     crowdInstanceCount,
+    footballMeshCount,
     helmetCount,
     lightCount,
     materialCount: materialIds.size,
@@ -170,6 +177,19 @@ function isCrowdObject(object: THREE.Object3D): boolean {
 
 function isOfficialObject(object: THREE.Object3D): boolean {
   return /official|referee/i.test(object.name);
+}
+
+function isFootballObject(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object;
+
+  while (current) {
+    if (current.name === 'football-ball' || current.name.startsWith('football-')) {
+      return true;
+    }
+    current = current.parent;
+  }
+
+  return false;
 }
 
 function isStadiumObject(object: THREE.Object3D): boolean {

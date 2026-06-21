@@ -115,6 +115,7 @@ export class GameplayCameraController {
   skipPresentationShot(): boolean {
     const skipped = this.presentationDirector.skipActiveShot();
     this.presentationOverrideActive = false;
+    this.cinematicDebug = this.presentationDirector.getDebugSnapshot();
     return skipped;
   }
 

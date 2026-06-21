@@ -524,8 +524,11 @@ function createPresentationHoldSnapshot(): PresentationHoldSnapshot {
 function createRenderMetrics(snapshot: GameplaySnapshot): RenderMetricsSnapshot {
   return {
     calls: 10,
+    crowdInstanceCount: 0,
     frameTimeMs: 16.7,
+    footballMeshCount: 0,
     geometries: 20,
+    officialMeshCount: 0,
     playerBodyMeshCount: snapshot.players.length,
     playerCount: snapshot.players.length,
     sceneMaterialCount: 12,

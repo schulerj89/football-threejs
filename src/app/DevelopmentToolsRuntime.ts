@@ -29,6 +29,7 @@ import {
 } from '../officials/OfficialsPresentationController';
 import type { OfficialsPresentationSnapshot } from '../officials/OfficialTypes';
 import { DebugOverlay, type RenderMetricsSnapshot } from '../debugOverlay';
+import { createFieldAuditOverlay } from '../field/FieldAuditOverlay';
 import {
   createElevenAuditOverlay,
   syncElevenAuditOverlay,
@@ -121,9 +122,15 @@ declare global {
 export interface SevenAuditResetCycleResourceSnapshot {
   activeAudioNodes: number;
   activePlayerRootCount: number;
+  crowdInstanceCount: number;
+  debugOverlayCount: number;
+  footballMeshCount: number;
   geometryCount: number;
   materialCount: number;
+  officialMeshCount: number;
   presentationHistoryCount: number;
+  stadiumMeshCount: number;
+  textureCount: number;
   visualRootCount: number;
 }
 
@@ -138,6 +145,8 @@ export interface ElevenAuditResetCycleResourceSnapshot extends SevenAuditResetCy
   activePresentationHold: boolean;
   crowdReaction: string | null;
   helmetInstanceCount: number;
+  officialCount: number;
+  stadiumGeometryCount: number;
 }
 
 export interface ElevenAuditResetCycleResult {
@@ -471,7 +480,7 @@ export class DevelopmentToolsRuntime {
       'field',
       'Field',
       queryEnabled('fieldAudit'),
-      () => createStaticDebugNote('field-debug-note', 'Field audit helpers require ?fieldAudit=1 at scene creation.'),
+      createFieldAuditOverlay,
       () => {},
     );
     registerElementFeature(
@@ -706,12 +715,4 @@ export class DevelopmentToolsRuntime {
       options.crowdPresentationDebugEnabled ||
       options.crowdPreviewEnabled;
   }
-}
-
-function createStaticDebugNote(className: string, text: string): HTMLDivElement {
-  const element = document.createElement('div');
-  element.className = `${className} debug-note-overlay`;
-  element.textContent = text;
-  document.body.append(element);
-  return element;
 }

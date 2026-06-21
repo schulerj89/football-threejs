@@ -203,6 +203,27 @@ describe('gameplay camera controller', () => {
     });
   });
 
+  it('clears cinematic-mode shot debug state immediately when a shot is skipped', () => {
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
+    const snapshot = snapshotGameplayModel(gameplay);
+    const controller = new GameplayCameraController({
+      cinematics: 'brief',
+      height: 900,
+      initialMode: 'cinematicBroadcast',
+      width: 1440,
+    });
+
+    controller.update(snapshot, 0);
+    expect(controller.getDebugSnapshot().activeShotName).toBe('prePlayOrbit180');
+    expect(controller.skipPresentationShot()).toBe(true);
+
+    expect(controller.getDebugSnapshot()).toMatchObject({
+      activeShotName: null,
+      mode: 'cinematicBroadcast',
+      state: 'cinematicBroadcast',
+    });
+  });
+
   it('calculates pre-play orbit paths for every snap lane', () => {
     for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
       const preview = createFormationPreviewModel('7v7', lane);

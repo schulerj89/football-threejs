@@ -65,6 +65,7 @@ export class PresentationCameraDirector {
   reset(): void {
     this.sequencer.reset();
     this.presentationRig.reset();
+    this.debugSnapshot = createEmptyDebugSnapshot();
   }
 
   hasActiveOrbitShot(): boolean {
@@ -72,7 +73,18 @@ export class PresentationCameraDirector {
   }
 
   skipActiveShot(): boolean {
-    return this.sequencer.skipActiveShot();
+    const skipped = this.sequencer.skipActiveShot();
+    if (skipped) {
+      this.debugSnapshot = {
+        ...this.debugSnapshot,
+        activeShotName: null,
+        orbitCenter: null,
+        orbitRadius: null,
+        restoreCamera: null,
+        shotProgress: null,
+      };
+    }
+    return skipped;
   }
 
   update(

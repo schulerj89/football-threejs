@@ -305,8 +305,11 @@ interface FormationPreviewSnapshot {
 
 interface RenderMetricsSnapshot {
   calls: number;
+  crowdInstanceCount: number;
   frameTimeMs: number;
+  footballMeshCount: number;
   geometries: number;
+  officialMeshCount: number;
   playerBodyMeshCount: number;
   playerCount: number;
   sceneMaterialCount: number;
@@ -617,9 +620,15 @@ interface SevenAuditResetCycleResult {
 interface SevenAuditResetCycleResourceSnapshot {
   activeAudioNodes: number;
   activePlayerRootCount: number;
+  crowdInstanceCount: number;
+  debugOverlayCount: number;
+  footballMeshCount: number;
   geometryCount: number;
   materialCount: number;
+  officialMeshCount: number;
   presentationHistoryCount: number;
+  stadiumMeshCount: number;
+  textureCount: number;
   visualRootCount: number;
 }
 
@@ -634,6 +643,8 @@ interface ElevenAuditResetCycleResourceSnapshot extends SevenAuditResetCycleReso
   activePresentationHold: boolean;
   crowdReaction: string | null;
   helmetInstanceCount: number;
+  officialCount: number;
+  stadiumGeometryCount: number;
 }
 
 interface PresentationHardeningAuditSnapshot {
@@ -790,6 +801,11 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   await expect(page.locator('.gameplay-hud')).toBeHidden();
   await expect(page.locator('.play-call-ui')).toBeHidden();
 
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('.title-screen')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start Game' })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+
   const initial = await getGameplaySnapshot(page);
   await page.waitForTimeout(500);
   const afterDelay = await getGameplaySnapshot(page);
@@ -828,7 +844,29 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
     gameplayCamera: 'offense',
     officialsEnabled: true,
     preset: 'broadcast',
+    stadiumEnabled: true,
   });
+  const stadium = await getStadiumSnapshot(page);
+  expect(stadium.enabled).toBe(true);
+  expect(stadium.drawCalls).toBeGreaterThan(0);
+  const crowd = await getCrowdPresentationSnapshot(page);
+  expect(crowd).toMatchObject({
+    actualSpectatorCount: 500,
+    density: 'low',
+    visualsEnabled: true,
+  });
+  const officials = await getOfficialsSnapshot(page);
+  expect(officials).toMatchObject({
+    enabled: true,
+    visibleOfficialCount: 7,
+  });
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'offensePerspective',
+  });
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.pause-settings-panel')).toBeVisible();
+  await page.locator('.pause-settings-panel').getByRole('button', { name: 'Close' }).click();
+  await expect(page.locator('.pause-settings-panel')).toBeHidden();
 });
 
 test('starts the performance preset without visual crowd or cinematics', async ({ page }) => {
@@ -898,6 +936,8 @@ test('persists title-screen settings across reloads', async ({ page }) => {
 });
 
 test('toggles runtime debug tools with F1 and persists the title-screen debug setting', async ({ page }) => {
+  test.setTimeout(60_000);
+
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-panel')).toBeHidden();
@@ -905,17 +945,79 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
   await page.keyboard.press('F1');
   await expect(page.locator('.debug-panel')).toBeVisible();
   await expect(page.locator('.debug-feature-row')).toHaveCount(18);
+  await expect(page.locator('.debug-feature-row span')).toContainText([
+    '11v11 audit',
+    '7v7 audit',
+    'Appearance',
+    'Audio',
+    'Camera',
+    'Commentary',
+    'Crowd',
+    'Field',
+    'Formation',
+    'General metrics',
+    'Memory',
+    'Officials',
+    'Passing',
+    'Player motion',
+    'Presentation',
+    'Presentation hardening',
+    'Quality',
+    'Route',
+  ]);
   await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').check();
   await expect(page.locator('.debug-overlay')).toBeVisible();
   await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').uncheck();
   await expect(page.locator('.debug-overlay')).toBeHidden();
+  await page.locator('.debug-feature-row').filter({ hasText: 'Camera' }).getByRole('checkbox').check();
+  await expect(page.locator('.debug-overlay')).toContainText('CAM');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Camera' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.debug-overlay')).toBeHidden();
+  await page.locator('.debug-feature-row').filter({ hasText: 'Field' }).getByRole('checkbox').check();
+  await expect(page.locator('.field-audit-overlay')).toContainText('FIELD AUDIT');
+  await expect(page.locator('.field-audit-overlay')).toContainText('ISSUES none');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Field' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.field-audit-overlay')).toHaveCount(0);
+  await page.locator('.debug-feature-row').filter({ hasText: 'Formation' }).getByRole('checkbox').check();
+  await expect(page.locator('.formation-audit-overlay')).toContainText('FORMATION AUDIT');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Formation' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.formation-audit-overlay')).toHaveCount(0);
+  await page.locator('.debug-feature-row').filter({ hasText: 'Route' }).getByRole('checkbox').check();
+  await expect(page.locator('.route-audit-overlay')).toContainText('ROUTE AUDIT');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Route' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.route-audit-overlay')).toHaveCount(0);
+  await page.locator('.debug-feature-row').filter({ hasText: 'Passing' }).getByRole('checkbox').check();
+  await expect(page.locator('.pass-audit-overlay')).toContainText('PASS AUDIT');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Passing' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.pass-audit-overlay')).toHaveCount(0);
+  await page.locator('.debug-feature-row').filter({ hasText: 'Crowd' }).getByRole('checkbox').check();
+  await expect(page.locator('.crowd-presentation-overlay')).toContainText('CROWD PRESENTATION');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Crowd' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.crowd-presentation-overlay')).toHaveCount(0);
   await page.locator('.debug-feature-row').filter({ hasText: 'Memory' }).getByRole('checkbox').check();
   await expect(page.locator('.memory-debug-panel')).toBeVisible();
   await expect(page.locator('.memory-debug-panel')).toContainText('RENDERER COUNTERS');
+  await expect(page.locator('.memory-debug-panel')).toContainText('stadium');
+  await expect(page.locator('.memory-debug-panel')).toContainText('officials');
   const memorySnapshot = await page.evaluate(() => window.__footballDebug?.getMemoryProfileSnapshot());
   expect(memorySnapshot?.disclaimer).toContain('not exact GPU VRAM');
+  expect(memorySnapshot?.subsystemTotals.some((entry) => entry.subsystem === 'crowd' && entry.objectCount > 0)).toBe(true);
+  expect(memorySnapshot?.subsystemTotals.some((entry) => entry.subsystem === 'stadium' && entry.objectCount > 0)).toBe(true);
+  expect(memorySnapshot?.subsystemTotals.some((entry) => entry.subsystem === 'officials')).toBe(true);
   await page.locator('.debug-feature-row').filter({ hasText: 'Memory' }).getByRole('checkbox').uncheck();
   await expect(page.locator('.memory-debug-panel')).toBeHidden();
+  await page.locator('.debug-feature-row').filter({ hasText: 'Audio' }).getByRole('checkbox').check();
+  await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Audio' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.audio-debug-overlay')).toHaveCount(0);
+  await page.getByRole('checkbox', { name: 'Presentation', exact: true }).check();
+  await expect(page.locator('.presentation-audit-overlay')).toContainText('PRESENTATION AUDIT');
+  await page.getByRole('checkbox', { name: 'Presentation', exact: true }).uncheck();
+  await expect(page.locator('.presentation-audit-overlay')).toHaveCount(0);
+  await page.locator('.debug-feature-row').filter({ hasText: 'Officials' }).getByRole('checkbox').check();
+  await expect(page.locator('.officials-debug-overlay')).toContainText('OFFICIALS');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Officials' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
 
   await page.locator('.title-screen').getByLabel('Debug tools').check();
   let experience = await getGameExperienceSnapshot(page);
@@ -1295,14 +1397,22 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   expect(resetCycles.after.activePlayerRootCount).toBe(22);
   expect(resetCycles.after.visualRootCount).toBe(22);
   expect(resetCycles.after.helmetInstanceCount).toBe(22);
+  expect(resetCycles.after.footballMeshCount).toBe(resetCycles.before.footballMeshCount);
+  expect(resetCycles.after.officialCount).toBe(0);
+  expect(resetCycles.after.officialMeshCount).toBe(0);
+  expect(resetCycles.after.crowdInstanceCount).toBe(0);
+  expect(resetCycles.after.stadiumGeometryCount).toBeGreaterThan(0);
+  expect(resetCycles.after.stadiumMeshCount).toBe(resetCycles.before.stadiumMeshCount);
   expect(resetCycles.after.geometryCount).toBeLessThanOrEqual(resetCycles.before.geometryCount);
   expect(resetCycles.after.materialCount).toBe(resetCycles.before.materialCount);
+  expect(resetCycles.after.textureCount).toBe(resetCycles.before.textureCount);
+  expect(resetCycles.after.debugOverlayCount).toBe(resetCycles.before.debugOverlayCount);
   expect(resetCycles.after.activeAudioNodes).toBeLessThanOrEqual(resetCycles.before.activeAudioNodes);
   expect(resetCycles.after.activeCameraShot).toBeNull();
   expect(resetCycles.after.activePresentationHold).toBe(false);
   expect(resetCycles.after.crowdReaction === null || resetCycles.after.crowdReaction === 'idle').toBe(true);
 
-  await page.goto('/?debug=1&readback=1&experience=performance&elevenAudit=1&crowdVisuals=1&crowdDensity=low&crowdReactions=1&audio=1&cinematics=brief&camera=cinematic');
+  await page.goto('/?debug=1&readback=1&experience=performance&elevenAudit=1&crowdVisuals=1&crowdDensity=low&crowdReactions=1&officials=1&audio=1&cinematics=brief&camera=cinematic');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.eleven-audit-overlay')).toContainText('ELEVEN AUDIT');
   const crowdAudit = await getElevenAuditSnapshot(page);
@@ -1311,6 +1421,31 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   expect(crowdAudit.resourceCounts.crowdReaction).toBe('idle');
   expect(crowdAudit.resourceCounts.drawCalls).toBeGreaterThan(0);
   expect(crowdAudit.resourceCounts.triangles).toBeGreaterThan(noCrowdAudit.resourceCounts.triangles);
+  const integratedResetCycles = await runElevenAuditResetCycles(page, 100);
+  expect(integratedResetCycles.cycles).toBe(100);
+  expect(integratedResetCycles.after.activePlayerRootCount).toBe(22);
+  expect(integratedResetCycles.after.visualRootCount).toBe(22);
+  expect(integratedResetCycles.after.helmetInstanceCount).toBe(22);
+  expect(integratedResetCycles.after.footballMeshCount).toBe(integratedResetCycles.before.footballMeshCount);
+  expect(integratedResetCycles.after.officialCount).toBe(7);
+  expect(integratedResetCycles.after.officialMeshCount).toBe(integratedResetCycles.before.officialMeshCount);
+  expect(integratedResetCycles.after.crowdInstanceCount).toBeGreaterThanOrEqual(500);
+  expect(integratedResetCycles.after.crowdInstanceCount).toBe(
+    integratedResetCycles.before.crowdInstanceCount,
+  );
+  expect(integratedResetCycles.after.stadiumGeometryCount).toBeGreaterThan(0);
+  expect(integratedResetCycles.after.stadiumMeshCount).toBe(integratedResetCycles.before.stadiumMeshCount);
+  expect(integratedResetCycles.after.geometryCount).toBeLessThanOrEqual(
+    integratedResetCycles.before.geometryCount,
+  );
+  expect(integratedResetCycles.after.materialCount).toBe(integratedResetCycles.before.materialCount);
+  expect(integratedResetCycles.after.textureCount).toBe(integratedResetCycles.before.textureCount);
+  expect(integratedResetCycles.after.debugOverlayCount).toBe(integratedResetCycles.before.debugOverlayCount);
+  expect(integratedResetCycles.after.activeAudioNodes).toBeLessThanOrEqual(
+    integratedResetCycles.before.activeAudioNodes,
+  );
+  expect(integratedResetCycles.after.activeCameraShot).toBeNull();
+  expect(integratedResetCycles.after.activePresentationHold).toBe(false);
   await expectNonBlankCanvas(page);
 });
 

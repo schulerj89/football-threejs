@@ -183,6 +183,7 @@ function createSubsystemStates(): Map<MemorySubsystemId, SubsystemState> {
     'field',
     'players',
     'helmets',
+    'officials',
     'football',
     'routeArt',
     'crowd',
@@ -226,6 +227,12 @@ function createSubsystemLookup(
       assignSubsystem(object, 'field', lookup);
     } else if (name === 'football-ball' || name.startsWith('football-')) {
       assignSubsystem(object, 'football', lookup);
+    } else if (
+      object.userData.officialsPresentation ||
+      name.includes('official') ||
+      name.includes('referee')
+    ) {
+      assignSubsystem(object, 'officials', lookup);
     } else if (name === 'route-art-root' || name.startsWith('route-art-')) {
       assignSubsystem(object, 'routeArt', lookup);
     } else if (
@@ -270,6 +277,13 @@ function classifyObject(object: THREE.Object3D): MemorySubsystemId {
   }
   if (name.includes('football') || name.includes('ball')) {
     return 'football';
+  }
+  if (
+    object.userData.officialsPresentation ||
+    name.includes('official') ||
+    name.includes('referee')
+  ) {
+    return 'officials';
   }
   if (name.includes('route-art')) {
     return 'routeArt';

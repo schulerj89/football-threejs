@@ -126,6 +126,7 @@ function createRendererMetrics() {
 function createSceneMetrics() {
   return {
     crowdInstanceCount: 500,
+    footballMeshCount: 1,
     helmetCount: 22,
     lightCount: 2,
     materialCount: 59,

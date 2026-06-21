@@ -446,17 +446,27 @@ export class ApplicationDiagnostics {
     const audio = this.options.presentation.getRuntimeAudioSnapshot();
     const hold = this.options.presentation.holdSnapshot;
     const crowd = this.options.presentation.getCrowdPresentationSnapshot();
+    const officials = this.options.presentation.getOfficialsSnapshot();
+    const stadium = this.options.presentation.getStadiumSnapshot();
     return {
       activeAudioNodes: audio.activeAudioNodeCount,
       activeCameraShot: this.options.presentation.cameraDebugSnapshot.activeShotName ?? null,
       activePlayerRootCount: this.getActivePlayers().length,
       activePresentationHold: hold.active,
+      crowdInstanceCount: metrics.crowdInstanceCount,
       crowdReaction: crowd?.reactionState ?? null,
+      debugOverlayCount: countActiveDebugOverlays(),
+      footballMeshCount: metrics.footballMeshCount,
       geometryCount: metrics.geometries,
       helmetInstanceCount: getHelmetAssetSnapshot().attachedPlayerIds.length,
       materialCount: metrics.sceneMaterialCount,
+      officialCount: officials.visibleOfficialCount,
+      officialMeshCount: metrics.officialMeshCount,
       presentationHistoryCount:
         this.options.presentation.getGamePresentationRuntimeSnapshot().history.length,
+      stadiumGeometryCount: stadium.geometryCount,
+      stadiumMeshCount: metrics.stadiumMeshCount,
+      textureCount: metrics.textures,
       visualRootCount: this.options.playerVisuals.size,
     };
   }
@@ -467,10 +477,16 @@ export class ApplicationDiagnostics {
     return {
       activeAudioNodes: audio.activeAudioNodeCount,
       activePlayerRootCount: this.getActivePlayers().length,
+      crowdInstanceCount: metrics.crowdInstanceCount,
+      debugOverlayCount: countActiveDebugOverlays(),
+      footballMeshCount: metrics.footballMeshCount,
       geometryCount: metrics.geometries,
       materialCount: metrics.sceneMaterialCount,
+      officialMeshCount: metrics.officialMeshCount,
       presentationHistoryCount:
         this.options.presentation.getGamePresentationRuntimeSnapshot().history.length,
+      stadiumMeshCount: metrics.stadiumMeshCount,
+      textureCount: metrics.textures,
       visualRootCount: this.options.playerVisuals.size,
     };
   }
@@ -480,4 +496,26 @@ export class ApplicationDiagnostics {
       !!this.options.presentation.crowdPreviewController,
     );
   }
+}
+
+function countActiveDebugOverlays(): number {
+  return document.querySelectorAll([
+    '.appearance-audit-overlay',
+    '.audio-debug-overlay',
+    '.crowd-presentation-overlay',
+    '.crowd-preview-overlay',
+    '.debug-overlay',
+    '.eleven-audit-overlay',
+    '.field-audit-overlay',
+    '.formation-audit-overlay',
+    '.memory-debug-panel',
+    '.officials-debug-overlay',
+    '.pass-audit-overlay',
+    '.performance-debug-overlay',
+    '.pose-debug-overlay',
+    '.presentation-audit-overlay',
+    '.presentation-hardening-audit-overlay',
+    '.route-audit-overlay',
+    '.seven-audit-overlay',
+  ].join(',')).length;
 }
