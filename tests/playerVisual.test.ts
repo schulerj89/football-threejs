@@ -15,6 +15,12 @@ import {
   syncPlayerVisual,
 } from '../src/playerVisual';
 import { FIVE_ON_FIVE_PLAYER_IDS } from '../src/roster';
+import { DEFAULT_USER_TEAM_ID } from '../src/teams/TeamRegistry';
+import {
+  DEFAULT_TEAM_PROFILE_SETTINGS,
+  updateTeamColorOverride,
+} from '../src/teams/TeamProfileStore';
+import { resolveTeamPresentationTheme } from '../src/teams/TeamThemeApplier';
 
 describe('player visual', () => {
   it('creates the low-poly mannequin hierarchy under the existing player root', () => {
@@ -68,7 +74,7 @@ describe('player visual', () => {
     expect(snapshot.bodyBounds.size.y).toBeGreaterThan(1.45);
     expect(snapshot.bodyBounds.size.y).toBeLessThanOrEqual(PLAYER_BODY_DIMENSIONS.totalHeight);
     expect(snapshot.uniqueBodyGeometryCount).toBe(8);
-    expect(snapshot.uniqueBodyMaterialCount).toBe(5);
+    expect(snapshot.uniqueBodyMaterialCount).toBe(6);
     expect(snapshot.headBounds).not.toBeNull();
     expect(snapshot.neckBounds).not.toBeNull();
     expect(snapshot.appearance).toEqual(resolvePlayerAppearance(player.id));
@@ -187,6 +193,36 @@ describe('player visual', () => {
     );
   });
 
+  it('applies custom team uniform palettes without changing skin tones', () => {
+    const teamProfiles = updateTeamColorOverride(
+      DEFAULT_TEAM_PROFILE_SETTINGS,
+      DEFAULT_USER_TEAM_ID,
+      {
+        faceguard: '#333333',
+        helmetShell: '#654321',
+        pants: '#abcdef',
+        primary: '#123456',
+        secondary: '#fedcba',
+      },
+    );
+    const theme = resolveTeamPresentationTheme(teamProfiles);
+    const player = createPlayerModel(undefined, {
+      id: 'custom-uniform-runner',
+      role: 'runner',
+      team: 'offense',
+    });
+    const playerVisual = createPlaceholderPlayerVisual(player, {
+      teamUniforms: theme.uniforms,
+    });
+
+    expect(getMeshColorHex(playerVisual, 'torso')).toBe(0x123456);
+    expect(getMeshColorHex(playerVisual, 'shoulderPads')).toBe(0x123456);
+    expect(getMeshColorHex(playerVisual, 'leftLeg')).toBe(0xabcdef);
+    expect(getMeshSkinToneId(playerVisual, 'head')).toBe(
+      resolvePlayerAppearance(player.id).skinToneId,
+    );
+  });
+
   it('adds a shared image-textured jersey panel without replacing the primitive body', () => {
     const offenseVisual = createPlaceholderPlayerVisual(
       createPlayerModel(undefined, { id: 'offense-qb', role: 'quarterback', team: 'offense' }),
@@ -243,6 +279,40 @@ describe('player visual', () => {
 
     expect(getMeshMaterial(playerVisual, 'torso')).not.toBe(torsoMaterial);
     expect(getMeshColorHex(playerVisual, 'torso')).toBe(0xf2f4f6);
+  });
+
+  it('keeps shared team material counts bounded across an active roster', () => {
+    const theme = resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS);
+    const players = [
+      ...Array.from({ length: 11 }, (_, index) =>
+        createPlayerModel(undefined, {
+          id: `offense-material-${index}`,
+          role: index === 0 ? 'quarterback' : 'blocker',
+          team: 'offense',
+        }),
+      ),
+      ...Array.from({ length: 11 }, (_, index) =>
+        createPlayerModel(undefined, {
+          id: `defense-material-${index}`,
+          role: 'defender',
+          team: 'defense',
+        }),
+      ),
+    ];
+    const materialIds = new Set<string>();
+
+    for (const player of players) {
+      const visual = createPlaceholderPlayerVisual(player, {
+        teamUniforms: theme.uniforms,
+      });
+      visual.traverse((object) => {
+        if (object instanceof THREE.Mesh) {
+          materialIds.add((object.material as THREE.Material).uuid);
+        }
+      });
+    }
+
+    expect(materialIds.size).toBeLessThanOrEqual(18);
   });
 
   it('resolves deterministic skin tones from stable player identity only', () => {

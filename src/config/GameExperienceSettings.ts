@@ -28,6 +28,18 @@ import {
   loadStoredGameSettingsEnvelope,
   saveStoredGameSettingsEnvelope,
 } from './GameSettingsStore';
+import {
+  DEFAULT_TEAM_PROFILE_SETTINGS,
+  cloneTeamProfileSettings,
+  normalizeTeamProfileSettings,
+  type TeamProfileSettings,
+} from '../teams/TeamProfileStore';
+import {
+  DEFAULT_OPPONENT_TEAM_ID,
+  DEFAULT_USER_TEAM_ID,
+  isTeamProfileId,
+} from '../teams/TeamRegistry';
+import type { UniformVariant } from '../teams/UniformPalette';
 
 export type ExperiencePreset =
   | 'broadcast'
@@ -59,6 +71,7 @@ export interface GameExperienceSettings {
   qualityMode: QualityMode;
   routeArtEnabled: boolean;
   stadiumEnabled: boolean;
+  teamProfiles: TeamProfileSettings;
 }
 
 export interface PersistedGameExperienceSettings {
@@ -91,6 +104,7 @@ export interface GameExperienceQueryOverrides {
   qualityMode?: QualityMode;
   routeArtEnabled?: boolean;
   stadiumEnabled?: boolean;
+  teamProfiles?: TeamProfileSettings;
 }
 
 export interface DevelopmentModeFlags {
@@ -166,6 +180,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   qualityMode: DEFAULT_QUALITY_MODE,
   routeArtEnabled: true,
   stadiumEnabled: true,
+  teamProfiles: DEFAULT_TEAM_PROFILE_SETTINGS,
 } as const;
 
 export const PERFORMANCE_EXPERIENCE_SETTINGS: GameExperienceSettings = {
@@ -317,6 +332,9 @@ export function normalizeGameExperienceSettings(
       : presetDefaults.qualityMode,
     routeArtEnabled: settings.routeArtEnabled ?? presetDefaults.routeArtEnabled,
     stadiumEnabled: settings.stadiumEnabled ?? presetDefaults.stadiumEnabled,
+    teamProfiles: normalizeTeamProfileSettings(
+      settings.teamProfiles ?? presetDefaults.teamProfiles,
+    ),
   };
 }
 
@@ -383,6 +401,7 @@ export function resolveGameExperienceQueryOverrides(
   applyVolumeOverride(overrides, 'announcerVolume', searchParams, 'announcerVolume');
   applyVolumeOverride(overrides, 'crowdVolume', searchParams, 'crowdVolume');
   applyVolumeOverride(overrides, 'masterVolume', searchParams, 'masterVolume');
+  applyTeamProfileOverrides(overrides, searchParams);
 
   return overrides;
 }
@@ -424,14 +443,27 @@ export function createGameExperienceDebugSnapshot(
     },
     developmentModes: { ...resolvedSettings.developmentModes },
     effectivePreset: resolvedSettings.settings.preset,
-    finalSettings: { ...resolvedSettings.settings },
+    finalSettings: {
+      ...resolvedSettings.settings,
+      teamProfiles: cloneTeamProfileSettings(resolvedSettings.settings.teamProfiles),
+    },
     persistedSettings: {
       customSettings: resolvedSettings.persistedSettings.customSettings
-        ? { ...resolvedSettings.persistedSettings.customSettings }
+        ? {
+            ...resolvedSettings.persistedSettings.customSettings,
+            teamProfiles: cloneTeamProfileSettings(
+              resolvedSettings.persistedSettings.customSettings.teamProfiles,
+            ),
+          }
         : null,
       preset: resolvedSettings.persistedSettings.preset,
       settings: resolvedSettings.persistedSettings.settings
-        ? { ...resolvedSettings.persistedSettings.settings }
+        ? {
+            ...resolvedSettings.persistedSettings.settings,
+            teamProfiles: cloneTeamProfileSettings(
+              resolvedSettings.persistedSettings.settings.teamProfiles,
+            ),
+          }
         : null,
       version: resolvedSettings.persistedSettings.version,
     },
@@ -477,6 +509,7 @@ function createCustomSettingsFromExisting(
     masterVolume: audioSettings.masterVolume,
     muted: audioSettings.muted,
     preset: 'custom',
+    teamProfiles: DEFAULT_TEAM_PROFILE_SETTINGS,
   });
 }
 
@@ -539,6 +572,33 @@ function applyBooleanOverride(
   overrides[key] = value !== '0';
 }
 
+function applyTeamProfileOverrides(
+  overrides: GameExperienceQueryOverrides,
+  searchParams: URLSearchParams,
+): void {
+  const userTeamId = searchParams.get('userTeam') ?? searchParams.get('homeTeam');
+  const opponentTeamId = searchParams.get('opponentTeam') ?? searchParams.get('awayTeam');
+  const userUniform = searchParams.get('userUniform') ?? searchParams.get('homeUniform');
+  const opponentUniform = searchParams.get('opponentUniform') ?? searchParams.get('awayUniform');
+
+  if (
+    !isTeamProfileId(userTeamId) &&
+    !isTeamProfileId(opponentTeamId) &&
+    !isUniformVariant(userUniform) &&
+    !isUniformVariant(opponentUniform)
+  ) {
+    return;
+  }
+
+  overrides.teamProfiles = normalizeTeamProfileSettings({
+    ...DEFAULT_TEAM_PROFILE_SETTINGS,
+    userTeamId: isTeamProfileId(userTeamId) ? userTeamId : DEFAULT_USER_TEAM_ID,
+    opponentTeamId: isTeamProfileId(opponentTeamId) ? opponentTeamId : DEFAULT_OPPONENT_TEAM_ID,
+    userUniform: isUniformVariant(userUniform) ? userUniform : 'home',
+    opponentUniform: isUniformVariant(opponentUniform) ? opponentUniform : 'away',
+  });
+}
+
 function applyVolumeOverride(
   overrides: GameExperienceQueryOverrides,
   key: keyof Pick<
@@ -573,6 +633,10 @@ function isCrowdDensity(value: unknown): value is CrowdDensity {
 
 function isPlaybookId(value: unknown): value is PlaybookId {
   return value === '5v5' || value === '7v7' || value === '11v11';
+}
+
+function isUniformVariant(value: unknown): value is UniformVariant {
+  return value === 'away' || value === 'home';
 }
 
 function clampVolume(value: number): number {

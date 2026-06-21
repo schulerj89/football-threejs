@@ -78,6 +78,7 @@ export interface CrowdPresentationSnapshot {
 }
 
 interface CrowdPresentationControllerOptions {
+  accentColors?: readonly string[];
   settings: CrowdPresentationSettings;
 }
 
@@ -94,12 +95,18 @@ export class CrowdPresentationController {
   private reactionTimeSeconds = 0;
   private reactionUpdateCount = 0;
   private readonly resourceOwner: CrowdResourceOwner;
+  private accentColorNumbers: readonly number[];
   private readonly settings: CrowdPresentationSettings;
   private readonly scratchMatrix = new THREE.Matrix4();
 
-  constructor({ settings }: CrowdPresentationControllerOptions) {
+  constructor({ accentColors = [], settings }: CrowdPresentationControllerOptions) {
     this.settings = normalizeSettings(settings);
-    this.resourceOwner = new CrowdResourceOwner(DENSITY_PRESETS[this.settings.crowdDensity], 'crowd-presentation');
+    this.accentColorNumbers = accentColors.map(hexToNumber);
+    this.resourceOwner = new CrowdResourceOwner(
+      DENSITY_PRESETS[this.settings.crowdDensity],
+      'crowd-presentation',
+      this.accentColorNumbers,
+    );
     this.resourceOwner.enableDynamicInstanceMatrices();
     this.group = this.resourceOwner.group;
     this.group.userData.crowdPresentation = true;
@@ -112,6 +119,16 @@ export class CrowdPresentationController {
 
   setPageActive(active: boolean): void {
     this.reactionSequencer.setPageActive(active);
+  }
+
+  setAccentColors(accentColors: readonly string[]): void {
+    const next = accentColors.map(hexToNumber);
+    if (next.join('|') === this.accentColorNumbers.join('|')) {
+      return;
+    }
+
+    this.accentColorNumbers = next;
+    this.resourceOwner.setAccentColors(next);
   }
 
   skipReactionHold(): boolean {
@@ -341,4 +358,8 @@ function getLocalStorage(): StorageLike | null {
   } catch {
     return null;
   }
+}
+
+function hexToNumber(hex: string): number {
+  return Number.parseInt(hex.replace('#', ''), 16);
 }

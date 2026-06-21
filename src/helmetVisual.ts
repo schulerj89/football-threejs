@@ -2,12 +2,19 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import helmetUrl from '../low_poly_helmet.glb?url';
 import type { PlayerModel, PlayerTeam } from './playerModel';
-import { PLAYER_BODY_DIMENSIONS, getPlayerVisualHeadAnchor } from './playerVisual';
+import {
+  DEFAULT_PLAYER_TEAM_UNIFORMS,
+  PLAYER_BODY_DIMENSIONS,
+  getPlayerVisualHeadAnchor,
+  type PlayerTeamUniforms,
+} from './playerVisual';
+import { getUniformColorNumber } from './teams/TeamThemeApplier';
 
 type HelmetAssetStatus = 'idle' | 'loading' | 'loaded' | 'error';
 type HelmetPart = 'faceguard' | 'shell';
 type AttachedHelmetReferences = {
   helmet: THREE.Object3D;
+  materialKey: string;
   parts: HelmetPartMeshes;
   team: PlayerTeam | null;
 };
@@ -75,6 +82,7 @@ let helmetTemplatePromise: Promise<THREE.Group> | null = null;
 export async function attachHelmetToPlayerVisual(
   playerVisual: THREE.Object3D,
   player: PlayerModel,
+  teamUniforms: PlayerTeamUniforms = DEFAULT_PLAYER_TEAM_UNIFORMS,
 ): Promise<boolean> {
   const headAnchor = getPlayerVisualHeadAnchor(playerVisual);
 
@@ -84,7 +92,7 @@ export async function attachHelmetToPlayerVisual(
 
   const existingReferences = getAttachedHelmetReferences(playerVisual);
   if (existingReferences ?? headAnchor.getObjectByName('low-poly-helmet')) {
-    syncHelmetTeamMaterials(playerVisual, player);
+    syncHelmetTeamMaterials(playerVisual, player, teamUniforms);
     return true;
   }
 
@@ -102,8 +110,14 @@ export async function attachHelmetToPlayerVisual(
     helmetParts.faceguardMeshes.push(...findMeshes(fallbackFaceguard));
   }
 
-  applyHelmetTeamMaterials(helmetParts, player.team);
-  cacheAttachedHelmetReferences(playerVisual, helmet, helmetParts, player.team);
+  applyHelmetTeamMaterials(helmetParts, player.team, teamUniforms);
+  cacheAttachedHelmetReferences(
+    playerVisual,
+    helmet,
+    helmetParts,
+    player.team,
+    createHelmetMaterialKey(player.team, teamUniforms),
+  );
   headAnchor.add(helmet);
   recordAttachedPlayer(player.id);
   return true;
@@ -112,6 +126,7 @@ export async function attachHelmetToPlayerVisual(
 export function attachHelmetsToPlayerVisuals(
   playerVisuals: Map<string, THREE.Group>,
   players: PlayerModel[],
+  teamUniforms: PlayerTeamUniforms = DEFAULT_PLAYER_TEAM_UNIFORMS,
 ): void {
   for (const player of players) {
     const playerVisual = playerVisuals.get(player.id);
@@ -120,7 +135,7 @@ export function attachHelmetsToPlayerVisuals(
       continue;
     }
 
-    void attachHelmetToPlayerVisual(playerVisual, player).catch((error: unknown) => {
+    void attachHelmetToPlayerVisual(playerVisual, player, teamUniforms).catch((error: unknown) => {
       helmetAssetState.status = 'error';
       helmetAssetState.errorMessage = error instanceof Error ? error.message : String(error);
     });
@@ -130,18 +145,21 @@ export function attachHelmetsToPlayerVisuals(
 export function syncHelmetTeamMaterials(
   playerVisual: THREE.Object3D,
   player: PlayerModel,
+  teamUniforms: PlayerTeamUniforms = DEFAULT_PLAYER_TEAM_UNIFORMS,
 ): void {
   const references = getOrCreateAttachedHelmetReferences(playerVisual);
   if (!references) {
     return;
   }
 
-  if (references.team === player.team) {
+  const materialKey = createHelmetMaterialKey(player.team, teamUniforms);
+  if (references.team === player.team && references.materialKey === materialKey) {
     return;
   }
 
-  applyHelmetTeamMaterials(references.parts, player.team);
+  applyHelmetTeamMaterials(references.parts, player.team, teamUniforms);
   references.team = player.team;
+  references.materialKey = materialKey;
 }
 
 export function getHelmetAssetSnapshot(): HelmetAssetSnapshot {
@@ -171,13 +189,17 @@ export function findHelmetPartMeshes(root: THREE.Object3D): HelmetPartMeshes {
   };
 }
 
-export function applyHelmetTeamMaterials(parts: HelmetPartMeshes, team: PlayerTeam): void {
+export function applyHelmetTeamMaterials(
+  parts: HelmetPartMeshes,
+  team: PlayerTeam,
+  teamUniforms: PlayerTeamUniforms = DEFAULT_PLAYER_TEAM_UNIFORMS,
+): void {
   for (const shellMesh of parts.shellMeshes) {
-    assignTeamMaterial(shellMesh, 'shell', team);
+    assignTeamMaterial(shellMesh, 'shell', team, teamUniforms);
   }
 
   for (const faceguardMesh of parts.faceguardMeshes) {
-    assignTeamMaterial(faceguardMesh, 'faceguard', team);
+    assignTeamMaterial(faceguardMesh, 'faceguard', team, teamUniforms);
   }
 }
 
@@ -251,9 +273,16 @@ function createFallbackFaceguard(): THREE.Group {
   return group;
 }
 
-function assignTeamMaterial(mesh: THREE.Mesh, part: HelmetPart, team: PlayerTeam): void {
+function assignTeamMaterial(
+  mesh: THREE.Mesh,
+  part: HelmetPart,
+  team: PlayerTeam,
+  teamUniforms: PlayerTeamUniforms,
+): void {
   const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-  const assignedMaterials = materials.map((material) => getTeamMaterial(material, part, team));
+  const assignedMaterials = materials.map((material) =>
+    getTeamMaterial(material, part, team, teamUniforms),
+  );
 
   mesh.material = Array.isArray(mesh.material) ? assignedMaterials : assignedMaterials[0];
 }
@@ -262,8 +291,10 @@ function getTeamMaterial(
   sourceMaterial: THREE.Material,
   part: HelmetPart,
   team: PlayerTeam,
+  teamUniforms: PlayerTeamUniforms,
 ): THREE.Material {
-  const cacheKey = `${part}:${team}:${sourceMaterial.uuid}`;
+  const color = resolveHelmetPartColor(part, team, teamUniforms);
+  const cacheKey = `${part}:${team}:${color}:${sourceMaterial.uuid}`;
   const cachedMaterial = teamMaterialCache.get(cacheKey);
 
   if (cachedMaterial) {
@@ -271,7 +302,6 @@ function getTeamMaterial(
   }
 
   const material = sourceMaterial.clone();
-  const color = HELMET_VISUAL_CONFIG.teamColors[team][part];
 
   if ('color' in material && material.color instanceof THREE.Color) {
     material.color.setHex(color);
@@ -311,7 +341,13 @@ function getOrCreateAttachedHelmetReferences(
     return null;
   }
 
-  return cacheAttachedHelmetReferences(playerVisual, helmet, findHelmetPartMeshes(helmet), null);
+  return cacheAttachedHelmetReferences(
+    playerVisual,
+    helmet,
+    findHelmetPartMeshes(helmet),
+    null,
+    '',
+  );
 }
 
 function getAttachedHelmetReferences(playerVisual: THREE.Object3D): AttachedHelmetReferences | null {
@@ -329,10 +365,29 @@ function cacheAttachedHelmetReferences(
   helmet: THREE.Object3D,
   parts: HelmetPartMeshes,
   team: PlayerTeam | null,
+  materialKey: string,
 ): AttachedHelmetReferences {
-  const references = { helmet, parts, team };
+  const references = { helmet, materialKey, parts, team };
   attachedHelmetReferences.set(playerVisual, references);
   return references;
+}
+
+function createHelmetMaterialKey(
+  team: PlayerTeam,
+  teamUniforms: PlayerTeamUniforms,
+): string {
+  const palette = teamUniforms[team] ?? DEFAULT_PLAYER_TEAM_UNIFORMS[team];
+  return `${team}:${palette.helmetShell}:${palette.faceguard}`;
+}
+
+function resolveHelmetPartColor(
+  part: HelmetPart,
+  team: PlayerTeam,
+  teamUniforms: PlayerTeamUniforms,
+): number {
+  const palette = teamUniforms[team] ?? DEFAULT_PLAYER_TEAM_UNIFORMS[team];
+
+  return getUniformColorNumber(part === 'shell' ? palette.helmetShell : palette.faceguard);
 }
 
 function findMeshes(root: THREE.Object3D): THREE.Mesh[] {

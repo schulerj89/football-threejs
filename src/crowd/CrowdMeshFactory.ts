@@ -8,7 +8,14 @@ import {
 } from './CrowdMetrics';
 import type { CrowdPreviewPlacement, CrowdResources } from './CrowdTypes';
 
-export function createCrowdResources(requestedCount: number): CrowdResources {
+export interface CrowdColorOptions {
+  accentColors?: readonly number[];
+}
+
+export function createCrowdResources(
+  requestedCount: number,
+  options: CrowdColorOptions = {},
+): CrowdResources {
   const placements = createCrowdPlacements(requestedCount);
   const nearPlacements = placements.filter((placement) => placement.lod === 'near');
   const farPlacements = placements.filter((placement) => placement.lod === 'far');
@@ -32,8 +39,15 @@ export function createCrowdResources(requestedCount: number): CrowdResources {
     group.add(mesh);
   }
 
-  applyDetailedInstances(nearPlacements, detailedTorso, detailedHead, detailedArmLeft, detailedArmRight);
-  applyFarInstances(farPlacements, farBody);
+  applyDetailedInstances(
+    nearPlacements,
+    detailedTorso,
+    detailedHead,
+    detailedArmLeft,
+    detailedArmRight,
+    options.accentColors,
+  );
+  applyFarInstances(farPlacements, farBody, options.accentColors);
 
   const ownedGeometries = [
     geometries.torso,
@@ -66,6 +80,21 @@ export function createCrowdResources(requestedCount: number): CrowdResources {
       textureCount: 0,
     },
   };
+}
+
+export function applyCrowdAccentColors(
+  resources: CrowdResources,
+  accentColors: readonly number[] = [],
+): void {
+  applyDetailedInstanceColors(
+    resources.nearPlacements,
+    resources.detailedTorso,
+    resources.detailedHead,
+    resources.detailedArmLeft,
+    resources.detailedArmRight,
+    accentColors,
+  );
+  applyFarInstanceColors(resources.farPlacements, resources.farBody, accentColors);
 }
 
 function createSharedCrowdGeometries(): {
@@ -108,47 +137,47 @@ export function applyDetailedInstances(
   headMesh: THREE.InstancedMesh,
   leftArmMesh: THREE.InstancedMesh,
   rightArmMesh: THREE.InstancedMesh,
+  accentColors: readonly number[] = [],
 ): void {
   const matrix = new THREE.Matrix4();
-  const color = new THREE.Color();
 
   placements.forEach((placement, index) => {
-    const uniformColor = resolveUniformColor(placement.colorSeed);
-    const skinColor = resolveSkinColor(placement.colorSeed);
     setPartMatrix(matrix, placement, 0, 0.48, 0, 0, placement.scale, 1);
     torsoMesh.setMatrixAt(index, matrix);
-    torsoMesh.setColorAt(index, color.setHex(uniformColor));
 
     setPartMatrix(matrix, placement, 0, 0.87, 0, 0, placement.scale, 1);
     headMesh.setMatrixAt(index, matrix);
-    headMesh.setColorAt(index, color.setHex(skinColor));
 
     setPartMatrix(matrix, placement, -0.23, 0.52, 0, 0.58, placement.scale, 0.68);
     leftArmMesh.setMatrixAt(index, matrix);
-    leftArmMesh.setColorAt(index, color.setHex(uniformColor));
 
     setPartMatrix(matrix, placement, 0.23, 0.52, 0, -0.58, placement.scale, 0.68);
     rightArmMesh.setMatrixAt(index, matrix);
-    rightArmMesh.setColorAt(index, color.setHex(uniformColor));
   });
 
-  markInstanceAttributesDirty(torsoMesh, headMesh, leftArmMesh, rightArmMesh);
+  applyDetailedInstanceColors(
+    placements,
+    torsoMesh,
+    headMesh,
+    leftArmMesh,
+    rightArmMesh,
+    accentColors,
+  );
 }
 
 export function applyFarInstances(
   placements: readonly CrowdPreviewPlacement[],
   farBodyMesh: THREE.InstancedMesh,
+  accentColors: readonly number[] = [],
 ): void {
   const matrix = new THREE.Matrix4();
-  const color = new THREE.Color();
 
   placements.forEach((placement, index) => {
     setPartMatrix(matrix, placement, 0, 0.45, 0, 0, placement.scale, 1);
     farBodyMesh.setMatrixAt(index, matrix);
-    farBodyMesh.setColorAt(index, color.setHex(resolveUniformColor(placement.colorSeed)));
   });
 
-  markInstanceAttributesDirty(farBodyMesh);
+  applyFarInstanceColors(placements, farBodyMesh, accentColors);
 }
 
 export function setPartMatrix(
@@ -184,7 +213,50 @@ export function markInstanceAttributesDirty(...meshes: THREE.InstancedMesh[]): v
   }
 }
 
-export function resolveUniformColor(seed: number): number {
+function applyDetailedInstanceColors(
+  placements: readonly CrowdPreviewPlacement[],
+  torsoMesh: THREE.InstancedMesh,
+  headMesh: THREE.InstancedMesh,
+  leftArmMesh: THREE.InstancedMesh,
+  rightArmMesh: THREE.InstancedMesh,
+  accentColors: readonly number[],
+): void {
+  const color = new THREE.Color();
+
+  placements.forEach((placement, index) => {
+    const uniformColor = resolveUniformColor(placement.colorSeed, accentColors);
+    const skinColor = resolveSkinColor(placement.colorSeed);
+    torsoMesh.setColorAt(index, color.setHex(uniformColor));
+    headMesh.setColorAt(index, color.setHex(skinColor));
+    leftArmMesh.setColorAt(index, color.setHex(uniformColor));
+    rightArmMesh.setColorAt(index, color.setHex(uniformColor));
+  });
+
+  markInstanceAttributesDirty(torsoMesh, headMesh, leftArmMesh, rightArmMesh);
+}
+
+function applyFarInstanceColors(
+  placements: readonly CrowdPreviewPlacement[],
+  farBodyMesh: THREE.InstancedMesh,
+  accentColors: readonly number[],
+): void {
+  const color = new THREE.Color();
+
+  placements.forEach((placement, index) => {
+    farBodyMesh.setColorAt(
+      index,
+      color.setHex(resolveUniformColor(placement.colorSeed, accentColors)),
+    );
+  });
+
+  markInstanceAttributesDirty(farBodyMesh);
+}
+
+export function resolveUniformColor(seed: number, accentColors: readonly number[] = []): number {
+  if (accentColors.length > 0 && seed % 4 !== 0) {
+    return accentColors[Math.floor(seed / 3) % accentColors.length] ?? accentColors[0] ?? 0xffffff;
+  }
+
   const colors = [0x354f7d, 0x7d3f35, 0x436946, 0x6e5c38, 0x4a4f57, 0x7a7341];
   return colors[seed % colors.length];
 }

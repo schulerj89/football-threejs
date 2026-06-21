@@ -1129,7 +1129,7 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   expect(bodySnapshots.every((snapshot) => snapshot.bodyStyle === 'mannequin')).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.meshesPerPlayer === 11)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyGeometryCount === 8)).toBe(true);
-  expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyMaterialCount === 5)).toBe(true);
+  expect(bodySnapshots.every((snapshot) => snapshot.uniqueBodyMaterialCount === 6)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyTriangleCount >= 300)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyTriangleCount <= 700)).toBe(true);
   expect(bodySnapshots.every((snapshot) => snapshot.bodyBounds.min.y >= -0.001)).toBe(true);
@@ -1211,7 +1211,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     customSettings: null,
     preset: 'broadcast',
     settings: null,
-    version: 3,
+    version: 4,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({

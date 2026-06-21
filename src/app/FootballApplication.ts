@@ -40,6 +40,7 @@ import {
 } from '../performance/RendererMetricsCollector';
 import type { QualityDebugSnapshot } from '../ui/PerformanceSettingsPanel';
 import type { CrowdDensity } from '../presentation/CrowdPresentationController';
+import { resolveTeamPresentationTheme } from '../teams/TeamThemeApplier';
 
 export interface FootballApplicationOptions {
   mount: HTMLDivElement;
@@ -81,6 +82,9 @@ export class FootballApplication {
       skipPresentation: () => this.presentation.skipPresentation(),
     });
     this.sceneRuntime = new SceneRuntime({ mount, searchParams });
+    this.sceneRuntime.applyTeamTheme(
+      resolveTeamPresentationTheme(this.gameExperience.settings.teamProfiles),
+    );
     this.presentation = new PresentationRuntime({
       formationPreviewActive: !!this.gameplay.formationPreviewModel,
       gameExperience: this.gameExperience,
@@ -102,6 +106,7 @@ export class FootballApplication {
     this.playerVisuals = new PlayerVisualRegistry(this.sceneRuntime.scene, {
       bodyStyle: resolvePlayerBodyVisualStyle(searchParams.get('playerBody')),
       debugRoleColors: searchParams.has('debugRoleColors'),
+      teamUniforms: resolveTeamPresentationTheme(this.gameExperience.settings.teamProfiles).uniforms,
     });
     this.playerVisuals.reconcile(this.getActivePlayers());
     this.presentation.syncBall(
@@ -427,6 +432,9 @@ export class FootballApplication {
       crowdPresentationSettings: this.gameExperience.crowdPresentationSettings,
       searchParams: this.searchParams,
     });
+    const teamTheme = resolveTeamPresentationTheme(this.gameExperience.settings.teamProfiles);
+    this.sceneRuntime.applyTeamTheme(teamTheme);
+    this.playerVisuals.setTeamUniforms(teamTheme.uniforms);
     this.presentation.applyExperience(this.gameExperience);
     this.developmentTools.setDebugToolsEnabled(this.gameExperience.settings.debugToolsEnabled);
     this.qualityController.setMode(

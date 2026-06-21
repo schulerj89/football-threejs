@@ -27,5 +27,9 @@ export interface FootballField {
 }
 
 export interface CreateFootballFieldOptions {
+  endZoneColors?: {
+    far: string;
+    near: string;
+  };
   fieldAudit?: boolean;
 }

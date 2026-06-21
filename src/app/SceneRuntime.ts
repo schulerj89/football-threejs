@@ -3,9 +3,11 @@ import {
   WORLD_SCALE,
   createFootballField,
   syncFootballFieldDriveLines,
+  syncFootballFieldTeamColors,
   type FootballField,
 } from '../field';
 import type { RenderMetricsSnapshot } from '../debugOverlay';
+import type { TeamPresentationTheme } from '../teams/TeamThemeApplier';
 
 export interface SceneRuntimeOptions {
   mount: HTMLElement;
@@ -92,6 +94,13 @@ export class SceneRuntime {
     firstDownMarker: { z: number },
   ): void {
     syncFootballFieldDriveLines(this.field, lineOfScrimmage, firstDownMarker);
+  }
+
+  applyTeamTheme(theme: TeamPresentationTheme): void {
+    syncFootballFieldTeamColors(this.field, {
+      farEndZone: theme.defense.profile.endZoneColor,
+      nearEndZone: theme.offense.profile.endZoneColor,
+    });
   }
 
   createRenderMetricsSnapshot(

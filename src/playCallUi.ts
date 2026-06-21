@@ -9,6 +9,7 @@ import {
 } from './playCallDiagram';
 import type { GameplaySnapshot } from './playState';
 import { PLAYS, type PlayDefinition, type PlayId } from './playbook';
+import type { TeamPresentationTheme } from './teams/TeamThemeApplier';
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
@@ -19,7 +20,10 @@ export class PlayCallUi {
   private lastRenderKey = '';
   private pendingSelectedPlayId: string | null = null;
 
-  constructor(private plays: PlayDefinition[] = PLAYS) {
+  constructor(
+    private plays: PlayDefinition[] = PLAYS,
+    private teamTheme: TeamPresentationTheme | null = null,
+  ) {
     this.root = document.createElement('div');
     this.root.className = 'play-call-ui';
     this.root.hidden = true;
@@ -44,6 +48,15 @@ export class PlayCallUi {
     this.lastRenderKey = '';
     this.pendingSelectedPlayId = null;
     this.grid.replaceChildren();
+  }
+
+  setTeamTheme(teamTheme: TeamPresentationTheme): void {
+    if (this.teamTheme?.teamKey === teamTheme.teamKey) {
+      return;
+    }
+
+    this.teamTheme = teamTheme;
+    this.lastRenderKey = '';
   }
 
   hide(): void {
@@ -71,6 +84,7 @@ export class PlayCallUi {
       gameplay.drive.snapLane,
       gameplay.drive.lineOfScrimmage.x.toFixed(3),
       gameplay.drive.lineOfScrimmage.z.toFixed(3),
+      this.teamTheme?.teamKey ?? 'default',
     ].join('|');
 
     if (renderKey === this.lastRenderKey) {
@@ -102,7 +116,7 @@ export class PlayCallUi {
       spot: gameplay.drive.lineOfScrimmage,
     };
     const cards = this.plays.map((play) =>
-      createPlayCard(play, snapPlacement, gameplay.selectedPlay.id),
+      createPlayCard(play, snapPlacement, gameplay.selectedPlay.id, this.teamTheme),
     );
 
     this.grid.replaceChildren(...cards);
@@ -131,8 +145,11 @@ export class PlayCallUi {
   };
 }
 
-export function createPlayCallUi(plays: PlayDefinition[] = PLAYS): PlayCallUi {
-  return new PlayCallUi(plays);
+export function createPlayCallUi(
+  plays: PlayDefinition[] = PLAYS,
+  teamTheme: TeamPresentationTheme | null = null,
+): PlayCallUi {
+  return new PlayCallUi(plays, teamTheme);
 }
 
 export function syncPlayCallUi(ui: PlayCallUi, gameplay: GameplaySnapshot): void {
@@ -143,6 +160,7 @@ function createPlayCard(
   play: PlayDefinition,
   snapPlacement: SnapPlacement,
   selectedPlayId: PlayId,
+  teamTheme: TeamPresentationTheme | null,
 ): HTMLButtonElement {
   const selected = play.id === selectedPlayId;
   const model = createPlayCallDiagramModel(play, snapPlacement);
@@ -159,12 +177,15 @@ function createPlayCard(
   title.className = 'play-card-title';
   title.textContent = play.displayName;
   card.appendChild(title);
-  card.appendChild(createDiagramSvg(model));
+  card.appendChild(createDiagramSvg(model, teamTheme));
 
   return card;
 }
 
-function createDiagramSvg(model: PlayCallDiagramModel): SVGSVGElement {
+function createDiagramSvg(
+  model: PlayCallDiagramModel,
+  teamTheme: TeamPresentationTheme | null,
+): SVGSVGElement {
   const svg = createSvgElement('svg');
   svg.classList.add('play-card-diagram');
   svg.dataset.playId = model.playId;
@@ -187,21 +208,29 @@ function createDiagramSvg(model: PlayCallDiagramModel): SVGSVGElement {
   }
 
   if (model.runDirection) {
-    svg.appendChild(createArrowPath(
+    const runPath = createArrowPath(
       model.runDirection.points,
       'play-card-run-direction',
       runMarkerId,
-    ));
+    );
+    if (teamTheme) {
+      runPath.style.stroke = teamTheme.offense.uniform.stripe;
+    }
+    svg.appendChild(runPath);
   }
 
   for (const route of model.receiverRoutes) {
-    svg.appendChild(createArrowPath(route.points, 'play-card-receiver-route', routeMarkerId));
+    const routePath = createArrowPath(route.points, 'play-card-receiver-route', routeMarkerId);
+    if (teamTheme) {
+      routePath.style.stroke = teamTheme.offense.uniform.number;
+    }
+    svg.appendChild(routePath);
   }
 
   for (const player of model.players) {
     svg.appendChild(player.role === 'quarterback'
-      ? createQuarterbackMarker(player.point)
-      : createPlayerMarker(player.point));
+      ? createQuarterbackMarker(player.point, teamTheme)
+      : createPlayerMarker(player.point, teamTheme));
   }
 
   svg.appendChild(createBallMarker(model.ball));
@@ -259,17 +288,26 @@ function createFieldBackground(): SVGGElement {
   return group;
 }
 
-function createPlayerMarker(point: SvgPoint): SVGCircleElement {
+function createPlayerMarker(
+  point: SvgPoint,
+  teamTheme: TeamPresentationTheme | null,
+): SVGCircleElement {
   const circle = createSvgElement('circle');
   circle.classList.add('play-card-offense-marker');
   circle.setAttribute('cx', point.x.toFixed(2));
   circle.setAttribute('cy', point.y.toFixed(2));
   circle.setAttribute('r', '4.1');
+  if (teamTheme) {
+    circle.style.fill = teamTheme.offense.uniform.jersey;
+  }
 
   return circle;
 }
 
-function createQuarterbackMarker(point: SvgPoint): SVGPolygonElement {
+function createQuarterbackMarker(
+  point: SvgPoint,
+  teamTheme: TeamPresentationTheme | null,
+): SVGPolygonElement {
   const marker = createSvgElement('polygon');
   const size = 5.2;
   const points = [
@@ -280,6 +318,9 @@ function createQuarterbackMarker(point: SvgPoint): SVGPolygonElement {
   ];
   marker.classList.add('play-card-quarterback-marker');
   marker.setAttribute('points', points.join(' '));
+  if (teamTheme) {
+    marker.style.fill = teamTheme.offense.uniform.helmetShell;
+  }
 
   return marker;
 }

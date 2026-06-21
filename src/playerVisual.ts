@@ -6,6 +6,13 @@ import {
   type SkinToneId,
 } from './playerAppearance';
 import type { PlayerModel, PlayerRole, PlayerTeam } from './playerModel';
+import {
+  getUniformColorNumber,
+} from './teams/TeamThemeApplier';
+import {
+  serializeUniformPalette,
+  type UniformPalette,
+} from './teams/UniformPalette';
 
 const PLAYER_CENTER_Y = 1.1;
 const PLAYER_FORWARD_Z = 1;
@@ -59,6 +66,7 @@ export interface PlayerBodyDimensions {
 export interface PlayerVisualOptions {
   bodyStyle?: PlayerBodyVisualStyle;
   debugRoleColors?: boolean;
+  teamUniforms?: PlayerTeamUniforms;
 }
 
 export interface PlayerVisualBoundsSnapshot {
@@ -157,22 +165,34 @@ const PLAYER_ROLE_COLORS: Record<PlayerRole, number> = {
   runner: 0x2f66d8,
 };
 
-const PLAYER_UNIFORM_COLORS = {
+export type PlayerTeamUniforms = Record<PlayerTeam, UniformPalette>;
+
+export const DEFAULT_PLAYER_TEAM_UNIFORMS: PlayerTeamUniforms = {
   defense: {
-    jersey: 0xf2f4f6,
-    pants: 0xb83737,
-    shoes: 0x1c2228,
-    trim: 0x24282e,
+    faceguard: '#24282e',
+    helmetShell: '#b83737',
+    jersey: '#f2f4f6',
+    number: '#24282e',
+    pants: '#b83737',
+    shoe: '#1c2228',
+    shoulder: '#f2f4f6',
+    socks: '#b83737',
+    stripe: '#b83737',
   },
   offense: {
-    jersey: 0x2f66d8,
-    pants: 0xf2f4f6,
-    shoes: 0x1c2228,
-    trim: 0xdfe8f5,
+    faceguard: '#f3f5f8',
+    helmetShell: '#2f66d8',
+    jersey: '#2f66d8',
+    number: '#f2f4f6',
+    pants: '#f2f4f6',
+    shoe: '#1c2228',
+    shoulder: '#2f66d8',
+    socks: '#2f66d8',
+    stripe: '#dfe8f5',
   },
 } as const;
 
-type UniformClothPart = keyof typeof PLAYER_UNIFORM_COLORS.offense;
+type UniformClothPart = 'jersey' | 'pants' | 'shoes' | 'shoulder' | 'trim';
 type UniformPart = UniformClothPart | 'skin' | 'jerseyTexture';
 type UniformMeshReference = {
   mesh: THREE.Mesh;
@@ -183,6 +203,7 @@ type PlayerVisualMaterialState = {
   playerId: string;
   role: PlayerRole;
   team: PlayerTeam;
+  uniformKey: string;
 };
 type PlayerVisualHierarchyReferences = {
   bodyRoot: THREE.Object3D;
@@ -275,12 +296,7 @@ export function createPlaceholderPlayerVisual(
   const references = cachePlayerVisualReferences(group, bodyRoot);
 
   if (player) {
-    references.materialState = {
-      debugRoleColors,
-      playerId: player.id,
-      role: player.role,
-      team: player.team,
-    };
+    syncPlayerBodyMaterials(group, player, options);
   }
 
   return group;
@@ -289,7 +305,7 @@ export function createPlaceholderPlayerVisual(
 export function syncPlayerVisual(
   playerVisual: THREE.Object3D,
   playerModel: PlayerModel,
-  options: Pick<PlayerVisualOptions, 'debugRoleColors'> = {},
+  options: Pick<PlayerVisualOptions, 'debugRoleColors' | 'teamUniforms'> = {},
 ): void {
   if (playerVisual.userData.sourcePlayerId !== playerModel.id) {
     playerVisual.userData.sourcePlayerId = playerModel.id;
@@ -414,7 +430,7 @@ function createMannequinBodyRoot(
   const shoulderPads = createBodyMesh(
     BODY_PART_NAMES.shoulderPads,
     sharedGeometry.shoulderPads,
-    'jersey',
+    'shoulder',
     player,
     debugRoleColors,
   );
@@ -574,18 +590,22 @@ function createBodyMesh(
 function syncPlayerBodyMaterials(
   playerVisual: THREE.Object3D,
   playerModel: PlayerModel,
-  options: Pick<PlayerVisualOptions, 'debugRoleColors'>,
+  options: Pick<PlayerVisualOptions, 'debugRoleColors' | 'teamUniforms'>,
 ): void {
   const debugRoleColors =
     options.debugRoleColors ?? Boolean(playerVisual.userData.debugRoleColors);
+  const teamUniforms = options.teamUniforms ?? DEFAULT_PLAYER_TEAM_UNIFORMS;
+  const uniformKey = createUniformThemeKey(teamUniforms);
   const references = getOrCreatePlayerVisualReferences(playerVisual);
 
   playerVisual.userData.debugRoleColors = debugRoleColors;
+  playerVisual.userData.uniformKey = uniformKey;
   if (
     references.materialState?.debugRoleColors === debugRoleColors &&
     references.materialState.playerId === playerModel.id &&
     references.materialState.role === playerModel.role &&
-    references.materialState.team === playerModel.team
+    references.materialState.team === playerModel.team &&
+    references.materialState.uniformKey === uniformKey
   ) {
     return;
   }
@@ -600,6 +620,7 @@ function syncPlayerBodyMaterials(
         playerModel.role,
         playerModel.id,
         debugRoleColors,
+        teamUniforms,
       );
     if (uniformPart === 'skin') {
       mesh.userData.skinToneId = appearance.skinToneId;
@@ -611,6 +632,7 @@ function syncPlayerBodyMaterials(
     playerId: playerModel.id,
     role: playerModel.role,
     team: playerModel.team,
+    uniformKey,
   };
 }
 
@@ -620,18 +642,21 @@ function getUniformMaterial(
   role: PlayerRole,
   playerId: string,
   debugRoleColors: boolean,
+  teamUniforms: PlayerTeamUniforms = DEFAULT_PLAYER_TEAM_UNIFORMS,
 ): THREE.Material {
   if (uniformPart === 'skin') {
     return getSkinToneMaterial(resolvePlayerAppearance(playerId).skinToneId);
   }
 
   if (uniformPart === 'jerseyTexture') {
-    return getJerseyTextureMaterial(team, debugRoleColors);
+    return getJerseyTextureMaterial(team, debugRoleColors, teamUniforms);
   }
 
+  const palette = teamUniforms[team] ?? DEFAULT_PLAYER_TEAM_UNIFORMS[team];
+  const uniformColor = getUniformPartColor(uniformPart, palette);
   const materialKey = debugRoleColors
     ? `debug:${uniformPart}:${role}`
-    : `uniform:${uniformPart}:${team}`;
+    : `uniform:${uniformPart}:${team}:${uniformColor}`;
   const cached = materialCache.get(materialKey);
 
   if (cached instanceof THREE.MeshLambertMaterial) {
@@ -640,7 +665,7 @@ function getUniformMaterial(
 
   const color = debugRoleColors
     ? PLAYER_ROLE_COLORS[role]
-    : PLAYER_UNIFORM_COLORS[team][uniformPart];
+    : getUniformColorNumber(uniformColor);
   const material = new THREE.MeshLambertMaterial({
     color,
     flatShading: true,
@@ -653,8 +678,12 @@ function getUniformMaterial(
 function getJerseyTextureMaterial(
   team: PlayerTeam,
   debugRoleColors: boolean,
+  teamUniforms: PlayerTeamUniforms,
 ): THREE.MeshBasicMaterial {
-  const materialKey = `jersey-texture:${debugRoleColors ? 'debug' : team}`;
+  const palette = teamUniforms[team] ?? DEFAULT_PLAYER_TEAM_UNIFORMS[team];
+  const materialKey = debugRoleColors
+    ? `jersey-texture:debug:${team}`
+    : `jersey-texture:${team}:${palette.number}:${palette.stripe}`;
   const cached = materialCache.get(materialKey);
 
   if (cached instanceof THREE.MeshBasicMaterial) {
@@ -663,7 +692,7 @@ function getJerseyTextureMaterial(
 
   const material = new THREE.MeshBasicMaterial({
     alphaTest: 0.08,
-    map: createJerseyTexture(team, debugRoleColors),
+    map: createJerseyTexture(team, debugRoleColors, teamUniforms),
     side: THREE.FrontSide,
     transparent: true,
   });
@@ -672,16 +701,21 @@ function getJerseyTextureMaterial(
   return material;
 }
 
-function createJerseyTexture(team: PlayerTeam, debugRoleColors: boolean): THREE.DataTexture {
+function createJerseyTexture(
+  team: PlayerTeam,
+  debugRoleColors: boolean,
+  teamUniforms: PlayerTeamUniforms,
+): THREE.DataTexture {
   const width = 64;
   const height = 64;
   const data = new Uint8Array(width * height * 4);
-  const accent = debugRoleColors || team === 'offense'
+  const palette = teamUniforms[team] ?? DEFAULT_PLAYER_TEAM_UNIFORMS[team];
+  const accent = debugRoleColors
     ? [246, 250, 255, 220]
-    : [30, 35, 42, 220];
-  const trim = team === 'offense'
+    : hexToRgba(palette.number, 220);
+  const trim = debugRoleColors
     ? [18, 45, 98, 180]
-    : [184, 55, 55, 190];
+    : hexToRgba(palette.stripe, 190);
 
   paintRect(data, width, 7, 8, 50, 5, accent);
   paintRect(data, width, 7, 51, 50, 4, accent);
@@ -699,6 +733,40 @@ function createJerseyTexture(team: PlayerTeam, debugRoleColors: boolean): THREE.
   texture.name = `jersey-panel-${debugRoleColors ? 'debug' : team}`;
   texture.needsUpdate = true;
   return texture;
+}
+
+function getUniformPartColor(uniformPart: UniformClothPart, palette: UniformPalette): string {
+  if (uniformPart === 'shoes') {
+    return palette.shoe;
+  }
+
+  if (uniformPart === 'trim') {
+    return palette.stripe;
+  }
+
+  if (uniformPart === 'shoulder') {
+    return palette.shoulder;
+  }
+
+  return palette[uniformPart];
+}
+
+function createUniformThemeKey(teamUniforms: PlayerTeamUniforms): string {
+  return [
+    serializeUniformPalette(teamUniforms.offense),
+    serializeUniformPalette(teamUniforms.defense),
+  ].join('::');
+}
+
+function hexToRgba(hex: string, alpha: number): readonly number[] {
+  const value = getUniformColorNumber(hex);
+
+  return [
+    (value >> 16) & 0xff,
+    (value >> 8) & 0xff,
+    value & 0xff,
+    alpha,
+  ];
 }
 
 function paintRect(
@@ -768,6 +836,7 @@ function isUniformPart(value: unknown): value is UniformPart {
     value === 'jerseyTexture' ||
     value === 'pants' ||
     value === 'shoes' ||
+    value === 'shoulder' ||
     value === 'skin' ||
     value === 'trim'
   );

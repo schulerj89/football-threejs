@@ -81,6 +81,10 @@ import {
   OfficialsPresentationController,
   type OfficialsPresentationSnapshot,
 } from '../officials/OfficialsPresentationController';
+import {
+  resolveTeamPresentationTheme,
+  type TeamPresentationTheme,
+} from '../teams/TeamThemeApplier';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -131,6 +135,7 @@ export class PresentationRuntime {
   private presentationHoldDirector: PresentationHoldDirector;
   private readonly searchParams: URLSearchParams;
   private readonly shotPreview: ReturnType<typeof resolvePresentationShotPreview>;
+  private teamTheme: TeamPresentationTheme;
   private crowdBenchmarkSuppressed = false;
 
   constructor({
@@ -146,6 +151,7 @@ export class PresentationRuntime {
     this.scene = scene;
     this.searchParams = searchParams;
     this.gameExperience = gameExperience;
+    this.teamTheme = resolveTeamPresentationTheme(gameExperience.settings.teamProfiles);
     this.qualityProfile = getQualityProfile('broadcastHigh');
     this.crowdPresentationSettings = resolveEffectiveCrowdSettings(
       gameExperience.crowdPresentationSettings,
@@ -195,7 +201,10 @@ export class PresentationRuntime {
 
     this.crowdPresentationController =
       !this.crowdPreviewController && this.crowdPresentationSettings.crowdVisualsEnabled
-        ? new CrowdPresentationController({ settings: this.crowdPresentationSettings })
+        ? new CrowdPresentationController({
+            accentColors: this.teamTheme.crowdAccentColors,
+            settings: this.crowdPresentationSettings,
+          })
         : null;
     if (this.crowdPresentationController) {
       this.scene.add(this.crowdPresentationController.group);
@@ -238,7 +247,7 @@ export class PresentationRuntime {
     this.broadcastCaptions = createBroadcastCaptions();
     this.playCallUi = formationPreviewActive || this.crowdPreviewController
       ? null
-      : createPlayCallUi(initialPlays);
+      : createPlayCallUi(initialPlays, this.teamTheme);
     this.playerPoseController = new PlayerPoseController(undefined, {
       enabled: gameExperience.settings.playerMotionEnabled,
     });
@@ -373,14 +382,14 @@ export class PresentationRuntime {
     this.gamePresentationRuntime.recordCameraSnapshot(cameraSnapshot);
     if (profiler?.enabled) {
       profiler.measure('hudDomUpdate', () => {
-        syncGameplayHud(this.gameplayHud, gameplaySnapshot);
+        syncGameplayHud(this.gameplayHud, gameplaySnapshot, this.teamTheme);
         syncBroadcastCaptions(
           this.broadcastCaptions,
           this.broadcastCommentaryDirector.getSnapshot(),
         );
       });
     } else {
-      syncGameplayHud(this.gameplayHud, gameplaySnapshot);
+      syncGameplayHud(this.gameplayHud, gameplaySnapshot, this.teamTheme);
       syncBroadcastCaptions(
         this.broadcastCaptions,
         this.broadcastCommentaryDirector.getSnapshot(),
@@ -410,8 +419,10 @@ export class PresentationRuntime {
     const previousCameraSetting = this.gameExperience.settings.gameplayCamera;
     const previousCinematicsSetting = this.gameExperience.settings.cinematics;
     const previousCrowdSettings = this.crowdPresentationSettings;
+    const previousTeamKey = this.teamTheme.teamKey;
 
     this.gameExperience = gameExperience;
+    this.teamTheme = resolveTeamPresentationTheme(gameExperience.settings.teamProfiles);
     this.crowdPresentationSettings = resolveEffectiveCrowdSettings(
       gameExperience.crowdPresentationSettings,
       this.qualityProfile,
@@ -431,6 +442,10 @@ export class PresentationRuntime {
     this.broadcastCommentaryDirector.setCaptionsEnabled(
       gameExperience.settings.captionsEnabled,
     );
+    if (previousTeamKey !== this.teamTheme.teamKey) {
+      this.playCallUi?.setTeamTheme(this.teamTheme);
+      this.crowdPresentationController?.setAccentColors(this.teamTheme.crowdAccentColors);
+    }
     if (
       previousCameraSetting !== gameExperience.settings.gameplayCamera ||
       previousCinematicsSetting !== gameExperience.settings.cinematics
@@ -571,6 +586,7 @@ export class PresentationRuntime {
     }
 
     this.crowdPresentationController = new CrowdPresentationController({
+      accentColors: this.teamTheme.crowdAccentColors,
       settings: this.crowdPresentationSettings,
     });
     this.crowdPresentationController.setPageActive(!document.hidden && document.hasFocus());

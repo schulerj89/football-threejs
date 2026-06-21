@@ -1,4 +1,8 @@
 import type { GameplaySnapshot } from './playState';
+import {
+  getReadableTextColor,
+  type TeamPresentationTheme,
+} from './teams/TeamThemeApplier';
 
 export interface GameplayHud {
   clock: HTMLDivElement;
@@ -106,7 +110,14 @@ export function createGameplayHud(): GameplayHud {
   };
 }
 
-export function syncGameplayHud(hud: GameplayHud, gameplay: GameplaySnapshot): void {
+export function syncGameplayHud(
+  hud: GameplayHud,
+  gameplay: GameplaySnapshot,
+  teamTheme: TeamPresentationTheme | null = null,
+): void {
+  if (teamTheme) {
+    applyGameplayHudTeamTheme(hud, teamTheme);
+  }
   const lastPlayResult = gameplay.lastPlayResult;
   const isTurnoverOnDowns = gameplay.drive.lastDriveResult?.type === 'turnoverOnDowns';
   const isGameOver = gameplay.playState === 'gameOver';
@@ -137,6 +148,29 @@ export function syncGameplayHud(hud: GameplayHud, gameplay: GameplaySnapshot): v
   hud.gameOverMessage.textContent = isGameOver
     ? `FINAL SCORE ${gameplay.scoreAttack.finalScore ?? gameplay.score} - PRESS ENTER`
     : '';
+}
+
+export function applyGameplayHudTeamTheme(
+  hud: GameplayHud,
+  teamTheme: TeamPresentationTheme,
+): void {
+  if (hud.root.dataset.teamKey === teamTheme.teamKey) {
+    return;
+  }
+
+  hud.root.dataset.teamKey = teamTheme.teamKey;
+  hud.root.style.setProperty('--scorebug-user-bg', teamTheme.offense.profile.colors.primary);
+  hud.root.style.setProperty(
+    '--scorebug-user-text',
+    getReadableTextColor(teamTheme.offense.profile.colors.primary),
+  );
+  hud.root.style.setProperty('--scorebug-opponent-bg', teamTheme.defense.profile.colors.primary);
+  hud.root.style.setProperty(
+    '--scorebug-opponent-text',
+    getReadableTextColor(teamTheme.defense.profile.colors.primary),
+  );
+  hud.root.style.setProperty('--scorebug-accent', teamTheme.offense.profile.colors.accent);
+  hud.root.style.setProperty('--scorebug-secondary', teamTheme.offense.profile.colors.secondary);
 }
 
 function formatClock(totalSeconds: number): string {

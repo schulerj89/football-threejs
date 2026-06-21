@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 3;
+export const GAME_SETTINGS_SCHEMA_VERSION = 4;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;

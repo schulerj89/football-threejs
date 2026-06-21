@@ -56,6 +56,11 @@ export class FieldMaterialLibrary {
     return this.get(getFieldMarkingMaterialKey(layout));
   }
 
+  setEndZoneColors(colors: { far: string; near: string }): void {
+    this.endZoneA.color.set(colors.near);
+    this.endZoneB.color.set(colors.far);
+  }
+
   dispose(): void {
     for (const key of FIELD_MATERIAL_KEYS) {
       this[key].dispose();

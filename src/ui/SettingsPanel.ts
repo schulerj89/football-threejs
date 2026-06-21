@@ -11,11 +11,13 @@ import type { CrowdDensity } from '../presentation/CrowdPresentationController';
 import type { QualityMode } from '../performance/QualityProfile';
 import { getPlaybookOptions } from '../playbook';
 import type { PlaybookId } from '../roster';
+import { TeamCustomizationPanel } from './TeamCustomizationPanel';
 
 export interface SettingsPanelOptions {
   initialSettings: GameExperienceSettings;
   onSettingsChange?: (settings: GameExperienceSettings) => void;
   showGameMode?: boolean;
+  showTeamCustomization?: boolean;
 }
 
 export class SettingsPanel {
@@ -24,6 +26,8 @@ export class SettingsPanel {
   private settings: GameExperienceSettings;
   private readonly onSettingsChange?: (settings: GameExperienceSettings) => void;
   private readonly showGameMode: boolean;
+  private readonly showTeamCustomization: boolean;
+  private readonly teamCustomizationPanel: TeamCustomizationPanel | null;
   private readonly presetSelect = document.createElement('select');
   private readonly playbookSelect = document.createElement('select');
   private readonly qualityModeSelect = document.createElement('select');
@@ -53,6 +57,18 @@ export class SettingsPanel {
     this.settings = normalizeGameExperienceSettings(options.initialSettings);
     this.onSettingsChange = options.onSettingsChange;
     this.showGameMode = options.showGameMode ?? true;
+    this.showTeamCustomization = options.showTeamCustomization ?? true;
+    this.teamCustomizationPanel = this.showTeamCustomization
+      ? new TeamCustomizationPanel({
+          initialSettings: this.settings.teamProfiles,
+          onSettingsChange: (teamProfiles) => {
+            this.updateSettings({
+              ...this.settings,
+              teamProfiles,
+            });
+          },
+        })
+      : null;
     this.root.className = 'game-setup-screen settings-panel';
     this.root.append(this.createContent());
     this.syncControls();
@@ -144,6 +160,12 @@ export class SettingsPanel {
     );
 
     content.append(primary, custom);
+    if (this.teamCustomizationPanel) {
+      const teamWrapper = document.createElement('div');
+      teamWrapper.className = 'game-setup-team';
+      teamWrapper.append(this.teamCustomizationPanel.root);
+      content.append(teamWrapper);
+    }
     this.installHandlers();
     return content;
   }
@@ -204,11 +226,12 @@ export class SettingsPanel {
       const preset = this.presetSelect.value as ExperiencePreset;
       const playbookId = this.settings.playbookId;
       const debugToolsEnabled = this.settings.debugToolsEnabled;
+      const teamProfiles = this.settings.teamProfiles;
       const next =
         preset === 'broadcast'
-          ? { ...BROADCAST_EXPERIENCE_SETTINGS, debugToolsEnabled, playbookId }
+          ? { ...BROADCAST_EXPERIENCE_SETTINGS, debugToolsEnabled, playbookId, teamProfiles }
           : preset === 'performance'
-            ? { ...PERFORMANCE_EXPERIENCE_SETTINGS, debugToolsEnabled, playbookId }
+            ? { ...PERFORMANCE_EXPERIENCE_SETTINGS, debugToolsEnabled, playbookId, teamProfiles }
             : { ...this.settings, preset: 'custom' as const };
       this.updateSettings(next);
     });
@@ -327,6 +350,7 @@ export class SettingsPanel {
     this.playerMotionInput.checked = this.settings.playerMotionEnabled;
     this.officialsDebugLabelsInput.checked = this.settings.officialsDebugLabels;
     this.officialsInput.checked = this.settings.officialsEnabled;
+    this.teamCustomizationPanel?.setSettings(this.settings.teamProfiles);
 
     const customEnabled = this.settings.preset === 'custom';
     for (const control of this.customControls) {

@@ -32,7 +32,7 @@ export class PauseSettingsPanel {
 
     const note = document.createElement('p');
     note.className = 'settings-note';
-    note.textContent = 'Volume, captions, crowd, and camera presentation changes apply immediately. Change game mode from the title screen.';
+    note.textContent = 'Volume, captions, crowd, and camera presentation changes apply immediately. Change game mode, teams, or uniforms from the title screen.';
 
     this.returnToTitleButton.type = 'button';
     this.returnToTitleButton.className = 'return-title-button';

@@ -1,12 +1,14 @@
 import * as THREE from 'three';
-import { createCrowdResources } from './CrowdMeshFactory';
+import { applyCrowdAccentColors, createCrowdResources } from './CrowdMeshFactory';
 import type { CrowdResources } from './CrowdTypes';
 
 export class CrowdResourceOwner {
   private currentResources: CrowdResources;
+  private accentColors: readonly number[];
 
-  constructor(requestedCount: number, groupName: string) {
-    this.currentResources = createCrowdResources(requestedCount);
+  constructor(requestedCount: number, groupName: string, accentColors: readonly number[] = []) {
+    this.accentColors = accentColors;
+    this.currentResources = createCrowdResources(requestedCount, { accentColors });
     this.currentResources.group.name = groupName;
   }
 
@@ -20,9 +22,16 @@ export class CrowdResourceOwner {
 
   rebuild(requestedCount: number, groupName = this.currentResources.group.name): CrowdResources {
     this.dispose();
-    this.currentResources = createCrowdResources(requestedCount);
+    this.currentResources = createCrowdResources(requestedCount, {
+      accentColors: this.accentColors,
+    });
     this.currentResources.group.name = groupName;
     return this.currentResources;
+  }
+
+  setAccentColors(accentColors: readonly number[]): void {
+    this.accentColors = accentColors;
+    applyCrowdAccentColors(this.currentResources, accentColors);
   }
 
   enableDynamicInstanceMatrices(): void {

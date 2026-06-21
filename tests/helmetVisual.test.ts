@@ -12,6 +12,12 @@ import {
   PLAYER_HEAD_ANCHOR_NAME,
   createPlaceholderPlayerVisual,
 } from '../src/playerVisual';
+import { DEFAULT_USER_TEAM_ID } from '../src/teams/TeamRegistry';
+import {
+  DEFAULT_TEAM_PROFILE_SETTINGS,
+  updateTeamColorOverride,
+} from '../src/teams/TeamProfileStore';
+import { resolveTeamPresentationTheme } from '../src/teams/TeamThemeApplier';
 
 describe('helmet visual integration', () => {
   it('keeps a dedicated head anchor on the procedural player body', () => {
@@ -66,6 +72,34 @@ describe('helmet visual integration', () => {
     expect((faceguard.material as THREE.MeshStandardMaterial).color.getHex()).toBe(
       HELMET_VISUAL_CONFIG.teamColors.defense.faceguard,
     );
+  });
+
+  it('uses helmet shell and faceguard colors from the active uniform palette', () => {
+    const shellMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const faceguardMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const shell = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), shellMaterial);
+    const faceguard = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), faceguardMaterial);
+    const teamProfiles = updateTeamColorOverride(
+      DEFAULT_TEAM_PROFILE_SETTINGS,
+      DEFAULT_USER_TEAM_ID,
+      {
+        faceguard: '#101820',
+        helmetShell: '#654321',
+      },
+    );
+    const theme = resolveTeamPresentationTheme(teamProfiles);
+
+    applyHelmetTeamMaterials(
+      {
+        faceguardMeshes: [faceguard],
+        shellMeshes: [shell],
+      },
+      'offense',
+      theme.uniforms,
+    );
+
+    expect((shell.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0x654321);
+    expect((faceguard.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0x101820);
   });
 
   it('reuses cached helmet parts when the team color is unchanged', () => {

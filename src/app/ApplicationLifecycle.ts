@@ -52,6 +52,7 @@ export class ApplicationLifecycle {
           initialSettings: options.initialSettings,
           onSettingsChange: options.onPauseSettingsChange,
           showGameMode: false,
+          showTeamCustomization: false,
         })
       : null;
     this.pauseSettingsPanel = this.pauseSetupScreen

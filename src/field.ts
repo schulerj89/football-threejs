@@ -29,6 +29,7 @@ export {
 export type { CreateFootballFieldOptions, FootballField } from './field/FieldTypes';
 
 const dynamicMarkerControllers = new WeakMap<FootballField, DynamicFieldMarkers>();
+const fieldResourceOwners = new WeakMap<FootballField, FieldResourceOwner>();
 
 export function createFootballField(options: CreateFootballFieldOptions = {}): FootballField {
   const layout = createFieldLayout();
@@ -36,6 +37,9 @@ export function createFootballField(options: CreateFootballFieldOptions = {}): F
     options.fieldAudit ? validateFieldLayout(layout).map((issue) => issue.id) : [],
   );
   const resourceOwner = new FieldResourceOwner();
+  if (options.endZoneColors) {
+    resourceOwner.materials.setEndZoneColors(options.endZoneColors);
+  }
   const geometryBuilder = resourceOwner.geometryBuilder;
   const group = new THREE.Group();
   group.name = 'football-field';
@@ -76,6 +80,7 @@ export function createFootballField(options: CreateFootballFieldOptions = {}): F
     auditEnabled: !!options.fieldAudit,
     dispose: () => {
       dynamicMarkerControllers.delete(field);
+      fieldResourceOwners.delete(field);
       resourceOwner.disposeObject(group);
     },
     firstDownLineMarker: dynamicMarkers.firstDownLineMarker,
@@ -87,6 +92,7 @@ export function createFootballField(options: CreateFootballFieldOptions = {}): F
   };
 
   dynamicMarkerControllers.set(field, dynamicMarkers);
+  fieldResourceOwners.set(field, resourceOwner);
   return field;
 }
 
@@ -101,4 +107,14 @@ export function syncFootballFieldDriveLines(
     firstDownMarker,
     field.auditEnabled,
   );
+}
+
+export function syncFootballFieldTeamColors(
+  field: FootballField,
+  colors: { farEndZone: string; nearEndZone: string },
+): void {
+  fieldResourceOwners.get(field)?.materials.setEndZoneColors({
+    far: colors.farEndZone,
+    near: colors.nearEndZone,
+  });
 }

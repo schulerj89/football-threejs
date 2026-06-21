@@ -9,6 +9,7 @@ import {
   getPlayerBodyVisualSnapshot,
   syncPlayerVisual,
   type PlayerBodyVisualSnapshot,
+  type PlayerTeamUniforms,
   type PlayerVisualOptions,
 } from '../playerVisual';
 
@@ -36,6 +37,10 @@ export class PlayerVisualRegistry {
     return this.visuals.values();
   }
 
+  setTeamUniforms(teamUniforms: PlayerTeamUniforms): void {
+    this.options.teamUniforms = teamUniforms;
+  }
+
   reconcile(players: readonly PlayerModel[]): void {
     const activeIds = new Set(players.map((player) => player.id));
 
@@ -57,10 +62,10 @@ export class PlayerVisualRegistry {
       }
 
       syncPlayerVisual(playerVisual, player, this.options);
-      syncHelmetTeamMaterials(playerVisual, player);
+      syncHelmetTeamMaterials(playerVisual, player, this.options.teamUniforms);
     }
 
-    attachHelmetsToPlayerVisuals(this.visuals, [...players]);
+    attachHelmetsToPlayerVisuals(this.visuals, [...players], this.options.teamUniforms);
   }
 
   sync(players: readonly PlayerModel[]): void {
@@ -68,7 +73,7 @@ export class PlayerVisualRegistry {
       const playerVisual = this.visuals.get(player.id);
       if (playerVisual) {
         syncPlayerVisual(playerVisual, player, this.options);
-        syncHelmetTeamMaterials(playerVisual, player);
+        syncHelmetTeamMaterials(playerVisual, player, this.options.teamUniforms);
       }
     }
   }

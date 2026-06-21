@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.52.0] - 2026-06-21
+
+### Added
+
+- Added fictional team profiles, home/away uniform palettes, persisted team customization settings, six-digit hex color validation, reset-to-defaults, and deterministic similar-uniform warnings.
+- Added a title/setup team customization panel with team selectors, uniform selectors, preset swatches, and HTML color pickers for primary, secondary, helmet, pants, and faceguard colors.
+- Routed one resolved team theme through player jerseys, shoulder pads, pants, helmet shells, faceguards, HUD/scorebug colors, pre-snap play-card markers, field end zones, and supported crowd accent colors.
+
+### Changed
+
+- Kept team and uniform changes title/setup-only during active matches while pause settings continue to apply safe presentation/audio changes.
+- Preserved role-specific body colors behind `?debugRoleColors=1` and kept deterministic skin tones independent from team identity.
+
+### Tests
+
+- Added team-profile validation, settings persistence/migration, palette resolution, color contrast, field end-zone theming, custom player-uniform, helmet-color, and bounded shared-material coverage.
+
 ## [0.51.6] - 2026-06-21
 
 ### Fixed
