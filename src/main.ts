@@ -45,7 +45,9 @@ import {
   startPlay,
   updateGameplayModel,
   type GameplaySnapshot,
+  type PassAuditSnapshot,
 } from './playState';
+import { createPassAuditOverlay, syncPassAuditOverlay } from './passAuditOverlay';
 import { resolvePlaybookId } from './playbook';
 import {
   PlayerPoseController,
@@ -90,6 +92,7 @@ declare global {
       getFormationPreviewSnapshot: () => FormationPreviewSnapshot | null;
       getGameplaySnapshot: () => GameplaySnapshot;
       getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
+      getPassAuditSnapshot: () => PassAuditSnapshot | null;
       getPresentationAuditSnapshot: () => PresentationAuditSnapshot | null;
       getPlayerBodyVisualSnapshots: () => PlayerBodyVisualSnapshot[];
       getPlayerPoseSnapshots: () => PlayerPoseSnapshot[];
@@ -120,6 +123,7 @@ const playbookId = resolvePlaybookId(searchParams.get('playbook') ?? searchParam
 const presentationAuditEnabled = searchParams.has('presentationAudit');
 const routeAuditEnabled = searchParams.has('routeAudit');
 const routeArtEnabled = searchParams.get('routeArt') !== '0';
+const passAuditEnabled = searchParams.has('passAudit');
 let presentationAuditState: PresentationAuditState = resolvePresentationAuditState(
   searchParams.get('presentationState'),
 );
@@ -192,6 +196,7 @@ const presentationAuditOverlay = presentationAuditEnabled
   ? createPresentationAuditOverlay()
   : null;
 const routeAuditOverlay = routeAuditEnabled ? createRouteAuditOverlay() : null;
+const passAuditOverlay = passAuditEnabled ? createPassAuditOverlay() : null;
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 let latestRenderMetrics: RenderMetricsSnapshot | null = null;
@@ -217,6 +222,7 @@ if (import.meta.env.DEV || searchParams.has('debug') || presentationAuditEnabled
       formationPreviewModel ? snapshotFormationPreviewModel(formationPreviewModel) : null,
     getGameplaySnapshot: () => getActivePresentationSnapshot(),
     getHelmetAssetSnapshot,
+    getPassAuditSnapshot: () => getActivePresentationSnapshot().passAudit,
     getPresentationAuditSnapshot: () => getPresentationAuditSnapshot(),
     getPlayerBodyVisualSnapshots: () =>
       [...playerVisuals.values()].map((playerVisual) => getPlayerBodyVisualSnapshot(playerVisual)),
@@ -313,6 +319,9 @@ function renderFrame(delta: number): void {
   }
   if (routeAuditOverlay) {
     syncRouteAuditOverlay(routeAuditOverlay, routeArtRenderer.getSnapshot());
+  }
+  if (passAuditOverlay) {
+    syncPassAuditOverlay(passAuditOverlay, gameplaySnapshot.passAudit);
   }
   const renderMetrics = debugOverlay.isVisible() ? latestRenderMetrics ?? undefined : undefined;
   debugOverlay.update(
@@ -517,7 +526,7 @@ function getPresentationAuditSnapshot(): PresentationAuditSnapshot | null {
 }
 
 function shouldCollectPresentationDiagnostics(): boolean {
-  return debugOverlay.isVisible() || !!poseDebugOverlay || !!presentationAuditOverlay || !!routeAuditOverlay;
+  return debugOverlay.isVisible() || !!poseDebugOverlay || !!presentationAuditOverlay || !!routeAuditOverlay || !!passAuditOverlay;
 }
 
 function createEmptyPresentationAuditSnapshot(): PresentationAuditSnapshot {

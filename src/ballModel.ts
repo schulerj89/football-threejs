@@ -1,6 +1,7 @@
 import { INITIAL_BALL_SPOT } from './field';
 import type { FootballSpot } from './fieldScale';
 import type { PlayerModel } from './playerModel';
+import { evaluateSweptCatch } from './passTargeting';
 
 export interface Vector3 {
   x: number;
@@ -29,6 +30,7 @@ export type BallState =
 
 export interface BallModel {
   position: Vector3;
+  previousPosition: Vector3;
   possession: BallPossession;
   state: BallState;
 }
@@ -41,6 +43,8 @@ export const BALL_CARRY_ATTACHMENT = {
 
 export const PASSING_CONFIG = {
   catchRadius: 2.4,
+  catchTargetHeight: 1.35,
+  targetingIterations: 4,
   maxCatchHeight: 4.4,
   maxFlightSeconds: 1.05,
   maxFlightTimeSeconds: 1.25,
@@ -48,14 +52,14 @@ export const PASSING_CONFIG = {
   minFlightSeconds: 0.45,
   passSpeed: 18,
   peakHeight: 3.4,
-  receiverLeadDistance: 5.5,
-  receiverLeadSeconds: 0.45,
-  targetHeight: 0,
 } as const;
 
 export function createBallModel(initialSpot: FootballSpot = INITIAL_BALL_SPOT): BallModel {
+  const position = { x: initialSpot.x, y: BALL_CARRY_ATTACHMENT.y, z: initialSpot.z };
+
   return {
-    position: { x: initialSpot.x, y: BALL_CARRY_ATTACHMENT.y, z: initialSpot.z },
+    position: { ...position },
+    previousPosition: { ...position },
     possession: { kind: 'none' },
     state: { kind: 'dead' },
   };
@@ -67,6 +71,7 @@ export function resetBallModel(ball: BallModel, spot: FootballSpot = INITIAL_BAL
   ball.position.x = spot.x;
   ball.position.y = BALL_CARRY_ATTACHMENT.y;
   ball.position.z = spot.z;
+  ball.previousPosition = { ...ball.position };
 }
 
 export function giveBallToPlayer(
@@ -77,6 +82,7 @@ export function giveBallToPlayer(
   ball.possession = { kind: 'player', playerId: player.id };
   ball.state = { kind: stateKind, playerId: player.id };
   updateCarriedBallPosition(ball, player);
+  ball.previousPosition = { ...ball.position };
 }
 
 export function throwBallToward(ball: BallModel, target: Vector3): boolean {
@@ -93,6 +99,7 @@ export function throwBallToward(ball: BallModel, target: Vector3): boolean {
   );
 
   ball.possession = { kind: 'none' };
+  ball.previousPosition = { ...start };
   ball.state = {
     durationSeconds,
     elapsedSeconds: 0,
@@ -112,6 +119,7 @@ export function updateInFlightBall(ball: BallModel, deltaSeconds: number): void 
   }
 
   const flight = ball.state;
+  ball.previousPosition = { ...ball.position };
   flight.elapsedSeconds = Math.min(
     flight.maxFlightTimeSeconds,
     flight.elapsedSeconds + Math.max(0, deltaSeconds),
@@ -141,16 +149,13 @@ export function isBallCatchableByPlayer(ball: BallModel, player: PlayerModel): b
     return false;
   }
 
-  const distance = Math.hypot(
-    ball.position.x - player.position.x,
-    ball.position.z - player.position.z,
-  );
-
-  return (
-    distance <= PASSING_CONFIG.catchRadius &&
-    ball.position.y >= PASSING_CONFIG.minCatchHeight &&
-    ball.position.y <= PASSING_CONFIG.maxCatchHeight
-  );
+  return evaluateSweptCatch(
+    ball.previousPosition,
+    ball.position,
+    player.position,
+    player.position,
+    PASSING_CONFIG,
+  ).catchable;
 }
 
 export function markBallIncomplete(ball: BallModel): void {
@@ -174,6 +179,7 @@ export function updateCarriedBallPosition(ball: BallModel, player: PlayerModel):
   ball.position.x = player.position.x + BALL_CARRY_ATTACHMENT.x * cos + BALL_CARRY_ATTACHMENT.z * sin;
   ball.position.y = BALL_CARRY_ATTACHMENT.y;
   ball.position.z = player.position.z - BALL_CARRY_ATTACHMENT.x * sin + BALL_CARRY_ATTACHMENT.z * cos;
+  ball.previousPosition = { ...ball.position };
 }
 
 function lerp(start: number, end: number, t: number): number {

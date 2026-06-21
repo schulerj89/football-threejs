@@ -16,6 +16,35 @@ interface FootballSpot {
   z: number;
 }
 
+interface Vector3Snapshot {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface PassAuditSnapshot {
+  actualClosestApproach: {
+    ball: Vector3Snapshot;
+    receiver: FootballSpot;
+  } | null;
+  ballHeightAtClosestApproach: number | null;
+  horizontalMissDistance: number | null;
+  predictedFlightSeconds: number;
+  predictedReceiverPosition: FootballSpot;
+  predictedReceiverRouteDistance: number;
+  predictedTargetPosition: Vector3Snapshot;
+  releasePosition: Vector3Snapshot;
+  resultReason:
+    | 'aboveCatchHeight'
+    | 'belowCatchHeight'
+    | 'catch'
+    | 'flightFinished'
+    | 'inFlight'
+    | 'outOfBounds'
+    | 'outsideCatchRadius';
+  selectedReceiverId: string;
+}
+
 interface PlayResultSnapshot {
   endingBallSpot: FootballSpot;
   id: number;
@@ -78,6 +107,7 @@ interface GameplaySnapshot {
     initialMovementDirection: FootballSpot;
   };
   selectedReceiver: { displayName: string; id: string } | null;
+  passAudit: PassAuditSnapshot | null;
   passAttempted: boolean;
   forwardPassEligible: boolean;
   passFeedback: 'pastLineOfScrimmage' | null;
@@ -756,6 +786,35 @@ test('shows on-field receiver routes before snap and supports route audit mode',
   const auditRoutes = await getRouteArtSnapshot(page);
   expect(auditRoutes.routes[0].audit).not.toBeNull();
   await expect(page.locator('.route-audit-overlay')).toContainText('ROUTE AUDIT');
+});
+
+test('shows pass audit data for a route-aware throw', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?debug=1&readback=1&passAudit=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.pass-audit-overlay')).toContainText('no active pass');
+
+  await page.keyboard.press('3');
+  await page.keyboard.press('Space');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    ball: { state: { kind: 'possessed' } },
+    playState: 'live',
+  });
+
+  await page.keyboard.press('f');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    passAttempted: true,
+  });
+  await expect.poll(() => getPassAuditSnapshot(page)).toMatchObject({
+    selectedReceiverId: 'offense-wr',
+  });
+  await expect(page.locator('.pass-audit-overlay')).toContainText('TARGET offense-wr');
+  await expect(page.locator('.pass-audit-overlay')).toContainText('PRED_TARGET');
+
+  await expect.poll(async () => (await getPassAuditSnapshot(page))?.actualClosestApproach).not.toBeNull();
+  const audit = await getPassAuditSnapshot(page);
+  expect(audit?.predictedFlightSeconds).toBeGreaterThan(0);
+  expect(audit?.predictedReceiverRouteDistance).toBeGreaterThan(0);
 });
 
 test('starts playable 7v7 Twin Slants Flat and throws to the selected target', async ({ page }) => {
@@ -1624,6 +1683,24 @@ async function getGameplaySnapshot(page: Page): Promise<GameplaySnapshot> {
     }
 
     return debugApi.getGameplaySnapshot();
+  });
+}
+
+async function getPassAuditSnapshot(page: Page): Promise<PassAuditSnapshot | null> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getPassAuditSnapshot: () => PassAuditSnapshot | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getPassAuditSnapshot();
   });
 }
 

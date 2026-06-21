@@ -2,7 +2,6 @@ import {
   PASSING_CONFIG,
   createBallModel,
   giveBallToPlayer,
-  isBallCatchableByPlayer,
   isPassFlightFinished,
   markBallDead,
   markBallIncomplete,
@@ -13,7 +12,7 @@ import {
   type BallModel,
   type Vector3,
 } from './ballModel';
-import { type SnapLane } from './ballSpotting';
+import { resolveSnapPlacement, type SnapLane } from './ballSpotting';
 import {
   isTackleContact,
 } from './defenderModel';
@@ -42,7 +41,6 @@ import {
   getDefaultPlayId,
   getPlay,
   getNextEligibleReceiverId,
-  getReceiverRouteTarget,
   getReceiverDisplayName,
   hasReceiverRoute,
   isEligibleReceiverId,
@@ -52,8 +50,17 @@ import {
 } from './playbook';
 import {
   createReceiverRouteStateMap,
+  getRouteDefinition,
+  resolveReceiverRoute,
   type ReceiverRouteState,
 } from './receiverRoutes';
+import {
+  evaluateSweptCatch,
+  solveRouteAwarePassTarget,
+  type CatchEvaluationReason,
+  type PassTargetSolution,
+  type SweptCatchEvaluation,
+} from './passTargeting';
 import {
   snapshotPlayerModel,
   type PlayerModel,
@@ -99,6 +106,22 @@ export interface PlayResult {
   yardsGained: number;
 }
 
+export interface PassAuditSnapshot {
+  actualClosestApproach: {
+    ball: Vector3;
+    receiver: FootballSpot;
+  } | null;
+  ballHeightAtClosestApproach: number | null;
+  horizontalMissDistance: number | null;
+  predictedFlightSeconds: number;
+  predictedReceiverPosition: FootballSpot;
+  predictedReceiverRouteDistance: number;
+  predictedTargetPosition: Vector3;
+  releasePosition: Vector3;
+  resultReason: CatchEvaluationReason | 'flightFinished' | 'inFlight' | 'outOfBounds';
+  selectedReceiverId: string;
+}
+
 export const GAMEPLAY_CONFIG = {
   touchdownPoints: 6,
   touchdownResetDelaySeconds: 1.25,
@@ -124,11 +147,13 @@ export interface GameplayModel {
   nextPlayResultId: number;
   passFeedbackTimerSeconds: number;
   passAttempted: boolean;
+  passAudit: PassAuditSnapshot | null;
   forwardPassEligible: boolean;
   player: PlayerModel;
   players: PlayerModel[];
   playbookId: PlaybookId;
   receiverRouteStates: Record<string, ReceiverRouteState>;
+  previousPlayerPositions: Record<string, FootballSpot>;
   selectedPlay: PlayDefinition;
   playState: PlayState;
   playResetTimerSeconds: number | null;
@@ -173,6 +198,7 @@ export interface GameplaySnapshot {
   scoreAttack: ScoreAttackSnapshot;
   snapLane: SnapLane;
   passAttempted: boolean;
+  passAudit: PassAuditSnapshot | null;
   forwardPassEligible: boolean;
   passFeedback: 'pastLineOfScrimmage' | null;
 }
@@ -205,11 +231,13 @@ export function createGameplayModel(options: CreateGameplayModelOptions = {}): G
     nextPlayResultId: 1,
     passFeedbackTimerSeconds: 0,
     passAttempted: false,
+    passAudit: null,
     forwardPassEligible: true,
     player: ballCarrier,
     players,
     playbookId,
     receiverRouteStates: createReceiverRouteStateMap(selectedPlay),
+    previousPlayerPositions: capturePlayerPositions(players),
     selectedPlay,
     playState: 'preSnap',
     playResetTimerSeconds: null,
@@ -231,6 +259,7 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
 
   gameplay.selectedPlay = play;
   gameplay.passAttempted = false;
+  gameplay.passAudit = null;
   gameplay.forwardPassEligible = true;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(play);
@@ -258,12 +287,14 @@ export function startPlay(gameplay: GameplayModel): boolean {
   setNextSnapSpot(gameplay, gameplay.drive.lineOfScrimmage);
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
+  gameplay.passAudit = null;
   gameplay.passFeedbackTimerSeconds = 0;
   ensureSelectedReceiver(gameplay);
   gameplay.playResetTimerSeconds = null;
   gameplay.playState = 'live';
   resetBlockingState(gameplay.blocking);
   gameplay.receiverRouteStates = createReceiverRouteStateMap(gameplay.selectedPlay);
+  gameplay.previousPlayerPositions = capturePlayerPositions(gameplay.players);
   gameplay.player = getBallCarrier(gameplay.players, gameplay.selectedPlay);
   for (const player of gameplay.players) {
     if (player.id === gameplay.player.id) {
@@ -306,13 +337,14 @@ export function attemptPass(gameplay: GameplayModel): boolean {
     return false;
   }
 
-  const target = calculatePassTarget(gameplay, receiver);
-  const thrown = throwBallToward(gameplay.ball, target);
+  const solution = calculatePassTarget(gameplay, receiver);
+  const thrown = throwBallToward(gameplay.ball, solution.target);
 
   if (!thrown) {
     return false;
   }
 
+  gameplay.passAudit = createPassAuditSnapshot(receiver.id, gameplay.ball.previousPosition, solution);
   gameplay.passAttempted = true;
   gameplay.player.velocity.x = 0;
   gameplay.player.velocity.z = 0;
@@ -373,9 +405,11 @@ export function resetPlay(gameplay: GameplayModel): void {
   setNextSnapSpot(gameplay, resetSpot);
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
+  gameplay.passAudit = null;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(gameplay.selectedPlay);
   gameplay.receiverRouteStates = createReceiverRouteStateMap(gameplay.selectedPlay);
+  gameplay.previousPlayerPositions = {};
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
   resetBlockingState(gameplay.blocking);
@@ -403,9 +437,11 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
   gameplay.nextPlayResultId = 1;
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
+  gameplay.passAudit = null;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(defaultPlay);
   gameplay.receiverRouteStates = createReceiverRouteStateMap(defaultPlay);
+  gameplay.previousPlayerPositions = {};
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
   resetBlockingState(gameplay.blocking);
@@ -417,6 +453,7 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
 
 export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): void {
   const delta = Math.max(0, deltaSeconds);
+  gameplay.previousPlayerPositions = capturePlayerPositions(gameplay.players);
 
   updateScoreAttackClock(gameplay.scoreAttack, delta);
   updatePassFeedback(gameplay, delta);
@@ -438,7 +475,7 @@ export function updateGameplayModel(gameplay: GameplayModel, deltaSeconds = 0): 
         receiverRouteStates: gameplay.receiverRouteStates,
       });
       updateForwardPassEligibility(gameplay);
-      updatePassFlight(gameplay, delta);
+      updatePassFlight(gameplay, delta, gameplay.previousPlayerPositions);
       detectSack(gameplay);
       if (gameplay.playState === 'live') {
         detectTackle(gameplay);
@@ -504,6 +541,7 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     passFeedback: gameplay.passFeedbackTimerSeconds > 0 ? 'pastLineOfScrimmage' : null,
     forwardPassEligible: gameplay.forwardPassEligible,
     passAttempted: gameplay.passAttempted,
+    passAudit: clonePassAuditSnapshot(gameplay.passAudit),
     player: snapshotPlayerModel(gameplay.player),
     players: gameplay.players.map(snapshotPlayerModel),
     playbookId: gameplay.playbookId,
@@ -673,7 +711,11 @@ function detectOutOfBounds(gameplay: GameplayModel): void {
   );
 }
 
-function updatePassFlight(gameplay: GameplayModel, deltaSeconds: number): void {
+function updatePassFlight(
+  gameplay: GameplayModel,
+  deltaSeconds: number,
+  previousPlayerPositions: Record<string, FootballSpot>,
+): void {
   if (gameplay.ball.state.kind !== 'inFlight') {
     return;
   }
@@ -681,19 +723,25 @@ function updatePassFlight(gameplay: GameplayModel, deltaSeconds: number): void {
   updateInFlightBall(gameplay.ball, deltaSeconds);
 
   const receiver = getEligibleReceiver(gameplay);
-  if (
-    receiver &&
-    gameplay.playState === 'live' &&
-    isBallCatchableByPlayer(gameplay.ball, receiver)
-  ) {
-    completePass(gameplay, receiver);
-    return;
+  if (receiver && gameplay.playState === 'live') {
+    const catchEvaluation = evaluateSweptCatch(
+      gameplay.ball.previousPosition,
+      gameplay.ball.position,
+      previousPlayerPositions[receiver.id] ?? receiver.position,
+      receiver.position,
+      PASSING_CONFIG,
+    );
+    updatePassAuditFromCatchEvaluation(gameplay, catchEvaluation);
+
+    if (catchEvaluation.catchable) {
+      completePass(gameplay, receiver);
+      return;
+    }
   }
 
-  if (
-    isPassFlightFinished(gameplay.ball) ||
-    isBallOutsidePlayableField(gameplay.ball.position)
-  ) {
+  const outsideField = isBallOutsidePlayableField(gameplay.ball.position);
+  if (isPassFlightFinished(gameplay.ball) || outsideField) {
+    updatePassAuditResultReason(gameplay, outsideField ? 'outOfBounds' : 'flightFinished');
     recordIncompletePass(gameplay);
   }
 }
@@ -774,33 +822,78 @@ function enterScoreAttackGameOver(gameplay: GameplayModel): void {
   markBallDead(gameplay.ball);
 }
 
-function calculatePassTarget(gameplay: GameplayModel, receiver: PlayerModel): Vector3 {
-  const routeTarget = getReceiverRouteTarget(receiver, gameplay.currentBallSpot, gameplay.selectedPlay);
-  const velocityLength = Math.hypot(receiver.velocity.x, receiver.velocity.z);
-  let lead = { x: 0, z: 0 };
+function calculatePassTarget(gameplay: GameplayModel, receiver: PlayerModel): PassTargetSolution {
+  const routeDefinition = getRouteDefinition(gameplay.selectedPlay, receiver.id);
+  const route = resolveReceiverRoute(
+    gameplay.selectedPlay,
+    receiver.id,
+    resolveSnapPlacement(gameplay.currentBallSpot),
+  );
 
-  if (velocityLength > 0) {
-    lead = {
-      x: receiver.velocity.x * PASSING_CONFIG.receiverLeadSeconds,
-      z: receiver.velocity.z * PASSING_CONFIG.receiverLeadSeconds,
-    };
-  } else if (routeTarget) {
-    const routeDeltaX = routeTarget.x - receiver.position.x;
-    const routeDeltaZ = routeTarget.z - receiver.position.z;
-    const routeLength = Math.hypot(routeDeltaX, routeDeltaZ);
+  return solveRouteAwarePassTarget({
+    ballStart: gameplay.ball.position,
+    config: {
+      ...PASSING_CONFIG,
+      iterations: PASSING_CONFIG.targetingIterations,
+      playableBounds: PLAYABLE_FIELD_BOUNDS,
+    },
+    receiverPosition: receiver.position,
+    route,
+    routeSpeedYardsPerSecond: routeDefinition?.speedYardsPerSecond ?? 0,
+    routeState: gameplay.receiverRouteStates[receiver.id] ?? null,
+  });
+}
 
-    if (routeLength > 0) {
-      lead = {
-        x: (routeDeltaX / routeLength) * PASSING_CONFIG.receiverLeadDistance,
-        z: (routeDeltaZ / routeLength) * PASSING_CONFIG.receiverLeadDistance,
-      };
-    }
+function createPassAuditSnapshot(
+  selectedReceiverId: string,
+  releasePosition: Vector3,
+  solution: PassTargetSolution,
+): PassAuditSnapshot {
+  return {
+    actualClosestApproach: null,
+    ballHeightAtClosestApproach: null,
+    horizontalMissDistance: null,
+    predictedFlightSeconds: solution.predictedFlightSeconds,
+    predictedReceiverPosition: { ...solution.predictedReceiverPosition },
+    predictedReceiverRouteDistance: solution.predictedReceiverRouteDistance,
+    predictedTargetPosition: { ...solution.target },
+    releasePosition: { ...releasePosition },
+    resultReason: 'inFlight',
+    selectedReceiverId,
+  };
+}
+
+function updatePassAuditFromCatchEvaluation(
+  gameplay: GameplayModel,
+  evaluation: SweptCatchEvaluation,
+): void {
+  if (!gameplay.passAudit) {
+    return;
   }
 
-  return {
-    x: receiver.position.x + lead.x,
-    y: PASSING_CONFIG.targetHeight,
-    z: receiver.position.z + lead.z,
+  gameplay.passAudit = {
+    ...gameplay.passAudit,
+    actualClosestApproach: {
+      ball: { ...evaluation.closestBallPosition },
+      receiver: { ...evaluation.closestReceiverPosition },
+    },
+    ballHeightAtClosestApproach: evaluation.ballHeightAtClosestApproach,
+    horizontalMissDistance: evaluation.horizontalMissDistance,
+    resultReason: evaluation.reason,
+  };
+}
+
+function updatePassAuditResultReason(
+  gameplay: GameplayModel,
+  reason: PassAuditSnapshot['resultReason'],
+): void {
+  if (!gameplay.passAudit) {
+    return;
+  }
+
+  gameplay.passAudit = {
+    ...gameplay.passAudit,
+    resultReason: reason,
   };
 }
 
@@ -846,6 +939,15 @@ function isBallOutsidePlayableField(position: Vector3): boolean {
     position.x > PLAYABLE_FIELD_BOUNDS.maxX ||
     position.z < PLAYABLE_FIELD_BOUNDS.minZ ||
     position.z > PLAYABLE_FIELD_BOUNDS.maxZ
+  );
+}
+
+function capturePlayerPositions(players: PlayerModel[]): Record<string, FootballSpot> {
+  return Object.fromEntries(
+    players.map((player) => [
+      player.id,
+      { ...player.position },
+    ]),
   );
 }
 
@@ -905,6 +1007,25 @@ function clonePlayResult(playResult: PlayResult | null): PlayResult | null {
     startingBallSpot: cloneFootballSpot(playResult.startingBallSpot),
     type: playResult.type,
     yardsGained: playResult.yardsGained,
+  };
+}
+
+function clonePassAuditSnapshot(passAudit: PassAuditSnapshot | null): PassAuditSnapshot | null {
+  if (!passAudit) {
+    return null;
+  }
+
+  return {
+    ...passAudit,
+    actualClosestApproach: passAudit.actualClosestApproach
+      ? {
+          ball: { ...passAudit.actualClosestApproach.ball },
+          receiver: { ...passAudit.actualClosestApproach.receiver },
+        }
+      : null,
+    predictedReceiverPosition: { ...passAudit.predictedReceiverPosition },
+    predictedTargetPosition: { ...passAudit.predictedTargetPosition },
+    releasePosition: { ...passAudit.releasePosition },
   };
 }
 

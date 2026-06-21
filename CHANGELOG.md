@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.27.1] - 2026-06-21
+
+### Fixed
+
+- Replaced normal passing's fixed receiver lead heuristic with route-aware targeting that samples the selected receiver's declared route progress over predicted ball flight time.
+- Added swept ball/receiver catch evaluation so catches remain deterministic when the ball crosses the catch corridor between frames.
+- Added `?passAudit=1` pass diagnostics for release position, predicted target, predicted receiver location, flight time, closest approach, miss distance, catch height, and result reason.
+- Added unit and browser coverage for route-aware prediction, slant and flat timing, hash-lane bounds, completed-route targets, swept catches, pass-audit reset, and 30/60/120 Hz pass-result consistency.
+
 ## [0.27.0] - 2026-06-21
 
 ### Added

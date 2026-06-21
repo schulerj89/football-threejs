@@ -193,6 +193,7 @@ export function snapshotFormationPreviewAsGameplay(
     lastPlayResult: null,
     nextBallSpot: cloneFootballSpot(lineOfScrimmage),
     nextSnapSpot: cloneFootballSpot(lineOfScrimmage),
+    passAudit: null,
     passAttempted: false,
     passFeedback: null,
     player: snapshotPlayerModel(primaryPlayer),

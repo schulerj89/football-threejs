@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALL_CARRY_ATTACHMENT, updateCarriedBallPosition } from '../src/ballModel';
+import { BALL_CARRY_ATTACHMENT, PASSING_CONFIG, updateCarriedBallPosition } from '../src/ballModel';
 import { SNAP_LANE_X } from '../src/ballSpotting';
 import {
   DEFENDER_COLLISION_RADII,
@@ -542,6 +542,44 @@ describe('play state transitions', () => {
     updateGameplayModel(gameplay, 0.25);
 
     expect(receiver.position).toEqual(caughtPosition);
+  });
+
+  it('records route-aware pass audit details for the selected receiver and clears them on reset', () => {
+    const gameplay = createGameplayModel();
+
+    selectPlay(gameplay, 'slant-flat');
+    cycleSelectedReceiver(gameplay);
+    startPlay(gameplay);
+    expect(attemptPass(gameplay)).toBe(true);
+
+    expect(gameplay.passAudit).toMatchObject({
+      selectedReceiverId: 'offense-rb',
+      resultReason: 'inFlight',
+    });
+    expect(gameplay.passAudit?.predictedReceiverRouteDistance).toBeGreaterThan(0);
+    expect(snapshotGameplayModel(gameplay).passAudit?.selectedReceiverId).toBe('offense-rb');
+
+    updateGameplayModel(gameplay, 1 / 60);
+
+    expect(gameplay.passAudit?.actualClosestApproach).not.toBeNull();
+    expect(gameplay.previousPlayerPositions['offense-rb']).toBeDefined();
+
+    resetPlay(gameplay);
+
+    expect(gameplay.passAudit).toBeNull();
+    expect(snapshotGameplayModel(gameplay).passAudit).toBeNull();
+    expect(gameplay.previousPlayerPositions).toEqual({});
+  });
+
+  it('produces the same pass result at 30, 60, and 120 updates per second', () => {
+    const results = [30, 60, 120].map((fps) => runSlantFlatPassUntilResolved(fps, 0.2));
+
+    expect(results.map((result) => result.ballState)).toEqual(['caught', 'caught', 'caught']);
+    expect(results.every((result) => result.controlledPlayerId === 'offense-wr')).toBe(true);
+    for (const result of results) {
+      expect(result.passAudit?.resultReason).toBe('catch');
+      expect(result.passAudit?.horizontalMissDistance).toBeLessThanOrEqual(PASSING_CONFIG.catchRadius);
+    }
   });
 
   it('starts Twin Slants Flat in playable 7v7 mode with three deterministic targets', () => {
@@ -1414,6 +1452,41 @@ function selectReceiver(gameplay: ReturnType<typeof createGameplayModel>, receiv
   if (gameplay.selectedReceiverId !== receiverId) {
     throw new Error(`Unable to select ${receiverId}`);
   }
+}
+
+function runSlantFlatPassUntilResolved(
+  fps: number,
+  throwDelaySeconds: number,
+): {
+  ballState: string;
+  controlledPlayerId: string;
+  passAudit: ReturnType<typeof snapshotGameplayModel>['passAudit'];
+} {
+  const gameplay = createGameplayModel();
+  const stepSeconds = 1 / fps;
+
+  selectPlay(gameplay, 'slant-flat');
+  startPlay(gameplay);
+
+  for (let elapsed = 0; elapsed < throwDelaySeconds - 0.000001; elapsed += stepSeconds) {
+    updateGameplayModel(gameplay, stepSeconds);
+  }
+
+  expect(attemptPass(gameplay)).toBe(true);
+
+  for (let step = 0; step < fps * 2; step += 1) {
+    if (gameplay.ball.state.kind !== 'inFlight') {
+      break;
+    }
+
+    updateGameplayModel(gameplay, stepSeconds);
+  }
+
+  return {
+    ballState: gameplay.ball.state.kind,
+    controlledPlayerId: gameplay.player.id,
+    passAudit: snapshotGameplayModel(gameplay).passAudit,
+  };
 }
 
 function snapshotBlockerFormation(player: PlayerModel): {
