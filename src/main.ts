@@ -57,7 +57,10 @@ if (!app) {
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x101920);
 
-const field = createFootballField();
+const searchParams = new URLSearchParams(window.location.search);
+const field = createFootballField({
+  fieldAudit: searchParams.has('fieldAudit'),
+});
 scene.add(field.group);
 
 const gameplayModel = createGameplayModel();
@@ -74,7 +77,6 @@ const ballVisual = createBallVisual();
 syncBallVisual(ballVisual, gameplayModel.ball);
 scene.add(ballVisual);
 
-const searchParams = new URLSearchParams(window.location.search);
 const cameraController = new GameplayCameraController({
   height: window.innerHeight,
   initialMode: resolveGameplayCameraMode(searchParams.get('camera')),

@@ -2,12 +2,14 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, Quick Pass, Slant Flat, primitive player bodies with cloned low-poly helmet visuals, a controllable primitive ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, Quick Pass, Slant Flat, primitive player bodies with cloned low-poly helmet visuals, a graybox field generated from a pure field specification, a controllable primitive ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera.
 
 ## Current Non-Goals
 
 - No stadium
 - No crowd
+- No yard numbers
+- No turf redesign
 - No imported assets beyond the current reusable low-poly helmet
 - No loose-ball physics
 - No large play-calling menu
@@ -75,6 +77,10 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Implementation Rules
 
 - Keep field construction in `src/field.ts` or a similarly dedicated field module.
+- Keep authoritative field dimensions, paint widths, playable bounds, field bounds, and plain field layout data in `src/fieldSpec.ts`.
+- `src/fieldSpec.ts` must stay free of Three.js imports.
+- Generate rendered field-marking dimensions and positions from the field spec rather than repeating raw field dimensions in renderer code.
+- Keep painted field markings fully inside the field surface; boundary paint outer edges should align with field outer edges, and transverse internal markings should stop at the inner sideline paint edges.
 - Use primitive Three.js geometry and simple materials during graybox work.
 - Keep input, simulation, and visual synchronization in separate modules.
 - All gameplay players use the common player model with stable ID, team, role, position, velocity, facing, collision radius, and current state.
@@ -120,6 +126,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Score attack starts at 120 seconds, begins on the first snap, ticks continuously after that, allows a live play to finish at zero, prevents another snap after expiry, records final score, and restarts from game over with Enter.
 - The low-poly helmet GLB loads once, clones to every player, attaches to the player head anchor, tints shell colors by team, and leaves gameplay collision unchanged.
 - The tactical orthographic camera and optional offense perspective camera can both render, resize, and be compared through URL selection or the development/debug `C` toggle without resetting gameplay.
+- Field dimensions and painted-line containment are validated through pure layout tests plus a Three.js `Box3` integration test.
 - Play lookup, formation placement, invalid IDs, selection restrictions, pass eligibility, rejected throws, pass transitions, catch eligibility, incomplete passes, sacks, selected-target cycling, control transfer, and duplicate throw prevention have deterministic tests.
 - Existing tests pass.
 - The browser smoke test proves play selection plus formation, movement, score, tackle, out-of-bounds, and turnover-on-downs outcomes work.

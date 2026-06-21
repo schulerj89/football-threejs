@@ -177,6 +177,29 @@ test('starts the Three.js graybox field scene', async ({ page }) => {
   expect(pageErrors).toEqual([]);
 });
 
+test('starts field audit mode without render errors', async ({ page }) => {
+  const consoleErrors: string[] = [];
+  const pageErrors: string[] = [];
+
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text());
+    }
+  });
+
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message);
+  });
+
+  await page.goto('/?debug=1&readback=1&fieldAudit=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.debug-overlay')).toContainText('FPS');
+  await expectNonBlankCanvas(page);
+
+  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
 test('selects offense perspective camera and toggles modes without resetting gameplay', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?debug=1&readback=1&camera=offense');

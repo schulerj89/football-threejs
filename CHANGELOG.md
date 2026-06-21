@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.0] - 2026-06-21
+
+### Added
+
+- Added pure `src/fieldSpec.ts` as the authoritative source for field scale, dimensions, paint widths, field bounds, playable bounds, and plain field-layout data.
+- Added field-layout validation that checks marking bounds without constructing Three.js scene objects.
+- Added `?fieldAudit=1` development overlay with field bounds, inner marking bounds, corner markers, and red highlighting for any out-of-bounds marking.
+- Added unit coverage for field dimensions, end-zone depth, goal-line distance, yard-line spacing, hash spacing, boundary symmetry, paint containment, and yard/world conversion.
+- Added a Three.js field-geometry integration test that validates painted-line mesh `Box3` world bounds stay inside the field surface.
+
+### Fixed
+
+- Inset sideline and end-line paint so boundary outer edges align with the field surface instead of extending beyond it.
+- Stopped yard lines, goal lines, line-of-scrimmage, and first-down line at the inner sideline paint edges.
+- Removed the extra `fieldWidth + 1.5` sizing from dynamic drive lines.
+
 ## [0.16.0] - 2026-06-21
 
 ### Added

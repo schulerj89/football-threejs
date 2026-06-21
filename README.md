@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, two passing plays, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a graybox American-football field, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
+The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, two passing plays, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a graybox American-football field generated from a pure field specification, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
 
 ## World Scale
 
@@ -11,6 +11,7 @@ The current milestone is a two-minute three-on-three offensive score-attack dril
 - The `X` axis runs sideline to sideline, `Z` runs end zone to end zone, and `Y` is vertical.
 - Direction of play is positive `Z`.
 - The initial line of scrimmage is at `Z = -15`.
+- Field dimensions, paint widths, field bounds, playable bounds, and plain layout data are centralized in `src/fieldSpec.ts`.
 - World-unit to football-yard conversion is centralized in `src/fieldScale.ts`.
 
 ## Scripts
@@ -67,10 +68,14 @@ Open the dev server at `http://127.0.0.1:5173`.
 
 Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, triangle count, camera mode, camera state, focus position, and camera position.
 
+Add `?fieldAudit=1` to show field geometry validation helpers: authoritative field bounds, inner marking bounds, corner markers, and red highlighting for any painted marking that escapes the field surface.
+
 ## Current Non-Goals
 
 - No stadium
 - No crowd
+- No yard numbers
+- No turf redesign
 - No imported assets beyond the current reusable low-poly helmet
 - No loose-ball physics
 - No large play-calling menu

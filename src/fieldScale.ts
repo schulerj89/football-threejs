@@ -1,4 +1,4 @@
-import { WORLD_SCALE } from './field';
+import { FIELD_DIRECTION, WORLD_SCALE } from './fieldSpec';
 
 export interface FootballSpot {
   x: number;
@@ -7,7 +7,7 @@ export interface FootballSpot {
 
 export const FIELD_SCALE = {
   worldUnitsPerFootballYard: WORLD_SCALE.worldUnitsPerYard,
-  playDirectionZ: 1,
+  playDirectionZ: FIELD_DIRECTION.playDirectionZ,
 } as const;
 
 export function cloneFootballSpot(spot: FootballSpot): FootballSpot {
