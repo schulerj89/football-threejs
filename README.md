@@ -75,62 +75,12 @@ Add `?fieldAudit=1` to show field geometry validation helpers: authoritative fie
 
 ## Current Non-Goals
 
-- No stadium
-- No crowd
-- No turf redesign
-- No stadium seating
-- No sideline characters
-- No advertisements
-- No field degradation
-- No weather
-- No imported assets beyond the current reusable low-poly helmet
-- No loose-ball physics
-- No large play-calling menu
-- No audibles
-- No defensive play selection
-- No interceptions
-- No four-on-four
-- No manual aiming
-- No hot routes
-- No bullet/lob selection
-- No pump fake
-- No illegal-forward-pass penalty
-- No referee logic
-- No scramble animation
-- No blitz selection
-- No user-controlled catch mechanic
-- No contested-catch ratings
-- No quarterback animations
-- No route editor
-- No procedural play generation
-- No additional formations beyond the current four plays
-- No offensive linemen rules
-- No holding penalties
-- No pancake blocks
-- No double-team blocks
-- No pulling guards
-- No diving tackles
-- No tackling animations
-- No pathfinding library
-- No sprinting
-- No animation
-- No quarters
-- No opponent score
-- No halftime
-- No timeouts
-- No NFL clock-stoppage rules
-- No play clock
-- No punts
-- No field goals
-- No penalties
-- No defensive possessions
-- No celebration animation
-- No stadium presentation
-- No center or snap animation
-- No full game rules
-- No menus
-- No freely rotating camera
-- No camera-relative controls
-- No force-based physics
-- No ragdoll physics
-- No unrelated refactoring
+- Presentation: no stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, or stadium presentation.
+- Roster scope: no 4v4, 5v5, full special teams, additional offensive or defensive players, player switching, or formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data.
+- Assets and animation: no imported assets beyond the current reusable low-poly helmet, no full player models replacing primitive bodies, no imported animations, no quarterback animation, no scramble animation, no tackling animation, no celebration animation, and no center or snap animation.
+- Play calling: no large play-calling menu, audibles, defensive play selection, route editor, procedural play generation, hot routes, or menus beyond the current minimal HUD/debug displays.
+- Passing and ball outcomes: no interceptions, fumbles, loose-ball physics, manual aiming, pass-type selection, pump fake, illegal-forward-pass penalty, referee logic, user-controlled catch mechanic, contested-catch ratings, or quarterback ratings.
+- Blocking and tackling: no offensive linemen rules, holding penalties, pancake blocks, double-team blocks, pulling guards, diving tackles, advanced pursuit/pathfinding library, or physics-driven contact.
+- Game structure: no quarters, opponent score, halftime, timeouts, NFL clock-stoppage rules, play clock, punts, field goals, penalties, defensive possessions, full game rules, season modes, or franchise systems.
+- Controls and camera: no sprinting, stamina, freely rotating camera, camera-relative controls, cinematic replay system, or camera redesign beyond the current tactical and offense-perspective modes.
+- Simulation architecture: no force-based physics, ragdoll physics, general-purpose physics engine, advanced AI rewrite, or unrelated refactoring.

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.2] - 2026-06-21
+
+### Changed
+
+- Reorganized README and AGENTS non-goals around the current 3v3 score-attack prototype scope.
+- Clarified current exclusions for roster size, play calling, passing outcomes, game structure, camera controls, assets, animation, and simulation architecture.
+
 ## [0.18.1] - 2026-06-21
 
 ### Added
