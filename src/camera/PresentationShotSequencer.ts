@@ -15,11 +15,13 @@ import { PresentationShotFactory } from './PresentationShotDefinitions';
 export class PresentationShotSequencer {
   private activeOrbitShot: ActiveOrbitShot | null = null;
   private readonly completedEventShotKeys = new Set<string>();
+  private currentPreSnapAnchorKey: string | null = null;
   private lastCompletedPrePlayKey: string | null = null;
   private lastCompletedTouchdownResultId: number | null = null;
   private phase: PresentationCameraPhase = 'preSnapEstablish';
   private phaseElapsedSeconds = 0;
   private previousPlayState: PlayState | null = null;
+  private preSnapSequenceId = 0;
   private returnToPreSnapSeconds = 0;
   private transitionToGameplaySeconds = 0;
 
@@ -34,12 +36,20 @@ export class PresentationShotSequencer {
     return this.phase;
   }
 
+  get currentPreSnapSequenceId(): number {
+    return this.preSnapSequenceId;
+  }
+
   reset(): void {
     this.activeOrbitShot = null;
     this.completedEventShotKeys.clear();
+    this.currentPreSnapAnchorKey = null;
+    this.lastCompletedPrePlayKey = null;
+    this.lastCompletedTouchdownResultId = null;
     this.phase = 'preSnapEstablish';
     this.phaseElapsedSeconds = 0;
     this.previousPlayState = null;
+    this.preSnapSequenceId = 0;
     this.returnToPreSnapSeconds = 0;
     this.transitionToGameplaySeconds = 0;
   }
@@ -59,6 +69,16 @@ export class PresentationShotSequencer {
   }
 
   updateTransitionTimers(snapshot: GameplaySnapshot, deltaSeconds: number): void {
+    if (snapshot.playState === 'preSnap') {
+      const anchorKey = createPreSnapAnchorKey(snapshot);
+      if (this.previousPlayState !== 'preSnap' || anchorKey !== this.currentPreSnapAnchorKey) {
+        this.preSnapSequenceId += 1;
+        this.currentPreSnapAnchorKey = anchorKey;
+      }
+    } else {
+      this.currentPreSnapAnchorKey = null;
+    }
+
     if (this.previousPlayState === 'preSnap' && snapshot.playState === 'live') {
       this.transitionToGameplaySeconds = this.config.phases.transitionToGameplay.shotDuration;
     }
@@ -241,7 +261,7 @@ export class PresentationShotSequencer {
     }
 
     if (snapshot.playState === 'preSnap') {
-      const prePlayKey = createPrePlayShotKey(snapshot, formationBounds);
+      const prePlayKey = createPrePlayShotKey(snapshot, formationBounds, this.preSnapSequenceId);
       if (prePlayKey !== this.lastCompletedPrePlayKey) {
         this.activeOrbitShot = {
           elapsedSeconds: 0,
@@ -293,6 +313,18 @@ export class PresentationShotSequencer {
     this.completedEventShotKeys.add(`${activeShot.name}:${activeShot.resultId ?? activeShot.key}`);
     this.lastCompletedTouchdownResultId = activeShot.resultId ?? Number(activeShot.key);
   }
+}
+
+function createPreSnapAnchorKey(snapshot: GameplaySnapshot): string {
+  return [
+    snapshot.playbookId,
+    snapshot.snapLane,
+    snapshot.nextSnapSpot.x.toFixed(2),
+    snapshot.nextSnapSpot.z.toFixed(2),
+    snapshot.drive.currentDown,
+    snapshot.drive.yardsToFirstDown.toFixed(2),
+    snapshot.score,
+  ].join('|');
 }
 
 function selectHighestPriorityCutawayEvent(

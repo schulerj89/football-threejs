@@ -7,12 +7,18 @@ export const GAMEPLAY_CAMERA_CONFIG = {
     distanceBehindFocus: 30,
     fieldOfView: 48,
     forwardLookAhead: 18,
+    focusDamping: 10,
+    framingDistanceDamping: 7,
     height: 17,
     liveBallLookAhead: 8,
+    maxDeltaSeconds: 0.05,
+    maximumAngularChangePerSecond: Math.PI * 1.35,
+    maximumCameraTranslationPerSecond: 85,
     maximumFieldPosition: {
       x: PLAYABLE_FIELD_BOUNDS.maxX,
       z: PLAYABLE_FIELD_BOUNDS.maxZ,
     },
+    maximumLookTargetTranslationPerSecond: 90,
     minimumFieldPosition: {
       x: PLAYABLE_FIELD_BOUNDS.minX,
       z: PLAYABLE_FIELD_BOUNDS.minZ,
@@ -108,6 +114,8 @@ export const PRESENTATION_CAMERA_CONFIG: PresentationCameraConfig = {
     x: PLAYABLE_FIELD_BOUNDS.maxX,
     z: PLAYABLE_FIELD_BOUNDS.maxZ,
   },
+  maximumAngularChangePerSecond: Math.PI * 1.15,
+  maximumLookTargetSpeed: 90,
   maximumTransitionSpeed: 85,
   maxDeltaSeconds: 0.05,
   minimumFieldPosition: {

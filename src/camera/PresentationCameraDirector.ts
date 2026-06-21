@@ -108,6 +108,8 @@ export class PresentationCameraDirector {
         camera,
         formationBounds,
         lookTarget: this.presentationRig.smoothedTarget,
+        preSnapSequenceId: this.sequencer.currentPreSnapSequenceId,
+        stabilityMetrics: this.presentationRig.getStabilityMetrics(),
         shot: orbitShot,
       });
       this.sequencer.completeOrbitShotIfFinished(orbitShot);
@@ -129,6 +131,8 @@ export class PresentationCameraDirector {
       camera,
       formationBounds,
       lookTarget: this.presentationRig.smoothedTarget,
+      preSnapSequenceId: this.sequencer.currentPreSnapSequenceId,
+      stabilityMetrics: this.presentationRig.getStabilityMetrics(),
       shot,
     });
 
@@ -139,12 +143,17 @@ export class PresentationCameraDirector {
     return {
       activeShotName: this.debugSnapshot.activeShotName,
       cameraPosition: { ...this.debugSnapshot.cameraPosition },
+      desiredCameraPosition: { ...this.debugSnapshot.desiredCameraPosition },
+      desiredLookTarget: { ...this.debugSnapshot.desiredLookTarget },
       focusTarget: { ...this.debugSnapshot.focusTarget },
       formationBounds: cloneFieldPlaneBounds(this.debugSnapshot.formationBounds),
       lookTarget: { ...this.debugSnapshot.lookTarget },
       orbitCenter: this.debugSnapshot.orbitCenter ? { ...this.debugSnapshot.orbitCenter } : null,
       orbitRadius: this.debugSnapshot.orbitRadius,
+      perFrameAngularChange: this.debugSnapshot.perFrameAngularChange,
+      perFrameDisplacement: this.debugSnapshot.perFrameDisplacement,
       phase: this.debugSnapshot.phase,
+      preSnapSequenceId: this.debugSnapshot.preSnapSequenceId,
       restoreCamera: this.debugSnapshot.restoreCamera,
       shotProgress: this.debugSnapshot.shotProgress,
     };
@@ -171,23 +180,32 @@ function createDebugSnapshot({
   camera,
   formationBounds,
   lookTarget,
+  preSnapSequenceId,
+  stabilityMetrics,
   shot,
 }: {
   activePhase: PresentationCameraDebugSnapshot['phase'];
   camera: THREE.PerspectiveCamera;
   formationBounds: PresentationCameraDebugSnapshot['formationBounds'];
   lookTarget: THREE.Vector3;
+  preSnapSequenceId: number;
+  stabilityMetrics: ReturnType<PresentationCameraRig['getStabilityMetrics']>;
   shot: PresentationCameraShot;
 }): PresentationCameraDebugSnapshot {
   return {
     activeShotName: shot.activeShotName,
     cameraPosition: toPlainVector(camera.position),
+    desiredCameraPosition: stabilityMetrics.desiredCameraPosition,
+    desiredLookTarget: stabilityMetrics.desiredLookTarget,
     focusTarget: toPlainVector(shot.focus),
     formationBounds,
     lookTarget: toPlainVector(lookTarget),
     orbitCenter: shot.orbitCenter ? toPlainVector(shot.orbitCenter) : null,
     orbitRadius: shot.orbitRadius,
+    perFrameAngularChange: stabilityMetrics.perFrameAngularChange,
+    perFrameDisplacement: stabilityMetrics.perFrameDisplacement,
     phase: activePhase,
+    preSnapSequenceId,
     restoreCamera: shot.restoreCamera,
     shotProgress: shot.shotProgress,
   };
@@ -199,12 +217,17 @@ function createEmptyDebugSnapshot(): PresentationCameraDebugSnapshot {
   return {
     activeShotName: null,
     cameraPosition: { x: 0, y: 0, z: 0 },
+    desiredCameraPosition: { x: 0, y: 0, z: 0 },
+    desiredLookTarget: { x: 0, y: 0, z: 0 },
     focusTarget: { x: 0, y: 0, z: 0 },
     formationBounds: emptyBounds,
     lookTarget: { x: 0, y: 0, z: 0 },
     orbitCenter: null,
     orbitRadius: null,
+    perFrameAngularChange: 0,
+    perFrameDisplacement: 0,
     phase: 'preSnapEstablish',
+    preSnapSequenceId: 0,
     restoreCamera: null,
     shotProgress: null,
   };

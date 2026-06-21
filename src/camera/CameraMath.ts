@@ -39,6 +39,55 @@ export function smoothVectorWithSpeedLimit(
   return current.clone().add(delta.multiplyScalar(maxDistance / distance));
 }
 
+export function calculateLookDirectionAngle(
+  previousPosition: THREE.Vector3,
+  previousLookTarget: THREE.Vector3,
+  nextPosition: THREE.Vector3,
+  nextLookTarget: THREE.Vector3,
+): number {
+  const previousDirection = previousLookTarget.clone().sub(previousPosition);
+  const nextDirection = nextLookTarget.clone().sub(nextPosition);
+
+  if (previousDirection.lengthSq() === 0 || nextDirection.lengthSq() === 0) {
+    return 0;
+  }
+
+  return previousDirection.normalize().angleTo(nextDirection.normalize());
+}
+
+export function limitLookTargetAngularChange(
+  previousPosition: THREE.Vector3,
+  previousLookTarget: THREE.Vector3,
+  nextPosition: THREE.Vector3,
+  desiredLookTarget: THREE.Vector3,
+  maxRadians: number,
+): THREE.Vector3 {
+  if (maxRadians <= 0) {
+    return previousLookTarget.clone();
+  }
+
+  const previousDirection = previousLookTarget.clone().sub(previousPosition);
+  const desiredDirection = desiredLookTarget.clone().sub(nextPosition);
+
+  if (previousDirection.lengthSq() === 0 || desiredDirection.lengthSq() === 0) {
+    return desiredLookTarget.clone();
+  }
+
+  const angle = previousDirection.clone().normalize().angleTo(desiredDirection.clone().normalize());
+  if (angle <= maxRadians) {
+    return desiredLookTarget.clone();
+  }
+
+  const distance = desiredLookTarget.distanceTo(nextPosition);
+  const blend = clamp(maxRadians / angle, 0, 1);
+  const limitedDirection = previousDirection
+    .normalize()
+    .lerp(desiredDirection.normalize(), blend)
+    .normalize();
+
+  return nextPosition.clone().add(limitedDirection.multiplyScalar(distance));
+}
+
 export function easeInOutCubic(value: number): number {
   const t = clamp(value, 0, 1);
 

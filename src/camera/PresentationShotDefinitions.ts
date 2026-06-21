@@ -87,7 +87,7 @@ export class PresentationShotFactory {
     const center = activeShot.lockedCenter
       ? activeShot.lockedCenter.clone()
       : activeShot.name === 'prePlayOrbit180'
-        ? this.createPrePlayOrbitCenter(formationBounds)
+        ? this.createPrePlayOrbitCenter(snapshot)
         : this.createTouchdownOrbitCenter(snapshot);
     const phase: PresentationCameraPhase = activeShot.name === 'prePlayOrbit180'
       ? 'preSnapEstablish'
@@ -189,8 +189,10 @@ export class PresentationShotFactory {
     };
   }
 
-  private createPrePlayOrbitCenter(formationBounds: FieldPlaneBounds): THREE.Vector3 {
-    return new THREE.Vector3(formationBounds.center.x, 1.45, formationBounds.center.z);
+  private createPrePlayOrbitCenter(snapshot: GameplaySnapshot): THREE.Vector3 {
+    const snap = snapshot.nextSnapSpot ?? snapshot.currentBallSpot;
+
+    return new THREE.Vector3(snap.x, 1.45, snap.z);
   }
 
   private calculateOrbitRadius(

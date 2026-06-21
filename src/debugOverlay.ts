@@ -90,6 +90,11 @@ export class DebugOverlay {
         `CAM_STATE ${camera.state}`,
         `FOCUS ${formatVector(camera.focusPosition)}`,
         `CAM_POS ${formatVector(camera.cameraPosition)}`,
+        `CAM_SEQ ${camera.stability.preSnapSequenceId}`,
+        `CAM_REASON ${camera.stability.reasonCameraTargetChanged}`,
+        `CAM_DPOS ${camera.stability.perFrameDisplacement.toFixed(2)}`,
+        `CAM_DANG ${camera.stability.perFrameAngularChange.toFixed(3)}`,
+        `CAM_DESIRED ${formatVector(camera.stability.desiredCameraPosition)}`,
       );
 
       if (camera.presentationPhase) {

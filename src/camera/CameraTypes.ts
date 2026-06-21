@@ -79,9 +79,32 @@ export interface GameplayCameraDebugSnapshot {
   presentationPhase?: PresentationCameraPhase;
   restoreCamera?: string | null;
   shotProgress?: number | null;
+  stability: CameraStabilityDebugSnapshot;
   state: GameplayCameraState;
   targetPosition: { x: number; y: number; z: number };
 }
+
+export interface CameraStabilityDebugSnapshot {
+  activeShot: PresentationOrbitShotName | null;
+  cameraPosition: { x: number; y: number; z: number };
+  desiredCameraPosition: { x: number; y: number; z: number };
+  desiredLookTarget: { x: number; y: number; z: number };
+  lookTarget: { x: number; y: number; z: number };
+  perFrameAngularChange: number;
+  perFrameDisplacement: number;
+  preSnapSequenceId: number;
+  reasonCameraTargetChanged: CameraTargetChangeReason;
+  selectedPlayId: string;
+}
+
+export type CameraTargetChangeReason =
+  | 'activeShotChanged'
+  | 'initial'
+  | 'playStateChanged'
+  | 'preSnapSequenceChanged'
+  | 'selectedPlayChangedPreservedAnchor'
+  | 'snapLocationChanged'
+  | 'stable';
 
 export interface GameplayCameraControllerOptions {
   cinematics?: CinematicsSetting;
@@ -100,12 +123,17 @@ export interface GameplayCameraUpdateOptions {
 export interface PresentationCameraDebugSnapshot {
   activeShotName: PresentationOrbitShotName | null;
   cameraPosition: { x: number; y: number; z: number };
+  desiredCameraPosition: { x: number; y: number; z: number };
+  desiredLookTarget: { x: number; y: number; z: number };
   focusTarget: { x: number; y: number; z: number };
   formationBounds: FieldPlaneBounds;
   lookTarget: { x: number; y: number; z: number };
   orbitCenter: { x: number; y: number; z: number } | null;
   orbitRadius: number | null;
+  perFrameAngularChange: number;
+  perFrameDisplacement: number;
   phase: PresentationCameraPhase;
+  preSnapSequenceId: number;
   restoreCamera: string | null;
   shotProgress: number | null;
 }
@@ -122,6 +150,8 @@ export interface PresentationCameraConfig {
   fieldOfView: number;
   holdPreSnapEstablish?: boolean;
   maximumFieldPosition: { x: number; z: number };
+  maximumAngularChangePerSecond: number;
+  maximumLookTargetSpeed: number;
   maximumTransitionSpeed: number;
   maxDeltaSeconds: number;
   minimumFieldPosition: { x: number; z: number };

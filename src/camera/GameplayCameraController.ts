@@ -5,6 +5,7 @@ import { resolveOffensePerspectiveFocus } from './CameraFocusResolver';
 import { normalizeDirection, toPlainVector } from './CameraMath';
 import { GameplayCameraRig } from './CameraRig';
 import type {
+  CameraTargetChangeReason,
   CinematicsSetting,
   GameplayCameraFocus,
   GameplayCameraDebugSnapshot,
@@ -37,10 +38,15 @@ export class GameplayCameraController {
   private readonly presentationDirector: PresentationCameraDirector;
   private presentationOverrideActive = false;
   private lastGameplayFocus: GameplayCameraFocus | null = null;
+  private previousActiveShotName: GameplayCameraDebugSnapshot['activeShotName'] = null;
+  private previousPreSnapAnchorKey: string | null = null;
   private previousPlayState: GameplaySnapshot['playState'] | null = null;
+  private previousSelectedPlayId: string | null = null;
+  private preSnapSequenceId = 0;
   private resetLineOfScrimmageSeconds = 0;
   private readonly rig: GameplayCameraRig;
   private readonly shotPreview: PresentationOrbitShotName | null;
+  private stabilityReason: CameraTargetChangeReason = 'initial';
 
   constructor({
     cinematics = 'off',
@@ -124,12 +130,18 @@ export class GameplayCameraController {
     deltaSeconds: number,
     options: GameplayCameraUpdateOptions = {},
   ): void {
+    const cameraDeltaSeconds = Math.min(
+      Math.max(0, deltaSeconds),
+      GAMEPLAY_CAMERA_CONFIG.offensePerspective.maxDeltaSeconds,
+    );
+    const targetChangeReason = this.updatePreSnapSequenceTracking(snapshot);
+
     if (this.previousPlayState === 'dead' && snapshot.playState === 'preSnap') {
       this.resetLineOfScrimmageSeconds = 0.7;
     }
 
-    if (this.updatePresentationOverride(snapshot, deltaSeconds, options)) {
-      this.previousPlayState = snapshot.playState;
+    if (this.updatePresentationOverride(snapshot, cameraDeltaSeconds, options)) {
+      this.finishCameraUpdate(snapshot, targetChangeReason);
       return;
     }
 
@@ -138,12 +150,12 @@ export class GameplayCameraController {
       this.lastGameplayFocus = null;
       this.rig.positionTacticalCamera();
     } else if (this.mode === 'cinematicBroadcast') {
-      this.updateCinematicBroadcastCamera(snapshot, deltaSeconds, options);
+      this.updateCinematicBroadcastCamera(snapshot, cameraDeltaSeconds, options);
     } else {
-      this.updateOffensePerspectiveCamera(snapshot, deltaSeconds);
+      this.updateOffensePerspectiveCamera(snapshot, cameraDeltaSeconds);
     }
 
-    this.previousPlayState = snapshot.playState;
+    this.finishCameraUpdate(snapshot, targetChangeReason);
   }
 
   getDebugSnapshot(): GameplayCameraDebugSnapshot {
@@ -159,6 +171,7 @@ export class GameplayCameraController {
       lookTargetPosition,
       mode: this.mode,
       state: this.cameraState,
+      stability: this.createStabilityDebugSnapshot(),
       targetPosition: this.lastGameplayFocus?.framingTargetPosition ?? lookTargetPosition,
     };
 
@@ -177,6 +190,7 @@ export class GameplayCameraController {
       presentationPhase: this.cinematicDebug.phase,
       restoreCamera: this.cinematicDebug.restoreCamera,
       shotProgress: this.cinematicDebug.shotProgress,
+      stability: this.createStabilityDebugSnapshot(),
       targetPosition: this.cinematicDebug.lookTarget,
     };
   }
@@ -260,6 +274,97 @@ export class GameplayCameraController {
 
     return true;
   }
+
+  private createStabilityDebugSnapshot(): GameplayCameraDebugSnapshot['stability'] {
+    const activeShot = (this.mode === 'cinematicBroadcast' || this.presentationOverrideActive)
+      ? this.cinematicDebug.activeShotName
+      : null;
+    const metrics = (this.mode === 'cinematicBroadcast' || this.presentationOverrideActive)
+      ? {
+        desiredCameraPosition: this.cinematicDebug.desiredCameraPosition,
+        desiredLookTarget: this.cinematicDebug.desiredLookTarget,
+        perFrameAngularChange: this.cinematicDebug.perFrameAngularChange,
+        perFrameDisplacement: this.cinematicDebug.perFrameDisplacement,
+      }
+      : this.rig.getStabilityMetrics();
+    const activeCamera = this.camera;
+
+    return {
+      activeShot,
+      cameraPosition: toPlainVector(activeCamera.position),
+      desiredCameraPosition: { ...metrics.desiredCameraPosition },
+      desiredLookTarget: { ...metrics.desiredLookTarget },
+      lookTarget: (this.mode === 'cinematicBroadcast' || this.presentationOverrideActive)
+        ? { ...this.cinematicDebug.lookTarget }
+        : toPlainVector(this.rig.smoothedTarget),
+      perFrameAngularChange: metrics.perFrameAngularChange,
+      perFrameDisplacement: metrics.perFrameDisplacement,
+      preSnapSequenceId: (this.mode === 'cinematicBroadcast' || this.presentationOverrideActive)
+        ? this.cinematicDebug.preSnapSequenceId
+        : this.preSnapSequenceId,
+      reasonCameraTargetChanged: this.stabilityReason,
+      selectedPlayId: this.previousSelectedPlayId ?? '',
+    };
+  }
+
+  private updatePreSnapSequenceTracking(snapshot: GameplaySnapshot): CameraTargetChangeReason {
+    const selectedPlayChanged = this.previousSelectedPlayId !== null &&
+      this.previousSelectedPlayId !== snapshot.selectedPlay.id;
+
+    if (snapshot.playState !== 'preSnap') {
+      if (this.previousPlayState !== null && this.previousPlayState !== snapshot.playState) {
+        return 'playStateChanged';
+      }
+
+      return selectedPlayChanged ? 'selectedPlayChangedPreservedAnchor' : 'stable';
+    }
+
+    const anchorKey = createPreSnapAnchorKey(snapshot);
+    if (this.previousPlayState !== 'preSnap') {
+      this.preSnapSequenceId += 1;
+      this.previousPreSnapAnchorKey = anchorKey;
+      return 'preSnapSequenceChanged';
+    }
+
+    if (anchorKey !== this.previousPreSnapAnchorKey) {
+      this.preSnapSequenceId += 1;
+      this.previousPreSnapAnchorKey = anchorKey;
+      return 'snapLocationChanged';
+    }
+
+    if (selectedPlayChanged) {
+      return 'selectedPlayChangedPreservedAnchor';
+    }
+
+    return 'stable';
+  }
+
+  private finishCameraUpdate(
+    snapshot: GameplaySnapshot,
+    targetChangeReason: CameraTargetChangeReason,
+  ): void {
+    const activeShot = (this.mode === 'cinematicBroadcast' || this.presentationOverrideActive)
+      ? this.cinematicDebug.activeShotName
+      : null;
+    this.stabilityReason = this.previousActiveShotName !== activeShot
+      ? 'activeShotChanged'
+      : targetChangeReason;
+    this.previousActiveShotName = activeShot;
+    this.previousPlayState = snapshot.playState;
+    this.previousSelectedPlayId = snapshot.selectedPlay.id;
+  }
+}
+
+function createPreSnapAnchorKey(snapshot: GameplaySnapshot): string {
+  return [
+    snapshot.playbookId,
+    snapshot.snapLane,
+    snapshot.nextSnapSpot.x.toFixed(2),
+    snapshot.nextSnapSpot.z.toFixed(2),
+    snapshot.drive.currentDown,
+    snapshot.drive.yardsToFirstDown.toFixed(2),
+    snapshot.score,
+  ].join('|');
 }
 
 export function resolveGameplayCameraMode(value: string | null): GameplayCameraMode {

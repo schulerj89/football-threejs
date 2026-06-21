@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import {
+  GAMEPLAY_CAMERA_CONFIG,
   GameplayCameraController,
   resolveCinematicsSetting,
   resolveGameplayCameraMode,
   resolvePresentationShotPreview,
 } from '../src/camera/GameplayCameraController';
+import { PRESENTATION_CAMERA_CONFIG } from '../src/camera/PresentationCameraDirector';
 import {
   attemptPass,
   createGameplayModel,
@@ -18,6 +20,7 @@ import {
   snapshotFormationPreviewAsGameplay,
 } from '../src/formationPreview';
 import type { PlayerSnapshot } from '../src/playerModel';
+import { SNAP_LANE_X, type SnapLane } from '../src/ballSpotting';
 
 describe('gameplay camera controller', () => {
   it('resolves camera URL aliases', () => {
@@ -239,8 +242,8 @@ describe('gameplay camera controller', () => {
       const debug = controller.getDebugSnapshot();
 
       expect(debug.activeShotName).toBe('prePlayOrbit180');
-      expect(debug.orbitCenter?.x).toBeCloseTo(debug.formationBounds?.center.x ?? 0);
-      expect(debug.orbitCenter?.z).toBeCloseTo(debug.formationBounds?.center.z ?? 0);
+      expect(debug.orbitCenter?.x).toBeCloseTo(snapshot.nextSnapSpot.x);
+      expect(debug.orbitCenter?.z).toBeCloseTo(snapshot.nextSnapSpot.z);
       expect(debug.orbitRadius).toBeGreaterThan(0);
     }
   });
@@ -261,10 +264,86 @@ describe('gameplay camera controller', () => {
 
       expect(debug.activeShotName).toBe('prePlayOrbit180');
       expect(debug.formationBounds?.playerIds).toHaveLength(22);
-      expect(debug.orbitCenter?.x).toBeCloseTo(debug.formationBounds?.center.x ?? 0);
-      expect(debug.orbitCenter?.z).toBeCloseTo(debug.formationBounds?.center.z ?? 0);
+      expect(debug.orbitCenter?.x).toBeCloseTo(snapshot.nextSnapSpot.x);
+      expect(debug.orbitCenter?.z).toBeCloseTo(snapshot.nextSnapSpot.z);
       expect(debug.orbitRadius).toBeGreaterThan(0);
     }
+  });
+
+  it('keeps the completed pre-play camera stable while switching plays before the snap', () => {
+    const playIds = ['inside-zone-7', 'outside-zone-7', 'quick-pass-7', 'twin-slants-flat'];
+    const frameSeconds = 0.016;
+
+    for (const mode of ['tacticalOrthographic', 'offensePerspective', 'cinematicBroadcast'] as const) {
+      for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+        const gameplay = createGameplayModel({ playbookId: '7v7' });
+        moveGameplayToSnapLane(gameplay, lane);
+        selectPlay(gameplay, playIds[0]);
+        const controller = new GameplayCameraController({
+          cinematics: 'brief',
+          height: 900,
+          initialMode: mode,
+          width: 1440,
+        });
+        let snapshot = snapshotGameplayModel(gameplay);
+
+        controller.update(snapshot, 0);
+        for (let frame = 0; frame < 90; frame += 1) {
+          controller.update(snapshot, frameSeconds);
+        }
+
+        const completedDebug = controller.getDebugSnapshot();
+        const preSnapSequenceId = completedDebug.stability.preSnapSequenceId;
+        expect(completedDebug.activeShotName ?? null).toBeNull();
+
+        for (const playId of playIds.slice(1)) {
+          expect(selectPlay(gameplay, playId)).toBe(true);
+          snapshot = snapshotGameplayModel(gameplay);
+          const before = controller.camera.position.clone();
+          controller.update(snapshot, frameSeconds);
+          const debug = controller.getDebugSnapshot();
+          const maxTranslation = mode === 'cinematicBroadcast'
+            ? PRESENTATION_CAMERA_CONFIG.maximumTransitionSpeed
+            : GAMEPLAY_CAMERA_CONFIG.offensePerspective.maximumCameraTranslationPerSecond;
+          const maxAngular = mode === 'cinematicBroadcast'
+            ? PRESENTATION_CAMERA_CONFIG.maximumAngularChangePerSecond
+            : GAMEPLAY_CAMERA_CONFIG.offensePerspective.maximumAngularChangePerSecond;
+
+          expect(debug.activeShotName ?? null).toBeNull();
+          expect(debug.stability.preSnapSequenceId).toBe(preSnapSequenceId);
+          expect(debug.stability.reasonCameraTargetChanged).toBe('selectedPlayChangedPreservedAnchor');
+          expect(debug.stability.selectedPlayId).toBe(playId);
+          expect(debug.stability.perFrameDisplacement).toBeLessThanOrEqual(
+            maxTranslation * frameSeconds + 0.001,
+          );
+          expect(debug.stability.perFrameAngularChange).toBeLessThanOrEqual(
+            maxAngular * frameSeconds + 0.001,
+          );
+          expect(controller.camera.position.distanceTo(before)).toBeLessThanOrEqual(
+            maxTranslation * frameSeconds + 0.001,
+          );
+        }
+
+        expect(snapshot.selectedPlay.id).toBe(playIds.at(-1));
+      }
+    }
+  });
+
+  it('starts gameplay immediately after a pre-snap play change without waiting for camera settling', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+    const controller = new GameplayCameraController({
+      cinematics: 'brief',
+      height: 900,
+      initialMode: 'cinematicBroadcast',
+      width: 1440,
+    });
+
+    controller.update(snapshotGameplayModel(gameplay), 0);
+    expect(selectPlay(gameplay, 'twin-slants-flat')).toBe(true);
+    controller.update(snapshotGameplayModel(gameplay), 0.016);
+
+    expect(startPlay(gameplay)).toBe(true);
+    expect(gameplay.playState).toBe('live');
   });
 
   it('updates orbit framing when resized', () => {
@@ -331,4 +410,15 @@ function getUnframedPlayerIds(camera: THREE.Camera, players: PlayerSnapshot[]): 
       );
     })
     .map((player) => player.id);
+}
+
+function moveGameplayToSnapLane(
+  gameplay: ReturnType<typeof createGameplayModel>,
+  lane: SnapLane,
+): void {
+  const x = SNAP_LANE_X[lane];
+  gameplay.currentBallSpot = { x, z: gameplay.currentBallSpot.z };
+  gameplay.nextSnapSpot = { x, z: gameplay.nextSnapSpot.z };
+  gameplay.drive.lineOfScrimmage = { x, z: gameplay.drive.lineOfScrimmage.z };
+  gameplay.drive.snapLane = lane;
 }

@@ -64,6 +64,18 @@ describe('GamePresentationRuntime', () => {
       cameraPosition: { x: 0, y: 12, z: -20 },
       focusPosition: { x: 0, y: 0, z: -15 },
       mode: 'cinematicBroadcast',
+      stability: {
+        activeShot: 'prePlayOrbit180',
+        cameraPosition: { x: 0, y: 12, z: -20 },
+        desiredCameraPosition: { x: 0, y: 12, z: -20 },
+        desiredLookTarget: { x: 0, y: 0, z: -10 },
+        lookTarget: { x: 0, y: 0, z: -10 },
+        perFrameAngularChange: 0,
+        perFrameDisplacement: 0,
+        preSnapSequenceId: 1,
+        reasonCameraTargetChanged: 'initial',
+        selectedPlayId: 'inside-run',
+      },
       state: 'preSnapFormation',
       targetPosition: { x: 0, y: 0, z: -10 },
     });

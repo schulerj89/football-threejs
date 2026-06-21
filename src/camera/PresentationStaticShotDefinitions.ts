@@ -33,7 +33,7 @@ export function createPresentationPhaseShot({
   const context = { config, playDirection, sidelineDirection };
 
   if (phase === 'preSnapEstablish') {
-    return createFormationEstablishShot(context, formationBounds, phase);
+    return createFormationEstablishShot(context, snapshot, formationBounds, phase);
   }
 
   if (phase === 'transitionToGameplay') {
@@ -67,11 +67,13 @@ interface StaticShotContext {
 
 function createFormationEstablishShot(
   context: StaticShotContext,
+  snapshot: GameplaySnapshot,
   formationBounds: FieldPlaneBounds,
   phase: PresentationCameraPhase,
 ): PresentationCameraShot {
   const config = context.config.phases[phase];
-  const focus = createPresentationFieldFocus(context, formationBounds.center.x, formationBounds.center.z, 1.3);
+  const snap = snapshot.nextSnapSpot ?? snapshot.currentBallSpot;
+  const focus = createPresentationFieldFocus(context, snap.x, snap.z, 1.3);
   const distance = config.distance + formationBounds.size.z * 0.28;
   const sidelineOffset = (config.sidelineOffset ?? 0) + formationBounds.size.x * 0.12;
 
@@ -96,7 +98,12 @@ function createTransitionShot(
   const carrier = getBallCarrier(snapshot) ?? snapshot.player;
   const focus = snapshot.playState === 'live'
     ? createPresentationFieldFocus(context, carrier.position.x, carrier.position.z, 1.25)
-    : createPresentationFieldFocus(context, formationBounds.center.x, snapshot.drive.lineOfScrimmage.z, 1.2);
+    : createPresentationFieldFocus(
+      context,
+      snapshot.nextSnapSpot.x,
+      snapshot.nextSnapSpot.z,
+      1.2,
+    );
   const config = context.config.phases[phase];
 
   return createStaticShot(context, {

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.2] - 2026-06-21
+
+### Fixed
+
+- Stabilized pre-snap camera behavior so changing plays no longer restarts completed pre-play orbit shots, clears camera smoothing history, or recenters presentation shots on formation bounds.
+- Anchored pre-snap presentation shots to the authoritative snap-ball position while still using formation size to smooth framing distance.
+- Added camera-stability debug data for pre-snap sequence ID, selected play, desired camera/look targets, per-frame displacement, angular change, and target-change reason.
+
+### Tests
+
+- Added camera coverage for rapid 7v7 play switching across left hash, middle, right hash, tactical, offense, and cinematic camera modes.
+- Verified immediate snap after play selection still starts gameplay and that full unit, build, and browser smoke suites pass.
+
 ## [0.51.1] - 2026-06-21
 
 ### Changed

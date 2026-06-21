@@ -346,17 +346,18 @@ export function getBallCarrier(snapshot: GameplaySnapshot): PlayerSnapshot | nul
 
 export function createPrePlayShotKey(
   snapshot: GameplaySnapshot,
-  formationBounds: FieldPlaneBounds,
+  _formationBounds: FieldPlaneBounds,
+  preSnapSequenceId = 0,
 ): string {
   return [
-    snapshot.selectedPlay.id,
+    `preSnap:${preSnapSequenceId}`,
+    snapshot.playbookId,
+    snapshot.snapLane,
     snapshot.nextSnapSpot.x.toFixed(2),
     snapshot.nextSnapSpot.z.toFixed(2),
-    formationBounds.center.x.toFixed(2),
-    formationBounds.center.z.toFixed(2),
-    formationBounds.size.x.toFixed(2),
-    formationBounds.size.z.toFixed(2),
-    formationBounds.playerIds.join(','),
+    snapshot.drive.currentDown,
+    snapshot.drive.yardsToFirstDown.toFixed(2),
+    snapshot.score,
   ].join('|');
 }
 
