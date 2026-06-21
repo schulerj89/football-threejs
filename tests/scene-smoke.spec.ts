@@ -521,6 +521,41 @@ interface GamePresentationRuntimeSnapshot {
   recentEvents: Array<{ type: string }>;
 }
 
+interface SevenAuditSnapshot {
+  activePlay: string;
+  activePresentationEvent: string | null;
+  playerOverlapWarnings: string[];
+  resourceCounts: {
+    activeAudioNodes: number;
+    drawCalls: number;
+    geometries: number;
+    materialCount: number;
+    playerVisualCount: number;
+    presentationHistoryCount: number;
+    textures: number;
+    triangles: number;
+  };
+  rosterCount: number;
+  routeErrors: Array<{ exceedsTolerance: boolean; receiverId: string }>;
+  snapLane: string;
+  staleEngagements: string[];
+}
+
+interface SevenAuditResetCycleResult {
+  after: SevenAuditResetCycleResourceSnapshot;
+  before: SevenAuditResetCycleResourceSnapshot;
+  cycles: number;
+}
+
+interface SevenAuditResetCycleResourceSnapshot {
+  activeAudioNodes: number;
+  activePlayerRootCount: number;
+  geometryCount: number;
+  materialCount: number;
+  presentationHistoryCount: number;
+  visualRootCount: number;
+}
+
 interface PresentationHardeningAuditSnapshot {
   activeCameraShot: CameraSnapshot['activeShotName'];
   audio: {
@@ -950,6 +985,42 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
   await waitForPreSnap(page);
   expect((await getPresentationHoldSnapshot(page)).active).toBe(false);
   await expectNonBlankCanvas(page);
+});
+
+test('runs seven-on-seven audit and reset-cycle resource stability checks', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1&experience=performance&sevenAudit=1&audio=0&crowdVisuals=0&cinematics=off');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.seven-audit-overlay')).toContainText('SEVEN AUDIT');
+  await expect(page.locator('.seven-audit-overlay')).toContainText('ROSTER 14');
+  await expect(page.locator('.seven-audit-overlay')).toContainText('WARNINGS none');
+  await expect.poll(() => getHelmetAssetSnapshot(page), { timeout: 5000 }).toMatchObject({
+    status: 'loaded',
+  });
+
+  const audit = await getSevenAuditSnapshot(page);
+  expect(audit).toMatchObject({
+    activePlay: 'Inside Zone 7',
+    rosterCount: 14,
+    snapLane: 'middle',
+    staleEngagements: [],
+    playerOverlapWarnings: [],
+  });
+  expect(audit.resourceCounts.playerVisualCount).toBe(14);
+  expect(audit.resourceCounts.drawCalls).toBeGreaterThan(0);
+  expect(audit.resourceCounts.triangles).toBeGreaterThan(0);
+
+  const resetCycles = await runSevenAuditResetCycles(page, 100);
+  expect(resetCycles.cycles).toBe(100);
+  expect(resetCycles.after.activePlayerRootCount).toBe(14);
+  expect(resetCycles.after.visualRootCount).toBe(14);
+  expect(resetCycles.after.geometryCount).toBeLessThanOrEqual(resetCycles.before.geometryCount);
+  expect(resetCycles.after.materialCount).toBe(resetCycles.before.materialCount);
+  expect(resetCycles.after.activeAudioNodes).toBeLessThanOrEqual(resetCycles.before.activeAudioNodes);
+  expect(resetCycles.after.presentationHistoryCount).toBeLessThanOrEqual(24);
+
+  const afterAudit = await getSevenAuditSnapshot(page);
+  expect(afterAudit.staleEngagements).toEqual([]);
+  expect(afterAudit.playerOverlapWarnings).toEqual([]);
 });
 
 test('supports the box player body comparison URL option', async ({ page }) => {
@@ -2804,6 +2875,57 @@ async function getGamePresentationRuntimeSnapshot(page: Page): Promise<GamePrese
 
     return debugApi.getGamePresentationRuntimeSnapshot();
   });
+}
+
+async function getSevenAuditSnapshot(page: Page): Promise<SevenAuditSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getSevenAuditSnapshot: () => SevenAuditSnapshot | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    const snapshot = debugApi.getSevenAuditSnapshot();
+
+    if (!snapshot) {
+      throw new Error('Missing seven audit snapshot');
+    }
+
+    return snapshot;
+  });
+}
+
+async function runSevenAuditResetCycles(
+  page: Page,
+  cycles: number,
+): Promise<SevenAuditResetCycleResult> {
+  return page.evaluate((cycleCount) => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          runSevenAuditResetCycles: (cycles?: number) => SevenAuditResetCycleResult | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    const result = debugApi.runSevenAuditResetCycles(cycleCount);
+
+    if (!result) {
+      throw new Error('Missing seven audit reset-cycle result');
+    }
+
+    return result;
+  }, cycles);
 }
 
 async function getPresentationHardeningAuditSnapshot(page: Page): Promise<PresentationHardeningAuditSnapshot> {

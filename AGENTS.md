@@ -133,6 +133,8 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Normal-game crowd visuals, reactions, and cutaways must be optional. Disabled crowd visuals must not create crowd GPU resources or load unnecessary generated audio.
 - Presentation hold and cutaway coordination may delay only automatic dead-play reset when cinematics are enabled and the gameplay result is already authoritative. It must not delay scoring, change possession, alter collision, or determine gameplay outcomes. `?cinematics=off` must preserve the previous reset timing.
 - Presentation hardening audits live in `src/presentation/PresentationHardeningAudit.ts` and may report audio/crowd/camera/hold diagnostics, but must not mutate gameplay state or trigger presentation events.
+- Seven-on-seven gameplay hardening audits live in `src/sevenOnSevenAudit.ts` and are enabled with `?sevenAudit=1`. They may report roster count, assignments, route errors, stale engagements, overlaps, presentation event state, and resource counters, but must not mutate gameplay or presentation state.
+- Seven-on-seven matrix tests should cover the active 7v7 playbook across all plays, snap lanes, tactical/offense/cinematic camera configuration values, off/brief cinematics, disabled/low crowd modes, and 30/60/120 Hz update rates where simulation tests support them.
 - Development crowd rendering lives in `src/crowdPreview.ts` and must remain disabled unless `?crowdPreview=1` is present.
 - Crowd preview must use `InstancedMesh` with shared geometry/material sets and must not create one `Object3D`, geometry, or material per spectator.
 - Crowd preview may report frame time and FPS as machine-specific measurements, but hard acceptance should focus on bounded draw calls, bounded geometry/material counts, explicit instance-buffer estimates, and clean startup/disposal.
@@ -166,9 +168,10 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 
 ## Done Criteria For This Milestone
 
-- One authoritative immutable presentation-event stream feeds `GameAudioDirector`, `BroadcastCommentaryDirector`, `CrowdPresentationController`, `GameplayCameraController`, `PresentationCameraDirector`, and `PresentationHoldDirector`.
-- Event precedence prevents lower-value same-play presentation from competing with touchdown, turnover, sack, first-down, incomplete/out-of-bounds, or tackle outcomes.
-- Skip and page-activity handling restore camera, holds, crowd reactions, commentary, and ducking without replaying stale events.
-- Development integration history reports gameplay result ID, emitted presentation events, camera shot, crowd reaction/audio, announcer clip, caption, hold, and reset completion.
-- Presentation settings do not alter score, down, distance, ball spot, possession, route progression, collision results, or reset identity.
+- The deterministic 7v7 matrix covers every active 7v7 play, every snap lane, tactical/offense/cinematic camera configuration values, off/brief cinematics, disabled/low crowd modes, and 30/60/120 Hz update-rate scenarios.
+- Repeated pre-snap updates preserve positions, facing, snap lane, assignments, and route progress.
+- Run and pass plays validate ball carrier/quarterback possession, unique blocking/protection/coverage assignments, route ordering, route timing, update-rate consistency, sacks, catches, incompletions, and reset cleanup.
+- All seven-on-seven result paths produce one authoritative result, advance the drive once, reset players cleanly, and avoid stale engagements or stale route state.
+- `?sevenAudit=1` reports roster count, assignments, route errors, stale engagements, overlap warnings, active presentation event, and resource counters.
+- At least 100 snap/reset cycles keep active players and visual roots at fourteen while geometry/material/audio/presentation counts remain bounded.
 - Existing tactical, offense-perspective, cinematic broadcast, 5v5 regression, 7v7 gameplay, crowd preview, audio, route art, play cards, helmet, mannequin, visual, camera, unit, build, and browser smoke tests pass.

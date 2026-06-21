@@ -137,6 +137,8 @@ Add `?formationAudit=1` to show the resolved semantic formation: snap lane, fiel
 
 Add `?presentationAudit=1` to show the development-only presentation audit for 7v7 preview scenarios. It reports snap lane, audit state, camera mode, presentation phase, visual-bound framing, grounding, helmet attachment and gap checks, frame time, draw calls, triangles, player mesh count, material count, and any presentation validation issues.
 
+Add `?sevenAudit=1` to show the default 7v7 hardening audit. It reports active play, snap lane, roster count, assignments, route corridor errors, stale engagements, overlap warnings, active presentation event, draw calls, triangles, geometry count, material count, player visual count, and active audio nodes.
+
 Add `?routeAudit=1` to show the development-only route audit overlay for receiver routes. It reports route ID, receiver ID, active segment, distance completed, total route distance, completion percentage, nearest projected route point, and cross-track error in yards.
 
 Add `?passAudit=1` to show the development-only pass audit overlay for route-aware passing. It reports selected receiver, release position, predicted target position, predicted receiver position, predicted route distance, predicted flight time, actual closest approach, horizontal miss distance, ball height at closest approach, and the catch or incompletion reason.

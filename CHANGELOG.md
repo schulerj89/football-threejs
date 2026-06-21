@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.42.1] - 2026-06-21
+
+### Added
+
+- Added a deterministic 7v7 hardening matrix covering four plays, three snap lanes, tactical/offense/cinematic camera modes, off/brief cinematics, disabled/low crowd modes, and 30/60/120 Hz simulation rates.
+- Added `src/sevenOnSevenAudit.ts` with `?sevenAudit=1` overlay/readback for active play, snap lane, roster count, assignments, route corridor errors, stale engagements, overlap warnings, presentation events, and resource counters.
+- Added browser smoke coverage for the seven-audit overlay and 100 snap/reset cycles to verify active player roots, visual roots, geometry/material counts, audio nodes, and presentation history remain bounded.
+
+### Changed
+
+- Extended unit coverage for 7v7 pre-snap stability, run assignments, pass routes/protection/coverage, update-rate consistency, reset cleanup, and tackle/sack/catch/incomplete/out-of-bounds/first-down/touchdown/turnover result paths.
+- Documented 7v7 audit usage and patch-level hardening criteria.
+
 ## [0.42.0] - 2026-06-21
 
 ### Added

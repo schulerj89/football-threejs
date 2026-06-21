@@ -99,6 +99,12 @@ import {
 } from './playState';
 import { createPassAuditOverlay, syncPassAuditOverlay } from './passAuditOverlay';
 import {
+  createSevenAuditOverlay,
+  createSevenAuditSnapshot,
+  syncSevenAuditOverlay,
+  type SevenAuditSnapshot,
+} from './sevenOnSevenAudit';
+import {
   PlayerPoseController,
   createPlayerPoseDebugOverlay,
   syncPlayerPoseDebugOverlay,
@@ -173,12 +179,14 @@ declare global {
       getPresentationHardeningAuditSnapshot: () => PresentationHardeningAuditSnapshot | null;
       getPresentationHoldSnapshot: () => PresentationHoldSnapshot;
       getPresentationAuditSnapshot: () => PresentationAuditSnapshot | null;
+      getSevenAuditSnapshot: () => SevenAuditSnapshot | null;
       getPlayerBodyVisualSnapshots: () => PlayerBodyVisualSnapshot[];
       getPlayerPoseSnapshots: () => PlayerPoseSnapshot[];
       getPlayerSnapshot: () => PlayerSnapshot;
       getRenderMetrics: () => RenderMetricsSnapshot;
       getRouteArtSnapshot: () => RouteArtRendererSnapshot;
       playAudioTestOneShot: () => Promise<boolean>;
+      runSevenAuditResetCycles: (cycles?: number) => SevenAuditResetCycleResult | null;
       setCrowdPreviewCameraView: (view: CrowdPreviewCameraView) => void;
       setAnnouncerEnabled: (enabled: boolean) => void;
       setAnnouncerVolume: (volume: number) => void;
@@ -189,6 +197,21 @@ declare global {
       stopAudioTestLoop: () => boolean;
     };
   }
+}
+
+interface SevenAuditResetCycleResourceSnapshot {
+  activeAudioNodes: number;
+  activePlayerRootCount: number;
+  geometryCount: number;
+  materialCount: number;
+  presentationHistoryCount: number;
+  visualRootCount: number;
+}
+
+interface SevenAuditResetCycleResult {
+  after: SevenAuditResetCycleResourceSnapshot;
+  before: SevenAuditResetCycleResourceSnapshot;
+  cycles: number;
 }
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -225,6 +248,7 @@ const presentationAuditEnabled = searchParams.has('presentationAudit');
 const routeAuditEnabled = searchParams.has('routeAudit');
 let routeArtEnabled = effectiveExperienceSettings.routeArtEnabled;
 const passAuditEnabled = searchParams.has('passAudit');
+const sevenAuditEnabled = searchParams.has('sevenAudit');
 const appearanceAuditEnabled = searchParams.has('appearanceAudit');
 let audioFeatureFlags = gameExperience.audioFeatureFlags;
 const commentaryDebugEnabled = searchParams.has('commentaryDebug');
@@ -356,6 +380,7 @@ const presentationAuditOverlay = presentationAuditEnabled
   : null;
 const routeAuditOverlay = routeAuditEnabled ? createRouteAuditOverlay() : null;
 const passAuditOverlay = passAuditEnabled ? createPassAuditOverlay() : null;
+const sevenAuditOverlay = sevenAuditEnabled ? createSevenAuditOverlay() : null;
 const appearanceAuditOverlay = appearanceAuditEnabled ? createAppearanceAuditOverlay() : null;
 const audioDebugOverlay = audioFeatureFlags.audioDebug || commentaryDebugEnabled
   ? createAudioDebugOverlay()
@@ -413,6 +438,7 @@ if (
   cameraDebugEnabled ||
   presentationAuditEnabled ||
   appearanceAuditEnabled ||
+  sevenAuditEnabled ||
   audioFeatureFlags.audioDebug ||
   commentaryDebugEnabled ||
   crowdPresentationDebugEnabled ||
@@ -449,6 +475,7 @@ if (
     getPresentationHardeningAuditSnapshot: () => getPresentationHardeningAuditSnapshot(),
     getPresentationHoldSnapshot: () => presentationHoldDirector.getSnapshot(),
     getPresentationAuditSnapshot: () => getPresentationAuditSnapshot(),
+    getSevenAuditSnapshot: () => getSevenAuditSnapshot(),
     getPlayerBodyVisualSnapshots: () =>
       [...playerVisuals.values()].map((playerVisual) => getPlayerBodyVisualSnapshot(playerVisual)),
     getPlayerPoseSnapshots: () => playerPoseController.getPoseSnapshots(),
@@ -456,6 +483,7 @@ if (
     getRenderMetrics: () => latestRenderMetrics ?? createRenderMetricsSnapshot(0),
     getRouteArtSnapshot: () => routeArtRenderer.getSnapshot(),
     playAudioTestOneShot: () => gameAudioDirector.playTestOneShot(),
+    runSevenAuditResetCycles: (cycles = 100) => runSevenAuditResetCycles(cycles),
     setCrowdPreviewCameraView: (view: CrowdPreviewCameraView) => {
       crowdPreviewController?.setCameraView(view);
     },
@@ -618,6 +646,12 @@ function renderFrame(delta: number): void {
   }
   if (passAuditOverlay) {
     syncPassAuditOverlay(passAuditOverlay, gameplaySnapshot.passAudit);
+  }
+  if (sevenAuditOverlay) {
+    const snapshot = getSevenAuditSnapshot();
+    if (snapshot) {
+      syncSevenAuditOverlay(sevenAuditOverlay, snapshot);
+    }
   }
   if (appearanceAuditOverlay) {
     syncAppearanceAuditOverlay(
@@ -1202,9 +1236,70 @@ function shouldCollectPresentationDiagnostics(): boolean {
     !!presentationAuditOverlay ||
     !!routeAuditOverlay ||
     !!passAuditOverlay ||
+    !!sevenAuditOverlay ||
     !!appearanceAuditOverlay ||
     !!crowdPresentationOverlay ||
     !!presentationHardeningAuditOverlay;
+}
+
+function getSevenAuditSnapshot(): SevenAuditSnapshot | null {
+  if (!sevenAuditEnabled) {
+    return null;
+  }
+
+  const renderMetrics = latestRenderMetrics ?? createRenderMetricsSnapshot(0);
+
+  return createSevenAuditSnapshot({
+    activeAudioNodes: getRuntimeAudioSnapshot().activeAudioNodeCount,
+    gameplay: getActivePresentationSnapshot(),
+    materialCount: renderMetrics.sceneMaterialCount,
+    play: gameplayModel.selectedPlay,
+    playerVisualCount: playerVisuals.size,
+    presentation: gamePresentationRuntime.getSnapshot(),
+    renderMetrics,
+  });
+}
+
+function runSevenAuditResetCycles(cycles: number): SevenAuditResetCycleResult | null {
+  if (crowdPreviewController || formationPreviewModel) {
+    return null;
+  }
+
+  const cycleCount = Math.max(0, Math.min(500, Math.floor(cycles)));
+  const before = createSevenAuditResetCycleResourceSnapshot();
+
+  for (let cycle = 0; cycle < cycleCount; cycle += 1) {
+    if (gameplayModel.playState !== 'preSnap') {
+      resetPlay(gameplayModel);
+    }
+
+    startPlay(gameplayModel);
+    resetPlay(gameplayModel);
+    reconcilePlayerVisuals();
+    syncBallVisual(ballVisual, gameplayModel.ball);
+    routeArtRenderer.update(snapshotGameplayModel(gameplayModel), gameplayModel.selectedPlay);
+    gamePresentationRuntime.skipPresentation();
+  }
+
+  return {
+    after: createSevenAuditResetCycleResourceSnapshot(),
+    before,
+    cycles: cycleCount,
+  };
+}
+
+function createSevenAuditResetCycleResourceSnapshot(): SevenAuditResetCycleResourceSnapshot {
+  const metrics = createRenderMetricsSnapshot(0);
+  const audio = getRuntimeAudioSnapshot();
+
+  return {
+    activeAudioNodes: audio.activeAudioNodeCount,
+    activePlayerRootCount: getActivePlayers().length,
+    geometryCount: metrics.geometries,
+    materialCount: metrics.sceneMaterialCount,
+    presentationHistoryCount: gamePresentationRuntime.getSnapshot().history.length,
+    visualRootCount: playerVisuals.size,
+  };
 }
 
 function createEmptyPresentationAuditSnapshot(): PresentationAuditSnapshot {
