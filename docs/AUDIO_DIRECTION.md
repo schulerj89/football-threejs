@@ -2,12 +2,12 @@
 
 Audio is now planned product scope for the low-poly football game, including football sound effects, announcer presentation, crowd ambience, and cinematic presentation support.
 
-Current implementation scope includes offline generation planning and a local-file runtime mixer foundation. Generated asset approval/import, announcer playback, crowd reactions, spatial audio, music, crowd rendering, and camera changes remain future work.
+Current implementation scope includes offline generation planning, a local-file runtime mixer foundation, and event-driven crowd/SFX playback from local starter-pack asset IDs. Generated asset approval, announcer playback, spatial audio, music, visual crowd rendering, and camera changes remain future work.
 
 ## Production Roles
 
 - `sfx`: short football one-shots such as cleats, catch sounds, contact, whistles, and UI feedback.
-- `crowd`: loopable or layered crowd beds for future presentation states.
+- `crowd`: loopable or layered crowd beds for presentation states and result reactions.
 - `announcer`: original broadcast-style speech generated offline from concise scripts.
 - `music`: future menu or cinematic music. No music assets are planned in the current seed plan.
 - `positional`: future field-relative sounds. Runtime spatialization is deferred.
@@ -34,4 +34,4 @@ Project-specific direction lives in:
 - Announcer lines should stay concise and caption-matched.
 - Approved generated files should be preserved rather than regenerated.
 
-Generated audio assets are queued future runtime content until a dedicated integration milestone maps them to gameplay and presentation events.
+Runtime crowd and football-event cues are mapped through the presentation event bridge. Missing optional generated files must warn in development without stopping gameplay.

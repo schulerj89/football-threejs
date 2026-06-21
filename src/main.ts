@@ -340,7 +340,7 @@ function renderFrame(delta: number): void {
   }
 
   const gameplaySnapshot = getActivePresentationSnapshot();
-  gameAudioDirector.update(gameplaySnapshot);
+  gameAudioDirector.update(gameplaySnapshot, delta);
   syncFootballFieldDriveLines(
     field,
     gameplaySnapshot.drive.lineOfScrimmage,

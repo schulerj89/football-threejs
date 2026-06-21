@@ -26,6 +26,7 @@ export function syncAudioDebugOverlay(
     `STREAMED ${snapshot.streamedAssetIds.join(',') || 'none'}`,
     `MISSING ${snapshot.missingOptionalAssetIds.join(',') || 'none'}`,
     `EVENTS ${snapshot.recentEvents.map((event) => event.type).join(',') || 'none'}`,
+    `EVENT_HISTORY ${formatEventHistory(snapshot.eventHistory)}`,
     `UNLOCK_ERROR ${snapshot.lastUnlockError ?? 'none'}`,
   ].join('\n');
 }
@@ -34,4 +35,19 @@ function formatBusGains(busGains: GameAudioDirectorSnapshot['busGains']): string
   return Object.entries(busGains)
     .map(([busName, gain]) => `${busName}:${gain.toFixed(2)}`)
     .join(' ');
+}
+
+function formatEventHistory(eventHistory: GameAudioDirectorSnapshot['eventHistory']): string {
+  if (eventHistory.length === 0) {
+    return 'none';
+  }
+
+  return eventHistory
+    .slice(0, 6)
+    .map((entry) => {
+      const asset = entry.assetId ?? 'none';
+      const reason = entry.reason ?? 'ok';
+      return `${entry.eventType}:${entry.eventId}:${asset}:${entry.triggerTimeSeconds.toFixed(2)}:${entry.status}:${reason}`;
+    })
+    .join(' | ');
 }

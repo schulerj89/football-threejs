@@ -146,6 +146,7 @@ describe('runtime audio mixer', () => {
     await expect(mixer.startLoop(STREAM_TEST_ASSET.assetId)).resolves.toBe(false);
 
     expect(warnings).toHaveLength(1);
+    expect(fakeContext.mediaSources).toHaveLength(1);
     expect(loader.getSnapshot().missingOptionalAssetIds).toEqual([STREAM_TEST_ASSET.assetId]);
   });
 
@@ -190,14 +191,36 @@ describe('runtime audio mixer', () => {
     expect(mixer.getSnapshot().streamedAssetIds).toEqual([STREAM_TEST_ASSET.assetId]);
   });
 
+  it('reuses active loop instances while allowing gain updates', async () => {
+    const fakeContext = new FakeAudioContext('running');
+    const fakeElement = createFakeAudioElement(STREAM_TEST_ASSET.url);
+    const loader = new AudioAssetLoader({
+      audioContext: fakeContext.asAudioContext(),
+      createAudioElement: () => fakeElement,
+      manifest: [STREAM_TEST_ASSET],
+      warn: () => undefined,
+    });
+    const mixer = createMixer(fakeContext, { loader });
+
+    await expect(mixer.startLoop(STREAM_TEST_ASSET.assetId, { gain: 0 })).resolves.toBe(true);
+    await expect(mixer.startLoop(STREAM_TEST_ASSET.assetId, { gain: 0.4 })).resolves.toBe(true);
+
+    expect(fakeContext.mediaSources).toHaveLength(1);
+    expect(mixer.hasActiveLoop(STREAM_TEST_ASSET.assetId)).toBe(true);
+    expect(mixer.getLoopGain(STREAM_TEST_ASSET.assetId)).toBe(0.4);
+    expect(mixer.setLoopGain(STREAM_TEST_ASSET.assetId, 0.2)).toBe(true);
+    expect(mixer.getLoopGain(STREAM_TEST_ASSET.assetId)).toBe(0.2);
+  });
+
   it('lets the audio director observe gameplay snapshots without mutating them', () => {
     const gameplay = createGameplayModel();
     const snapshot = snapshotGameplayModel(gameplay);
     const before = JSON.stringify(snapshot);
-    const director = new GameAudioDirector(createMixer(new FakeAudioContext('running')));
+    const mixer = createMixer(new FakeAudioContext('running'));
+    mixer.setMuted(true);
+    const director = new GameAudioDirector(mixer);
 
     director.update(snapshot);
-    director.setMuted(true);
 
     expect(JSON.stringify(snapshot)).toBe(before);
   });

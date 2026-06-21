@@ -32,6 +32,10 @@ export interface AudioMixerSnapshot {
   streamedAssetIds: string[];
 }
 
+export interface AudioLoopStartOptions {
+  gain?: number;
+}
+
 export interface AudioMixerOptions {
   audioContextFactory?: () => AudioContext;
   flags?: AudioFeatureFlags;
@@ -64,6 +68,7 @@ export class AudioMixer {
   private readonly activeOneShotsByAsset = new Map<string, number>();
   private readonly flags: AudioFeatureFlags;
   private readonly loader: AudioAssetLoader;
+  private readonly preparedLoops = new Map<string, ActiveLoop>();
   private readonly storage: StorageLike | null;
   private lastUnlockError: string | null = null;
   private settings: AudioSettings;
@@ -180,42 +185,81 @@ export class AudioMixer {
     return true;
   }
 
-  async startLoop(assetId: string): Promise<boolean> {
-    if (!this.canPlay() || this.activeLoops.has(assetId)) {
+  async startLoop(assetId: string, options: AudioLoopStartOptions = {}): Promise<boolean> {
+    if (!this.canPlay()) {
       return false;
     }
 
-    const streamedAsset = this.loader.loadStream(assetId);
+    const activeLoop = this.activeLoops.get(assetId);
 
-    if (!streamedAsset || !this.isCategoryEnabled(streamedAsset.asset.category)) {
+    if (activeLoop) {
+      if (options.gain !== undefined) {
+        activeLoop.gain.gain.value = clampGain(options.gain);
+      }
+      return true;
+    }
+
+    if (this.loader.isMissingOptionalAsset(assetId)) {
       return false;
     }
 
-    const source = this.context.createMediaElementSource(streamedAsset.element);
-    const gain = this.context.createGain();
-    gain.gain.value = streamedAsset.asset.defaultGain;
-    source.connect(gain);
-    gain.connect(this.getBusForCategory(streamedAsset.asset.category));
+    let loop = this.preparedLoops.get(assetId);
+
+    if (!loop) {
+      const streamedAsset = this.loader.loadStream(assetId);
+
+      if (!streamedAsset || !this.isCategoryEnabled(streamedAsset.asset.category)) {
+        return false;
+      }
+
+      const source = this.context.createMediaElementSource(streamedAsset.element);
+      const gain = this.context.createGain();
+      gain.gain.value = 0;
+      source.connect(gain);
+      gain.connect(this.getBusForCategory(streamedAsset.asset.category));
+      loop = {
+        asset: streamedAsset.asset,
+        element: streamedAsset.element,
+        gain,
+        source,
+      };
+      this.preparedLoops.set(assetId, loop);
+    }
+
+    loop.gain.gain.value = clampGain(options.gain ?? loop.asset.defaultGain);
 
     try {
-      await streamedAsset.element.play();
+      await loop.element.play();
     } catch (error) {
       this.loader.reportMissingOptionalAsset(
-        streamedAsset.asset.assetId,
+        loop.asset.assetId,
         error instanceof Error ? error.message : String(error),
       );
-      source.disconnect();
-      gain.disconnect();
+      loop.gain.gain.value = 0;
       return false;
     }
 
-    this.activeLoops.set(assetId, {
-      asset: streamedAsset.asset,
-      element: streamedAsset.element,
-      gain,
-      source,
-    });
+    this.activeLoops.set(assetId, loop);
     return true;
+  }
+
+  setLoopGain(assetId: string, gain: number): boolean {
+    const activeLoop = this.activeLoops.get(assetId);
+
+    if (!activeLoop) {
+      return false;
+    }
+
+    activeLoop.gain.gain.value = clampGain(gain);
+    return true;
+  }
+
+  getLoopGain(assetId: string): number {
+    return this.activeLoops.get(assetId)?.gain.gain.value ?? 0;
+  }
+
+  hasActiveLoop(assetId: string): boolean {
+    return this.activeLoops.has(assetId);
   }
 
   stopLoop(assetId: string): boolean {
@@ -226,8 +270,7 @@ export class AudioMixer {
     }
 
     activeLoop.element.pause();
-    activeLoop.source.disconnect();
-    activeLoop.gain.disconnect();
+    activeLoop.gain.gain.value = 0;
     this.activeLoops.delete(assetId);
     return true;
   }
@@ -259,6 +302,10 @@ export class AudioMixer {
 
   getLoaderSnapshot(): AudioAssetLoaderSnapshot {
     return this.loader.getSnapshot();
+  }
+
+  getCurrentTime(): number {
+    return this.context.currentTime;
   }
 
   private applySettings(): void {
@@ -338,4 +385,12 @@ function getActiveBuses(buses: BusGainMap): AudioBusName[] {
 
 function isAudioContextRunning(context: AudioContext): boolean {
   return context.state === 'running';
+}
+
+function clampGain(gain: number): number {
+  if (!Number.isFinite(gain)) {
+    return 0;
+  }
+
+  return Math.min(1, Math.max(0, gain));
 }

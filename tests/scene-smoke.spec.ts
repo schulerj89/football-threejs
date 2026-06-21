@@ -350,6 +350,14 @@ interface AudioRuntimeSnapshot {
   loadedCompressedBytes: number;
   missingOptionalAssetIds: string[];
   muted: boolean;
+  eventHistory: Array<{
+    assetId: string | null;
+    eventId: string;
+    eventType: string;
+    reason: string | null;
+    status: 'played' | 'suppressed';
+    triggerTimeSeconds: number;
+  }>;
   recentEvents: Array<{ type: string }>;
   streamedAssetIds: string[];
 }
@@ -496,6 +504,7 @@ test('starts runtime audio debug and plays local test assets without mutating ga
   await page.goto('/?debug=1&readback=1&audioDebug=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO');
+  await expect(page.locator('.audio-debug-overlay')).toContainText('EVENT_HISTORY');
 
   const before = await getGameplaySnapshot(page);
   const initialAudio = await getAudioSnapshot(page);

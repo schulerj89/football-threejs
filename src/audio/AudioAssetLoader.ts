@@ -124,6 +124,10 @@ export class AudioAssetLoader {
     }
   }
 
+  isMissingOptionalAsset(assetId: string): boolean {
+    return this.missingOptionalAssetIds.has(assetId);
+  }
+
   getSnapshot(): AudioAssetLoaderSnapshot {
     return {
       decodedBufferBytes: [...this.decodedAssets.values()].reduce(

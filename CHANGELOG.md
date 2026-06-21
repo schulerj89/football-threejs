@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.32.0] - 2026-06-21
+
+### Added
+
+- Added an immutable presentation audio event bridge with stable event IDs for play preparation, snap, catch, tackle, incomplete, out-of-bounds, first down, touchdown, sack, turnover, and reset events.
+- Added deterministic crowd ambience control that starts idle ambience in pre-snap, crossfades toward pressure ambience during live play, returns to idle after results, and prevents duplicate loop instances.
+- Added result-driven crowd reactions and football event SFX mapping for snap, catch, tackle, sack, incomplete, first down, touchdown, turnover, and whistle cues.
+- Added deterministic non-repeating variant selection and whistle cooldown suppression.
+- Added audio debug event history with event ID, chosen asset, trigger time, status, and suppression reason.
+- Added unit coverage for one event cue per gameplay result, touchdown precedence over first down, dead-delay dedupe, reset dedupe, muted silence, missing optional reactions, loop reuse, and deterministic variants.
+
 ## [0.31.0] - 2026-06-21
 
 ### Added
