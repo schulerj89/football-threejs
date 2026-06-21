@@ -165,6 +165,22 @@ const PLAYER_UNIFORM_COLORS = {
 
 type UniformClothPart = keyof typeof PLAYER_UNIFORM_COLORS.offense;
 type UniformPart = UniformClothPart | 'skin';
+type UniformMeshReference = {
+  mesh: THREE.Mesh;
+  uniformPart: UniformPart;
+};
+type PlayerVisualMaterialState = {
+  debugRoleColors: boolean;
+  playerId: string;
+  role: PlayerRole;
+  team: PlayerTeam;
+};
+type PlayerVisualHierarchyReferences = {
+  bodyRoot: THREE.Object3D;
+  headAnchor: THREE.Object3D | null;
+  materialState: PlayerVisualMaterialState | null;
+  uniformMeshes: UniformMeshReference[];
+};
 
 const ARM_X = PLAYER_BODY_DIMENSIONS.shoulderWidth / 2 - PLAYER_BODY_DIMENSIONS.armInsetX;
 const FOOT_DEPTH = PLAYER_BODY_DIMENSIONS.footLength;
@@ -219,6 +235,7 @@ const sharedGeometry = {
 };
 
 const materialCache = new Map<string, THREE.MeshLambertMaterial | THREE.MeshBasicMaterial>();
+const playerVisualReferences = new WeakMap<THREE.Object3D, PlayerVisualHierarchyReferences>();
 
 export function resolvePlayerBodyVisualStyle(value: string | null): PlayerBodyVisualStyle {
   return value === 'box' ? 'box' : 'mannequin';
@@ -242,6 +259,16 @@ export function createPlaceholderPlayerVisual(
       ? createBoxBodyRoot(player, debugRoleColors)
       : createMannequinBodyRoot(player, debugRoleColors);
   group.add(bodyRoot);
+  const references = cachePlayerVisualReferences(group, bodyRoot);
+
+  if (player) {
+    references.materialState = {
+      debugRoleColors,
+      playerId: player.id,
+      role: player.role,
+      team: player.team,
+    };
+  }
 
   return group;
 }
@@ -251,9 +278,22 @@ export function syncPlayerVisual(
   playerModel: PlayerModel,
   options: Pick<PlayerVisualOptions, 'debugRoleColors'> = {},
 ): void {
-  playerVisual.userData.sourcePlayerId = playerModel.id;
-  playerVisual.position.set(playerModel.position.x, PLAYER_CENTER_Y, playerModel.position.z);
-  playerVisual.rotation.y = playerModel.facingRadians;
+  if (playerVisual.userData.sourcePlayerId !== playerModel.id) {
+    playerVisual.userData.sourcePlayerId = playerModel.id;
+  }
+
+  if (
+    playerVisual.position.x !== playerModel.position.x ||
+    playerVisual.position.y !== PLAYER_CENTER_Y ||
+    playerVisual.position.z !== playerModel.position.z
+  ) {
+    playerVisual.position.set(playerModel.position.x, PLAYER_CENTER_Y, playerModel.position.z);
+  }
+
+  if (playerVisual.rotation.y !== playerModel.facingRadians) {
+    playerVisual.rotation.y = playerModel.facingRadians;
+  }
+
   syncPlayerBodyMaterials(playerVisual, playerModel, options);
 }
 
@@ -322,6 +362,10 @@ export function getPlayerBodyVisualSnapshot(playerVisual: THREE.Object3D): Playe
     uniqueBodyGeometryCount: geometryIds.size,
     uniqueBodyMaterialCount: materialIds.size,
   };
+}
+
+export function getPlayerVisualHeadAnchor(playerVisual: THREE.Object3D): THREE.Object3D | null {
+  return getOrCreatePlayerVisualReferences(playerVisual).headAnchor;
 }
 
 function createMannequinBodyRoot(
@@ -507,29 +551,40 @@ function syncPlayerBodyMaterials(
 ): void {
   const debugRoleColors =
     options.debugRoleColors ?? Boolean(playerVisual.userData.debugRoleColors);
+  const references = getOrCreatePlayerVisualReferences(playerVisual);
 
   playerVisual.userData.debugRoleColors = debugRoleColors;
-  playerVisual.traverse((object) => {
-    if (!(object instanceof THREE.Mesh) || isHelmetDescendant(object)) {
-      return;
-    }
+  if (
+    references.materialState?.debugRoleColors === debugRoleColors &&
+    references.materialState.playerId === playerModel.id &&
+    references.materialState.role === playerModel.role &&
+    references.materialState.team === playerModel.team
+  ) {
+    return;
+  }
 
-    const uniformPart = object.userData.uniformPart;
-    if (!isUniformPart(uniformPart)) {
-      return;
-    }
-
-    object.material = getUniformMaterial(
-      uniformPart,
-      playerModel.team,
-      playerModel.role,
-      playerModel.id,
-      debugRoleColors,
-    );
+  const appearance = resolvePlayerAppearance(playerModel.id);
+  for (const { mesh, uniformPart } of references.uniformMeshes) {
+    mesh.material = uniformPart === 'skin'
+      ? getSkinToneMaterial(appearance.skinToneId)
+      : getUniformMaterial(
+        uniformPart,
+        playerModel.team,
+        playerModel.role,
+        playerModel.id,
+        debugRoleColors,
+      );
     if (uniformPart === 'skin') {
-      object.userData.skinToneId = resolvePlayerAppearance(playerModel.id).skinToneId;
+      mesh.userData.skinToneId = appearance.skinToneId;
     }
-  });
+  }
+
+  references.materialState = {
+    debugRoleColors,
+    playerId: playerModel.id,
+    role: playerModel.role,
+    team: playerModel.team,
+  };
 }
 
 function getUniformMaterial(
@@ -607,6 +662,47 @@ function getBasicMaterial(name: string, color: number): THREE.MeshBasicMaterial 
 
 function isUniformPart(value: unknown): value is UniformPart {
   return value === 'jersey' || value === 'pants' || value === 'shoes' || value === 'skin' || value === 'trim';
+}
+
+function getOrCreatePlayerVisualReferences(playerVisual: THREE.Object3D): PlayerVisualHierarchyReferences {
+  const cachedReferences = playerVisualReferences.get(playerVisual);
+
+  if (cachedReferences) {
+    return cachedReferences;
+  }
+
+  return cachePlayerVisualReferences(playerVisual);
+}
+
+function cachePlayerVisualReferences(
+  playerVisual: THREE.Object3D,
+  knownBodyRoot?: THREE.Object3D,
+): PlayerVisualHierarchyReferences {
+  const bodyRoot = knownBodyRoot ?? playerVisual.getObjectByName(PLAYER_BODY_ROOT_NAME) ?? playerVisual;
+  const references: PlayerVisualHierarchyReferences = {
+    bodyRoot,
+    headAnchor: null,
+    materialState: null,
+    uniformMeshes: [],
+  };
+
+  bodyRoot.traverse((object) => {
+    if (object.name === BODY_PART_NAMES.headAnchor) {
+      references.headAnchor = object;
+    }
+
+    if (!(object instanceof THREE.Mesh) || isHelmetDescendant(object)) {
+      return;
+    }
+
+    const uniformPart = object.userData.uniformPart;
+    if (isUniformPart(uniformPart)) {
+      references.uniformMeshes.push({ mesh: object, uniformPart });
+    }
+  });
+
+  playerVisualReferences.set(playerVisual, references);
+  return references;
 }
 
 function isHelmetDescendant(object: THREE.Object3D): boolean {

@@ -2,10 +2,15 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import helmetUrl from '../low_poly_helmet.glb?url';
 import type { PlayerModel, PlayerTeam } from './playerModel';
-import { PLAYER_BODY_DIMENSIONS, PLAYER_HEAD_ANCHOR_NAME } from './playerVisual';
+import { PLAYER_BODY_DIMENSIONS, getPlayerVisualHeadAnchor } from './playerVisual';
 
 type HelmetAssetStatus = 'idle' | 'loading' | 'loaded' | 'error';
 type HelmetPart = 'faceguard' | 'shell';
+type AttachedHelmetReferences = {
+  helmet: THREE.Object3D;
+  parts: HelmetPartMeshes;
+  team: PlayerTeam | null;
+};
 
 export interface HelmetAssetSnapshot {
   assetId: string;
@@ -64,19 +69,21 @@ const helmetAssetState: HelmetAssetSnapshot = {
 
 const loader = new GLTFLoader();
 const teamMaterialCache = new Map<string, THREE.Material>();
+const attachedHelmetReferences = new WeakMap<THREE.Object3D, AttachedHelmetReferences>();
 let helmetTemplatePromise: Promise<THREE.Group> | null = null;
 
 export async function attachHelmetToPlayerVisual(
   playerVisual: THREE.Object3D,
   player: PlayerModel,
 ): Promise<boolean> {
-  const headAnchor = playerVisual.getObjectByName(PLAYER_HEAD_ANCHOR_NAME);
+  const headAnchor = getPlayerVisualHeadAnchor(playerVisual);
 
   if (!headAnchor) {
     return false;
   }
 
-  if (headAnchor.getObjectByName('low-poly-helmet')) {
+  const existingReferences = getAttachedHelmetReferences(playerVisual);
+  if (existingReferences ?? headAnchor.getObjectByName('low-poly-helmet')) {
     syncHelmetTeamMaterials(playerVisual, player);
     return true;
   }
@@ -96,6 +103,7 @@ export async function attachHelmetToPlayerVisual(
   }
 
   applyHelmetTeamMaterials(helmetParts, player.team);
+  cacheAttachedHelmetReferences(playerVisual, helmet, helmetParts, player.team);
   headAnchor.add(helmet);
   recordAttachedPlayer(player.id);
   return true;
@@ -123,13 +131,17 @@ export function syncHelmetTeamMaterials(
   playerVisual: THREE.Object3D,
   player: PlayerModel,
 ): void {
-  const helmet = playerVisual.getObjectByName('low-poly-helmet');
-
-  if (!helmet) {
+  const references = getOrCreateAttachedHelmetReferences(playerVisual);
+  if (!references) {
     return;
   }
 
-  applyHelmetTeamMaterials(findHelmetPartMeshes(helmet), player.team);
+  if (references.team === player.team) {
+    return;
+  }
+
+  applyHelmetTeamMaterials(references.parts, player.team);
+  references.team = player.team;
 }
 
 export function getHelmetAssetSnapshot(): HelmetAssetSnapshot {
@@ -282,6 +294,45 @@ function applyHelmetOffset(
   object.position.set(offset.position.x, offset.position.y, offset.position.z);
   object.rotation.set(offset.rotation.x, offset.rotation.y, offset.rotation.z);
   object.scale.set(offset.scale.x, offset.scale.y, offset.scale.z);
+}
+
+function getOrCreateAttachedHelmetReferences(
+  playerVisual: THREE.Object3D,
+): AttachedHelmetReferences | null {
+  const cachedReferences = getAttachedHelmetReferences(playerVisual);
+
+  if (cachedReferences) {
+    return cachedReferences;
+  }
+
+  const helmet = playerVisual.getObjectByName('low-poly-helmet');
+
+  if (!helmet) {
+    return null;
+  }
+
+  return cacheAttachedHelmetReferences(playerVisual, helmet, findHelmetPartMeshes(helmet), null);
+}
+
+function getAttachedHelmetReferences(playerVisual: THREE.Object3D): AttachedHelmetReferences | null {
+  const references = attachedHelmetReferences.get(playerVisual);
+
+  if (!references || references.helmet.parent === null) {
+    return null;
+  }
+
+  return references;
+}
+
+function cacheAttachedHelmetReferences(
+  playerVisual: THREE.Object3D,
+  helmet: THREE.Object3D,
+  parts: HelmetPartMeshes,
+  team: PlayerTeam | null,
+): AttachedHelmetReferences {
+  const references = { helmet, parts, team };
+  attachedHelmetReferences.set(playerVisual, references);
+  return references;
 }
 
 function findMeshes(root: THREE.Object3D): THREE.Mesh[] {

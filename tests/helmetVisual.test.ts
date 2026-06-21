@@ -4,6 +4,7 @@ import {
   HELMET_VISUAL_CONFIG,
   applyHelmetTeamMaterials,
   findHelmetPartMeshes,
+  syncHelmetTeamMaterials,
 } from '../src/helmetVisual';
 import { createPlayerModel } from '../src/playerModel';
 import {
@@ -65,5 +66,67 @@ describe('helmet visual integration', () => {
     expect((faceguard.material as THREE.MeshStandardMaterial).color.getHex()).toBe(
       HELMET_VISUAL_CONFIG.teamColors.defense.faceguard,
     );
+  });
+
+  it('reuses cached helmet parts when the team color is unchanged', () => {
+    const player = createPlayerModel(undefined, {
+      id: 'helmet-cache-player',
+      role: 'runner',
+      team: 'offense',
+    });
+    const playerVisual = createPlaceholderPlayerVisual(player);
+    const headAnchor = playerVisual.getObjectByName(PLAYER_HEAD_ANCHOR_NAME);
+    const helmet = new THREE.Group();
+    const shell = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, name: 'shell-source' }),
+    );
+    const faceguard = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, name: 'faceguard-source' }),
+    );
+
+    if (!headAnchor) {
+      throw new Error('Missing player head anchor');
+    }
+
+    helmet.name = 'low-poly-helmet';
+    shell.name = 'helmet_shell';
+    faceguard.name = 'faceguard';
+    helmet.add(shell, faceguard);
+    headAnchor.add(helmet);
+
+    syncHelmetTeamMaterials(playerVisual, player);
+
+    const offenseShellMaterial = shell.material;
+    const offenseFaceguardMaterial = faceguard.material;
+    const originalGetObjectByName = playerVisual.getObjectByName;
+    const originalHelmetTraverse = helmet.traverse;
+
+    playerVisual.getObjectByName = (() => {
+      throw new Error('syncHelmetTeamMaterials should use cached helmet references');
+    }) as typeof playerVisual.getObjectByName;
+    helmet.traverse = (() => {
+      throw new Error('syncHelmetTeamMaterials should not traverse cached helmet parts');
+    }) as typeof helmet.traverse;
+
+    try {
+      syncHelmetTeamMaterials(playerVisual, player);
+
+      expect(shell.material).toBe(offenseShellMaterial);
+      expect(faceguard.material).toBe(offenseFaceguardMaterial);
+
+      syncHelmetTeamMaterials(playerVisual, { ...player, team: 'defense' });
+
+      expect((shell.material as THREE.MeshStandardMaterial).color.getHex()).toBe(
+        HELMET_VISUAL_CONFIG.teamColors.defense.shell,
+      );
+      expect((faceguard.material as THREE.MeshStandardMaterial).color.getHex()).toBe(
+        HELMET_VISUAL_CONFIG.teamColors.defense.faceguard,
+      );
+    } finally {
+      playerVisual.getObjectByName = originalGetObjectByName;
+      helmet.traverse = originalHelmetTraverse;
+    }
   });
 });

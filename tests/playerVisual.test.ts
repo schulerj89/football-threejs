@@ -186,6 +186,45 @@ describe('player visual', () => {
     );
   });
 
+  it('reuses cached body material references when material inputs are unchanged', () => {
+    const player = createPlayerModel(undefined, {
+      id: 'cached-sync-runner',
+      role: 'runner',
+      team: 'offense',
+    });
+    const playerVisual = createPlaceholderPlayerVisual(player);
+    const bodyRoot = playerVisual.getObjectByName(PLAYER_BODY_ROOT_NAME);
+
+    syncPlayerVisual(playerVisual, player);
+    const torsoMaterial = getMeshMaterial(playerVisual, 'torso');
+    const originalPlayerTraverse = playerVisual.traverse;
+    const originalBodyTraverse = bodyRoot?.traverse;
+    const failTraverse = (() => {
+      throw new Error('syncPlayerVisual should use cached body references');
+    }) as typeof playerVisual.traverse;
+
+    playerVisual.traverse = failTraverse;
+    if (bodyRoot) {
+      bodyRoot.traverse = failTraverse;
+    }
+
+    try {
+      syncPlayerVisual(playerVisual, player);
+    } finally {
+      playerVisual.traverse = originalPlayerTraverse;
+      if (bodyRoot && originalBodyTraverse) {
+        bodyRoot.traverse = originalBodyTraverse;
+      }
+    }
+
+    expect(getMeshMaterial(playerVisual, 'torso')).toBe(torsoMaterial);
+
+    syncPlayerVisual(playerVisual, { ...player, team: 'defense' });
+
+    expect(getMeshMaterial(playerVisual, 'torso')).not.toBe(torsoMaterial);
+    expect(getMeshColorHex(playerVisual, 'torso')).toBe(0xf2f4f6);
+  });
+
   it('resolves deterministic skin tones from stable player identity only', () => {
     const first = resolvePlayerAppearance('offense-qb');
     const second = resolvePlayerAppearance('offense-qb');
