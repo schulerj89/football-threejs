@@ -161,7 +161,13 @@ function renderFrame(delta: number): void {
   cameraController.update(gameplaySnapshot, delta);
   syncGameplayHud(gameplayHud, gameplaySnapshot);
   renderer.render(scene, cameraController.camera);
-  debugOverlay.update(delta, renderer, gameplayModel.player, cameraController.getDebugSnapshot());
+  debugOverlay.update(
+    delta,
+    renderer,
+    gameplayModel.player,
+    cameraController.getDebugSnapshot(),
+    gameplaySnapshot,
+  );
 
   if (!hasRenderedFirstFrame) {
     hasRenderedFirstFrame = true;

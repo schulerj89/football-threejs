@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.1] - 2026-06-21
+
+### Added
+
+- Added pure ball-spotting rules that resolve exact dead-ball spots to `leftHash`, `middle`, or `rightHash` snap lanes.
+- Added debug-overlay readouts for exact dead-ball spot, resolved next snap spot, snap lane, hash X positions, and formation origin.
+- Added deterministic tests for snap lane selection, incomplete-pass lane preservation, touchdown reset spotting, exact yardage, and formation-origin reset.
+
+### Changed
+
+- Normalized next-play formation origins to widened arcade hash lanes while preserving exact play-result spots for yardage and forward progress.
+- Derived painted hash-mark positions and spotting lanes from the same field-spec hash X value.
+
 ## [0.18.0] - 2026-06-21
 
 ### Added

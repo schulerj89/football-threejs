@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALL_CARRY_ATTACHMENT, updateCarriedBallPosition } from '../src/ballModel';
+import { SNAP_LANE_X } from '../src/ballSpotting';
 import {
   DEFENDER_COLLISION_RADII,
   DEFENDER_CONFIG,
@@ -924,23 +925,55 @@ describe('play state transitions', () => {
     expect(gameplay.nextBallSpot).toEqual({ x: 0, z: LINE_OF_SCRIMMAGE_Z - 4 });
   });
 
-  it('ends live play out of bounds and spots the ball at the sideline', () => {
+  it('keeps exact tackle progress while resetting formation at the resolved snap spot', () => {
     const gameplay = createGameplayModel();
-    const expectedSpot = {
+    const defender = getPrimaryDefender(gameplay.players);
+    const exactTackleSpot = { x: PLAYABLE_FIELD_BOUNDS.minX + 2, z: LINE_OF_SCRIMMAGE_Z + 5 };
+    const expectedSnapSpot = { x: SNAP_LANE_X.leftHash, z: exactTackleSpot.z };
+
+    startPlay(gameplay);
+    gameplay.player.position.x = exactTackleSpot.x;
+    gameplay.player.position.z = exactTackleSpot.z;
+    defender.position.x = gameplay.player.position.x;
+    defender.position.z = gameplay.player.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: exactTackleSpot,
+      type: 'tackle',
+    });
+    expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(5);
+    expect(gameplay.nextSnapSpot).toEqual(expectedSnapSpot);
+    expect(gameplay.drive.lineOfScrimmage).toEqual(expectedSnapSpot);
+    expect(gameplay.drive.snapLane).toBe('leftHash');
+
+    updateGameplayModel(gameplay, GAMEPLAY_CONFIG.tackleResetDelaySeconds);
+
+    expect(gameplay.currentBallSpot).toEqual(expectedSnapSpot);
+    expect(gameplay.formationOrigin).toEqual(expectedSnapSpot);
+    expect(gameplay.player.position).toEqual(expectedSnapSpot);
+  });
+
+  it('ends live play out of bounds and resolves the next snap to the nearest hash', () => {
+    const gameplay = createGameplayModel();
+    const exactDeadBallSpot = {
       x: PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.halfWidth,
       z: LINE_OF_SCRIMMAGE_Z + 6,
     };
+    const expectedSnapSpot = { x: SNAP_LANE_X.rightHash, z: exactDeadBallSpot.z };
 
     startPlay(gameplay);
     gameplay.player.position.x = PLAYABLE_FIELD_BOUNDS.maxX;
-    gameplay.player.position.z = expectedSpot.z;
+    gameplay.player.position.z = exactDeadBallSpot.z;
 
     expect(hasCrossedSideline(gameplay.player)).toBe(true);
     updateGameplayModel(gameplay, 0);
 
     expect(gameplay.playState).toBe('dead');
     expect(gameplay.lastPlayResult).toMatchObject({
-      endingBallSpot: expectedSpot,
+      endingBallSpot: exactDeadBallSpot,
       reason: 'outOfBounds',
       scoringTeam: null,
       startingBallSpot: INITIAL_BALL_SPOT,
@@ -949,13 +982,16 @@ describe('play state transitions', () => {
     expect(gameplay.lastPlayResult?.yardsGained).toBeCloseTo(6);
     expect(gameplay.drive.currentDown).toBe(2);
     expect(gameplay.drive.yardsToFirstDown).toBeCloseTo(4);
-    expect(gameplay.nextBallSpot).toEqual(expectedSpot);
+    expect(gameplay.nextSnapSpot).toEqual(expectedSnapSpot);
+    expect(gameplay.nextBallSpot).toEqual(expectedSnapSpot);
+    expect(gameplay.drive.snapLane).toBe('rightHash');
     expect(gameplay.playResetTimerSeconds).toBe(GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds);
 
     updateGameplayModel(gameplay, GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds);
 
-    expect(gameplay.currentBallSpot).toEqual(expectedSpot);
-    expect(gameplay.player.position).toEqual(expectedSpot);
+    expect(gameplay.currentBallSpot).toEqual(expectedSnapSpot);
+    expect(gameplay.formationOrigin).toEqual(expectedSnapSpot);
+    expect(gameplay.player.position).toEqual(expectedSnapSpot);
   });
 
   it('keeps receivers inside bounds after a sideline dead-ball reset', () => {
@@ -970,9 +1006,8 @@ describe('play state transitions', () => {
     updateGameplayModel(gameplay, GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds);
 
     expect(gameplay.playState).toBe('preSnap');
-    expect(gameplay.currentBallSpot.x).toBeCloseTo(
-      PLAYABLE_FIELD_BOUNDS.maxX - PLAYER_MOVEMENT_CONFIG.halfWidth,
-    );
+    expect(gameplay.currentBallSpot.x).toBeCloseTo(SNAP_LANE_X.rightHash);
+    expect(gameplay.formationOrigin.x).toBeCloseTo(SNAP_LANE_X.rightHash);
 
     for (const receiver of gameplay.players.filter((player) => player.role === 'receiver')) {
       expect(receiver.position.x).toBeLessThanOrEqual(

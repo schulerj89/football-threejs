@@ -1,5 +1,8 @@
 import * as THREE from 'three';
+import { SNAP_LANE_X } from './ballSpotting';
 import type { GameplayCameraDebugSnapshot } from './camera/GameplayCameraController';
+import type { FootballSpot } from './fieldScale';
+import type { GameplaySnapshot } from './playState';
 import type { PlayerModel } from './playerModel';
 
 interface DebugOverlayOptions {
@@ -27,6 +30,7 @@ export class DebugOverlay {
     renderer: THREE.WebGLRenderer,
     player: PlayerModel,
     camera?: GameplayCameraDebugSnapshot,
+    gameplay?: GameplaySnapshot,
   ): void {
     this.frameCount += 1;
     this.elapsed += deltaSeconds;
@@ -54,10 +58,28 @@ export class DebugOverlay {
       );
     }
 
+    if (gameplay) {
+      lines.push(
+        `DEAD ${formatSpot(gameplay.exactDeadBallSpot)}`,
+        `SNAP ${formatSpot(gameplay.nextSnapSpot)}`,
+        `LANE ${gameplay.snapLane}`,
+        `HASH_X ${SNAP_LANE_X.leftHash.toFixed(2)}, ${SNAP_LANE_X.rightHash.toFixed(2)}`,
+        `FORM ${formatSpot(gameplay.formationOrigin)}`,
+      );
+    }
+
     this.element.textContent = lines.join('\n');
   }
 }
 
 function formatVector(vector: { x: number; y: number; z: number }): string {
   return `${vector.x.toFixed(1)}, ${vector.y.toFixed(1)}, ${vector.z.toFixed(1)}`;
+}
+
+function formatSpot(spot: FootballSpot | null): string {
+  if (!spot) {
+    return 'none';
+  }
+
+  return `${spot.x.toFixed(1)}, ${spot.z.toFixed(1)}`;
 }

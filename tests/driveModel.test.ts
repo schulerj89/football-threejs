@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SNAP_LANE_X } from '../src/ballSpotting';
 import { INITIAL_BALL_SPOT, LINE_OF_SCRIMMAGE_Z } from '../src/field';
 import {
   DRIVE_CONFIG,
@@ -15,6 +16,7 @@ describe('drive and down model', () => {
 
     expect(drive.currentDown).toBe(1);
     expect(drive.lineOfScrimmage).toEqual(INITIAL_BALL_SPOT);
+    expect(drive.snapLane).toBe('middle');
     expect(drive.firstDownMarker).toEqual({
       x: 0,
       z: LINE_OF_SCRIMMAGE_Z + DRIVE_CONFIG.firstDownYards,
@@ -25,7 +27,8 @@ describe('drive and down model', () => {
 
   it('turns a three-yard first-down run into second-and-7', () => {
     const drive = createDriveModel();
-    const endingSpot = { x: 0, z: LINE_OF_SCRIMMAGE_Z + 3 };
+    const endingSpot = { x: 20, z: LINE_OF_SCRIMMAGE_Z + 3 };
+    const expectedSnapSpot = { x: SNAP_LANE_X.rightHash, z: endingSpot.z };
 
     const update = applyPlayResultToDrive(drive, createPlayResult(1, 'tackle', endingSpot));
 
@@ -33,10 +36,12 @@ describe('drive and down model', () => {
       applied: true,
       driveEnded: false,
       newFirstDown: false,
-      nextBallSpot: endingSpot,
+      nextSnapLane: 'rightHash',
+      nextSnapSpot: expectedSnapSpot,
     });
     expect(drive.currentDown).toBe(2);
-    expect(drive.lineOfScrimmage).toEqual(endingSpot);
+    expect(drive.lineOfScrimmage).toEqual(expectedSnapSpot);
+    expect(drive.snapLane).toBe('rightHash');
     expect(drive.firstDownMarker).toEqual({
       x: 0,
       z: LINE_OF_SCRIMMAGE_Z + DRIVE_CONFIG.firstDownYards,
@@ -53,16 +58,37 @@ describe('drive and down model', () => {
       applied: true,
       driveEnded: false,
       newFirstDown: false,
-      nextBallSpot: INITIAL_BALL_SPOT,
+      nextSnapLane: 'middle',
+      nextSnapSpot: INITIAL_BALL_SPOT,
     });
     expect(drive.currentDown).toBe(2);
     expect(drive.lineOfScrimmage).toEqual(INITIAL_BALL_SPOT);
     expect(drive.yardsToFirstDown).toBeCloseTo(10);
   });
 
+  it('preserves the previous snap lane after an incomplete pass', () => {
+    const drive = createDriveModel();
+    const rightHashSpot = { x: 20, z: LINE_OF_SCRIMMAGE_Z + 3 };
+
+    applyPlayResultToDrive(drive, createPlayResult(1, 'tackle', rightHashSpot));
+    const update = applyPlayResultToDrive(
+      drive,
+      createPlayResult(2, 'incomplete', { x: 0, z: LINE_OF_SCRIMMAGE_Z + 3 }),
+    );
+
+    expect(update).toMatchObject({
+      applied: true,
+      nextSnapLane: 'rightHash',
+      nextSnapSpot: { x: SNAP_LANE_X.rightHash, z: rightHashSpot.z },
+    });
+    expect(drive.snapLane).toBe('rightHash');
+    expect(drive.lineOfScrimmage).toEqual({ x: SNAP_LANE_X.rightHash, z: rightHashSpot.z });
+  });
+
   it('advances the down and spots the ball after a sack', () => {
     const drive = createDriveModel();
-    const sackSpot = { x: 0, z: LINE_OF_SCRIMMAGE_Z - 5 };
+    const sackSpot = { x: -20, z: LINE_OF_SCRIMMAGE_Z - 5 };
+    const expectedSnapSpot = { x: SNAP_LANE_X.leftHash, z: sackSpot.z };
 
     const update = applyPlayResultToDrive(drive, createPlayResult(1, 'sack', sackSpot));
 
@@ -70,10 +96,12 @@ describe('drive and down model', () => {
       applied: true,
       driveEnded: false,
       newFirstDown: false,
-      nextBallSpot: sackSpot,
+      nextSnapLane: 'leftHash',
+      nextSnapSpot: expectedSnapSpot,
     });
     expect(drive.currentDown).toBe(2);
-    expect(drive.lineOfScrimmage).toEqual(sackSpot);
+    expect(drive.lineOfScrimmage).toEqual(expectedSnapSpot);
+    expect(drive.snapLane).toBe('leftHash');
     expect(drive.yardsToFirstDown).toBeCloseTo(15);
   });
 
@@ -91,7 +119,8 @@ describe('drive and down model', () => {
       applied: true,
       driveEnded: false,
       newFirstDown: true,
-      nextBallSpot: endingSpot,
+      nextSnapLane: 'middle',
+      nextSnapSpot: endingSpot,
     });
     expect(drive.currentDown).toBe(1);
     expect(drive.lineOfScrimmage).toEqual(endingSpot);
@@ -117,11 +146,13 @@ describe('drive and down model', () => {
       applied: true,
       driveEnded: true,
       newFirstDown: false,
-      nextBallSpot: INITIAL_BALL_SPOT,
+      nextSnapLane: 'middle',
+      nextSnapSpot: INITIAL_BALL_SPOT,
     });
     expect(drive.currentDown).toBe(4);
     expect(drive.state).toBe('over');
     expect(drive.lastDriveResult).toMatchObject({
+      nextDriveStartLane: 'middle',
       nextDriveStartSpot: INITIAL_BALL_SPOT,
       reason: 'turnoverOnDowns',
       type: 'turnoverOnDowns',
@@ -139,7 +170,8 @@ describe('drive and down model', () => {
       applied: true,
       driveEnded: true,
       newFirstDown: false,
-      nextBallSpot: INITIAL_BALL_SPOT,
+      nextSnapLane: 'middle',
+      nextSnapSpot: INITIAL_BALL_SPOT,
     });
     expect(drive.lastDriveResult?.type).toBe('touchdown');
 

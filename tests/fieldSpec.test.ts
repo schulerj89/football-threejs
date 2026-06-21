@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   FAR_GOAL_LINE_Z,
+  ARCADE_HASH_SPACING_MULTIPLIER,
   FIELD_BOUNDS,
   FIELD_DIMENSIONS,
+  FIELD_MARKING_DIMENSIONS,
   FIELD_MARKING_WIDTHS,
+  HASH_DISTANCE_FROM_SIDELINE_YARDS,
+  PROFESSIONAL_HASH_X,
   INITIAL_BALL_SPOT,
   NEAR_GOAL_LINE_Z,
   PLAYABLE_FIELD_BOUNDS,
@@ -102,6 +106,16 @@ describe('field specification', () => {
     for (let index = 1; index < leftHashZ.length; index += 1) {
       expect(leftHashZ[index] - leftHashZ[index - 1]).toBe(1);
     }
+  });
+
+  it('derives widened arcade hash lanes from professional field measurements', () => {
+    const expectedProfessionalHashX =
+      FIELD_DIMENSIONS.fieldWidth / 2 - HASH_DISTANCE_FROM_SIDELINE_YARDS;
+
+    expect(PROFESSIONAL_HASH_X).toBeCloseTo(expectedProfessionalHashX);
+    expect(FIELD_MARKING_DIMENSIONS.hashX).toBeCloseTo(
+      PROFESSIONAL_HASH_X * ARCADE_HASH_SPACING_MULTIPLIER,
+    );
   });
 
   it('stops internal transverse markings at the inner sideline edges', () => {

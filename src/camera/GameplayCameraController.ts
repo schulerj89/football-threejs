@@ -226,7 +226,7 @@ export class GameplayCameraController {
     }
 
     if (snapshot.playState === 'dead') {
-      const deadBallSpot = snapshot.lastPlayResult?.endingBallSpot ?? snapshot.nextBallSpot;
+      const deadBallSpot = snapshot.lastPlayResult?.endingBallSpot ?? snapshot.nextSnapSpot;
       const focus = this.createFieldFocus(deadBallSpot.x, deadBallSpot.z, 1.1);
 
       return {

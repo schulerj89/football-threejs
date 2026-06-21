@@ -2,7 +2,7 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, Quick Pass, Slant Flat, primitive player bodies with cloned low-poly helmet visuals, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable primitive ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, Quick Pass, Slant Flat, primitive player bodies with cloned low-poly helmet visuals, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable primitive ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera.
 
 ## Current Non-Goals
 
@@ -88,6 +88,7 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Batch static field markings by shared material where practical; keep line of scrimmage, first-down line, and play-direction marker separate because they are dynamic.
 - Field presentation meshes such as turf bands, yard numbers, goalposts, sideline apron, team boxes, and surrounding ground must remain presentation-only and must not influence collision, spotting, scoring, or boundaries.
 - Keep yard numbers sideline-oriented and goalposts on the end lines at the back of the end zones.
+- Painted hash marks and ball-spotting snap lanes must use the same authoritative hash X value from `src/fieldSpec.ts`.
 - Use primitive Three.js geometry and simple materials during graybox work.
 - Keep input, simulation, and visual synchronization in separate modules.
 - All gameplay players use the common player model with stable ID, team, role, position, velocity, facing, collision radius, and current state.
@@ -96,7 +97,8 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Play selection is allowed during pre-snap only; resetting preserves the selected play.
 - The gameplay model owns player position, velocity, facing, and blocking engagement state; Three.js meshes only display that state.
 - The gameplay model owns play state, ball possession, pass state, and pass flight data; the ball mesh is never authoritative.
-- The gameplay model owns play results, start spots, dead-ball spots, yards gained, and scoring team data; UI and meshes only display that state.
+- The gameplay model owns play results, start spots, exact dead-ball spots, normalized next snap spots, snap lanes, yards gained, and scoring team data; UI and meshes only display that state.
+- Never use the exact dead-ball X coordinate as the next formation origin; resolve the next snap to left hash, middle, or right hash through `src/ballSpotting.ts`.
 - Drive and down rules belong in a dedicated model, not renderer or HUD code.
 - Score-attack clock rules belong in a dedicated model and must use supplied delta time rather than wall-clock reads.
 - Keep conversion between world units and football yards centralized.

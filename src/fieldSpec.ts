@@ -77,6 +77,12 @@ export const FIELD_DIMENSIONS = {
   playableLength: WORLD_SCALE.playableLength,
 } as const;
 
+export const HASH_DISTANCE_FROM_SIDELINE_YARDS = (70 + 9 / 12) / 3;
+export const PROFESSIONAL_HASH_X =
+  FIELD_DIMENSIONS.fieldWidth / 2 - HASH_DISTANCE_FROM_SIDELINE_YARDS;
+export const ARCADE_HASH_SPACING_MULTIPLIER = 2;
+export const HASH_X = PROFESSIONAL_HASH_X * ARCADE_HASH_SPACING_MULTIPLIER;
+
 export const FIELD_MARKING_WIDTHS = {
   endLine: 0.32,
   firstDown: 0.22,
@@ -90,7 +96,7 @@ export const FIELD_MARKING_WIDTHS = {
 
 export const FIELD_MARKING_DIMENSIONS = {
   hashLength: 1.2,
-  hashX: 9,
+  hashX: HASH_X,
 } as const;
 
 export const FIELD_DIRECTION = {

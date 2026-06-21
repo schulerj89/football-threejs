@@ -13,6 +13,7 @@ import {
   type BallModel,
   type Vector3,
 } from './ballModel';
+import { type SnapLane } from './ballSpotting';
 import {
   isTackleContact,
 } from './defenderModel';
@@ -108,8 +109,10 @@ export interface GameplayModel {
   blocking: BlockingState;
   currentBallSpot: FootballSpot;
   drive: DriveModel;
+  formationOrigin: FootballSpot;
   lastPlayResult: PlayResult | null;
   nextBallSpot: FootballSpot;
+  nextSnapSpot: FootballSpot;
   nextPlayResultId: number;
   passFeedbackTimerSeconds: number;
   passAttempted: boolean;
@@ -136,8 +139,11 @@ export interface GameplaySnapshot {
   };
   currentBallSpot: FootballSpot;
   drive: DriveSnapshot;
+  exactDeadBallSpot: FootballSpot | null;
+  formationOrigin: FootballSpot;
   lastPlayResult: PlayResult | null;
   nextBallSpot: FootballSpot;
+  nextSnapSpot: FootballSpot;
   player: PlayerSnapshot;
   players: PlayerSnapshot[];
   selectedPlay: {
@@ -153,6 +159,7 @@ export interface GameplaySnapshot {
   playState: PlayState;
   score: number;
   scoreAttack: ScoreAttackSnapshot;
+  snapLane: SnapLane;
   passAttempted: boolean;
   forwardPassEligible: boolean;
   passFeedback: 'pastLineOfScrimmage' | null;
@@ -161,17 +168,21 @@ export interface GameplaySnapshot {
 export function createGameplayModel(): GameplayModel {
   const initialSpot = cloneFootballSpot(INITIAL_BALL_SPOT);
   const selectedPlay = getPlay(DEFAULT_PLAY_ID);
-  const players = createFormationPlayers(initialSpot, selectedPlay);
+  const drive = createDriveModel(initialSpot);
+  const initialSnapSpot = cloneFootballSpot(drive.lineOfScrimmage);
+  const players = createFormationPlayers(initialSnapSpot, selectedPlay);
   const ballCarrier = getBallCarrier(players, selectedPlay);
 
   return {
     activePlayStartSpot: null,
-    ball: createBallModel(initialSpot),
+    ball: createBallModel(initialSnapSpot),
     blocking: createBlockingState(),
-    currentBallSpot: cloneFootballSpot(initialSpot),
-    drive: createDriveModel(initialSpot),
+    currentBallSpot: cloneFootballSpot(initialSnapSpot),
+    drive,
+    formationOrigin: cloneFootballSpot(initialSnapSpot),
     lastPlayResult: null,
-    nextBallSpot: cloneFootballSpot(initialSpot),
+    nextBallSpot: cloneFootballSpot(initialSnapSpot),
+    nextSnapSpot: cloneFootballSpot(initialSnapSpot),
     nextPlayResultId: 1,
     passFeedbackTimerSeconds: 0,
     passAttempted: false,
@@ -199,7 +210,7 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(play);
   resetBlockingState(gameplay.blocking);
-  resetFormationPlayers(gameplay.players, gameplay.currentBallSpot, play);
+  resetFormationAt(gameplay, gameplay.currentBallSpot, play);
   gameplay.player = getBallCarrier(gameplay.players, play);
   resetBallModel(gameplay.ball, gameplay.currentBallSpot);
   return true;
@@ -218,7 +229,7 @@ export function startPlay(gameplay: GameplayModel): boolean {
   gameplay.currentBallSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
   gameplay.activePlayStartSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
   gameplay.lastPlayResult = null;
-  gameplay.nextBallSpot = cloneFootballSpot(gameplay.drive.lineOfScrimmage);
+  setNextSnapSpot(gameplay, gameplay.drive.lineOfScrimmage);
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
   gameplay.passFeedbackTimerSeconds = 0;
@@ -325,12 +336,12 @@ export function resetPlay(gameplay: GameplayModel): void {
 
   const resetSpot = shouldResetDrive
     ? cloneFootballSpot(INITIAL_BALL_SPOT)
-    : cloneFootballSpot(gameplay.nextBallSpot);
+    : cloneFootballSpot(gameplay.nextSnapSpot);
 
   gameplay.activePlayStartSpot = null;
   gameplay.currentBallSpot = cloneFootballSpot(resetSpot);
   gameplay.lastPlayResult = null;
-  gameplay.nextBallSpot = cloneFootballSpot(resetSpot);
+  setNextSnapSpot(gameplay, resetSpot);
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
   gameplay.passFeedbackTimerSeconds = 0;
@@ -338,7 +349,7 @@ export function resetPlay(gameplay: GameplayModel): void {
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
   resetBlockingState(gameplay.blocking);
-  resetFormationPlayers(gameplay.players, resetSpot, gameplay.selectedPlay);
+  resetFormationAt(gameplay, resetSpot, gameplay.selectedPlay);
   gameplay.player = getBallCarrier(gameplay.players, gameplay.selectedPlay);
   resetBallModel(gameplay.ball, resetSpot);
 }
@@ -358,7 +369,7 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
   gameplay.activePlayStartSpot = null;
   gameplay.currentBallSpot = cloneFootballSpot(initialSpot);
   gameplay.lastPlayResult = null;
-  gameplay.nextBallSpot = cloneFootballSpot(initialSpot);
+  setNextSnapSpot(gameplay, initialSpot);
   gameplay.nextPlayResultId = 1;
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
@@ -367,7 +378,7 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
   gameplay.playState = 'preSnap';
   gameplay.playResetTimerSeconds = null;
   resetBlockingState(gameplay.blocking);
-  resetFormationPlayers(gameplay.players, initialSpot, defaultPlay);
+  resetFormationAt(gameplay, initialSpot, defaultPlay);
   gameplay.player = getBallCarrier(gameplay.players, defaultPlay);
   resetBallModel(gameplay.ball, initialSpot);
   return true;
@@ -451,8 +462,13 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     },
     currentBallSpot: cloneFootballSpot(gameplay.currentBallSpot),
     drive: snapshotDriveModel(gameplay.drive),
+    exactDeadBallSpot: gameplay.lastPlayResult
+      ? cloneFootballSpot(gameplay.lastPlayResult.endingBallSpot)
+      : null,
+    formationOrigin: cloneFootballSpot(gameplay.formationOrigin),
     lastPlayResult: clonePlayResult(gameplay.lastPlayResult),
     nextBallSpot: cloneFootballSpot(gameplay.nextBallSpot),
+    nextSnapSpot: cloneFootballSpot(gameplay.nextSnapSpot),
     passFeedback: gameplay.passFeedbackTimerSeconds > 0 ? 'pastLineOfScrimmage' : null,
     forwardPassEligible: gameplay.forwardPassEligible,
     passAttempted: gameplay.passAttempted,
@@ -468,6 +484,7 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     playState: gameplay.playState,
     score: gameplay.score,
     scoreAttack: snapshotScoreAttack(gameplay.scoreAttack),
+    snapLane: gameplay.drive.snapLane,
   };
 }
 
@@ -501,7 +518,6 @@ function detectTouchdown(gameplay: GameplayModel): void {
     gameplay,
     'touchdown',
     endingSpot,
-    cloneFootballSpot(INITIAL_BALL_SPOT),
     GAMEPLAY_CONFIG.touchdownResetDelaySeconds,
     'offense',
   );
@@ -555,7 +571,6 @@ function detectTackle(gameplay: GameplayModel): void {
     gameplay,
     'tackle',
     endingSpot,
-    endingSpot,
     GAMEPLAY_CONFIG.tackleResetDelaySeconds,
     null,
   );
@@ -581,7 +596,6 @@ function detectSack(gameplay: GameplayModel): void {
   recordPlayResult(
     gameplay,
     'sack',
-    endingSpot,
     endingSpot,
     GAMEPLAY_CONFIG.sackResetDelaySeconds,
     null,
@@ -617,7 +631,6 @@ function detectOutOfBounds(gameplay: GameplayModel): void {
   recordPlayResult(
     gameplay,
     'outOfBounds',
-    endingSpot,
     endingSpot,
     GAMEPLAY_CONFIG.outOfBoundsResetDelaySeconds,
     null,
@@ -667,7 +680,6 @@ function recordIncompletePass(gameplay: GameplayModel): void {
     gameplay,
     'incomplete',
     startingSpot,
-    startingSpot,
     GAMEPLAY_CONFIG.incompleteResetDelaySeconds,
     null,
   );
@@ -677,7 +689,6 @@ function recordPlayResult(
   gameplay: GameplayModel,
   type: PlayResultType,
   endingSpot: FootballSpot,
-  nextBallSpot: FootballSpot,
   resetDelaySeconds: number,
   scoringTeam: ScoringTeam,
 ): void {
@@ -694,10 +705,9 @@ function recordPlayResult(
   };
   gameplay.nextPlayResultId += 1;
   gameplay.lastPlayResult = playResult;
-  gameplay.nextBallSpot = cloneFootballSpot(nextBallSpot);
 
   const driveUpdate = applyPlayResultToDrive(gameplay.drive, playResult);
-  gameplay.nextBallSpot = cloneFootballSpot(driveUpdate.nextBallSpot);
+  setNextSnapSpot(gameplay, driveUpdate.nextSnapSpot);
   if (type === 'incomplete') {
     markBallIncomplete(gameplay.ball);
   } else {
@@ -828,6 +838,22 @@ function getBallCarrier(players: PlayerModel[], play: PlayDefinition): PlayerMod
   }
 
   return carrier;
+}
+
+function setNextSnapSpot(gameplay: GameplayModel, spot: FootballSpot): void {
+  const nextSnapSpot = cloneFootballSpot(spot);
+
+  gameplay.nextSnapSpot = nextSnapSpot;
+  gameplay.nextBallSpot = cloneFootballSpot(nextSnapSpot);
+}
+
+function resetFormationAt(
+  gameplay: GameplayModel,
+  snapSpot: FootballSpot,
+  play: PlayDefinition,
+): void {
+  gameplay.formationOrigin = cloneFootballSpot(snapSpot);
+  resetFormationPlayers(gameplay.players, snapSpot, play);
 }
 
 function clonePlayResult(playResult: PlayResult | null): PlayResult | null {

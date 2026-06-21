@@ -677,7 +677,7 @@ test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
   await expect(page.locator('.tackle-message')).toBeHidden();
 });
 
-test('going out of bounds ends the play and resets at the sideline spot', async ({ page }) => {
+test('going out of bounds ends the play and resets at the resolved snap spot', async ({ page }) => {
   await page.goto('/?debug=1&readback=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 

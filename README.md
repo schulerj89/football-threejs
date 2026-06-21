@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, two passing plays, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, dead-ball spotting, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
+The current milestone is a two-minute three-on-three offensive score-attack drill with two data-defined rushing plays, two passing plays, primitive player bodies with cloned low-poly helmet visuals, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, placeholder players, selectable Inside Run, Outside Run, Quick Pass, and Slant Flat play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
 
 ## World Scale
 
@@ -14,6 +14,7 @@ The current milestone is a two-minute three-on-three offensive score-attack dril
 - Field dimensions, paint widths, field bounds, playable bounds, and plain layout data are centralized in `src/fieldSpec.ts`.
 - Static field markings are batched by material while the line of scrimmage, first-down line, and play-direction marker remain dynamic.
 - Yard numbers face the sidelines, and the presentation-only goalposts sit on the end lines at the back of each end zone.
+- Painted hash marks and snap-placement hash lanes share the same widened arcade hash X value derived from the professional hash position.
 - World-unit to football-yard conversion is centralized in `src/fieldScale.ts`.
 
 ## Scripts
@@ -58,7 +59,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Crossing a sideline during a live play ends the play out of bounds.
 - AI-controlled non-carriers stay inside the playable field while the active ball carrier may cross a sideline to end the play.
 - Each primitive player body keeps its gameplay-driven collision and movement while displaying a cloned `low_poly_helmet.glb` helmet attached to a head anchor.
-- Sack, tackle, completed pass, and out-of-bounds results display signed yards gained or lost, then reset the next play at the dead-ball spot.
+- Sack, tackle, completed pass, and out-of-bounds results display signed yards gained or lost from the exact dead-ball spot, then reset the next play at the nearest snap lane: left hash, middle, or right hash.
 - Incomplete passes end the play at the original line of scrimmage and advance the down.
 - The drill tracks down, distance, ball position, and score.
 - The challenge tracks remaining time and final score.
@@ -68,7 +69,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 
 ## Debug Overlay
 
-Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, triangle count, camera mode, camera state, focus position, and camera position.
+Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, triangle count, camera mode, camera state, focus position, camera position, exact dead-ball spot, resolved next snap spot, snap lane, hash X positions, and formation origin.
 
 Add `?fieldAudit=1` to show field geometry validation helpers: authoritative field bounds, inner marking bounds, corner markers, and red highlighting for any painted marking that escapes the field surface.
 
