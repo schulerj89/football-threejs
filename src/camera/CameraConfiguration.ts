@@ -3,10 +3,12 @@ import type { PresentationCameraConfig } from './CameraTypes';
 
 export const GAMEPLAY_CAMERA_CONFIG = {
   offensePerspective: {
+    ballCenterNdcTolerance: 0.35,
     distanceBehindFocus: 30,
     fieldOfView: 48,
     forwardLookAhead: 18,
     height: 17,
+    liveBallLookAhead: 8,
     maximumFieldPosition: {
       x: PLAYABLE_FIELD_BOUNDS.maxX,
       z: PLAYABLE_FIELD_BOUNDS.maxZ,
@@ -15,6 +17,7 @@ export const GAMEPLAY_CAMERA_CONFIG = {
       x: PLAYABLE_FIELD_BOUNDS.minX,
       z: PLAYABLE_FIELD_BOUNDS.minZ,
     },
+    passFlightLookAhead: 3.5,
     positionSmoothing: 8,
     targetSmoothing: 10,
   },
