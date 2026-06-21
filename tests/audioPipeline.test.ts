@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { FOOTBALL_AUDIO_PLAN, validateFootballAudioPlan } from '../tools/audio/audioPlan';
-import { createFootballAudioReport } from '../tools/audio/audioReport';
+import { createFootballAudioReport, writeFootballAudioReportFiles } from '../tools/audio/audioReport';
 import { generateSoundEffects } from '../tools/audio/generateSoundEffects';
 import { generateSpeech } from '../tools/audio/generateSpeech';
 import {
@@ -38,7 +38,21 @@ describe('audio production pipeline', () => {
   it('validates the typed football audio generation plan', () => {
     expect(validateFootballAudioPlan()).toEqual([]);
     expect(validateAudioPlan(FOOTBALL_AUDIO_PLAN)).toEqual([]);
-    expect(FOOTBALL_AUDIO_PLAN.length).toBeGreaterThan(0);
+    expect(FOOTBALL_AUDIO_PLAN).toHaveLength(15);
+    expect(FOOTBALL_AUDIO_PLAN.every((asset) => asset.modelId === 'eleven_text_to_sound_v2')).toBe(true);
+    expect(FOOTBALL_AUDIO_PLAN.every((asset) => asset.outputFormat === 'mp3_44100_128')).toBe(true);
+    expect(FOOTBALL_AUDIO_PLAN.every((asset) => asset.category !== 'announcer')).toBe(true);
+    expect(FOOTBALL_AUDIO_PLAN.every((asset) => !asset.script)).toBe(true);
+    expect(
+      FOOTBALL_AUDIO_PLAN.filter((asset) => asset.loop).every(
+        (asset) => asset.runtimeLoadingStrategy === 'stream',
+      ),
+    ).toBe(true);
+    expect(
+      FOOTBALL_AUDIO_PLAN.filter((asset) => !asset.loop).every(
+        (asset) => asset.runtimeLoadingStrategy === 'buffer',
+      ),
+    ).toBe(true);
     expect(
       FOOTBALL_AUDIO_PLAN.every(
         (asset) =>
@@ -49,7 +63,8 @@ describe('audio production pipeline', () => {
           asset.requestedDurationSeconds > 0 &&
           asset.outputFormat &&
           asset.outputPath &&
-          asset.generationStatus,
+          asset.generationStatus &&
+          asset.runtimeLoadingStrategy,
       ),
     ).toBe(true);
   });
@@ -90,23 +105,52 @@ describe('audio production pipeline', () => {
       });
       expect(summary.skipped).toHaveLength(2);
       expect(clientFactoryCalled).toBe(false);
-      expect(existsSync(join(cwd, 'public/audio/sfx/player-footstep-turf-light.mp3'))).toBe(false);
+      expect(existsSync(join(cwd, 'public/audio/crowd/crowd_idle_loop_01.mp3'))).toBe(false);
     });
   });
 
-  it('protects existing files before any paid request can start', async () => {
+  it('skips existing files before any paid request can start', async () => {
     await withTemporaryCwd(async (cwd) => {
       delete process.env.ELEVENLABS_API_KEY;
-      const existingPath = join(cwd, 'public/audio/sfx/player-footstep-turf-light.mp3');
-      mkdirSync(join(cwd, 'public/audio/sfx'), { recursive: true });
+      const existingPath = join(cwd, 'public/audio/crowd/crowd_idle_loop_01.mp3');
+      mkdirSync(join(cwd, 'public/audio/crowd'), { recursive: true });
       writeFileSync(existingPath, 'existing audio placeholder');
+      let clientFactoryCalled = false;
+
+      await expect(
+        generateSoundEffects(
+          FOOTBALL_AUDIO_PLAN,
+          {
+            ...DEFAULT_GENERATE_OPTIONS,
+            execute: true,
+          },
+          {
+            clientFactory: async () => {
+              clientFactoryCalled = true;
+              throw new Error('existing-only generation should not construct a client');
+            },
+          },
+        ),
+      ).resolves.toEqual({
+        dryRun: false,
+        generated: [],
+        skipped: ['crowd_idle_loop_01'],
+      });
+      expect(clientFactoryCalled).toBe(false);
+      expect(readFileSync(existingPath, 'utf8')).toBe('existing audio placeholder');
+    });
+  });
+
+  it('requires an API key when at least one paid asset is missing', async () => {
+    await withTemporaryCwd(async () => {
+      delete process.env.ELEVENLABS_API_KEY;
 
       await expect(
         generateSoundEffects(FOOTBALL_AUDIO_PLAN, {
           ...DEFAULT_GENERATE_OPTIONS,
           execute: true,
         }),
-      ).rejects.toThrow(/already exists/);
+      ).rejects.toThrow(/Missing ELEVENLABS_API_KEY/);
     });
   });
 
@@ -118,8 +162,35 @@ describe('audio production pipeline', () => {
     };
 
     expect(validateAudioPlan([invalidAsset])).toContain(
-      'invalid-output-path: outputPath must stay under public/audio/sfx',
+      'invalid-output-path: outputPath must stay under public/audio/crowd',
     );
+  });
+
+  it('reports duration, streaming, and one-shot decoded-memory policy without an API key', async () => {
+    await withTemporaryCwd(async (cwd) => {
+      const loopAsset = FOOTBALL_AUDIO_PLAN[0];
+      const oneShotAsset = FOOTBALL_AUDIO_PLAN.find((asset) => asset.assetId === 'pads_hit_01')!;
+      mkdirSync(join(cwd, 'public/audio/crowd'), { recursive: true });
+      mkdirSync(join(cwd, 'public/audio/sfx'), { recursive: true });
+      writeFileSync(join(cwd, loopAsset.outputPath), 'loop placeholder');
+      writeFileSync(join(cwd, oneShotAsset.outputPath), 'one-shot placeholder');
+
+      const report = createFootballAudioReport([loopAsset, oneShotAsset], '2026-06-21T00:00:00.000Z');
+
+      expect(report.validationErrors).toEqual([]);
+      expect(report.totalCompressedBytes).toBeGreaterThan(0);
+      expect(report.assets[0]).toMatchObject({
+        assetId: 'crowd_idle_loop_01',
+        runtimeLoadingStrategy: 'stream',
+        decodedMemoryBytes: null,
+      });
+      expect(report.assets[1].runtimeLoadingStrategy).toBe('buffer');
+      expect(report.assets[1].decodedMemoryBytes).toBeGreaterThan(0);
+
+      const written = writeFootballAudioReportFiles(report);
+      expect(existsSync(join(cwd, written.reportPath))).toBe(true);
+      expect(readFileSync(join(cwd, written.auditionIndexPath), 'utf8')).toContain('Football SFX Audition Index');
+    });
   });
 
   it('keeps secrets out of browser source and generated manifests', () => {

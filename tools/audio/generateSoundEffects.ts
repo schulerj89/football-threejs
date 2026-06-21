@@ -1,7 +1,7 @@
 import type { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import { FOOTBALL_AUDIO_PLAN } from './audioPlan';
 import {
-  assertCanWriteAsset,
+  assetOutputExists,
   assertValidAudioPlan,
   isDirectCli,
   parseGenerateOptions,
@@ -40,8 +40,19 @@ export async function generateSoundEffects(
     };
   }
 
-  for (const asset of selectedAssets) {
-    assertCanWriteAsset(asset, options.force);
+  const skipped = selectedAssets
+    .filter((asset) => !options.force && assetOutputExists(asset))
+    .map((asset) => asset.assetId);
+  const assetsToGenerate = selectedAssets.filter(
+    (asset) => options.force || !assetOutputExists(asset),
+  );
+
+  if (assetsToGenerate.length === 0) {
+    return {
+      dryRun: false,
+      generated: [],
+      skipped,
+    };
   }
 
   const apiKey = requireElevenLabsApiKey();
@@ -50,7 +61,7 @@ export async function generateSoundEffects(
     : await createDefaultClient(apiKey);
   const generated: string[] = [];
 
-  for (const asset of selectedAssets) {
+  for (const asset of assetsToGenerate) {
     await withSingleRetry(options.retryCount, async () => {
       const audio = await client.textToSoundEffects.convert({
         durationSeconds: asset.requestedDurationSeconds,
@@ -69,7 +80,7 @@ export async function generateSoundEffects(
   return {
     dryRun: false,
     generated,
-    skipped: [],
+    skipped,
   };
 }
 

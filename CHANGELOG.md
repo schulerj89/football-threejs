@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.31.0] - 2026-06-21
+
+### Added
+
+- Added a validated 15-asset ElevenLabs sound-effects starter-pack plan for football crowd loops, crowd reactions, pad hits, catches, whistle, and snap sounds.
+- Added runtime loading-strategy metadata to audio generation plans so crowd loops are marked for streaming while one-shots remain buffer candidates.
+- Added a richer audio report that records compressed size, measured duration when files exist, one-shot decoded-memory estimates, provenance sidecar status, and starter-pack budget status without decoding crowd loops.
+- Added optional report writing for `public/audio/football-sfx-pack-report.json` and `public/audio/audition-index.html`.
+
+### Changed
+
+- Made sound-effect generation idempotent by skipping existing output/sidecar files unless `--force` is supplied.
+- Allowed stable lowercase underscore asset IDs for generated football audio assets.
+
 ## [0.30.0] - 2026-06-21
 
 ### Added

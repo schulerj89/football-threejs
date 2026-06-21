@@ -8,6 +8,7 @@ export type AudioAssetCategory = 'announcer' | 'crowd' | 'sfx';
 export type AudioAssetKind = 'loop' | 'music' | 'oneShot' | 'positional' | 'speech';
 export type AudioGenerationStatus = 'approved' | 'generated' | 'needsReview' | 'planned';
 export type AudioOutputFormat = 'mp3_44100_128' | 'mp3_44100_64' | 'opus_48000_128';
+export type AudioRuntimeLoadingStrategy = 'buffer' | 'stream';
 
 export interface AudioAssetPlan {
   assetId: string;
@@ -22,6 +23,7 @@ export interface AudioAssetPlan {
   outputFormat: AudioOutputFormat;
   outputPath: string;
   generationStatus: AudioGenerationStatus;
+  runtimeLoadingStrategy: AudioRuntimeLoadingStrategy;
   maxBytes: number;
   notes?: string;
 }
@@ -35,6 +37,8 @@ export interface AudioProvenance {
   modelId: string;
   outputFormat: AudioOutputFormat;
   prompt?: string;
+  requestedDurationSeconds: number;
+  runtimeLoadingStrategy: AudioRuntimeLoadingStrategy;
   script?: string;
   voiceId?: string;
 }
@@ -48,6 +52,7 @@ export interface AudioPlanReportEntry {
   loop: boolean;
   maxBytes: number;
   outputPath: string;
+  runtimeLoadingStrategy: AudioRuntimeLoadingStrategy;
   sizeBytes: number;
 }
 
@@ -104,8 +109,8 @@ export function validateAudioPlan(plan: readonly AudioAssetPlan[]): string[] {
     }
     ids.add(asset.assetId);
 
-    if (!/^[a-z0-9][a-z0-9-]*$/.test(asset.assetId)) {
-      errors.push(`${asset.assetId}: assetId must be stable kebab-case`);
+    if (!/^[a-z0-9][a-z0-9_-]*$/.test(asset.assetId)) {
+      errors.push(`${asset.assetId}: assetId must be stable lowercase with hyphen or underscore separators`);
     }
 
     if (!asset.prompt && !asset.script) {
@@ -128,6 +133,12 @@ export function validateAudioPlan(plan: readonly AudioAssetPlan[]): string[] {
     }
     if (asset.kind === 'loop' && !asset.loop) {
       errors.push(`${asset.assetId}: loop kind must set loop=true`);
+    }
+    if (asset.loop && asset.runtimeLoadingStrategy !== 'stream') {
+      errors.push(`${asset.assetId}: looping assets must use stream runtime loading`);
+    }
+    if (!asset.loop && asset.runtimeLoadingStrategy !== 'buffer') {
+      errors.push(`${asset.assetId}: non-loop assets must use buffer runtime loading`);
     }
     if (asset.requestedDurationSeconds <= 0 || asset.requestedDurationSeconds > 30) {
       errors.push(`${asset.assetId}: requestedDurationSeconds must be between 0 and 30`);
@@ -232,6 +243,8 @@ export function createProvenance(
     modelId: asset.modelId,
     outputFormat: asset.outputFormat,
     prompt: asset.prompt,
+    requestedDurationSeconds: asset.requestedDurationSeconds,
+    runtimeLoadingStrategy: asset.runtimeLoadingStrategy,
     script: asset.script,
     voiceId: asset.voiceId,
   };
@@ -295,6 +308,12 @@ export function assertCanWriteAsset(asset: AudioAssetPlan, force: boolean): void
   }
 }
 
+export function assetOutputExists(asset: AudioAssetPlan): boolean {
+  const absoluteOutputPath = resolveRepoPath(asset.outputPath);
+  const sidecarPath = `${absoluteOutputPath}.json`;
+  return existsSync(absoluteOutputPath) || existsSync(sidecarPath);
+}
+
 export function createAudioPlanReport(plan: readonly AudioAssetPlan[]): AudioPlanReport {
   const validationErrors = validateAudioPlan(plan);
   const assets = plan.map((asset) => {
@@ -311,6 +330,7 @@ export function createAudioPlanReport(plan: readonly AudioAssetPlan[]): AudioPla
       loop: asset.loop,
       maxBytes: asset.maxBytes,
       outputPath: asset.outputPath,
+      runtimeLoadingStrategy: asset.runtimeLoadingStrategy,
       sizeBytes,
     } satisfies AudioPlanReportEntry;
   });
