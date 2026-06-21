@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-06-21
+
+### Added
+
+- Installed the official ElevenLabs `music` skill and added Node-only title-music production tooling for `music_v2` plan validation, dry-run guarded generation, reporting, audition HTML, selection, and provenance.
+- Generated three original instrumental Football JS title-theme candidates under `public/audio/music` and selected candidate A as the provisional stable `football-js-title.mp3`.
+- Added music pipeline tests for dry-run behavior, missing-key failure, existing-file protection, provenance/song-ID capture, report/audition output, stable selection copying, and secret scanning.
+
+### Changed
+
+- Extended shared audio schemas to support `music` assets, `mp3_48000_192`, longer music durations, local ElevenLabs key-file parsing, and optional song IDs in provenance sidecars.
+- Updated `GameBrand.titleMusicId` to point at the selected title-music asset while leaving runtime playback unimplemented.
+
 ## [1.1.0] - 2026-06-21
 
 ### Added

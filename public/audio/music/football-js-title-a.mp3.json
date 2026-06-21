@@ -1,0 +1,15 @@
+{
+  "assetId": "football-js-title-a",
+  "category": "music",
+  "compressedBytes": 1800621,
+  "contentHash": "0fdf7bd5ea6c49fc2d651488b57ec9a0171ada495ab76310247a761b16553107",
+  "durationSeconds": 75.024,
+  "generatedAt": "2026-06-21T23:23:52.392Z",
+  "kind": "music",
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create an original instrumental title theme for Football JS, a stylized low-poly American-football video game. Energetic American stadium-sports atmosphere, marching snare cadence, powerful bass drum, bold original brass fanfare, low brass and horns, cymbal swells, tom fills, restrained electric-guitar accents, cinematic low-end support, memorable original main motif, heroic, competitive, anticipatory, polished modern game-menu production. Structure: 0-7 seconds has a recognizable opening fanfare suitable for a game title reveal; 7-55 seconds is an energetic main title section with a strong repeatable motif; 55-75 seconds is a controlled reprise that can transition naturally back toward the beginning. Tempo approximately 108-120 BPM. No vocals, no spoken words, no chants, no announcers, no crowd audio, no real fight-song melodies, no real team melodies, no artist references, no song-title references, no copyrighted motifs, no comedy or novelty-band style, no excessive distortion, no trailer-style sound effects covering the music. Candidate A variation: make brass fanfare and marching percussion the dominant identity. Snare cadence, bass drum, and low brass should carry the hook. Keep electric guitar minimal and supportive.",
+  "requestedDurationSeconds": 75,
+  "runtimeLoadingStrategy": "stream",
+  "songId": "xdM31vlsmeZVF4v0BWXL"
+}

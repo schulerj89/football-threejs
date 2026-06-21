@@ -15,5 +15,5 @@ export const GAME_BRAND: GameBrand = {
   shortTitle: 'Football JS',
   tagline: '',
   title: 'Football JS',
-  titleMusicId: '',
+  titleMusicId: 'football-js-title',
 } as const;

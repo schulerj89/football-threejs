@@ -40,6 +40,9 @@ npm run audio:generate:sfx
 npm run audio:generate:speech
 npm run audio:report
 npm run audio:verify
+npm run music:plan
+npm run music:generate
+npm run music:report
 npm run branding:plan
 npm run branding:generate
 npm run branding:report
@@ -94,18 +97,21 @@ Press `F1` and enable `Memory`, or open with `?memoryDebug=1`, to inspect runtim
 
 ElevenLabs is used for offline generation only. Production browser code must not call ElevenLabs, receive `ELEVENLABS_API_KEY`, or use any `VITE_`-prefixed ElevenLabs secret.
 
-- Official installed skills: `.agents/skills/setup-api-key`, `.agents/skills/sound-effects`, and `.agents/skills/text-to-speech`.
+- Official installed skills: `.agents/skills/setup-api-key`, `.agents/skills/sound-effects`, `.agents/skills/text-to-speech`, and `.agents/skills/music`.
 - Project skills: `.codex/skills/football-audio-director` and `.codex/skills/football-broadcast-writer`.
 - Typed plan: `tools/audio/audioPlan.ts`.
 - Broadcast script catalog: `tools/audio/announcerScriptCatalog.ts`.
 - Announcer caption manifest and audition page: `public/audio/announcer/announcer-captions.json` and `public/audio/announcer/announcer-audition.html`.
 - Generated starter pack: two streamed crowd loops, six crowd reactions, seven football one-shots, and 27 announcer speech clips.
 - Safe local example: `.env.example`.
-- Output roots: `public/audio/sfx`, `public/audio/crowd`, and `public/audio/announcer`.
+- Title music plan and report: `tools/audio/musicPlan.ts`, `tools/audio/generateMusic.ts`, and `tools/audio/musicReport.ts`.
+- Output roots: `public/audio/sfx`, `public/audio/crowd`, `public/audio/announcer`, and `public/audio/music`.
 
 `npm run audio:generate:sfx` and `npm run audio:generate:speech` default to dry-run. Paid API calls require an explicit `--execute` flag, such as `npx tsx tools/audio/generateSoundEffects.ts --execute --max-files=15` or `npx tsx tools/audio/generateSpeech.ts --execute --max-files=27`; existing files require `--force` to replace, and one execution is capped by `--max-files` or `AUDIO_MAX_FILES`.
 
-The richer report can be printed with `npm run audio:report` and written with `npx tsx tools/audio/audioReport.ts --write`. `npm run audio:verify` validates runtime-manifest filenames, non-empty decodable MP3s, duration bounds, provenance sidecars, caption metadata, compressed-size budget, decoded-buffer budget policy, readiness classification, and the audition page at `public/audio/audition-index.html`. The browser runtime mixer consumes local files only. Runtime announcer playback uses the local `public/audio/announcer/*.mp3` files, serializes commentary so clips do not overlap, and shows exact captions when enabled. Spatial player sounds, live text generation, second-commentator support, and music are queued future tasks.
+The richer report can be printed with `npm run audio:report` and written with `npx tsx tools/audio/audioReport.ts --write`. `npm run audio:verify` validates runtime-manifest filenames, non-empty decodable MP3s, duration bounds, provenance sidecars, caption metadata, compressed-size budget, decoded-buffer budget policy, readiness classification, and the audition page at `public/audio/audition-index.html`. The browser runtime mixer consumes local files only. Runtime announcer playback uses the local `public/audio/announcer/*.mp3` files, serializes commentary so clips do not overlap, and shows exact captions when enabled. Spatial player sounds, live text generation, second-commentator support, and runtime music playback are queued future tasks.
+
+`npm run music:generate` defaults to dry-run. Paid ElevenLabs Music calls require direct execution with `--execute`, for example `npx tsx tools/audio/generateMusic.ts --execute --max-files=3`. Existing candidate or sidecar files are skipped unless `--force` is supplied. The current generated title-theme candidates are `public/audio/music/football-js-title-a.mp3`, `football-js-title-b.mp3`, and `football-js-title-c.mp3`; candidate A is copied to the stable provisional path `public/audio/music/football-js-title.mp3`. The audition page is `public/audio/music/music-audition.html`, and the selection manifest is `public/audio/music/music-selection.json`. These files are production assets only; no title-screen music playback is wired yet.
 
 ## Brand Asset Production
 
@@ -250,5 +256,5 @@ The debug readback API also exposes an experience-settings snapshot with the eff
 - Blocking and tackling: no offensive linemen rules, holding penalties, pancake blocks, double-team blocks, pulling guards, diving tackles, advanced pursuit/pathfinding library, or physics-driven contact.
 - Game structure future scope: no playable defense, playable field goals, playable punts or kickoffs, overtime, timeouts, NFL clock-stoppage rules, play clock, penalties, season modes, or franchise systems. The current Exhibition shell already includes four quarters, user score, opponent score, halftime, abstract punts, simulated opponent possessions, and final score.
 - Controls and camera: no sprinting, stamina, freely rotating camera, camera-relative controls, instant replay, replay recording, slow motion, camera collision, or camera redesign beyond the current tactical, offense-perspective, cinematic broadcast, optional orbit-shot, and optional fan-cutaway presentation modes.
-- Audio future scope: no spatial player sounds, music playback, live text generation, second commentator, or browser-side ElevenLabs calls in runtime gameplay. The first runtime MP3 pack is generated and verified locally; future audio work should preserve existing approved assets unless replacement is explicit.
+- Audio future scope: no spatial player sounds, music playback, live text generation, second commentator, or browser-side ElevenLabs calls in runtime gameplay. The first runtime MP3 pack and provisional title-theme candidates are generated and verified locally; future audio work should preserve existing approved assets unless replacement is explicit.
 - Simulation architecture: no force-based physics, ragdoll physics, general-purpose physics engine, advanced AI rewrite, or unrelated refactoring.

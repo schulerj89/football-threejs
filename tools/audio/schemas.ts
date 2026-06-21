@@ -5,10 +5,10 @@ import { createWriteStream, existsSync, mkdirSync, readFileSync, statSync, write
 import { dirname, extname, isAbsolute, normalize, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export type AudioAssetCategory = 'announcer' | 'crowd' | 'sfx';
+export type AudioAssetCategory = 'announcer' | 'crowd' | 'music' | 'sfx';
 export type AudioAssetKind = 'loop' | 'music' | 'oneShot' | 'positional' | 'speech';
 export type AudioGenerationStatus = 'approved' | 'generated' | 'needsReview' | 'planned';
-export type AudioOutputFormat = 'mp3_44100_128' | 'mp3_44100_64' | 'opus_48000_128';
+export type AudioOutputFormat = 'mp3_44100_128' | 'mp3_44100_64' | 'mp3_48000_192' | 'opus_48000_128';
 export type AudioRuntimeLoadingStrategy = 'buffer' | 'stream';
 
 export interface AudioAssetPlan {
@@ -55,6 +55,7 @@ export interface AudioProvenance {
   runtimeLoadingStrategy: AudioRuntimeLoadingStrategy;
   script?: string;
   scriptId?: string;
+  songId?: string;
   voiceId?: string;
 }
 
@@ -100,17 +101,20 @@ export const OFFICIAL_ELEVENLABS_SKILLS = [
   '.agents/skills/setup-api-key/SKILL.md',
   '.agents/skills/sound-effects/SKILL.md',
   '.agents/skills/text-to-speech/SKILL.md',
+  '.agents/skills/music/SKILL.md',
 ] as const;
 
 const ALLOWED_AUDIO_DIRS: Record<AudioAssetCategory, string> = {
   announcer: 'public/audio/announcer',
   crowd: 'public/audio/crowd',
+  music: 'public/audio/music',
   sfx: 'public/audio/sfx',
 };
 
 const OUTPUT_FORMAT_EXTENSIONS: Record<AudioOutputFormat, string> = {
   mp3_44100_128: '.mp3',
   mp3_44100_64: '.mp3',
+  mp3_48000_192: '.mp3',
   opus_48000_128: '.opus',
 };
 
@@ -164,8 +168,9 @@ export function validateAudioPlan(plan: readonly AudioAssetPlan[]): string[] {
     if (!asset.loop && asset.runtimeLoadingStrategy !== 'buffer') {
       errors.push(`${asset.assetId}: non-loop assets must use buffer runtime loading`);
     }
-    if (asset.requestedDurationSeconds <= 0 || asset.requestedDurationSeconds > 30) {
-      errors.push(`${asset.assetId}: requestedDurationSeconds must be between 0 and 30`);
+    const maxDurationSeconds = asset.kind === 'music' ? 600 : 30;
+    if (asset.requestedDurationSeconds <= 0 || asset.requestedDurationSeconds > maxDurationSeconds) {
+      errors.push(`${asset.assetId}: requestedDurationSeconds must be between 0 and ${maxDurationSeconds}`);
     }
     if (asset.maxBytes <= 0) {
       errors.push(`${asset.assetId}: maxBytes must be positive`);
@@ -258,6 +263,7 @@ export function createProvenance(
   content: Uint8Array,
   generatedAt = new Date().toISOString(),
   durationSeconds: number | null = null,
+  songId?: string,
 ): AudioProvenance {
   return {
     assetId: asset.assetId,
@@ -276,6 +282,7 @@ export function createProvenance(
     runtimeLoadingStrategy: asset.runtimeLoadingStrategy,
     script: asset.script,
     scriptId: asset.scriptId,
+    songId,
     voiceId: asset.voiceId,
   };
 }
@@ -285,11 +292,12 @@ export function writeProvenanceSidecar(
   content: Uint8Array,
   generatedAt?: string,
   durationSeconds?: number | null,
+  songId?: string,
 ): void {
   const sidecarPath = `${resolveRepoPath(asset.outputPath)}.json`;
   writeFileSync(
     sidecarPath,
-    `${JSON.stringify(createProvenance(asset, content, generatedAt, durationSeconds ?? null), null, 2)}\n`,
+    `${JSON.stringify(createProvenance(asset, content, generatedAt, durationSeconds ?? null, songId), null, 2)}\n`,
     'utf8',
   );
 }
@@ -397,6 +405,11 @@ export function createAudioPlanReport(plan: readonly AudioAssetPlan[]): AudioPla
   };
 }
 
+export function getFileHash(relativePath: string): string | null {
+  const path = resolveRepoPath(relativePath);
+  return existsSync(path) ? createHash('sha256').update(readFileSync(path)).digest('hex') : null;
+}
+
 export function findBrowserSecretReferences(files: readonly { path: string; text: string }[]): string[] {
   const unsafePatterns = [/ELEVENLABS_API_KEY/, /VITE_ELEVENLABS/i, /@elevenlabs\/elevenlabs-js/];
 
@@ -444,18 +457,27 @@ export function isDirectCli(importMetaUrl: string, argvPath = process.argv[1]): 
 function readLocalEnvApiKey(): string | null {
   const envPath = resolveRepoPath('.env');
 
-  if (!existsSync(envPath)) {
-    return null;
+  if (existsSync(envPath)) {
+    const lines = readFileSync(envPath, 'utf8').split(/\r?\n/);
+    const keyLine = lines.find((line) => line.trim().startsWith('ELEVENLABS_API_KEY='));
+
+    if (keyLine) {
+      return normalizeLocalApiKeyValue(keyLine.slice(keyLine.indexOf('=') + 1)) || null;
+    }
   }
 
-  const lines = readFileSync(envPath, 'utf8').split(/\r?\n/);
-  const keyLine = lines.find((line) => line.trim().startsWith('ELEVENLABS_API_KEY='));
-
-  if (!keyLine) {
-    return null;
+  const localKeyPath = resolve(process.cwd(), '..', 'eleven-labs-api-key.txt');
+  if (existsSync(localKeyPath)) {
+    return normalizeLocalApiKeyValue(readFileSync(localKeyPath, 'utf8')) || null;
   }
 
-  return keyLine.slice(keyLine.indexOf('=') + 1).trim().replace(/^"|"$/g, '') || null;
+  return null;
+}
+
+function normalizeLocalApiKeyValue(value: string): string {
+  const trimmed = value.trim();
+  const rawValue = trimmed.includes('=') ? trimmed.slice(trimmed.indexOf('=') + 1).trim() : trimmed;
+  return rawValue.replace(/^"|"$/g, '').replace(/^'|'$/g, '');
 }
 
 function readPositiveInteger(value: string | undefined, fallback: number): number {

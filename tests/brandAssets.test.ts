@@ -61,6 +61,7 @@ describe('Football JS brand asset pipeline', () => {
       heroImageUrl: '/branding/football-js-title.webp',
       shortTitle: 'Football JS',
       title: 'Football JS',
+      titleMusicId: 'football-js-title',
     });
   });
 

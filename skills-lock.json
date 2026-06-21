@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "music": {
+      "source": "elevenlabs/skills",
+      "sourceType": "github",
+      "skillPath": "music/SKILL.md",
+      "computedHash": "d6e2c4867f944f876b5d671a26827f9f2d9af9dc4c550775202f6690b6f4560d"
+    },
     "setup-api-key": {
       "source": "elevenlabs/skills",
       "sourceType": "github",
