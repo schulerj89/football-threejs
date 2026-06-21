@@ -6,7 +6,6 @@ const FIELD_MATERIAL_KEYS = [
   'auditError',
   'auditFieldBounds',
   'auditInnerBounds',
-  'direction',
   'endZoneA',
   'endZoneB',
   'fieldBandA',
@@ -32,7 +31,6 @@ export class FieldMaterialLibrary {
   readonly auditError = new THREE.MeshBasicMaterial({ color: 0xff2b2b });
   readonly auditFieldBounds = new THREE.MeshBasicMaterial({ color: 0x42d6ff });
   readonly auditInnerBounds = new THREE.MeshBasicMaterial({ color: 0xf2d94b });
-  readonly direction = new THREE.MeshBasicMaterial({ color: 0xf2b84b });
   readonly endZoneA = new THREE.MeshLambertMaterial({ color: 0x39444a });
   readonly endZoneB = new THREE.MeshLambertMaterial({ color: 0x4b443d });
   readonly fieldBandA = new THREE.MeshLambertMaterial({ color: 0x435145 });
