@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.0] - 2026-06-21
+
+### Added
+
+- Added development-only `?formationPreview=7v7` staging mode with fourteen stable player IDs, semantic formation resolution, mannequin bodies, and cloned helmets.
+- Added left-hash, middle, and right-hash preview lane controls with `1`, `2`, and `3`.
+- Added a 7v7 preview formation contract that validates seven players per team, stable IDs, clearance, legal sides, offensive-line spacing, receiver sideline insets, declared defensive gaps, and coverage alignment.
+- Added debug/test render metrics for frame time, scene/player mesh counts, material counts, geometry count, texture count, draw calls, and triangles.
+- Added unit and browser smoke coverage for 7v7 preview resolution, lane mirroring, defensive references, camera containment, idle preview behavior, helmet attachment, and render metrics.
+
+### Changed
+
+- Extended formation validation to support explicit roster contracts while preserving the existing five-on-five validation defaults.
+- Updated README and AGENTS to describe the static 7v7 preview as a development capability, not active 7v7 gameplay.
+
 ## [0.22.0] - 2026-06-21
 
 ### Added

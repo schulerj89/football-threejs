@@ -11,6 +11,18 @@ interface DebugOverlayOptions {
   player: PlayerModel;
 }
 
+export interface RenderMetricsSnapshot {
+  calls: number;
+  frameTimeMs: number;
+  geometries: number;
+  playerBodyMeshCount: number;
+  playerCount: number;
+  sceneMaterialCount: number;
+  sceneMeshCount: number;
+  textures: number;
+  triangles: number;
+}
+
 export class DebugOverlay {
   private readonly element: HTMLDivElement;
   private frameCount = 0;
@@ -37,6 +49,7 @@ export class DebugOverlay {
     camera?: GameplayCameraDebugSnapshot,
     gameplay?: GameplaySnapshot,
     playerBody?: PlayerBodyVisualSnapshot,
+    renderMetrics?: RenderMetricsSnapshot,
   ): void {
     this.frameCount += 1;
     this.elapsed += deltaSeconds;
@@ -84,6 +97,18 @@ export class DebugOverlay {
         `BODY_TRIS ${playerBody.bodyTriangleCount}`,
         `BODY_MESHES ${playerBody.meshesPerPlayer}`,
         `BODY_MATS ${playerBody.uniqueBodyMaterialCount}`,
+      );
+    }
+
+    if (renderMetrics) {
+      lines.push(
+        `FRAME_MS ${renderMetrics.frameTimeMs.toFixed(1)}`,
+        `GEOMS ${renderMetrics.geometries}`,
+        `TEX ${renderMetrics.textures}`,
+        `PLAYERS ${renderMetrics.playerCount}`,
+        `PLAYER_MESHES ${renderMetrics.playerBodyMeshCount}`,
+        `SCENE_MESHES ${renderMetrics.sceneMeshCount}`,
+        `MATERIALS ${renderMetrics.sceneMaterialCount}`,
       );
     }
 

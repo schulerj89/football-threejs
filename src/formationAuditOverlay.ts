@@ -1,6 +1,7 @@
 import {
   resolveFormation,
   type FormationValidationIssue,
+  type ResolvedFormation,
   type ResolvedFormationSlot,
 } from './formationLayout';
 import type { GameplayModel } from './playState';
@@ -16,8 +17,9 @@ export function createFormationAuditOverlay(): HTMLDivElement {
 export function syncFormationAuditOverlay(
   element: HTMLDivElement,
   gameplay: GameplayModel,
+  resolvedFormation?: ResolvedFormation,
 ): void {
-  const formation = resolveFormation(gameplay.selectedPlay, {
+  const formation = resolvedFormation ?? resolveFormation(gameplay.selectedPlay, {
     lane: gameplay.drive.snapLane,
     spot: gameplay.drive.lineOfScrimmage,
   });
@@ -26,7 +28,7 @@ export function syncFormationAuditOverlay(
   );
   const rows = [
     createRow('FORMATION AUDIT'),
-    createRow(`PLAY ${gameplay.selectedPlay.displayName}`),
+    createRow(`PLAY ${resolvedFormation ? '7v7 Formation Preview' : gameplay.selectedPlay.displayName}`),
     createRow(`SNAP ${formation.snapPlacement.lane} ${formatSpot(formation.snapPlacement.spot)}`),
     createRow(`FIELD ${formation.fieldSide} BOUNDARY ${formation.boundarySide}`),
     createRow(`ISSUES ${formation.issues.length === 0 ? 'none' : formation.issues.length}`),

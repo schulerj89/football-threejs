@@ -4,7 +4,7 @@ Low-poly 3D American football prototype built with Three.js, Vite, and TypeScrip
 
 The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness for validating controls, play states, formations, ball spotting, passing, tackling, downs, and camera language before the full game structure arrives.
 
-The current milestone adds visual-only procedural player poses and locomotion to the low-poly mannequin while keeping gameplay state authoritative. The active playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay data, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
+The current milestone adds a development-only `?formationPreview=7v7` staging mode to prove fourteen-player formation resolution, mannequin rendering, helmet cloning, camera framing, and validation before active 7v7 gameplay exists. The active playable prototype remains a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay data, visual-only procedural player poses and locomotion, and a basic offensive drive: a field generated from a pure field specification with batched static markings, turf bands, yard numbers, goalposts, sideline presentation, selectable play calls, quarterback scrambling with a line-of-scrimmage passing rule, route-running receiver behavior, selected-target passing with a deterministic arc, downs, yards-to-go, first-down line, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, final-score game over, the preserved orthographic three-quarter camera, and an optional behind-the-offense perspective camera.
 
 ## World Scale
 
@@ -66,6 +66,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 - Use `?playerBody=mannequin` for the current low-poly silhouette or `?playerBody=box` for comparison with the earlier rectangular placeholder body.
 - Use `?playerMotion=0` to disable visual-only procedural poses and locomotion for comparison.
 - Use `?debugRoleColors=1` to restore role-colored player bodies for visual debugging.
+- Use `?formationPreview=7v7` for the static fourteen-player development preview. In that mode, press `1` for left-hash staging, `2` for middle staging, and `3` for right-hash staging. Space does not start a play in preview mode.
 - Sack, tackle, completed pass, and out-of-bounds results display signed yards gained or lost from the exact dead-ball spot, then reset the next play at the nearest snap lane: left hash, middle, or right hash.
 - Incomplete passes end the play at the original line of scrimmage and advance the down.
 - The drill tracks down, distance, ball position, and score.
@@ -76,7 +77,7 @@ Open the dev server at `http://127.0.0.1:5173`.
 
 ## Debug Overlay
 
-Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, triangle count, camera mode, camera state, focus position, camera position, exact dead-ball spot, resolved next snap spot, snap lane, hash X positions, and formation origin.
+Add `?debug=1` to the URL to show the optional debug overlay. It shows FPS, placeholder player world coordinates, draw calls, triangle count, frame time, geometry and texture counts, scene/player mesh counts, material counts, camera mode, camera state, focus position, camera position, exact dead-ball spot, resolved next snap spot, snap lane, hash X positions, and formation origin.
 
 Add `?poseDebug=1` to show every player's current visual pose intent and locomotion phase.
 
@@ -87,7 +88,7 @@ Add `?formationAudit=1` to show the resolved semantic formation: snap lane, fiel
 ## Current Non-Goals And Future Scope
 
 - Presentation future scope: stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, and broader stadium presentation are planned later, not permanent exclusions.
-- Roster future scope: larger formations, 7v7, 11v11, full special teams, additional offensive or defensive players beyond the current five-on-five drill, player switching, and formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data are deferred.
+- Roster future scope: active 7v7 play, 11v11, full special teams, additional offensive or defensive gameplay players beyond the current five-on-five drill, player switching, and formations beyond the current Inside Run, Outside Run, Quick Pass, Slant Flat, and static 7v7 preview data are deferred.
 - Assets and animation future scope: imported full-body player models, skeletal animation, quarterback animation, scramble animation, tackling animation, celebration animation, and center or snap animation are deferred. The current milestone intentionally uses procedural low-poly silhouettes plus the reusable low-poly helmet.
 - Play calling: no large playbook menu, title screen, audibles, defensive play selection, route editor, procedural play generation, hot routes, or menus beyond the current pre-snap play cards and minimal HUD/debug displays.
 - Passing and ball outcomes: no interceptions, fumbles, loose-ball physics, manual aiming, pass-type selection, pump fake, illegal-forward-pass penalty, referee logic, user-controlled catch mechanic, contested-catch ratings, or quarterback ratings.

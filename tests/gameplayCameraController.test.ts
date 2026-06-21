@@ -11,6 +11,11 @@ import {
   snapshotGameplayModel,
   startPlay,
 } from '../src/playState';
+import {
+  createFormationPreviewModel,
+  snapshotFormationPreviewAsGameplay,
+} from '../src/formationPreview';
+import type { PlayerSnapshot } from '../src/playerModel';
 
 describe('gameplay camera controller', () => {
   it('resolves camera URL aliases', () => {
@@ -81,4 +86,45 @@ describe('gameplay camera controller', () => {
     expect(cameraSnapshot.targetPosition.x).toBeCloseTo(snapshot.ball.state.target.x);
     expect(cameraSnapshot.targetPosition.z).toBeCloseTo(snapshot.ball.state.target.z);
   });
+
+  it('frames every 7v7 preview player in both camera modes', () => {
+    const preview = createFormationPreviewModel('7v7', 'middle');
+    const snapshot = snapshotFormationPreviewAsGameplay(preview);
+    const tactical = new GameplayCameraController({
+      height: 900,
+      initialMode: 'tacticalOrthographic',
+      width: 1440,
+    });
+    const offense = new GameplayCameraController({
+      height: 900,
+      initialMode: 'offensePerspective',
+      width: 1440,
+    });
+
+    tactical.update(snapshot, 0);
+    offense.update(snapshot, 0);
+
+    expect(getUnframedPlayerIds(tactical.camera, snapshot.players)).toEqual([]);
+    expect(getUnframedPlayerIds(offense.camera, snapshot.players)).toEqual([]);
+  });
 });
+
+function getUnframedPlayerIds(camera: THREE.Camera, players: PlayerSnapshot[]): string[] {
+  camera.updateMatrixWorld(true);
+  if (camera instanceof THREE.OrthographicCamera || camera instanceof THREE.PerspectiveCamera) {
+    camera.updateProjectionMatrix();
+  }
+
+  return players
+    .filter((player) => {
+      const point = new THREE.Vector3(player.position.x, 1.1, player.position.z).project(camera);
+
+      return (
+        Math.abs(point.x) > 1 ||
+        Math.abs(point.y) > 1 ||
+        point.z < -1 ||
+        point.z > 1
+      );
+    })
+    .map((player) => player.id);
+}

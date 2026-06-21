@@ -2,14 +2,14 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness, not the final product identity. The current milestone adds visual-only procedural player poses and locomotion to the low-poly mannequin while preserving the reusable helmet GLB and gameplay-owned state.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness, not the final product identity. The current milestone adds a development-only static 7v7 formation preview while preserving the active five-on-five playable drill.
 
-The active playable prototype is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay play data, low-poly procedural player bodies with cloned low-poly helmet visuals, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera.
+The active playable prototype is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay play data, low-poly procedural player bodies with cloned low-poly helmet visuals, visual-only procedural poses and locomotion, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, and an optional behind-the-offense perspective camera. The `?formationPreview=7v7` mode is a static development staging tool for fourteen-player formation validation, rendering, and camera framing; it must not run AI or begin a live play.
 
 ## Current Non-Goals And Future Scope
 
 - Presentation future scope: stadium, crowd, stadium seating, sideline characters, advertisements, weather, field degradation, turf redesign, and broader stadium presentation are deferred product work, not permanent exclusions.
-- Roster future scope: larger formations, 7v7, 11v11, full special teams, additional offensive or defensive players beyond the current five-on-five drill, player switching, and formations beyond the current Inside Run, Outside Run, Quick Pass, and Slant Flat play data are deferred.
+- Roster future scope: active 7v7 play, 11v11, full special teams, additional offensive or defensive gameplay players beyond the current five-on-five drill, player switching, and formations beyond the current Inside Run, Outside Run, Quick Pass, Slant Flat, and static 7v7 preview data are deferred.
 - Assets and animation future scope: imported full-body player models, skeletal animation, quarterback animation, scramble animation, tackling animation, celebration animation, and center or snap animation are deferred. The current milestone intentionally uses procedural low-poly silhouettes plus the reusable low-poly helmet.
 - Play calling: no large playbook menu, title screen, audibles, defensive play selection, route editor, procedural play generation, hot routes, or menus beyond the current pre-snap play cards and minimal HUD/debug displays.
 - Passing and ball outcomes: no interceptions, fumbles, loose-ball physics, manual aiming, pass-type selection, pump fake, illegal-forward-pass penalty, referee logic, user-controlled catch mechanic, contested-catch ratings, or quarterback ratings.
@@ -45,7 +45,9 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Keep input, simulation, and visual synchronization in separate modules.
 - All gameplay players use the common player model with stable ID, team, role, position, velocity, facing, collision radius, and current state.
 - Current formations use the stable 10-player roster: `offense-qb`, `offense-rb`, `offense-blocker-left`, `offense-blocker-right`, `offense-wr`, `defense-rusher-left`, `defense-rusher-right`, `defense-cover-wr`, `defense-cover-rb`, and `defense-safety`.
+- The 7v7 preview roster uses fourteen stable IDs in `src/formationPreview.ts` and is development-only; do not make it the default playable mode until active 7v7 gameplay is explicitly requested.
 - Initial formations belong in semantic data resolved through `src/formationLayout.ts`, not hard-coded mesh positions or independent per-play clamps.
+- Formation preview positions must resolve through the semantic formation system for each snap lane and must fail validation rather than clamping invalid geometry.
 - Formation data should separate formation position, pre-snap facing, post-snap movement direction, blocking targets, route targets, and coverage assignments.
 - Play definitions belong in data and must stay independent from Three.js scene objects.
 - Play-call card diagrams must be generated from `PlayDefinition`, resolved formation, route targets, and blocker targets; do not maintain separate diagram coordinates.
@@ -86,9 +88,10 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- Offense and defense derive distinct pre-snap ready pose intents while staying at exact gameplay positions.
-- Moving players use visual-only locomotion on the existing shoulder and hip pivots with deterministic phase offsets from stable player IDs.
-- Locomotion phase advances from visual distance traveled where practical, and near-zero velocity blends back to the appropriate ready pose.
-- `?playerMotion=0` disables procedural motion, and `?poseDebug=1` displays each player's pose intent and phase.
-- The pose controller does not modify gameplay snapshots, player root positions, root facing, collision, blocking, tackling, possession, AI, camera, or movement speed.
-- Existing gameplay, helmet, visual, unit, and browser smoke tests pass.
+- `?formationPreview=7v7` renders exactly seven offensive and seven defensive mannequin players with stable IDs and cloned helmets.
+- Left-hash, middle, and right-hash preview lanes resolve valid formations through semantic formation data.
+- Offensive line spacing, receiver sideline insets, defensive gap alignment, corner coverage alignment, linebacker alignment, safety midpoint alignment, legal sides, clearance, and playable bounds are validated.
+- Preview lane controls work with `1`, `2`, and `3`; Space must not start a play in preview mode.
+- Both tactical orthographic and offense-perspective cameras frame the full static preview formation.
+- Debug metrics include draw calls, triangles, frame time, mesh counts, material counts, geometry count, and texture count.
+- Existing five-on-five gameplay, helmet, visual, unit, and browser smoke tests pass unchanged.

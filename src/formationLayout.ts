@@ -71,6 +71,17 @@ export interface FormationPlayDefinition {
     eligibleReceiverIds: string[];
   };
   preferredSide: PreferredFormationSide;
+  validation?: FormationValidationConfig;
+}
+
+export interface FormationValidationConfig {
+  coverageAlignmentToleranceYards?: number;
+  defensiveGapOffsets?: Record<string, number>;
+  expectedDefenseCount: number;
+  expectedOffenseCount: number;
+  offensiveLineIds?: readonly string[];
+  receiverSidelineInsetYards?: Record<string, number>;
+  stablePlayerIds: readonly string[];
 }
 
 export interface FormationFieldSpec {
@@ -92,6 +103,7 @@ export interface ResolvedFormation {
   issues: FormationValidationIssue[];
   slots: ResolvedFormationSlot[];
   snapPlacement: SnapPlacement;
+  validation: FormationValidationConfig;
 }
 
 export interface FormationValidationIssue {
@@ -138,6 +150,17 @@ export const FORMATION_MEASUREMENTS = {
   receiverSidelineInset: 5.5,
   runningBackDepth: 8,
   safetyDepth: 18,
+} as const;
+
+export const DEFAULT_FORMATION_VALIDATION: FormationValidationConfig = {
+  coverageAlignmentToleranceYards: 0.001,
+  expectedDefenseCount: 5,
+  expectedOffenseCount: 5,
+  offensiveLineIds: ['offense-blocker-left', 'offense-blocker-right'],
+  receiverSidelineInsetYards: {
+    'offense-wr': FORMATION_MEASUREMENTS.receiverSidelineInset,
+  },
+  stablePlayerIds: STABLE_PLAYER_IDS,
 } as const;
 
 export const DEFAULT_FORMATION_FIELD_SPEC: FormationFieldSpec = {
@@ -189,6 +212,7 @@ export function resolveFormation(
       lane: snapPlacement.lane,
       spot: cloneFootballSpot(snapPlacement.spot),
     },
+    validation: play.validation ?? DEFAULT_FORMATION_VALIDATION,
   };
   resolvedFormation.issues = validateResolvedFormation(resolvedFormation, fieldSpec);
 
@@ -237,7 +261,7 @@ export function validateResolvedFormation(
   validateSideOfBall(formation, fieldSpec, issues);
   validateBlockerSymmetry(formation, issues);
   validateLineDepths(formation, issues);
-  validateAssignments(formation, slotsById, issues);
+  validateAssignments(formation, slotsById, fieldSpec, issues);
 
   return issues;
 }
@@ -384,22 +408,28 @@ function validateStableRoster(
   const offenseCount = formation.slots.filter((slot) => slot.team === 'offense').length;
   const defenseCount = formation.slots.filter((slot) => slot.team === 'defense').length;
 
-  if (offenseCount !== 5) {
-    issues.push({ message: `Expected five offense players, found ${offenseCount}`, playerIds: [] });
+  if (offenseCount !== formation.validation.expectedOffenseCount) {
+    issues.push({
+      message: `Expected ${formatCount(formation.validation.expectedOffenseCount)} offense players, found ${offenseCount}`,
+      playerIds: [],
+    });
   }
 
-  if (defenseCount !== 5) {
-    issues.push({ message: `Expected five defense players, found ${defenseCount}`, playerIds: [] });
+  if (defenseCount !== formation.validation.expectedDefenseCount) {
+    issues.push({
+      message: `Expected ${formatCount(formation.validation.expectedDefenseCount)} defense players, found ${defenseCount}`,
+      playerIds: [],
+    });
   }
 
-  for (const playerId of STABLE_PLAYER_IDS) {
+  for (const playerId of formation.validation.stablePlayerIds) {
     if (!slotsById.has(playerId)) {
       issues.push({ message: `Missing stable player ID ${playerId}`, playerIds: [playerId] });
     }
   }
 
   for (const slot of formation.slots) {
-    if (!STABLE_PLAYER_IDS.includes(slot.id as StablePlayerId)) {
+    if (!formation.validation.stablePlayerIds.includes(slot.id)) {
       issues.push({ message: `Unexpected player ID ${slot.id}`, playerIds: [slot.id] });
     }
   }
@@ -481,26 +511,47 @@ function validateBlockerSymmetry(
   formation: ResolvedFormation,
   issues: FormationValidationIssue[],
 ): void {
-  const left = getSlot(formation, 'offense-blocker-left');
-  const right = getSlot(formation, 'offense-blocker-right');
+  const lineIds =
+    formation.validation.offensiveLineIds ?? DEFAULT_FORMATION_VALIDATION.offensiveLineIds ?? [];
+  const lineSlots = lineIds
+    .map((playerId) => getSlot(formation, playerId))
+    .filter((slot): slot is ResolvedFormationSlot => !!slot)
+    .sort((a, b) => a.position.x - b.position.x);
   const snapX = formation.snapPlacement.spot.x;
 
-  if (!left || !right) {
+  if (lineSlots.length < 2) {
     return;
   }
 
-  if (Math.abs(left.position.z - right.position.z) > FORMATION_EPSILON) {
+  const lineZ = lineSlots[0].position.z;
+  if (lineSlots.some((slot) => Math.abs(slot.position.z - lineZ) > FORMATION_EPSILON)) {
     issues.push({
-      message: 'Offensive blockers do not share the same pre-snap Z coordinate',
-      playerIds: [left.id, right.id],
+      message: 'Offensive line players do not share the same pre-snap Z coordinate',
+      playerIds: lineSlots.map((slot) => slot.id),
     });
   }
 
-  if (Math.abs((left.position.x + right.position.x) / 2 - snapX) > FORMATION_EPSILON) {
+  if (Math.abs(average(lineSlots.map((slot) => slot.position.x)) - snapX) > FORMATION_EPSILON) {
     issues.push({
-      message: 'Offensive blockers are not symmetrical around the snap X',
-      playerIds: [left.id, right.id],
+      message: 'Offensive line players are not symmetrical around the snap X',
+      playerIds: lineSlots.map((slot) => slot.id),
     });
+  }
+
+  if (lineSlots.length < 3) {
+    return;
+  }
+
+  const firstSpacing = lineSlots[1].position.x - lineSlots[0].position.x;
+  for (let index = 2; index < lineSlots.length; index += 1) {
+    const spacing = lineSlots[index].position.x - lineSlots[index - 1].position.x;
+    if (Math.abs(spacing - firstSpacing) > FORMATION_EPSILON) {
+      issues.push({
+        message: 'Offensive line spacing is not equal',
+        playerIds: lineSlots.map((slot) => slot.id),
+      });
+      return;
+    }
   }
 }
 
@@ -508,6 +559,8 @@ function validateLineDepths(
   formation: ResolvedFormation,
   issues: FormationValidationIssue[],
 ): void {
+  validateDefensiveGapOffsets(formation, issues);
+
   const leftRusher = getSlot(formation, 'defense-rusher-left');
   const rightRusher = getSlot(formation, 'defense-rusher-right');
 
@@ -526,6 +579,7 @@ function validateLineDepths(
 function validateAssignments(
   formation: ResolvedFormation,
   slotsById: Map<string, ResolvedFormationSlot>,
+  fieldSpec: FormationFieldSpec,
   issues: FormationValidationIssue[],
 ): void {
   for (const receiverId of Object.values(formation.coverageAssignments)) {
@@ -545,6 +599,9 @@ function validateAssignments(
       });
     }
   }
+
+  validateCoverageAlignment(formation, slotsById, issues);
+  validateReceiverSidelineInsets(formation, slotsById, fieldSpec, issues);
 }
 
 function getSlot(
@@ -552,4 +609,96 @@ function getSlot(
   playerId: string,
 ): ResolvedFormationSlot | undefined {
   return formation.slots.find((slot) => slot.id === playerId);
+}
+
+function validateCoverageAlignment(
+  formation: ResolvedFormation,
+  slotsById: Map<string, ResolvedFormationSlot>,
+  issues: FormationValidationIssue[],
+): void {
+  const tolerance = formation.validation.coverageAlignmentToleranceYards ?? 0.001;
+
+  for (const [defenderId, receiverId] of Object.entries(formation.coverageAssignments)) {
+    const defender = slotsById.get(defenderId);
+    const receiver = slotsById.get(receiverId);
+
+    if (!defender || !receiver) {
+      continue;
+    }
+
+    if (Math.abs(defender.position.x - receiver.position.x) > tolerance) {
+      issues.push({
+        message: `${defenderId} is not aligned to coverage assignment ${receiverId}`,
+        playerIds: [defenderId, receiverId],
+      });
+    }
+  }
+}
+
+function validateReceiverSidelineInsets(
+  formation: ResolvedFormation,
+  slotsById: Map<string, ResolvedFormationSlot>,
+  fieldSpec: FormationFieldSpec,
+  issues: FormationValidationIssue[],
+): void {
+  const expectedInsets = formation.validation.receiverSidelineInsetYards ?? {};
+
+  for (const [playerId, expectedInset] of Object.entries(expectedInsets)) {
+    const receiver = slotsById.get(playerId);
+
+    if (!receiver) {
+      continue;
+    }
+
+    const halfWidth = fieldSpec.fieldWidth / 2;
+    const inset = Math.min(
+      Math.abs(receiver.position.x - -halfWidth),
+      Math.abs(halfWidth - receiver.position.x),
+    );
+
+    if (Math.abs(inset - expectedInset) > FORMATION_EPSILON) {
+      issues.push({
+        message: `${playerId} does not preserve receiver sideline inset`,
+        playerIds: [playerId],
+      });
+    }
+  }
+}
+
+function validateDefensiveGapOffsets(
+  formation: ResolvedFormation,
+  issues: FormationValidationIssue[],
+): void {
+  const gapOffsets = formation.validation.defensiveGapOffsets ?? {};
+
+  for (const [playerId, expectedOffset] of Object.entries(gapOffsets)) {
+    const defender = getSlot(formation, playerId);
+
+    if (!defender) {
+      continue;
+    }
+
+    if (Math.abs(defender.lateralDistanceFromSnap - expectedOffset) > FORMATION_EPSILON) {
+      issues.push({
+        message: `${playerId} is not aligned to declared defensive gap`,
+        playerIds: [playerId],
+      });
+    }
+  }
+}
+
+function average(values: number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function formatCount(count: number): string {
+  if (count === 5) {
+    return 'five';
+  }
+
+  if (count === 7) {
+    return 'seven';
+  }
+
+  return count.toString();
 }

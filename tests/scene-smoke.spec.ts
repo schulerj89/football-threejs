@@ -153,6 +153,33 @@ interface PlayerPoseSnapshot {
   speed: number;
 }
 
+interface FormationPreviewSnapshot {
+  boundarySide: 'left' | 'right';
+  fieldSide: 'left' | 'right';
+  issues: Array<{ message: string; playerIds: string[] }>;
+  mode: '7v7';
+  players: PlayerSnapshot[];
+  snapLane: 'leftHash' | 'middle' | 'rightHash';
+  snapPlacement: { lane: 'leftHash' | 'middle' | 'rightHash'; spot: FootballSpot };
+}
+
+interface RenderMetricsSnapshot {
+  calls: number;
+  frameTimeMs: number;
+  geometries: number;
+  playerBodyMeshCount: number;
+  playerCount: number;
+  sceneMaterialCount: number;
+  sceneMeshCount: number;
+  textures: number;
+  triangles: number;
+}
+
+interface CameraFramingSnapshot {
+  framedPlayerIds: string[];
+  unframedPlayerIds: string[];
+}
+
 test('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -327,6 +354,113 @@ test('starts field and formation audit modes without render errors', async ({ pa
   await expect(page.locator('.formation-audit-overlay')).toContainText('FORMATION AUDIT');
   await expect(page.locator('.formation-audit-overlay')).toContainText('PLAY Inside Run');
   await expect(page.locator('.formation-audit-overlay')).toContainText('ISSUES none');
+  await expectNonBlankCanvas(page);
+
+  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('stages a static 7v7 formation preview across snap lanes and camera modes', async ({ page }) => {
+  const consoleErrors: string[] = [];
+  const pageErrors: string[] = [];
+
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text());
+    }
+  });
+
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message);
+  });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/?debug=1&readback=1&formationPreview=7v7&formationAudit=1');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.play-call-ui')).toBeHidden();
+  await expect(page.locator('.play-call')).toHaveText('7v7 Formation Preview');
+  await expect(page.locator('.formation-audit-overlay')).toContainText('PLAY 7v7 Formation Preview');
+  await expect(page.locator('.formation-audit-overlay')).toContainText('ISSUES none');
+
+  const initialPreview = await getFormationPreviewSnapshot(page);
+  expect(initialPreview).toMatchObject({
+    mode: '7v7',
+    snapLane: 'middle',
+    issues: [],
+  });
+  expect(initialPreview.players).toHaveLength(14);
+  expect(initialPreview.players.filter((player) => player.team === 'offense')).toHaveLength(7);
+  expect(initialPreview.players.filter((player) => player.team === 'defense')).toHaveLength(7);
+  expect(initialPreview.players.every((player) => player.currentState === 'idle')).toBe(true);
+  expect(new Set(initialPreview.players.map((player) => player.id)).size).toBe(14);
+
+  await expect.poll(() => getHelmetAssetSnapshot(page), { timeout: 5000 }).toMatchObject({
+    attachedPlayerIds: expect.arrayContaining([
+      'defense-corner-left',
+      'defense-corner-right',
+      'defense-line-left',
+      'defense-line-middle',
+      'defense-line-right',
+      'defense-linebacker',
+      'defense-safety',
+      'offense-center',
+      'offense-line-left',
+      'offense-line-right',
+      'offense-qb',
+      'offense-rb',
+      'offense-wr-left',
+      'offense-wr-right',
+    ]),
+    status: 'loaded',
+  });
+  expect(await getPlayerBodyVisualSnapshots(page)).toHaveLength(14);
+  await expect.poll(() => getCameraFramingSnapshot(page)).toMatchObject({
+    unframedPlayerIds: [],
+  });
+
+  await page.keyboard.press('1');
+  await expect.poll(() => getFormationPreviewSnapshot(page)).toMatchObject({
+    snapLane: 'leftHash',
+    issues: [],
+  });
+  await page.keyboard.press('2');
+  await expect.poll(() => getFormationPreviewSnapshot(page)).toMatchObject({
+    snapLane: 'middle',
+    issues: [],
+  });
+  await page.keyboard.press('3');
+  await expect.poll(() => getFormationPreviewSnapshot(page)).toMatchObject({
+    snapLane: 'rightHash',
+    issues: [],
+  });
+
+  const beforeSpace = await getFormationPreviewSnapshot(page);
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(100);
+  const afterSpace = await getFormationPreviewSnapshot(page);
+  expect(afterSpace.snapLane).toBe(beforeSpace.snapLane);
+  expect(afterSpace.players.every((player) => player.currentState === 'idle')).toBe(true);
+  expect((await getGameplaySnapshot(page)).playState).toBe('preSnap');
+
+  await expect(page.locator('.debug-overlay')).toContainText('FRAME_MS');
+  await expect(page.locator('.debug-overlay')).toContainText('PLAYERS 14');
+  const metrics = await getRenderMetrics(page);
+  expect(metrics.playerCount).toBe(14);
+  expect(metrics.calls).toBeGreaterThan(0);
+  expect(metrics.calls).toBeLessThan(260);
+  expect(metrics.frameTimeMs).toBeGreaterThan(0);
+  expect(metrics.triangles).toBeGreaterThan(0);
+  expect(metrics.sceneMeshCount).toBeGreaterThanOrEqual(metrics.playerBodyMeshCount);
+  expect(metrics.sceneMaterialCount).toBeGreaterThan(0);
+
+  await page.keyboard.press('c');
+  await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
+    mode: 'offensePerspective',
+    state: 'preSnapFormation',
+  });
+  await expect.poll(() => getCameraFramingSnapshot(page)).toMatchObject({
+    unframedPlayerIds: [],
+  });
   await expectNonBlankCanvas(page);
 
   expect(consoleErrors).toEqual([]);
@@ -1159,5 +1293,65 @@ async function getPlayerPoseSnapshots(page: Page): Promise<PlayerPoseSnapshot[]>
     }
 
     return debugApi.getPlayerPoseSnapshots();
+  });
+}
+
+async function getFormationPreviewSnapshot(page: Page): Promise<FormationPreviewSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getFormationPreviewSnapshot: () => FormationPreviewSnapshot | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    const snapshot = debugApi.getFormationPreviewSnapshot();
+
+    if (!snapshot) {
+      throw new Error('Missing formation preview snapshot');
+    }
+
+    return snapshot;
+  });
+}
+
+async function getRenderMetrics(page: Page): Promise<RenderMetricsSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getRenderMetrics: () => RenderMetricsSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getRenderMetrics();
+  });
+}
+
+async function getCameraFramingSnapshot(page: Page): Promise<CameraFramingSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getCameraFramingSnapshot: () => CameraFramingSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getCameraFramingSnapshot();
   });
 }
