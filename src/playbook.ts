@@ -623,6 +623,23 @@ export function getDefaultPlayId(playbookId: PlaybookId = '11v11'): PlayId {
   return playbookId === '7v7' ? DEFAULT_SEVEN_ON_SEVEN_PLAY_ID : DEFAULT_PLAY_ID;
 }
 
+export function createElevenOnElevenPlayForPreferredSide(
+  play: PlayDefinition,
+  preferredSide: PreferredFormationSide,
+): PlayDefinition {
+  if (play.playbookId !== '11v11') {
+    return play;
+  }
+
+  return {
+    ...play,
+    formation: play.id === 'spread-quick-11'
+      ? createElevenOnElevenPassFormation(preferredSide)
+      : createElevenOnElevenRunFormation(preferredSide),
+    preferredSide,
+  };
+}
+
 export function getPlay(playId: string): PlayDefinition {
   const play = ALL_PLAYS.find((candidate) => candidate.id === playId);
 
@@ -905,8 +922,10 @@ function elevenOnElevenValidation(): PlayDefinition['validation'] {
   };
 }
 
-function createElevenOnElevenRunFormation(): FormationSlot[] {
-  const baseFormation = createElevenOnElevenPreviewFormation(PLAY_SIDE);
+function createElevenOnElevenRunFormation(
+  preferredSide: PreferredFormationSide = PLAY_SIDE,
+): FormationSlot[] {
+  const baseFormation = createElevenOnElevenPreviewFormation(preferredSide);
   const runBlockerIds = new Set<string>([
     ...ELEVEN_ON_ELEVEN_ELIGIBLE_RECEIVER_IDS,
     'offense-center',
@@ -937,8 +956,10 @@ function createElevenOnElevenRunFormation(): FormationSlot[] {
   });
 }
 
-function createElevenOnElevenPassFormation(): FormationSlot[] {
-  const baseFormation = createElevenOnElevenPreviewFormation(PLAY_SIDE);
+function createElevenOnElevenPassFormation(
+  preferredSide: PreferredFormationSide = PLAY_SIDE,
+): FormationSlot[] {
+  const baseFormation = createElevenOnElevenPreviewFormation(preferredSide);
   const passProtectorIds = new Set<string>([
     'offense-center',
     'offense-line-left',

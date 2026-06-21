@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.45.1] - 2026-06-21
+
+### Added
+
+- Added `src/elevenOnElevenAudit.ts` with a deterministic 11v11 hardening matrix covering both plays, three snap lanes, normal/mirrored formation side, tactical/offense/cinematic camera modes, off/brief cinematics, disabled/low crowd modes, enabled/disabled audio, and 30/60/120 Hz simulation rates.
+- Added `?elevenAudit=1` overlay/readback plus browser reset-cycle tooling for 22-player roster counts, line/backfield legality, eligibility, assignments, route errors, overlaps, stale references, camera containment, draw calls, triangles, geometry/material counts, player and helmet visual counts, active audio nodes, presentation holds, camera shots, and crowd reaction state.
+- Added unit and browser smoke coverage for 11v11 formation legality, mirrored-side validation, pre-snap stability, run-blocking assignment ownership, pass protection, coverage, route order, update-rate consistency, catch/incompletion/sack/tackle/out-of-bounds/first-down/touchdown/turnover results, 100 reset cycles, and 7v7 baseline comparison.
+
+### Fixed
+
+- Corrected the 11v11 hardening audit so Spread Quick 11's strong-safety slot coverage is not incorrectly judged by the static-preview strong-safety midpoint rule.
+- Hardened the run-congestion validation to detect persistent trapping while allowing transient tackle-contact overlap at an authoritative result point.
+
 ## [0.45.0] - 2026-06-21
 
 ### Added

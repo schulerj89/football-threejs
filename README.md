@@ -139,6 +139,8 @@ Add `?presentationAudit=1` to show the development-only presentation audit for 7
 
 Add `?sevenAudit=1` with the explicit 7v7 regression playbook to show the seven-on-seven hardening audit. It reports active play, snap lane, roster count, assignments, route corridor errors, stale engagements, overlap warnings, active presentation event, draw calls, triangles, geometry count, material count, player visual count, and active audio nodes.
 
+Add `?elevenAudit=1` to show the eleven-on-eleven hardening audit. It reports roster counts, line/backfield legality, eligibility, assignments, route corridor errors, overlaps, out-of-bounds players, stale references, current result/event, camera containment, draw calls, triangles, geometry count, material count, player and helmet visual counts, active audio nodes, presentation holds, camera shots, crowd reaction state, and frame time.
+
 Add `?routeAudit=1` to show the development-only route audit overlay for receiver routes. It reports route ID, receiver ID, active segment, distance completed, total route distance, completion percentage, nearest projected route point, and cross-track error in yards.
 
 Add `?passAudit=1` to show the development-only pass audit overlay for route-aware passing. It reports selected receiver, release position, predicted target position, predicted receiver position, predicted route distance, predicted flight time, actual closest approach, horizontal miss distance, ball height at closest approach, and the catch or incompletion reason.

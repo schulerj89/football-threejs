@@ -569,6 +569,45 @@ interface SevenAuditSnapshot {
   staleEngagements: string[];
 }
 
+interface ElevenAuditSnapshot {
+  activePlay: string;
+  activePresentationEvent: string | null;
+  cameraContainment: {
+    framedPlayerIds: string[];
+    unframedPlayerIds: string[];
+  };
+  formationLegality: {
+    backfieldCount: number;
+    defenseCount: number;
+    eligiblePlayerIds: string[];
+    formationIssueCount: number;
+    formationIssues: string[];
+    lineCount: number;
+    offenseCount: number;
+  };
+  outOfBoundsWarnings: string[];
+  playerOverlapWarnings: string[];
+  resourceCounts: {
+    activeAudioNodes: number;
+    activeCameraShot: string | null;
+    activePresentationHold: boolean;
+    crowdReaction: string | null;
+    drawCalls: number;
+    geometries: number;
+    helmetInstanceCount: number;
+    materialCount: number;
+    playerModelCount: number;
+    playerVisualCount: number;
+    presentationHistoryCount: number;
+    textures: number;
+    triangles: number;
+  };
+  rosterCount: number;
+  routeErrors: Array<{ exceedsTolerance: boolean; receiverId: string }>;
+  snapLane: string;
+  staleReferences: string[];
+}
+
 interface SevenAuditResetCycleResult {
   after: SevenAuditResetCycleResourceSnapshot;
   before: SevenAuditResetCycleResourceSnapshot;
@@ -582,6 +621,19 @@ interface SevenAuditResetCycleResourceSnapshot {
   materialCount: number;
   presentationHistoryCount: number;
   visualRootCount: number;
+}
+
+interface ElevenAuditResetCycleResult {
+  after: ElevenAuditResetCycleResourceSnapshot;
+  before: ElevenAuditResetCycleResourceSnapshot;
+  cycles: number;
+}
+
+interface ElevenAuditResetCycleResourceSnapshot extends SevenAuditResetCycleResourceSnapshot {
+  activeCameraShot: string | null;
+  activePresentationHold: boolean;
+  crowdReaction: string | null;
+  helmetInstanceCount: number;
 }
 
 interface PresentationHardeningAuditSnapshot {
@@ -1049,6 +1101,68 @@ test('runs seven-on-seven audit and reset-cycle resource stability checks', asyn
   const afterAudit = await getSevenAuditSnapshot(page);
   expect(afterAudit.staleEngagements).toEqual([]);
   expect(afterAudit.playerOverlapWarnings).toEqual([]);
+});
+
+test('runs eleven-on-eleven audit matrix and reset-cycle resource stability checks', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1&experience=performance&playbook=7v7&sevenAudit=1&audio=0&crowdVisuals=0&cinematics=off');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  const sevenBaseline = await getSevenAuditSnapshot(page);
+  expect(sevenBaseline.rosterCount).toBe(14);
+
+  await page.goto('/?debug=1&readback=1&experience=performance&elevenAudit=1&audio=0&crowdVisuals=0&cinematics=off&camera=tactical');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.eleven-audit-overlay')).toContainText('ELEVEN AUDIT');
+  await expect(page.locator('.eleven-audit-overlay')).toContainText('ROSTER 22');
+  await expect(page.locator('.eleven-audit-overlay')).toContainText('WARNINGS none');
+  await expect.poll(() => getHelmetAssetSnapshot(page), { timeout: 5000 }).toMatchObject({
+    status: 'loaded',
+  });
+
+  const noCrowdAudit = await getElevenAuditSnapshot(page);
+  expect(noCrowdAudit).toMatchObject({
+    activePlay: 'Inside Zone 11',
+    formationLegality: {
+      backfieldCount: 4,
+      defenseCount: 11,
+      formationIssueCount: 0,
+      lineCount: 7,
+      offenseCount: 11,
+    },
+    outOfBoundsWarnings: [],
+    rosterCount: 22,
+    snapLane: 'middle',
+    staleReferences: [],
+  });
+  expect(noCrowdAudit.formationLegality.eligiblePlayerIds).toHaveLength(5);
+  expect(noCrowdAudit.cameraContainment.unframedPlayerIds).toEqual([]);
+  expect(noCrowdAudit.resourceCounts.playerModelCount).toBe(22);
+  expect(noCrowdAudit.resourceCounts.playerVisualCount).toBe(22);
+  expect(noCrowdAudit.resourceCounts.helmetInstanceCount).toBe(22);
+  expect(noCrowdAudit.resourceCounts.drawCalls).toBeGreaterThan(sevenBaseline.resourceCounts.drawCalls);
+  expect(noCrowdAudit.resourceCounts.triangles).toBeGreaterThan(sevenBaseline.resourceCounts.triangles);
+
+  const resetCycles = await runElevenAuditResetCycles(page, 100);
+  expect(resetCycles.cycles).toBe(100);
+  expect(resetCycles.after.activePlayerRootCount).toBe(22);
+  expect(resetCycles.after.visualRootCount).toBe(22);
+  expect(resetCycles.after.helmetInstanceCount).toBe(22);
+  expect(resetCycles.after.geometryCount).toBeLessThanOrEqual(resetCycles.before.geometryCount);
+  expect(resetCycles.after.materialCount).toBe(resetCycles.before.materialCount);
+  expect(resetCycles.after.activeAudioNodes).toBeLessThanOrEqual(resetCycles.before.activeAudioNodes);
+  expect(resetCycles.after.activeCameraShot).toBeNull();
+  expect(resetCycles.after.activePresentationHold).toBe(false);
+  expect(resetCycles.after.crowdReaction === null || resetCycles.after.crowdReaction === 'idle').toBe(true);
+
+  await page.goto('/?debug=1&readback=1&experience=performance&elevenAudit=1&crowdVisuals=1&crowdDensity=low&crowdReactions=1&audio=1&cinematics=brief&camera=cinematic');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.eleven-audit-overlay')).toContainText('ELEVEN AUDIT');
+  const crowdAudit = await getElevenAuditSnapshot(page);
+  expect(crowdAudit.rosterCount).toBe(22);
+  expect(crowdAudit.resourceCounts.playerVisualCount).toBe(22);
+  expect(crowdAudit.resourceCounts.crowdReaction).toBe('idle');
+  expect(crowdAudit.resourceCounts.drawCalls).toBeGreaterThan(0);
+  expect(crowdAudit.resourceCounts.triangles).toBeGreaterThan(noCrowdAudit.resourceCounts.triangles);
+  await expectNonBlankCanvas(page);
 });
 
 test('supports the box player body comparison URL option', async ({ page }) => {
@@ -3197,6 +3311,30 @@ async function getSevenAuditSnapshot(page: Page): Promise<SevenAuditSnapshot> {
   });
 }
 
+async function getElevenAuditSnapshot(page: Page): Promise<ElevenAuditSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getElevenAuditSnapshot: () => ElevenAuditSnapshot | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    const snapshot = debugApi.getElevenAuditSnapshot();
+
+    if (!snapshot) {
+      throw new Error('Missing eleven audit snapshot');
+    }
+
+    return snapshot;
+  });
+}
+
 async function runSevenAuditResetCycles(
   page: Page,
   cycles: number,
@@ -3218,6 +3356,33 @@ async function runSevenAuditResetCycles(
 
     if (!result) {
       throw new Error('Missing seven audit reset-cycle result');
+    }
+
+    return result;
+  }, cycles);
+}
+
+async function runElevenAuditResetCycles(
+  page: Page,
+  cycles: number,
+): Promise<ElevenAuditResetCycleResult> {
+  return page.evaluate((cycleCount) => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          runElevenAuditResetCycles: (cycles?: number) => ElevenAuditResetCycleResult | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    const result = debugApi.runElevenAuditResetCycles(cycleCount);
+
+    if (!result) {
+      throw new Error('Missing eleven audit reset-cycle result');
     }
 
     return result;

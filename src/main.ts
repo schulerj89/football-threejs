@@ -58,6 +58,12 @@ import {
   type CrowdPresentationSnapshot,
 } from './presentation/CrowdPresentationController';
 import {
+  createElevenAuditOverlay,
+  createElevenAuditSnapshot,
+  syncElevenAuditOverlay,
+  type ElevenAuditSnapshot,
+} from './elevenOnElevenAudit';
+import {
   PLAYABLE_FIELD_BOUNDS,
   WORLD_SCALE,
   createFootballField,
@@ -177,6 +183,7 @@ declare global {
       getGamePresentationRuntimeSnapshot: () => GamePresentationRuntimeSnapshot;
       getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
       getPassAuditSnapshot: () => PassAuditSnapshot | null;
+      getElevenAuditSnapshot: () => ElevenAuditSnapshot | null;
       getPresentationHardeningAuditSnapshot: () => PresentationHardeningAuditSnapshot | null;
       getPresentationHoldSnapshot: () => PresentationHoldSnapshot;
       getPresentationAuditSnapshot: () => PresentationAuditSnapshot | null;
@@ -187,6 +194,7 @@ declare global {
       getRenderMetrics: () => RenderMetricsSnapshot;
       getRouteArtSnapshot: () => RouteArtRendererSnapshot;
       playAudioTestOneShot: () => Promise<boolean>;
+      runElevenAuditResetCycles: (cycles?: number) => ElevenAuditResetCycleResult | null;
       runSevenAuditResetCycles: (cycles?: number) => SevenAuditResetCycleResult | null;
       setCrowdPreviewCameraView: (view: CrowdPreviewCameraView) => void;
       setAnnouncerEnabled: (enabled: boolean) => void;
@@ -212,6 +220,19 @@ interface SevenAuditResetCycleResourceSnapshot {
 interface SevenAuditResetCycleResult {
   after: SevenAuditResetCycleResourceSnapshot;
   before: SevenAuditResetCycleResourceSnapshot;
+  cycles: number;
+}
+
+interface ElevenAuditResetCycleResourceSnapshot extends SevenAuditResetCycleResourceSnapshot {
+  activeCameraShot: string | null;
+  activePresentationHold: boolean;
+  crowdReaction: string | null;
+  helmetInstanceCount: number;
+}
+
+interface ElevenAuditResetCycleResult {
+  after: ElevenAuditResetCycleResourceSnapshot;
+  before: ElevenAuditResetCycleResourceSnapshot;
   cycles: number;
 }
 
@@ -250,6 +271,7 @@ const routeAuditEnabled = searchParams.has('routeAudit');
 let routeArtEnabled = effectiveExperienceSettings.routeArtEnabled;
 const passAuditEnabled = searchParams.has('passAudit');
 const sevenAuditEnabled = searchParams.has('sevenAudit');
+const elevenAuditEnabled = searchParams.has('elevenAudit');
 const appearanceAuditEnabled = searchParams.has('appearanceAudit');
 let audioFeatureFlags = gameExperience.audioFeatureFlags;
 const commentaryDebugEnabled = searchParams.has('commentaryDebug');
@@ -382,6 +404,7 @@ const presentationAuditOverlay = presentationAuditEnabled
 const routeAuditOverlay = routeAuditEnabled ? createRouteAuditOverlay() : null;
 const passAuditOverlay = passAuditEnabled ? createPassAuditOverlay() : null;
 const sevenAuditOverlay = sevenAuditEnabled ? createSevenAuditOverlay() : null;
+const elevenAuditOverlay = elevenAuditEnabled ? createElevenAuditOverlay() : null;
 const appearanceAuditOverlay = appearanceAuditEnabled ? createAppearanceAuditOverlay() : null;
 const audioDebugOverlay = audioFeatureFlags.audioDebug || commentaryDebugEnabled
   ? createAudioDebugOverlay()
@@ -440,6 +463,7 @@ if (
   presentationAuditEnabled ||
   appearanceAuditEnabled ||
   sevenAuditEnabled ||
+  elevenAuditEnabled ||
   audioFeatureFlags.audioDebug ||
   commentaryDebugEnabled ||
   crowdPresentationDebugEnabled ||
@@ -473,6 +497,7 @@ if (
     getGamePresentationRuntimeSnapshot: () => gamePresentationRuntime.getSnapshot(),
     getHelmetAssetSnapshot,
     getPassAuditSnapshot: () => getActivePresentationSnapshot().passAudit,
+    getElevenAuditSnapshot: () => getElevenAuditSnapshot(),
     getPresentationHardeningAuditSnapshot: () => getPresentationHardeningAuditSnapshot(),
     getPresentationHoldSnapshot: () => presentationHoldDirector.getSnapshot(),
     getPresentationAuditSnapshot: () => getPresentationAuditSnapshot(),
@@ -484,6 +509,7 @@ if (
     getRenderMetrics: () => latestRenderMetrics ?? createRenderMetricsSnapshot(0),
     getRouteArtSnapshot: () => routeArtRenderer.getSnapshot(),
     playAudioTestOneShot: () => gameAudioDirector.playTestOneShot(),
+    runElevenAuditResetCycles: (cycles = 100) => runElevenAuditResetCycles(cycles),
     runSevenAuditResetCycles: (cycles = 100) => runSevenAuditResetCycles(cycles),
     setCrowdPreviewCameraView: (view: CrowdPreviewCameraView) => {
       crowdPreviewController?.setCameraView(view);
@@ -665,6 +691,12 @@ function renderFrame(delta: number): void {
     const snapshot = getSevenAuditSnapshot();
     if (snapshot) {
       syncSevenAuditOverlay(sevenAuditOverlay, snapshot);
+    }
+  }
+  if (elevenAuditOverlay) {
+    const snapshot = getElevenAuditSnapshot();
+    if (snapshot) {
+      syncElevenAuditOverlay(elevenAuditOverlay, snapshot);
     }
   }
   if (appearanceAuditOverlay) {
@@ -1258,9 +1290,34 @@ function shouldCollectPresentationDiagnostics(): boolean {
     !!routeAuditOverlay ||
     !!passAuditOverlay ||
     !!sevenAuditOverlay ||
+    !!elevenAuditOverlay ||
     !!appearanceAuditOverlay ||
     !!crowdPresentationOverlay ||
     !!presentationHardeningAuditOverlay;
+}
+
+function getElevenAuditSnapshot(): ElevenAuditSnapshot | null {
+  if (!elevenAuditEnabled) {
+    return null;
+  }
+
+  const renderMetrics = latestRenderMetrics ?? createRenderMetricsSnapshot(0);
+  const presentationSnapshot = gamePresentationRuntime.getSnapshot();
+  const crowdSnapshot = crowdPresentationController?.getSnapshot() ?? null;
+
+  return createElevenAuditSnapshot({
+    activeAudioNodes: getRuntimeAudioSnapshot().activeAudioNodeCount,
+    cameraContainment: getCameraFramingSnapshot(),
+    crowdReaction: crowdSnapshot?.reactionState ?? null,
+    gameplay: getActivePresentationSnapshot(),
+    helmetInstanceCount: getHelmetAssetSnapshot().attachedPlayerIds.length,
+    materialCount: renderMetrics.sceneMaterialCount,
+    play: gameplayModel.selectedPlay,
+    playerVisualCount: playerVisuals.size,
+    presentation: presentationSnapshot,
+    presentationHold: presentationHoldDirector.getSnapshot(),
+    renderMetrics,
+  });
 }
 
 function getSevenAuditSnapshot(): SevenAuditSnapshot | null {
@@ -1279,6 +1336,35 @@ function getSevenAuditSnapshot(): SevenAuditSnapshot | null {
     presentation: gamePresentationRuntime.getSnapshot(),
     renderMetrics,
   });
+}
+
+function runElevenAuditResetCycles(cycles: number): ElevenAuditResetCycleResult | null {
+  if (crowdPreviewController || formationPreviewModel || gameplayModel.playbookId !== '11v11') {
+    return null;
+  }
+
+  const cycleCount = Math.max(0, Math.min(500, Math.floor(cycles)));
+  const before = createElevenAuditResetCycleResourceSnapshot();
+
+  for (let cycle = 0; cycle < cycleCount; cycle += 1) {
+    if (gameplayModel.playState !== 'preSnap') {
+      resetPlay(gameplayModel);
+    }
+
+    startPlay(gameplayModel);
+    resetPlay(gameplayModel);
+    reconcilePlayerVisuals();
+    syncBallVisual(ballVisual, gameplayModel.ball);
+    routeArtRenderer.update(snapshotGameplayModel(gameplayModel), gameplayModel.selectedPlay);
+    presentationHoldDirector.skip();
+    gamePresentationRuntime.skipPresentation();
+  }
+
+  return {
+    after: createElevenAuditResetCycleResourceSnapshot(),
+    before,
+    cycles: cycleCount,
+  };
 }
 
 function runSevenAuditResetCycles(cycles: number): SevenAuditResetCycleResult | null {
@@ -1306,6 +1392,26 @@ function runSevenAuditResetCycles(cycles: number): SevenAuditResetCycleResult | 
     after: createSevenAuditResetCycleResourceSnapshot(),
     before,
     cycles: cycleCount,
+  };
+}
+
+function createElevenAuditResetCycleResourceSnapshot(): ElevenAuditResetCycleResourceSnapshot {
+  const metrics = createRenderMetricsSnapshot(0);
+  const audio = getRuntimeAudioSnapshot();
+  const hold = presentationHoldDirector.getSnapshot();
+  const crowd = crowdPresentationController?.getSnapshot() ?? null;
+
+  return {
+    activeAudioNodes: audio.activeAudioNodeCount,
+    activeCameraShot: cameraController.getDebugSnapshot().activeShotName ?? null,
+    activePlayerRootCount: getActivePlayers().length,
+    activePresentationHold: hold.active,
+    crowdReaction: crowd?.reactionState ?? null,
+    geometryCount: metrics.geometries,
+    helmetInstanceCount: getHelmetAssetSnapshot().attachedPlayerIds.length,
+    materialCount: metrics.sceneMaterialCount,
+    presentationHistoryCount: gamePresentationRuntime.getSnapshot().history.length,
+    visualRootCount: playerVisuals.size,
   };
 }
 

@@ -533,7 +533,8 @@ canvas {
   bottom: 12px;
 }
 
-.seven-audit-overlay {
+.seven-audit-overlay,
+.eleven-audit-overlay {
   position: fixed;
   right: 12px;
   top: 212px;
@@ -553,7 +554,8 @@ canvas {
   white-space: pre-wrap;
 }
 
-.seven-audit-row.invalid {
+.seven-audit-row.invalid,
+.eleven-audit-row.invalid {
   color: #ff6b6b;
 }
 
