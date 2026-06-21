@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 
 interface PlayerSnapshot {
   collisionRadius: number;
@@ -194,7 +194,46 @@ interface RenderMetricsSnapshot {
 
 interface CameraFramingSnapshot {
   framedPlayerIds: string[];
+  marginNdc?: number;
+  players?: Array<{
+    ndcBounds: {
+      max: { x: number; y: number; z: number };
+      min: { x: number; y: number; z: number };
+    };
+    playerId: string;
+    withinMargin: boolean;
+  }>;
   unframedPlayerIds: string[];
+}
+
+interface PresentationAuditSnapshot {
+  allFeetGrounded: boolean;
+  allHelmetsAttached: boolean;
+  allPlayersInsideFramingMargin: boolean;
+  cameraMode: 'cinematicBroadcast' | 'offensePerspective' | 'tacticalOrthographic';
+  cameraState: CameraSnapshot['state'];
+  enabled: true;
+  formationIssueCount: number;
+  framingMarginNdc: number;
+  issues: string[];
+  playerMotionEnabled: boolean;
+  players: Array<{
+    body: PlayerBodyVisualSnapshot;
+    feetOnOrAboveField: boolean;
+    helmetAttached: boolean;
+    helmetParentName: string | null;
+    helmetShoulderGapStable: boolean;
+    playerId: string;
+    restingLimbSymmetryError: number;
+    rootMatchesGameplay: boolean;
+    significantGeometryBelowField: boolean;
+    withinFramingMargin: boolean;
+  }>;
+  presentationPhase: CameraSnapshot['presentationPhase'] | null;
+  renderMetrics: RenderMetricsSnapshot | null;
+  snapLane: 'leftHash' | 'middle' | 'rightHash';
+  stableHelmetGaps: boolean;
+  state: 'locomotionPreview' | 'preSnap';
 }
 
 test('starts the Three.js graybox field scene', async ({ page }) => {
@@ -495,6 +534,113 @@ test('stages a static 7v7 formation preview across snap lanes and camera modes',
 
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test('runs 7v7 presentation audit scenarios with screenshots', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?readback=1&formationPreview=7v7&presentationAudit=1&camera=tactical');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect.poll(() => getHelmetAssetSnapshot(page), { timeout: 5000 }).toMatchObject({
+    assetId: 'low_poly_helmet',
+    attachedPlayerIds: expect.arrayContaining([
+      'defense-corner-left',
+      'defense-corner-right',
+      'defense-line-left',
+      'defense-line-middle',
+      'defense-line-right',
+      'defense-linebacker',
+      'defense-safety',
+      'offense-center',
+      'offense-line-left',
+      'offense-line-right',
+      'offense-qb',
+      'offense-rb',
+      'offense-wr-left',
+      'offense-wr-right',
+    ]),
+    status: 'loaded',
+  });
+  await page.keyboard.press('2');
+
+  await assertCleanPresentationAudit(page, {
+    cameraMode: 'tacticalOrthographic',
+    screenshotName: 'presentation-audit-middle-tactical-motionOn.png',
+    snapLane: 'middle',
+    state: 'preSnap',
+    testInfo,
+  });
+
+  await page.keyboard.press('c');
+  await assertCleanPresentationAudit(page, {
+    cameraMode: 'offensePerspective',
+    screenshotName: 'presentation-audit-middle-offense-motionOn.png',
+    snapLane: 'middle',
+    state: 'preSnap',
+    testInfo,
+  });
+
+  await page.keyboard.press('c');
+  await assertCleanPresentationAudit(page, {
+    cameraMode: 'cinematicBroadcast',
+    presentationPhase: 'preSnapEstablish',
+    screenshotName: 'presentation-audit-middle-cinematic-motionOn.png',
+    snapLane: 'middle',
+    state: 'preSnap',
+    testInfo,
+  });
+
+  await page.keyboard.press('1');
+  await assertCleanPresentationAudit(page, {
+    cameraMode: 'cinematicBroadcast',
+    presentationPhase: 'preSnapEstablish',
+    screenshotName: 'presentation-audit-leftHash-cinematic-motionOn.png',
+    snapLane: 'leftHash',
+    state: 'preSnap',
+    testInfo,
+  });
+
+  await page.keyboard.press('3');
+  await assertCleanPresentationAudit(page, {
+    cameraMode: 'cinematicBroadcast',
+    presentationPhase: 'preSnapEstablish',
+    screenshotName: 'presentation-audit-rightHash-cinematic-motionOn.png',
+    snapLane: 'rightHash',
+    state: 'preSnap',
+    testInfo,
+  });
+
+  await page.keyboard.press('2');
+  await page.keyboard.press('l');
+  await expect.poll(() => getPresentationAuditSnapshot(page)).toMatchObject({
+    playerMotionEnabled: true,
+    state: 'locomotionPreview',
+  });
+  await expect.poll(async () => {
+    const poses = await getPlayerPoseSnapshots(page);
+    return poses.length === 14 && poses.every((pose) => pose.intent === 'locomotion');
+  }).toBe(true);
+  await assertCleanPresentationAudit(page, {
+    cameraMode: 'cinematicBroadcast',
+    screenshotName: 'presentation-audit-middle-cinematic-locomotion-motionOn.png',
+    snapLane: 'middle',
+    state: 'locomotionPreview',
+    testInfo,
+  });
+
+  await page.goto('/?readback=1&formationPreview=7v7&presentationAudit=1&presentationState=locomotion&playerMotion=0&camera=cinematic');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect.poll(async () => {
+    const poses = await getPlayerPoseSnapshots(page);
+    return poses.length === 14 && poses.every((pose) => pose.intent === 'neutral');
+  }).toBe(true);
+  await assertCleanPresentationAudit(page, {
+    cameraMode: 'cinematicBroadcast',
+    playerMotionEnabled: false,
+    screenshotName: 'presentation-audit-middle-cinematic-locomotion-motionOff.png',
+    snapLane: 'middle',
+    state: 'locomotionPreview',
+    testInfo,
+  });
 });
 
 test('renders graphical play cards and selects plays through the shared request path', async ({ page }) => {
@@ -975,25 +1121,9 @@ test('scores touchdown by avoiding the defender and auto-resets', async ({ page 
   await page.keyboard.down('d');
   await page.waitForTimeout(850);
   await page.keyboard.up('d');
-  await expect.poll(async () => (await getGameplaySnapshot(page)).playState, {
-    timeout: 9000,
-  }).toBe('dead');
-  await expect.poll(async () => {
-    const snapshot = await getGameplaySnapshot(page);
-    const touchdownMessageVisible = await page.locator('.touchdown-message').evaluate((element) => !element.hasAttribute('hidden'));
-
-    return (
-      snapshot.playState === 'dead' &&
-      snapshot.lastPlayResult?.type === 'touchdown' &&
-      snapshot.score === 6 &&
-      touchdownMessageVisible
-    );
-  }, {
-    timeout: 1000,
-  }).toBe(true);
+  const touchdown = await waitForVisibleTouchdownResult(page, 9000);
   await page.keyboard.up('w');
 
-  const touchdown = await getGameplaySnapshot(page);
   expect(touchdown.lastPlayResult?.type).toBe('touchdown');
   expect(touchdown.lastPlayResult?.scoringTeam).toBe('offense');
   expect(touchdown.drive.state).toBe('over');
@@ -1153,6 +1283,90 @@ test('failed fourth down shows turnover and starts a new drill', async ({ page }
   await expect(page.locator('.turnover-message')).toBeHidden();
   await expect(page.locator('.drive-status')).toHaveText('1st & 10 | Ball -15');
 });
+
+async function assertCleanPresentationAudit(
+  page: Page,
+  options: {
+    cameraMode: PresentationAuditSnapshot['cameraMode'];
+    playerMotionEnabled?: boolean;
+    presentationPhase?: PresentationAuditSnapshot['presentationPhase'];
+    screenshotName: string;
+    snapLane: PresentationAuditSnapshot['snapLane'];
+    state: PresentationAuditSnapshot['state'];
+    testInfo: TestInfo;
+  },
+): Promise<void> {
+  await expect.poll(async () => {
+    const audit = await getPresentationAuditSnapshot(page);
+
+    return (
+      audit.cameraMode === options.cameraMode &&
+      audit.snapLane === options.snapLane &&
+      audit.state === options.state &&
+      audit.players.length === 14 &&
+      audit.formationIssueCount === 0 &&
+      audit.allFeetGrounded &&
+      audit.allHelmetsAttached &&
+      audit.stableHelmetGaps &&
+      (options.state !== 'preSnap' || audit.allPlayersInsideFramingMargin) &&
+      audit.issues.length === 0 &&
+      (options.playerMotionEnabled === undefined ||
+        audit.playerMotionEnabled === options.playerMotionEnabled) &&
+      (options.presentationPhase === undefined ||
+        audit.presentationPhase === options.presentationPhase)
+    );
+  }, {
+    timeout: 2500,
+  }).toBe(true);
+
+  const audit = await getPresentationAuditSnapshot(page);
+  expect(audit.renderMetrics).toMatchObject({
+    playerCount: 14,
+  });
+  expect(audit.renderMetrics?.calls).toBeGreaterThan(0);
+  expect(audit.renderMetrics?.triangles).toBeGreaterThan(0);
+  expect(audit.players.every((player) => player.rootMatchesGameplay)).toBe(true);
+  if (options.state === 'preSnap') {
+    expect(audit.players.every((player) => player.withinFramingMargin)).toBe(true);
+  }
+  expect(audit.players.every((player) => !player.significantGeometryBelowField)).toBe(true);
+  await expect(page.locator('.presentation-audit-overlay')).toContainText('PRESENTATION AUDIT');
+  await expectNonBlankCanvas(page);
+  await page.screenshot({ path: options.testInfo.outputPath(options.screenshotName), fullPage: true });
+}
+
+async function waitForVisibleTouchdownResult(
+  page: Page,
+  timeoutMs = 3000,
+): Promise<GameplaySnapshot> {
+  const deadline = Date.now() + timeoutMs;
+  let lastSnapshot: GameplaySnapshot | null = null;
+
+  while (Date.now() < deadline) {
+    const snapshot = await getGameplaySnapshot(page);
+    lastSnapshot = snapshot;
+    const touchdownMessageVisible = await page
+      .locator('.touchdown-message')
+      .evaluate((element) => !element.hasAttribute('hidden'));
+
+    if (
+      snapshot.playState === 'dead' &&
+      snapshot.lastPlayResult?.type === 'touchdown' &&
+      snapshot.score === 6 &&
+      touchdownMessageVisible
+    ) {
+      return snapshot;
+    }
+
+    await page.waitForTimeout(50);
+  }
+
+  throw new Error(
+    `Timed out waiting for visible touchdown result; last snapshot ${JSON.stringify(
+      lastSnapshot?.lastPlayResult ?? null,
+    )}`,
+  );
+}
 
 async function expectNonBlankCanvas(page: Page): Promise<void> {
   let renderState = await readCanvasState(page);
@@ -1393,6 +1607,30 @@ async function getFormationPreviewSnapshot(page: Page): Promise<FormationPreview
 
     if (!snapshot) {
       throw new Error('Missing formation preview snapshot');
+    }
+
+    return snapshot;
+  });
+}
+
+async function getPresentationAuditSnapshot(page: Page): Promise<PresentationAuditSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getPresentationAuditSnapshot: () => PresentationAuditSnapshot | null;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    const snapshot = debugApi.getPresentationAuditSnapshot();
+
+    if (!snapshot) {
+      throw new Error('Missing presentation audit snapshot');
     }
 
     return snapshot;

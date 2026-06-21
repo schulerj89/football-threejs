@@ -3,8 +3,10 @@ import { PLAYABLE_FIELD_BOUNDS } from '../field';
 import type { GameplaySnapshot } from '../playState';
 import type { PlayerSnapshot, Vector2 } from '../playerModel';
 import {
+  PRESENTATION_CAMERA_CONFIG,
   PresentationCameraDirector,
   type FieldPlaneBounds,
+  type PresentationCameraDebugSnapshot,
   type PresentationCameraPhase,
 } from './PresentationCameraDirector';
 
@@ -36,6 +38,7 @@ export interface GameplayCameraDebugSnapshot {
 
 interface GameplayCameraControllerOptions {
   height: number;
+  holdCinematicPreSnapEstablish?: boolean;
   initialMode?: GameplayCameraMode;
   width: number;
 }
@@ -93,11 +96,11 @@ export class GameplayCameraController {
     500,
   );
   private readonly playDirection = normalizeDirection(GAMEPLAY_CAMERA_CONFIG.playDirection);
-  private readonly presentationDirector = new PresentationCameraDirector();
+  private readonly presentationDirector: PresentationCameraDirector;
   private readonly smoothedFocus = new THREE.Vector3();
   private readonly smoothedTarget = new THREE.Vector3();
   private cameraState: GameplayCameraState = 'tacticalOverview';
-  private cinematicDebug = this.presentationDirector.getDebugSnapshot();
+  private cinematicDebug: PresentationCameraDebugSnapshot;
   private height: number;
   private isPerspectiveInitialized = false;
   private mode: GameplayCameraMode;
@@ -105,7 +108,18 @@ export class GameplayCameraController {
   private previousPlayState: GameplaySnapshot['playState'] | null = null;
   private width: number;
 
-  constructor({ height, initialMode = 'tacticalOrthographic', width }: GameplayCameraControllerOptions) {
+  constructor({
+    height,
+    holdCinematicPreSnapEstablish = false,
+    initialMode = 'tacticalOrthographic',
+    width,
+  }: GameplayCameraControllerOptions) {
+    this.presentationDirector = new PresentationCameraDirector(
+      holdCinematicPreSnapEstablish
+        ? { ...PRESENTATION_CAMERA_CONFIG, holdPreSnapEstablish: true }
+        : PRESENTATION_CAMERA_CONFIG,
+    );
+    this.cinematicDebug = this.presentationDirector.getDebugSnapshot();
     this.height = height;
     this.mode = initialMode;
     this.width = width;
@@ -155,6 +169,11 @@ export class GameplayCameraController {
     this.height = height;
     this.updateOrthographicProjection();
     this.updatePerspectiveProjection();
+  }
+
+  resetPresentation(): void {
+    this.presentationDirector.reset();
+    this.cinematicDebug = this.presentationDirector.getDebugSnapshot();
   }
 
   update(snapshot: GameplaySnapshot, deltaSeconds: number): void {

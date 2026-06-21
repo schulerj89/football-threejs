@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.24.1] - 2026-06-21
+
+### Added
+
+- Added development-only `?presentationAudit=1` for validating 7v7 presentation grounding, helmet attachment, helmet-to-shoulder gaps, root transform stability, NDC player-bound framing, and render metrics.
+- Added `?presentationState=locomotion` plus audit hotkeys `L` and `P` for presentation-only locomotion and pre-snap audit states without adding 7v7 gameplay behavior.
+- Added unit and browser smoke coverage for audit formations, 300-frame pre-snap root stability, helmet parenting, neutral disabled-motion poses, visual-bound camera containment, and required screenshot scenarios.
+
+### Fixed
+
+- Lifted the mannequin helmet anchor slightly and reduced procedural torso/limb pose extremes to preserve a stable helmet-to-shoulder gap.
+- Added visual-only locomotion foot lift so procedural stride poses keep feet and body geometry on or above field level.
+- Held cinematic pre-snap establish framing in presentation audit mode and reset presentation framing after 7v7 preview lane changes.
+
 ## [0.24.0] - 2026-06-21
 
 ### Added

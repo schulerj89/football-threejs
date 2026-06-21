@@ -52,6 +52,18 @@ import {
   syncPlayerPoseDebugOverlay,
   type PlayerPoseSnapshot,
 } from './presentation/PlayerPoseController';
+import {
+  PRESENTATION_AUDIT_CONFIG,
+  createCameraFramingSnapshot,
+  createPresentationAuditGameplaySnapshot,
+  createPresentationAuditOverlay,
+  createPresentationAuditSnapshot,
+  resolvePresentationAuditState,
+  syncPresentationAuditOverlay,
+  type CameraFramingSnapshot,
+  type PresentationAuditSnapshot,
+  type PresentationAuditState,
+} from './presentationAudit';
 import { snapshotPlayerModel, type PlayerSnapshot } from './playerModel';
 import { updatePlayerSimulation } from './playerSimulation';
 import {
@@ -70,17 +82,13 @@ declare global {
       getFormationPreviewSnapshot: () => FormationPreviewSnapshot | null;
       getGameplaySnapshot: () => GameplaySnapshot;
       getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
+      getPresentationAuditSnapshot: () => PresentationAuditSnapshot | null;
       getPlayerBodyVisualSnapshots: () => PlayerBodyVisualSnapshot[];
       getPlayerPoseSnapshots: () => PlayerPoseSnapshot[];
       getPlayerSnapshot: () => PlayerSnapshot;
       getRenderMetrics: () => RenderMetricsSnapshot;
     };
   }
-}
-
-interface CameraFramingSnapshot {
-  framedPlayerIds: string[];
-  unframedPlayerIds: string[];
 }
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -99,6 +107,10 @@ const playerVisualOptions = {
 };
 const playerMotionEnabled = searchParams.get('playerMotion') !== '0';
 const formationPreviewMode = resolveFormationPreviewMode(searchParams.get('formationPreview'));
+const presentationAuditEnabled = searchParams.has('presentationAudit');
+let presentationAuditState: PresentationAuditState = resolvePresentationAuditState(
+  searchParams.get('presentationState'),
+);
 const field = createFootballField({
   fieldAudit: searchParams.has('fieldAudit'),
 });
@@ -123,6 +135,7 @@ scene.add(ballVisual);
 
 const cameraController = new GameplayCameraController({
   height: window.innerHeight,
+  holdCinematicPreSnapEstablish: presentationAuditEnabled,
   initialMode: resolveGameplayCameraMode(searchParams.get('camera')),
   width: window.innerWidth,
 });
@@ -154,18 +167,22 @@ const poseDebugOverlay = searchParams.has('poseDebug') ? createPlayerPoseDebugOv
 const formationAuditOverlay = searchParams.has('formationAudit')
   ? createFormationAuditOverlay()
   : null;
+const presentationAuditOverlay = presentationAuditEnabled
+  ? createPresentationAuditOverlay()
+  : null;
 let previousFrameTime = performance.now();
 let hasRenderedFirstFrame = false;
 let latestRenderMetrics: RenderMetricsSnapshot | null = null;
 
-if (import.meta.env.DEV || searchParams.has('debug')) {
+if (import.meta.env.DEV || searchParams.has('debug') || presentationAuditEnabled) {
   window.__footballDebug = {
     getCameraSnapshot: () => cameraController.getDebugSnapshot(),
     getCameraFramingSnapshot: () => getCameraFramingSnapshot(),
     getFormationPreviewSnapshot: () =>
       formationPreviewModel ? snapshotFormationPreviewModel(formationPreviewModel) : null,
-    getGameplaySnapshot: () => getActiveGameplaySnapshot(),
+    getGameplaySnapshot: () => getActivePresentationSnapshot(),
     getHelmetAssetSnapshot,
+    getPresentationAuditSnapshot: () => getPresentationAuditSnapshot(),
     getPlayerBodyVisualSnapshots: () =>
       [...playerVisuals.values()].map((playerVisual) => getPlayerBodyVisualSnapshot(playerVisual)),
     getPlayerPoseSnapshots: () => playerPoseController.getPoseSnapshots(),
@@ -177,6 +194,10 @@ if (import.meta.env.DEV || searchParams.has('debug')) {
 
 if (formationPreviewModel) {
   window.addEventListener('keydown', handleFormationPreviewLaneControls);
+}
+
+if (presentationAuditEnabled) {
+  window.addEventListener('keydown', handlePresentationAuditControls);
 }
 
 window.addEventListener('resize', resize);
@@ -217,7 +238,7 @@ function renderFrame(delta: number): void {
     updateGameplayModel(gameplayModel, delta);
   }
 
-  const gameplaySnapshot = getActiveGameplaySnapshot();
+  const gameplaySnapshot = getActivePresentationSnapshot();
   syncFootballFieldDriveLines(
     field,
     gameplaySnapshot.drive.lineOfScrimmage,
@@ -244,8 +265,14 @@ function renderFrame(delta: number): void {
     syncFormationAuditOverlay(formationAuditOverlay, gameplayModel, formationPreviewModel?.formation);
   }
   renderer.render(scene, cameraController.camera);
-  if (debugOverlay.isVisible() || formationPreviewModel) {
+  if (shouldCollectPresentationDiagnostics()) {
     latestRenderMetrics = createRenderMetricsSnapshot(delta);
+  }
+  if (presentationAuditOverlay) {
+    syncPresentationAuditOverlay(
+      presentationAuditOverlay,
+      getPresentationAuditSnapshot() ?? createEmptyPresentationAuditSnapshot(),
+    );
   }
   const renderMetrics = debugOverlay.isVisible() ? latestRenderMetrics ?? undefined : undefined;
   debugOverlay.update(
@@ -305,18 +332,39 @@ function handleFormationPreviewLaneControls(event: KeyboardEvent): void {
 
   if (event.key === '1') {
     setFormationPreviewSnapLane(formationPreviewModel, 'leftHash');
+    cameraController.resetPresentation();
     event.preventDefault();
     return;
   }
 
   if (event.key === '2') {
     setFormationPreviewSnapLane(formationPreviewModel, 'middle');
+    cameraController.resetPresentation();
     event.preventDefault();
     return;
   }
 
   if (event.key === '3') {
     setFormationPreviewSnapLane(formationPreviewModel, 'rightHash');
+    cameraController.resetPresentation();
+    event.preventDefault();
+  }
+}
+
+function handlePresentationAuditControls(event: KeyboardEvent): void {
+  if (event.ctrlKey || event.metaKey || event.altKey) {
+    return;
+  }
+
+  if (event.key.toLowerCase() === 'l') {
+    presentationAuditState = 'locomotionPreview';
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key.toLowerCase() === 'p') {
+    presentationAuditState = 'preSnap';
+    cameraController.resetPresentation();
     event.preventDefault();
   }
 }
@@ -353,6 +401,16 @@ function getActiveGameplaySnapshot(): GameplaySnapshot {
   return formationPreviewModel
     ? snapshotFormationPreviewAsGameplay(formationPreviewModel)
     : snapshotGameplayModel(gameplayModel);
+}
+
+function getActivePresentationSnapshot(): GameplaySnapshot {
+  const snapshot = getActiveGameplaySnapshot();
+
+  if (!presentationAuditEnabled || !formationPreviewModel) {
+    return snapshot;
+  }
+
+  return createPresentationAuditGameplaySnapshot(snapshot, presentationAuditState);
 }
 
 function createRenderMetricsSnapshot(deltaSeconds: number): RenderMetricsSnapshot {
@@ -393,33 +451,53 @@ function createRenderMetricsSnapshot(deltaSeconds: number): RenderMetricsSnapsho
 }
 
 function getCameraFramingSnapshot(): CameraFramingSnapshot {
-  const framedPlayerIds: string[] = [];
-  const unframedPlayerIds: string[] = [];
-  const camera = cameraController.camera;
+  return createCameraFramingSnapshot(
+    cameraController.camera,
+    playerVisuals,
+    presentationAuditEnabled ? PRESENTATION_AUDIT_CONFIG.framingMarginNdc : 0,
+  );
+}
 
-  camera.updateMatrixWorld(true);
-  if (camera instanceof THREE.OrthographicCamera || camera instanceof THREE.PerspectiveCamera) {
-    camera.updateProjectionMatrix();
+function getPresentationAuditSnapshot(): PresentationAuditSnapshot | null {
+  if (!presentationAuditEnabled) {
+    return null;
   }
 
-  for (const player of getActivePlayers()) {
-    const point = new THREE.Vector3(player.position.x, 1.1, player.position.z).project(camera);
-    const isFramed =
-      Math.abs(point.x) <= 1 &&
-      Math.abs(point.y) <= 1 &&
-      point.z >= -1 &&
-      point.z <= 1;
+  return createPresentationAuditSnapshot({
+    camera: cameraController.camera,
+    cameraDebug: cameraController.getDebugSnapshot(),
+    formation: formationPreviewModel ? snapshotFormationPreviewModel(formationPreviewModel) : null,
+    gameplay: getActivePresentationSnapshot(),
+    playerMotionEnabled,
+    playerVisuals,
+    poseSnapshots: playerPoseController.getPoseSnapshots(),
+    renderMetrics: latestRenderMetrics,
+    state: presentationAuditState,
+  });
+}
 
-    if (isFramed) {
-      framedPlayerIds.push(player.id);
-    } else {
-      unframedPlayerIds.push(player.id);
-    }
-  }
+function shouldCollectPresentationDiagnostics(): boolean {
+  return debugOverlay.isVisible() || !!poseDebugOverlay || !!presentationAuditOverlay;
+}
 
+function createEmptyPresentationAuditSnapshot(): PresentationAuditSnapshot {
   return {
-    framedPlayerIds,
-    unframedPlayerIds,
+    allFeetGrounded: true,
+    allHelmetsAttached: true,
+    allPlayersInsideFramingMargin: true,
+    cameraMode: cameraController.getDebugSnapshot().mode,
+    cameraState: cameraController.getDebugSnapshot().state,
+    enabled: true,
+    formationIssueCount: 0,
+    framingMarginNdc: PRESENTATION_AUDIT_CONFIG.framingMarginNdc,
+    issues: [],
+    playerMotionEnabled,
+    players: [],
+    presentationPhase: cameraController.getDebugSnapshot().presentationPhase ?? null,
+    renderMetrics: null,
+    snapLane: formationPreviewModel?.snapPlacement.lane ?? gameplayModel.drive.snapLane,
+    stableHelmetGaps: true,
+    state: presentationAuditState,
   };
 }
 

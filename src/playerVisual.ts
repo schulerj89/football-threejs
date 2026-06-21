@@ -89,7 +89,7 @@ export const PLAYER_BODY_DIMENSIONS: PlayerBodyDimensions = {
   footWidth: 0.22,
   footHeight: 0.12,
   footForwardOffset: 0.06,
-  helmetOffsetY: 0.8,
+  helmetOffsetY: 0.84,
   helmetOffsetZ: 0,
   helmetScale: 0.38,
   radialSegments: 8,

@@ -30,6 +30,7 @@ export interface PresentationCameraDebugSnapshot {
 
 export interface PresentationCameraConfig {
   fieldOfView: number;
+  holdPreSnapEstablish?: boolean;
   maximumTransitionSpeed: number;
   maxDeltaSeconds: number;
   minimumFieldPosition: { x: number; z: number };
@@ -59,6 +60,7 @@ interface PresentationCameraShot {
 
 export const PRESENTATION_CAMERA_CONFIG: PresentationCameraConfig = {
   fieldOfView: 44,
+  holdPreSnapEstablish: false,
   maximumFieldPosition: {
     x: PLAYABLE_FIELD_BOUNDS.maxX,
     z: PLAYABLE_FIELD_BOUNDS.maxZ,
@@ -226,6 +228,10 @@ export class PresentationCameraDirector {
     if (snapshot.playState === 'preSnap') {
       if (this.returnToPreSnapSeconds > 0) {
         return 'returnToPreSnap';
+      }
+
+      if (this.config.holdPreSnapEstablish) {
+        return 'preSnapEstablish';
       }
 
       if (

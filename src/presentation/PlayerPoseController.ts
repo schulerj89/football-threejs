@@ -28,7 +28,9 @@ export interface ReadyPoseConfig {
 
 export interface LocomotionPoseConfig {
   armSwingRotationX: number;
+  baseFootLiftY: number;
   footSwingRotationX: number;
+  strideFootLiftY: number;
   legSwingRotationX: number;
   legSpreadRotationZ: number;
   torsoLeanX: number;
@@ -49,11 +51,13 @@ export interface PlayerPoseValues {
   leftArmRotationX: number;
   leftArmRotationZ: number;
   leftFootRotationX: number;
+  leftFootLiftY: number;
   leftLegRotationX: number;
   leftLegRotationZ: number;
   rightArmRotationX: number;
   rightArmRotationZ: number;
   rightFootRotationX: number;
+  rightFootLiftY: number;
   rightLegRotationX: number;
   rightLegRotationZ: number;
   shoulderRotationX: number;
@@ -102,30 +106,32 @@ export const PLAYER_POSE_CONFIG: PlayerPoseConfig = {
     armSpreadRotationZ: 0.08,
     legForwardRotationX: 0,
     legSpreadRotationZ: 0,
-    torsoLeanX: 0.08,
+    torsoLeanX: 0.06,
   },
   readyDefense: {
     armForwardRotationX: -0.08,
     armSpreadRotationZ: 0.14,
     legForwardRotationX: 0,
     legSpreadRotationZ: 0,
-    torsoLeanX: 0.05,
+    torsoLeanX: 0.045,
   },
   locomotion: {
-    armSwingRotationX: 0.46,
-    footSwingRotationX: 0.12,
-    legSwingRotationX: 0.48,
+    armSwingRotationX: 0.42,
+    baseFootLiftY: 0.045,
+    footSwingRotationX: 0.1,
+    strideFootLiftY: 0.075,
+    legSwingRotationX: 0.44,
     legSpreadRotationZ: 0,
-    torsoLeanX: 0.09,
-    torsoSwayRotationZ: 0.035,
+    torsoLeanX: 0.075,
+    torsoSwayRotationZ: 0.03,
   },
   safeLimits: {
-    armRotationX: 0.58,
+    armRotationX: 0.52,
     armRotationZ: 0.26,
-    footRotationX: 0.18,
-    legRotationX: 0.54,
+    footRotationX: 0.16,
+    legRotationX: 0.5,
     legRotationZ: 0.2,
-    torsoRotationX: 0.12,
+    torsoRotationX: 0.1,
     torsoRotationZ: 0.05,
   },
 };
@@ -136,11 +142,13 @@ const NEUTRAL_POSE: PlayerPoseValues = {
   leftArmRotationX: 0,
   leftArmRotationZ: 0,
   leftFootRotationX: 0,
+  leftFootLiftY: 0,
   leftLegRotationX: 0,
   leftLegRotationZ: 0,
   rightArmRotationX: 0,
   rightArmRotationZ: 0,
   rightFootRotationX: 0,
+  rightFootLiftY: 0,
   rightLegRotationX: 0,
   rightLegRotationZ: 0,
   shoulderRotationX: 0,
@@ -314,6 +322,12 @@ export function createPoseTarget(
   const stride = Math.sin(phaseRadians);
   const counterStride = -stride;
   const footStride = Math.sin(phaseRadians + Math.PI / 7);
+  const leftFootLiftY =
+    config.locomotion.baseFootLiftY +
+    Math.max(0, stride) * config.locomotion.strideFootLiftY;
+  const rightFootLiftY =
+    config.locomotion.baseFootLiftY +
+    Math.max(0, counterStride) * config.locomotion.strideFootLiftY;
   const torsoSway = Math.sin(phaseRadians * 0.5) * config.locomotion.torsoSwayRotationZ;
 
   return clampPoseValues(
@@ -321,11 +335,13 @@ export function createPoseTarget(
       leftArmRotationX: counterStride * config.locomotion.armSwingRotationX,
       leftArmRotationZ: 0,
       leftFootRotationX: -footStride * config.locomotion.footSwingRotationX,
+      leftFootLiftY,
       leftLegRotationX: stride * config.locomotion.legSwingRotationX,
       leftLegRotationZ: -config.locomotion.legSpreadRotationZ,
       rightArmRotationX: stride * config.locomotion.armSwingRotationX,
       rightArmRotationZ: 0,
       rightFootRotationX: footStride * config.locomotion.footSwingRotationX,
+      rightFootLiftY,
       rightLegRotationX: counterStride * config.locomotion.legSwingRotationX,
       rightLegRotationZ: config.locomotion.legSpreadRotationZ,
       shoulderRotationX: config.locomotion.torsoLeanX,
@@ -347,11 +363,13 @@ export function blendPoseValues(
     leftArmRotationX: lerp(current.leftArmRotationX, target.leftArmRotationX, clampedAlpha),
     leftArmRotationZ: lerp(current.leftArmRotationZ, target.leftArmRotationZ, clampedAlpha),
     leftFootRotationX: lerp(current.leftFootRotationX, target.leftFootRotationX, clampedAlpha),
+    leftFootLiftY: lerp(current.leftFootLiftY, target.leftFootLiftY, clampedAlpha),
     leftLegRotationX: lerp(current.leftLegRotationX, target.leftLegRotationX, clampedAlpha),
     leftLegRotationZ: lerp(current.leftLegRotationZ, target.leftLegRotationZ, clampedAlpha),
     rightArmRotationX: lerp(current.rightArmRotationX, target.rightArmRotationX, clampedAlpha),
     rightArmRotationZ: lerp(current.rightArmRotationZ, target.rightArmRotationZ, clampedAlpha),
     rightFootRotationX: lerp(current.rightFootRotationX, target.rightFootRotationX, clampedAlpha),
+    rightFootLiftY: lerp(current.rightFootLiftY, target.rightFootLiftY, clampedAlpha),
     rightLegRotationX: lerp(current.rightLegRotationX, target.rightLegRotationX, clampedAlpha),
     rightLegRotationZ: lerp(current.rightLegRotationZ, target.rightLegRotationZ, clampedAlpha),
     shoulderRotationX: lerp(current.shoulderRotationX, target.shoulderRotationX, clampedAlpha),
@@ -415,11 +433,13 @@ function createReadyPose(
       leftArmRotationX: pose.armForwardRotationX,
       leftArmRotationZ: -pose.armSpreadRotationZ,
       leftFootRotationX: 0,
+      leftFootLiftY: 0,
       leftLegRotationX: pose.legForwardRotationX,
       leftLegRotationZ: -pose.legSpreadRotationZ,
       rightArmRotationX: pose.armForwardRotationX,
       rightArmRotationZ: pose.armSpreadRotationZ,
       rightFootRotationX: 0,
+      rightFootLiftY: 0,
       rightLegRotationX: pose.legForwardRotationX,
       rightLegRotationZ: pose.legSpreadRotationZ,
       shoulderRotationX: pose.torsoLeanX,
@@ -442,6 +462,8 @@ function applyPoseToPlayerVisual(
   setRotation(parts.rightLegPivot, pose.rightLegRotationX, 0, pose.rightLegRotationZ);
   setRotation(parts.leftFoot, pose.leftFootRotationX, 0, 0);
   setRotation(parts.rightFoot, pose.rightFootRotationX, 0, 0);
+  setFootLift(parts.leftFoot, pose.leftFootLiftY);
+  setFootLift(parts.rightFoot, pose.rightFootLiftY);
   setRotation(parts.torso, pose.torsoRotationX, 0, pose.torsoRotationZ);
   setRotation(parts.shoulderPads, pose.shoulderRotationX, 0, pose.torsoRotationZ);
 
@@ -477,6 +499,18 @@ function setRotation(
   object.rotation.set(x, y, z);
 }
 
+function setFootLift(object: THREE.Object3D | null, liftY: number): void {
+  if (!object) {
+    return;
+  }
+
+  if (typeof object.userData.neutralPositionY !== 'number') {
+    object.userData.neutralPositionY = object.position.y;
+  }
+
+  object.position.y = object.userData.neutralPositionY + liftY;
+}
+
 function clampPoseValues(
   pose: PlayerPoseValues,
   limits: PoseLimitConfig,
@@ -485,11 +519,13 @@ function clampPoseValues(
     leftArmRotationX: clamp(pose.leftArmRotationX, -limits.armRotationX, limits.armRotationX),
     leftArmRotationZ: clamp(pose.leftArmRotationZ, -limits.armRotationZ, limits.armRotationZ),
     leftFootRotationX: clamp(pose.leftFootRotationX, -limits.footRotationX, limits.footRotationX),
+    leftFootLiftY: Math.max(0, pose.leftFootLiftY),
     leftLegRotationX: clamp(pose.leftLegRotationX, -limits.legRotationX, limits.legRotationX),
     leftLegRotationZ: clamp(pose.leftLegRotationZ, -limits.legRotationZ, limits.legRotationZ),
     rightArmRotationX: clamp(pose.rightArmRotationX, -limits.armRotationX, limits.armRotationX),
     rightArmRotationZ: clamp(pose.rightArmRotationZ, -limits.armRotationZ, limits.armRotationZ),
     rightFootRotationX: clamp(pose.rightFootRotationX, -limits.footRotationX, limits.footRotationX),
+    rightFootLiftY: Math.max(0, pose.rightFootLiftY),
     rightLegRotationX: clamp(pose.rightLegRotationX, -limits.legRotationX, limits.legRotationX),
     rightLegRotationZ: clamp(pose.rightLegRotationZ, -limits.legRotationZ, limits.legRotationZ),
     shoulderRotationX: clamp(pose.shoulderRotationX, -limits.torsoRotationX, limits.torsoRotationX),

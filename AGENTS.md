@@ -2,9 +2,9 @@
 
 ## Project
 
-This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness, not the final product identity. The current milestone adds an optional cinematic broadcast presentation camera while preserving the active five-on-five playable drill and existing gameplay cameras.
+This repository is a low-poly 3D American football game prototype built with Three.js, Vite, TypeScript, WebGL, and a future WebGPU path. The long-term target is a stylized low-poly 11v11 American-football game with cinematic and broadcast-style presentation. The current score-attack mode is a temporary gameplay test harness, not the final product identity. The current milestone is a 7v7 presentation-hardening patch for grounding, helmet placement, procedural poses, formation framing, camera transitions, screenshot coverage, and development audit validation.
 
-The active playable prototype is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay play data, low-poly procedural player bodies with cloned low-poly helmet visuals, visual-only procedural poses and locomotion, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, an optional behind-the-offense perspective camera, and an optional cinematic broadcast camera. The `?formationPreview=7v7` mode is a static development staging tool for fourteen-player formation validation, rendering, and camera framing; it must not run AI or begin a live play.
+The active playable prototype is a two-minute five-on-five offensive score-attack drill with semantic data-defined formations for Inside Run, Outside Run, Quick Pass, and Slant Flat, graphical pre-snap SVG play cards generated from gameplay play data, low-poly procedural player bodies with cloned low-poly helmet visuals, visual-only procedural poses and locomotion, a field generated from a pure field specification with batched static markings and presentation-only turf/yard-number/goalpost/sideline elements, a controllable ball carrier or scrambling quarterback, selected eligible receivers on pass plays, AI blockers, AI defenders, deterministic blocking engagements, pass rush, sack classification, a deterministic passing arc, per-play forward-pass eligibility, explicit ball states, a basic offensive drive, downs, yards-to-go, touchdown scoring, sack, tackle, incomplete, and out-of-bounds outcomes, turnover-on-downs reset, exact dead-ball spotting with three-lane snap placement, signed yardage, moving line of scrimmage, first-down marker, final-score game over, delayed reset, a preserved tactical orthographic camera, an optional behind-the-offense perspective camera, and an optional cinematic broadcast camera. The `?formationPreview=7v7` mode is a static development staging tool for fourteen-player formation validation, rendering, camera framing, and `?presentationAudit=1` presentation checks; it must not run AI or begin a live play.
 
 ## Current Non-Goals And Future Scope
 
@@ -72,6 +72,9 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Player visuals should preserve the root object used by gameplay synchronization, keep the helmet attached through the stable head anchor, and expose comparison/debug URL options when replacing major placeholder geometry.
 - Procedural player pose and locomotion belong in `src/presentation/PlayerPoseController.ts`; pose controllers may read gameplay snapshots and transform visual pivots but must never mutate gameplay state.
 - Pose amplitudes, blend rates, stride rates, velocity thresholds, and frame-delta clamps belong in a single pose configuration object.
+- Presentation audits belong in `src/presentationAudit.ts`; they may perform expensive `Box3` and projection checks only when the debug overlay, pose debug, or `?presentationAudit=1` is enabled.
+- `?presentationAudit=1` is development-only and may create presentation-only cloned snapshots for locomotion preview; it must never mutate formation preview players or add active 7v7 gameplay behavior.
+- Formation preview player roots must remain at exact gameplay coordinates while procedural poses affect only visual child pivots and meshes.
 - Normal player body colors should emphasize team identity; role-specific body colors belong behind explicit debug options.
 - Repeated GLB assets should be loaded once and cloned or instanced, with material clones created before team-specific tinting.
 - Forward-pass eligibility is gameplay state reset per play; crossing the original line of scrimmage disables it permanently for that play using the documented epsilon in `src/passRules.ts`.
@@ -90,11 +93,11 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 ## Done Criteria For This Milestone
 
 - The project builds and launches without console errors.
-- `?camera=cinematic` selects the optional cinematic broadcast camera without replacing tactical or offense-perspective modes.
-- `C` cycles through tactical orthographic, offense perspective, and cinematic broadcast cameras without resetting gameplay.
-- Cinematic pre-snap shots calculate bounds around all active players and frame both teams without assuming player count.
-- Snapping during cinematic establishing shots starts gameplay immediately; camera transition must not delay gameplay.
-- Cinematic live, pass-flight, dead-ball, touchdown, and return-to-pre-snap phases use gameplay snapshot data and keep focus targets visible.
-- Catch transfer, tackle, sack, and reset transitions are smoothed and capped by configured transition speed.
-- Cinematic debug output includes presentation phase, focus target, formation bounds, camera position, and look target.
-- Existing five-on-five gameplay, 7v7 preview, helmet, visual, unit, and browser smoke tests pass unchanged.
+- `?presentationAudit=1` works with `?formationPreview=7v7` across left-hash, middle, and right-hash snap lanes.
+- Presentation audit scenarios cover tactical, offense-perspective, and cinematic cameras; motion enabled and disabled; and pre-snap plus locomotion-preview states.
+- Advancing at least 300 pre-snap visual updates does not change gameplay player positions, facing, collision radii, snap placement, formation assignment, or player root transforms.
+- All fourteen players remain grounded, keep helmets parented to the head anchor, preserve stable helmet-to-shoulder gaps, and keep resting limbs symmetrical.
+- Pre-snap camera audits project visual player bounds into NDC and keep all fourteen players inside the configured framing margin.
+- Cinematic audit mode can hold pre-snap establish framing for repeatable validation while normal cinematic presentation behavior remains unchanged.
+- Browser smoke captures screenshot scenarios for each middle-snap camera, cinematic left/right hashes, and fourteen-player motion preview.
+- Existing five-on-five gameplay, 7v7 preview, helmet, visual, camera, unit, and browser smoke tests pass.
