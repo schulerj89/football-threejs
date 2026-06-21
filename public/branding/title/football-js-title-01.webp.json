@@ -1,0 +1,13 @@
+{
+  "assetId": "football-js-title-01",
+  "category": "title",
+  "compressedBytes": 181560,
+  "contentHash": "7a9dd662520c6348be9fb4652dc6adec4678b261f5cda9435f5dd0aaa0b8521a",
+  "generatedAt": "2026-06-21T23:01:25.467Z",
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "prompt": "Original stylized low-poly American-football video game title background. Cinematic broadcast presentation, twilight stadium atmosphere, regulation football field, low-poly players in fictional uniforms, dramatic clean lighting, readable central football action. Leave clean negative space for future title UI overlay and keep the image usable behind a title screen. Camera: low broadcast sideline angle looking across a low-poly football field toward an end zone, ball carrier silhouette in the foreground, defenders and blockers arranged as abstract faceted shapes. Palette: rich stadium greens, charcoal stands, warm rim light, team colors are fictional and non-specific. No rendered text, no words, no letters, no numbers, no logos, no watermarks. No real professional or college team uniforms, logos, mascots, league marks, broadcast marks, or stadium branding. No photorealistic player likenesses, no celebrity faces, no readable signage.",
+  "provisionalApproval": "needsReview",
+  "quality": "high",
+  "requestedSize": "1536x864"
+}

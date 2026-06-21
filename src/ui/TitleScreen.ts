@@ -1,3 +1,5 @@
+import { GAME_BRAND } from '../config/GameBrand';
+
 export interface TitleLoadingState {
   helmet: string;
   audio: string;
@@ -31,10 +33,11 @@ export class TitleScreen {
     eyebrow.className = 'title-eyebrow';
     eyebrow.textContent = 'Low-poly football prototype';
     const title = document.createElement('h1');
-    title.textContent = 'Gridiron Prototype';
+    title.textContent = GAME_BRAND.title;
     const subtitle = document.createElement('p');
     subtitle.className = 'title-subtitle';
-    subtitle.textContent = 'Choose teams, set the presentation, then play offense through a full exhibition.';
+    subtitle.textContent = GAME_BRAND.tagline ||
+      'Choose teams, set the presentation, then play offense through a full exhibition.';
     header.append(eyebrow, title, subtitle);
 
     this.startButton.className = 'title-start-button';

@@ -1,0 +1,18 @@
+{
+  "brandTitle": "Football JS",
+  "emblem": {
+    "assetId": "football-js-emblem-02",
+    "contentHash": "df8f18f221b3d1d0f239cc698a0411c20449493f80f8cb87501780bd0a9ea39a",
+    "outputPath": "public/branding/emblem/football-js-emblem-02.webp",
+    "runtimeImageUrl": "/branding/football-js-emblem.webp",
+    "runtimePath": "public/branding/football-js-emblem.webp"
+  },
+  "selectedAt": "2026-06-21T23:08:30.145Z",
+  "title": {
+    "assetId": "football-js-title-02",
+    "contentHash": "81bff492d710b1af6e33418cf733b852d2e95d8d0876186569fd0304820e28f1",
+    "outputPath": "public/branding/title/football-js-title-02.webp",
+    "runtimeImageUrl": "/branding/football-js-title.webp",
+    "runtimePath": "public/branding/football-js-title.webp"
+  }
+}

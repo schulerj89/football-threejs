@@ -1,0 +1,13 @@
+{
+  "assetId": "football-js-emblem-02",
+  "category": "emblem",
+  "compressedBytes": 75970,
+  "contentHash": "df8f18f221b3d1d0f239cc698a0411c20449493f80f8cb87501780bd0a9ea39a",
+  "generatedAt": "2026-06-21T23:08:04.221Z",
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "prompt": "Original stylized low-poly American-football game emblem artwork. Contained square composition with a dark simple background, a faceted football and field-stripe motif, strong silhouette, suitable for icon cropping. Graphic but not a logo for a real team or league. Subject: an original low-poly football helmet silhouette beside a faceted football on a small field-stripe base, no team identity, no lettering, no logo mark. Keep the design centered, dark contained background, clear crop-safe edges, simple enough for a small UI emblem. No rendered text, no words, no letters, no numbers, no logos, no watermarks, no real team or league references.",
+  "provisionalApproval": "needsReview",
+  "quality": "high",
+  "requestedSize": "1024x1024"
+}

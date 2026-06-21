@@ -1,0 +1,13 @@
+{
+  "assetId": "football-js-emblem-01",
+  "category": "emblem",
+  "compressedBytes": 110028,
+  "contentHash": "dfb2c4cada7ff998f864736a73528bd1a4d2d065e83d4d0dc1f51858bff99c64",
+  "generatedAt": "2026-06-21T23:05:36.335Z",
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "prompt": "Original stylized low-poly American-football game emblem artwork. Contained square composition with a dark simple background, a faceted football and field-stripe motif, strong silhouette, suitable for icon cropping. Graphic but not a logo for a real team or league. Subject: a low-poly prolate football hovering above simplified yard-line geometry, subtle stadium-light glow, symmetrical crop-safe framing. Colors: dark navy-charcoal background, warm brown football, muted green field accents, small amber highlight. No rendered text, no words, no letters, no numbers, no logos, no watermarks, no real team or league references.",
+  "provisionalApproval": "needsReview",
+  "quality": "high",
+  "requestedSize": "1024x1024"
+}

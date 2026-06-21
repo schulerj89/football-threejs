@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-06-21
+
+### Added
+
+- Added the central `Football JS` brand configuration with selected title-background and emblem image URLs plus the preserved fictional announcer display name.
+- Added Node-only OpenAI GPT Image 2 brand production tooling for typed asset planning, dry-run guarded generation, provenance sidecars, report output, gallery HTML, and stable runtime image selection.
+- Generated two title-background candidates and two emblem candidates, then selected provisional runtime assets at `public/branding/football-js-title.webp` and `public/branding/football-js-emblem.webp`.
+
+### Changed
+
+- Updated the title screen and document title to resolve the player-facing title from the brand configuration.
+- Documented OpenAI image generation as offline-only production tooling and added safe local `OPENAI_API_KEY` guidance without exposing secrets to browser code.
+
+### Tests
+
+- Added brand asset pipeline coverage for plan validation, missing-key failure, dry-run behavior, existing-file protection, invalid output-path rejection, report/gallery/selection output, and browser-secret scanning.
+
 ## [1.0.0] - 2026-06-21
 
 ### Added
