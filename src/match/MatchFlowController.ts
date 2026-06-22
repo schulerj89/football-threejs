@@ -9,9 +9,11 @@ import {
   addDriveSummary,
   advanceToNextQuarter,
   beginMatch,
+  completeKickoff,
   createMatchModel,
   enterCoinToss,
   enterGameOver,
+  enterKickoff,
   enterOpponentPossession,
   enterQuarterTransition,
   enterUserPossession,
@@ -28,12 +30,22 @@ import {
 } from './OpponentDriveSimulator';
 import type {
   DriveSummary,
+  DriveSummaryResult,
   MatchDifficulty,
+  MatchPossession,
   MatchRules,
   MatchSnapshot,
 } from './MatchTypes';
 import { DEFAULT_MATCH_RULES } from './MatchTypes';
 import type { CoinFace, CoinTossState } from './CoinTossModel';
+import { otherPossession } from './PossessionModel';
+import { getTeamRosterOrDefault } from '../roster/RosterRegistry';
+import { getKickerRatings } from '../specialTeams/KickerRatings';
+import {
+  createKickoffSimulationInput,
+  simulateKickoff,
+} from '../specialTeams/KickoffSimulation';
+import type { KickoffReason, KickoffResult } from '../specialTeams/KickoffTypes';
 
 export interface MatchFlowControllerOptions {
   difficulty?: MatchDifficulty;
@@ -106,6 +118,39 @@ export class MatchFlowController {
     if (this.model.phase === 'opponentDriveSimulation') {
       this.simulateOpponentPossessionOnce();
     }
+  }
+
+  beginOpeningKickoffAfterCoinToss(gameplay: GameplayModel): boolean {
+    if (!this.model.coinToss.completed) {
+      return false;
+    }
+
+    this.lastProcessedPlayResultId = null;
+    this.lastOpponentSimulationDriveNumber = null;
+    this.previousPlayState = null;
+    resetOffensePossession(gameplay, this.model.rules.touchbackSpot);
+    return this.scheduleKickoff('opening', this.model.openingPossession);
+  }
+
+  completeKickoff(gameplay: GameplayModel): KickoffResult | null {
+    const receivingTeam = this.model.kickoff.receivingTeam;
+    const result = completeKickoff(this.model);
+    if (!result || !receivingTeam) {
+      return null;
+    }
+
+    this.lastProcessedPlayResultId = null;
+    this.previousPlayState = null;
+    if (receivingTeam === 'user') {
+      enterUserPossession(this.model, result.receivingStartSpot);
+      resetOffensePossession(gameplay, result.receivingStartSpot);
+    } else {
+      enterOpponentPossession(this.model, result.receivingStartSpot);
+      resetOffensePossession(gameplay, this.model.rules.touchbackSpot);
+      this.simulateOpponentPossessionOnce();
+    }
+
+    return result;
   }
 
   update(deltaSeconds: number, gameplay: GameplayModel, snapshot: GameplaySnapshot): void {
@@ -188,13 +233,22 @@ export class MatchFlowController {
         enterQuarterTransition(this.model);
         return;
       }
+      if (this.shouldKickAfterOpponentDrive()) {
+        this.scheduleKickoff('postScore', 'user');
+        return;
+      }
       enterUserPossession(this.model, this.model.rules.touchbackSpot);
       resetOffensePossession(gameplay, this.model.rules.touchbackSpot);
       return;
     }
 
     if (this.model.phase === 'quarterBreak' || this.model.phase === 'halftime') {
+      const wasHalftime = this.model.phase === 'halftime';
       advanceToNextQuarter(this.model);
+      if (wasHalftime && this.model.quarter === 3) {
+        this.scheduleKickoff('secondHalf', this.model.possession);
+        return;
+      }
       const nextPhase = this.model.phase as string;
       if (nextPhase === 'userPossession') {
         resetOffensePossession(gameplay, this.model.rules.touchbackSpot);
@@ -233,8 +287,7 @@ export class MatchFlowController {
       });
       addDriveSummary(this.model, summary);
       stopUserPlayClock(this.model);
-      enterOpponentPossession(this.model);
-      this.simulateOpponentPossessionOnce();
+      this.scheduleKickoff('postScore', 'opponent');
       return;
     }
 
@@ -318,6 +371,55 @@ export class MatchFlowController {
     }
     return summary;
   }
+
+  private scheduleKickoff(reason: KickoffReason, receivingTeam: MatchPossession): boolean {
+    if (this.model.clock.remainingSeconds <= 0 && reason !== 'opening') {
+      enterQuarterTransition(this.model);
+      return false;
+    }
+
+    const kickingTeam = otherPossession(receivingTeam);
+    const roster = getTeamRosterOrDefault(
+      kickingTeam === 'user'
+        ? this.model.userTeam.id
+        : this.model.opponentTeam.id,
+    );
+    const kicker = roster.players.find((player) => player.id === roster.kickerId) ?? null;
+    const ratings = getKickerRatings(kicker);
+    const sequenceIndex = Math.max(-1, this.model.kickoff.sequenceIndex) + 1;
+    const simulationInput = createKickoffSimulationInput({
+      kickAccuracy: ratings.kickAccuracy,
+      kickerRosterId: roster.kickerId,
+      kickPower: ratings.kickPower,
+      kickingTeam,
+      matchSeed: this.model.deterministicSeed,
+      rules: this.model.rules,
+      sequenceIndex,
+    });
+
+    enterKickoff(this.model, {
+      completed: false,
+      direction: simulationInput.direction,
+      kickerRatings: ratings,
+      kickerRosterId: roster.kickerId,
+      kickingTeam,
+      phase: 'ready',
+      reason,
+      receivingTeam,
+      result: simulateKickoff(simulationInput),
+      sequenceIndex,
+    });
+    return true;
+  }
+
+  private shouldKickAfterOpponentDrive(): boolean {
+    const summary = this.model.previousDriveSummary;
+    return Boolean(
+      summary &&
+      summary.possession === 'opponent' &&
+      isScoringDriveResult(summary.result),
+    );
+  }
 }
 
 function createAggregateRatings(opponentTeamId: string, userTeamId: string): {
@@ -336,4 +438,8 @@ function stableRatingOffset(value: string): number {
     hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   }
   return (hash % 17) - 8;
+}
+
+function isScoringDriveResult(result: DriveSummaryResult): boolean {
+  return result === 'fieldGoal' || result === 'touchdown';
 }

@@ -147,7 +147,10 @@ function cloneTeamRoster(roster: TeamRoster): TeamRoster {
     defensiveStarterIds: [...roster.defensiveStarterIds],
     kickerId: roster.kickerId,
     offensiveStarterIds: [...roster.offensiveStarterIds],
-    players: roster.players.map((player) => ({ ...player })),
+    players: roster.players.map((player) => ({
+      ...player,
+      ...(player.kickerRatings ? { kickerRatings: { ...player.kickerRatings } } : {}),
+    })),
     punterId: roster.punterId,
     teamId: roster.teamId,
   };

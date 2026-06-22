@@ -827,6 +827,31 @@ interface MatchSnapshot {
     userCall: 'heads' | 'tails' | null;
     winner: 'opponent' | 'user' | null;
   };
+  kickoff: {
+    activeCommentary?: string | null;
+    animationProgress?: number;
+    ballPosition?: Vector3Snapshot | null;
+    completed: boolean;
+    direction: -1 | 1;
+    kickerRosterId: string | null;
+    kickingTeam: 'opponent' | 'user' | null;
+    landingType?: 'fielded' | 'touchback' | null;
+    phase: 'completed' | 'flight' | 'idle' | 'ready' | 'result';
+    reason: 'opening' | 'postScore' | 'secondHalf' | null;
+    receivingStartSpot?: FootballSpot | null;
+    receivingTeam: 'opponent' | 'user' | null;
+    result: null | {
+      apexHeight: number;
+      flightSeconds: number;
+      landingType: 'fielded' | 'touchback';
+      origin: FootballSpot;
+      receivingStartSpot: FootballSpot;
+      target: FootballSpot;
+      uncertaintyRadiusYards: number;
+    };
+    reticleVisible?: boolean;
+    sequenceIndex: number;
+  };
   currentFieldPosition: FootballSpot;
   deterministicSeed: number;
   driveNumber: number;
@@ -837,6 +862,7 @@ interface MatchSnapshot {
     | 'coinToss'
     | 'gameOver'
     | 'halftime'
+    | 'kickoff'
     | 'opponentDriveSimulation'
     | 'pregame'
     | 'quarterBreak'
@@ -858,6 +884,24 @@ interface MatchSnapshot {
   secondHalfPossession: 'opponent' | 'user';
   userScore: number;
   winner: 'opponent' | 'tie' | 'user' | null;
+}
+
+interface KickoffPresentationSnapshot {
+  activeCommentary: string | null;
+  animationProgress: number;
+  ballPosition: Vector3Snapshot | null;
+  completed: boolean;
+  direction: -1 | 1 | null;
+  kickerRosterId: string | null;
+  kickingTeam: 'opponent' | 'user' | null;
+  landingType: 'fielded' | 'touchback' | null;
+  phase: 'completed' | 'flight' | 'idle' | 'ready' | 'result';
+  reason?: 'opening' | 'postScore' | 'secondHalf' | null;
+  receivingStartSpot: FootballSpot | null;
+  receivingTeam: 'opponent' | 'user' | null;
+  result: MatchSnapshot['kickoff']['result'];
+  reticleVisible: boolean;
+  sequenceIndex: number | null;
 }
 
 interface StadiumSnapshot {
@@ -930,7 +974,7 @@ interface GameExperienceSnapshot {
 }
 
 test('shows the title screen, opens match setup, and holds gameplay until confirm', async ({ page }) => {
-  test.setTimeout(45_000);
+  test.setTimeout(75_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -1113,6 +1157,34 @@ test('shows the title screen, opens match setup, and holds gameplay until confir
       firstHalfOpeningPossession: 'user',
       secondHalfOpeningPossession: 'opponent',
       winner: 'user',
+    },
+    phase: 'kickoff',
+    possession: 'user',
+    quarter: 1,
+  });
+  await expect(page.locator('body[data-app-phase="kickoff"]')).toBeAttached();
+  const scheduledKickoff = await getMatchSnapshot(page);
+  expect(scheduledKickoff?.kickoff).toMatchObject({
+    kickingTeam: 'opponent',
+    receivingTeam: 'user',
+    reason: 'opening',
+    result: expect.objectContaining({
+      target: expect.objectContaining({
+        x: expect.any(Number),
+        z: expect.any(Number),
+      }),
+    }),
+  });
+  await expect.poll(() => getKickoffSnapshot(page).then((snapshot) => snapshot.phase), {
+    timeout: 15_000,
+  }).toBe('flight');
+  await expect.poll(() => getKickoffSnapshot(page).then((snapshot) => snapshot.reticleVisible), {
+    timeout: 5_000,
+  }).toBe(true);
+  await expect.poll(() => getMatchSnapshot(page), { timeout: 20_000 }).toMatchObject({
+    clock: {
+      remainingSeconds: 180,
+      running: false,
     },
     phase: 'userPossession',
     possession: 'user',
@@ -3619,6 +3691,24 @@ async function getMatchSnapshot(page: Page): Promise<MatchSnapshot | null> {
     }
 
     return debugApi.getMatchSnapshot();
+  });
+}
+
+async function getKickoffSnapshot(page: Page): Promise<KickoffPresentationSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getKickoffSnapshot: () => KickoffPresentationSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getKickoffSnapshot();
   });
 }
 

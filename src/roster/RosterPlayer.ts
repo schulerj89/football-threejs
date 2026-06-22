@@ -1,3 +1,5 @@
+import type { KickerRatings } from '../specialTeams/KickerRatings';
+
 export type FootballPosition =
   | 'C'
   | 'CB'
@@ -37,6 +39,7 @@ export interface RosterPlayer {
   footballPosition: FootballPosition;
   id: string;
   jerseyNumber: number;
+  kickerRatings?: KickerRatings;
   lastName: string;
   teamId: string;
 }
@@ -54,6 +57,7 @@ export function createRosterPlayer(
   firstName: string,
   lastName: string,
   archetype: PlayerArchetype,
+  kickerRatings?: KickerRatings,
 ): RosterPlayer {
   return {
     appearanceId: `${teamId}-${position.toLowerCase()}-${jerseyNumber}`,
@@ -63,6 +67,7 @@ export function createRosterPlayer(
     footballPosition: position,
     id: `${teamId}-${position.toLowerCase()}-${jerseyNumber}`,
     jerseyNumber,
+    ...(kickerRatings ? { kickerRatings: { ...kickerRatings } } : {}),
     lastName,
     teamId,
   };

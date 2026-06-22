@@ -14,6 +14,7 @@ import type { GameplayCameraDebugSnapshot } from '../camera/GameplayCameraContro
 import type { GameExperienceDebugSnapshot } from '../config/GameExperienceSettings';
 import type { MatchSnapshot } from '../match/MatchTypes';
 import type { CoinTossDebugSnapshot } from '../presentation/coinToss/CoinTossTypes';
+import type { KickoffFrameSnapshot } from '../specialTeams/KickoffTypes';
 import {
   createCrowdPreviewOverlay,
   syncCrowdPreviewOverlay,
@@ -191,6 +192,7 @@ export interface FootballDebugApi {
   getGameplaySnapshot: () => GameplaySnapshot;
   getGamePresentationRuntimeSnapshot: () => GamePresentationRuntimeSnapshot;
   getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
+  getKickoffSnapshot: () => KickoffFrameSnapshot;
   getOfficialsSnapshot: () => OfficialsPresentationSnapshot;
   getSidelineTeamSnapshot: () => SidelineTeamControllerSnapshot;
   getCrowdCapacityBenchmarkSnapshot: () => CrowdCapacityBenchmarkSnapshot;
@@ -265,6 +267,7 @@ export interface DevelopmentOverlayFrame {
   cameraSnapshot: GameplayCameraDebugSnapshot;
   controlledPlayerLabelSnapshot: ControlledPlayerLabelSnapshot;
   coinTossSnapshot: CoinTossDebugSnapshot;
+  kickoffSnapshot: KickoffFrameSnapshot;
   crowdPresentationSnapshot: CrowdPresentationSnapshot | null;
   crowdPreviewSnapshot: CrowdPreviewSnapshot | null;
   deltaSeconds: number;
@@ -411,6 +414,7 @@ export class DevelopmentToolsRuntime {
         frame.renderMetrics,
         frame.cameraSnapshot,
         frame.coinTossSnapshot,
+        frame.kickoffSnapshot,
       );
     }
     if (this.memoryDebugPanel && frame.memoryDebugSnapshot) {

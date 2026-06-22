@@ -132,6 +132,14 @@ import type {
   CoinTossDebugSnapshot,
   CoinTossFrameResult,
 } from '../presentation/coinToss/CoinTossTypes';
+import {
+  KickoffPresentationDirector,
+} from '../specialTeams/KickoffPresentationDirector';
+import type {
+  KickoffFrameResult,
+  KickoffFrameSnapshot,
+  KickoffPresentationContext,
+} from '../specialTeams/KickoffTypes';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -173,6 +181,14 @@ export interface CoinTossPresentationFrameOptions {
   profiler?: FramePerformanceProfiler;
 }
 
+export interface KickoffPresentationFrameOptions {
+  deltaSeconds: number;
+  gameplaySnapshot: GameplaySnapshot;
+  matchSnapshot: MatchSnapshot | null;
+  playerVisuals: Map<string, THREE.Group>;
+  profiler?: FramePerformanceProfiler;
+}
+
 export class PresentationRuntime {
   readonly audioMixer: AudioMixer;
   readonly ballVisual: THREE.Group;
@@ -193,6 +209,7 @@ export class PresentationRuntime {
   readonly officialsController: OfficialsPresentationController;
   readonly controlledPlayerLabels: ControlledPlayerLabelRenderer;
   readonly coinTossController: CoinTossController;
+  readonly kickoffPresentationDirector: KickoffPresentationDirector;
 
   private readonly scene: THREE.Scene;
   private cameraController: GameplayCameraController;
@@ -353,8 +370,16 @@ export class PresentationRuntime {
       teamTheme: this.teamTheme,
       warn,
     });
+    this.kickoffPresentationDirector = new KickoffPresentationDirector({
+      audioCoordinator: this.pregameAudioCoordinator,
+      ballVisualStyle: resolveBallVisualStyle(searchParams.get('ballVisual')),
+      rosterBinding: this.rosterBinding,
+      teamTheme: this.teamTheme,
+      warn,
+    });
     if (!this.crowdPreviewController) {
       this.scene.add(this.coinTossController.group);
+      this.scene.add(this.kickoffPresentationDirector.group);
     }
     this.pregamePresentationDirector = this.createPregamePresentationDirector();
     this.qbShowcaseCard = new QBShowcaseCard();
@@ -407,6 +432,7 @@ export class PresentationRuntime {
     this.pregamePresentationDirector.resetPresentationIdentity();
     this.pregameWarmupController.setActive(false);
     this.coinTossController.reset();
+    this.kickoffPresentationDirector.reset();
     this.qbShowcaseCard.hide('resetPresentationIdentity');
     this.broadcastCaptions.hidden = true;
     this.broadcastCaptions.textContent = '';
@@ -418,6 +444,7 @@ export class PresentationRuntime {
     this.pregamePresentationDirector.skip();
     this.pregameWarmupController.setActive(false);
     this.coinTossController.reset();
+    this.kickoffPresentationDirector.reset();
     this.qbShowcaseCard.hide('skipped');
   }
 
@@ -672,6 +699,51 @@ export class PresentationRuntime {
     this.cameraController.finishPregamePresentation(gameplaySnapshot);
   }
 
+  startKickoff(matchSnapshot: MatchSnapshot | null): void {
+    this.pregameWarmupController.setActive(false);
+    this.qbShowcaseCard.hide('kickoff');
+    this.coinTossController.reset();
+    this.ballVisual.visible = false;
+    this.kickoffPresentationDirector.start(matchSnapshot);
+  }
+
+  updateKickoffFrame({
+    deltaSeconds,
+    gameplaySnapshot,
+    matchSnapshot,
+    playerVisuals,
+    profiler,
+  }: KickoffPresentationFrameOptions): KickoffFrameResult {
+    if (profiler?.enabled) {
+      profiler.measure('proceduralPlayerPosing', () => {
+        this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+      });
+    } else {
+      this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+    }
+    this.officialsController.update(gameplaySnapshot, deltaSeconds, false);
+    this.sidelineTeamController.update();
+    const context: KickoffPresentationContext = {
+      deltaSeconds,
+      gameplaySnapshot,
+      matchSnapshot,
+    };
+    const result = this.kickoffPresentationDirector.update(context);
+    this.cameraController.updatePregamePresentation(
+      this.kickoffPresentationDirector.createCameraShot(),
+      deltaSeconds,
+    );
+    this.syncPregameCaptions();
+    return result;
+  }
+
+  finishKickoff(gameplaySnapshot: GameplaySnapshot): void {
+    this.kickoffPresentationDirector.finish();
+    this.broadcastCaptions.hidden = true;
+    this.broadcastCaptions.textContent = '';
+    this.cameraController.finishPregamePresentation(gameplaySnapshot);
+  }
+
   syncPlayCallUi(gameplaySnapshot: GameplaySnapshot, visible: boolean): void {
     if (this.playCallUi && visible) {
       syncPlayCallUi(this.playCallUi, gameplaySnapshot);
@@ -686,7 +758,7 @@ export class PresentationRuntime {
     this.controlledPlayerLabels.setApplicationPhase(appPhase);
     if (appPhase !== 'gameplay') {
       this.playCallUi?.hide();
-      if (appPhase !== 'pregamePresentation' && appPhase !== 'coinToss') {
+      if (appPhase !== 'pregamePresentation' && appPhase !== 'coinToss' && appPhase !== 'kickoff') {
         this.broadcastCaptions.hidden = true;
         this.broadcastCaptions.textContent = '';
         this.qbShowcaseCard.hide('appPhase');
@@ -737,6 +809,10 @@ export class PresentationRuntime {
       teamTheme: this.teamTheme,
     });
     this.coinTossController.applySettings({
+      rosterBinding: this.rosterBinding,
+      teamTheme: this.teamTheme,
+    });
+    this.kickoffPresentationDirector.applySettings({
       rosterBinding: this.rosterBinding,
       teamTheme: this.teamTheme,
     });
@@ -846,6 +922,10 @@ export class PresentationRuntime {
     return this.coinTossController.getSnapshot(matchSnapshot);
   }
 
+  getKickoffSnapshot(): KickoffFrameSnapshot {
+    return this.kickoffPresentationDirector.getSnapshot();
+  }
+
   getQBShowcaseCardSnapshot(): QBShowcaseCardSnapshot {
     return this.qbShowcaseCard.getSnapshot();
   }
@@ -896,6 +976,8 @@ export class PresentationRuntime {
     this.pregameWarmupController.dispose();
     this.scene.remove(this.coinTossController.group);
     this.coinTossController.dispose();
+    this.scene.remove(this.kickoffPresentationDirector.group);
+    this.kickoffPresentationDirector.dispose();
     this.playCallUi?.dispose();
     this.gameplayHud.root.remove();
     this.broadcastCaptions.remove();

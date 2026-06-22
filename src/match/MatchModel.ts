@@ -4,6 +4,14 @@ import {
 } from '../teams/TeamRegistry';
 import type { TeamProfile } from '../teams/TeamProfile';
 import {
+  cloneKickoffState,
+  createKickoffState,
+} from '../specialTeams/KickoffSimulation';
+import type {
+  KickoffResult,
+  KickoffState,
+} from '../specialTeams/KickoffTypes';
+import {
   createMatchClock,
   resetMatchClock,
   snapshotMatchClock,
@@ -67,6 +75,7 @@ export function createMatchModel({
     driveNumber: 1,
     driveSummaries: [],
     gameOverReason: null,
+    kickoff: createKickoffState(),
     openingPossession,
     opponentScore: 0,
     opponentTeam: getTeamProfileOrDefault(opponentTeamId),
@@ -134,6 +143,7 @@ export function resetMatchModel(match: MutableMatchModel): void {
   match.driveNumber = reset.driveNumber;
   match.driveSummaries = reset.driveSummaries;
   match.gameOverReason = reset.gameOverReason;
+  match.kickoff = reset.kickoff;
   match.openingPossession = reset.openingPossession;
   match.opponentScore = reset.opponentScore;
   match.phase = reset.phase;
@@ -172,6 +182,34 @@ export function addDriveSummary(match: MutableMatchModel, summary: DriveSummary)
   match.currentFieldPosition = { ...summary.endingFieldPosition };
 }
 
+export function enterKickoff(
+  match: MutableMatchModel,
+  kickoff: KickoffState,
+): KickoffState {
+  stopMatchClock(match.clock);
+  match.kickoff = cloneKickoffState(kickoff);
+  match.phase = 'kickoff';
+  if (kickoff.receivingTeam) {
+    match.possession = kickoff.receivingTeam;
+  }
+  return cloneKickoffState(match.kickoff);
+}
+
+export function completeKickoff(match: MutableMatchModel): KickoffResult | null {
+  const result = match.kickoff.result;
+  if (!result) {
+    return null;
+  }
+
+  match.kickoff = {
+    ...cloneKickoffState(match.kickoff),
+    completed: true,
+    phase: 'completed',
+  };
+  match.currentFieldPosition = { ...result.receivingStartSpot };
+  return { ...result, receivingStartSpot: { ...result.receivingStartSpot } };
+}
+
 export function advanceToNextQuarter(match: MutableMatchModel): void {
   if (match.quarter >= 4) {
     enterGameOver(match);
@@ -199,7 +237,10 @@ export function enterQuarterTransition(match: MutableMatchModel): void {
   }
 }
 
-export function enterOpponentPossession(match: MutableMatchModel): void {
+export function enterOpponentPossession(
+  match: MutableMatchModel,
+  startingFieldPosition: FootballSpot = match.rules.touchbackSpot,
+): void {
   if (match.clock.remainingSeconds <= 0) {
     enterQuarterTransition(match);
     return;
@@ -208,7 +249,7 @@ export function enterOpponentPossession(match: MutableMatchModel): void {
   stopMatchClock(match.clock);
   match.possession = 'opponent';
   match.phase = 'opponentDriveSimulation';
-  match.currentFieldPosition = { ...match.rules.touchbackSpot };
+  match.currentFieldPosition = { ...startingFieldPosition };
 }
 
 export function enterUserPossession(
@@ -247,6 +288,7 @@ export function snapshotMatchModel(match: MutableMatchModel): MatchSnapshot {
       startingFieldPosition: { ...summary.startingFieldPosition },
     })),
     gameOverReason: match.gameOverReason,
+    kickoff: cloneKickoffState(match.kickoff),
     openingPossession: match.openingPossession,
     opponentScore: match.opponentScore,
     opponentTeam: { ...match.opponentTeam },

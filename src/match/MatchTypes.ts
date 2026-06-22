@@ -1,10 +1,12 @@
 import type { FootballSpot } from '../fieldScale';
+import type { KickoffState } from '../specialTeams/KickoffTypes';
 import type { TeamProfile } from '../teams/TeamProfile';
 import type { CoinTossState } from './CoinTossModel';
 
 export type MatchPhase =
   | 'coinToss'
   | 'pregame'
+  | 'kickoff'
   | 'userPossession'
   | 'opponentDriveSimulation'
   | 'quarterBreak'
@@ -65,6 +67,7 @@ export interface MatchModel {
   driveNumber: number;
   driveSummaries: readonly DriveSummary[];
   gameOverReason: 'clockExpired' | null;
+  kickoff: KickoffState;
   openingPossession: MatchPossession;
   opponentScore: number;
   opponentTeam: TeamProfile;

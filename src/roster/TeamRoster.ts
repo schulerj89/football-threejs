@@ -6,6 +6,7 @@ import {
   type RosterPlayer,
   type RosterValidationIssue,
 } from './RosterPlayer';
+import { getStoredKickerRatingsForPlayerId } from '../specialTeams/KickerRatings';
 
 export interface TeamRoster {
   defensiveStarterIds: readonly string[];
@@ -58,16 +59,20 @@ export function createTeamRoster(
   defense: readonly StarterSeed[],
   specialists: readonly StarterSeed[],
 ): TeamRoster {
-  const players = [...offense, ...defense, ...specialists].map((seed) =>
-    createRosterPlayer(
+  const players = [...offense, ...defense, ...specialists].map((seed) => {
+    const playerId = `${teamId}-${seed.position.toLowerCase()}-${seed.jerseyNumber}`;
+    return createRosterPlayer(
       teamId,
       seed.position,
       seed.jerseyNumber,
       seed.firstName,
       seed.lastName,
       seed.archetype,
-    ),
-  );
+      seed.position === 'K'
+        ? getStoredKickerRatingsForPlayerId(playerId) ?? undefined
+        : undefined,
+    );
+  });
   const kicker = players.find((player) => player.footballPosition === 'K');
   const punter = players.find((player) => player.footballPosition === 'P');
 

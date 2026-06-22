@@ -58,7 +58,7 @@ export class ControlledPlayerLabelRenderer {
   private readonly controlledSprite = createLabelSprite('controlled-player-label');
   private readonly selectedReceiverSprite = createLabelSprite('selected-receiver-label');
   private readonly textureCache = new Map<string, THREE.CanvasTexture>();
-  private appPhase: 'coinToss' | 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title' = 'title';
+  private appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title' = 'title';
   private binding: GameplayRosterBinding;
   private settings: PlayerLabelSettings;
   private snapshot: ControlledPlayerLabelSnapshot = {
@@ -84,7 +84,7 @@ export class ControlledPlayerLabelRenderer {
     this.group.add(this.controlledSprite, this.selectedReceiverSprite);
   }
 
-  setApplicationPhase(appPhase: 'coinToss' | 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title'): void {
+  setApplicationPhase(appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title'): void {
     this.appPhase = appPhase;
   }
 
@@ -212,7 +212,7 @@ export class ControlledPlayerLabelRenderer {
 
 export function resolveControlledPlayerLabelStates(options: {
   activeShotName: string | null;
-    appPhase: 'coinToss' | 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title';
+    appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title';
   binding: GameplayRosterBinding;
   gameplay: GameplaySnapshot;
   gameplayActive?: boolean;
@@ -258,7 +258,7 @@ function resolveLabelState(
   gameplayPlayerId: string | null,
   options: {
     activeShotName: string | null;
-    appPhase: 'coinToss' | 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title';
+    appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title';
     binding: GameplayRosterBinding;
     gameplay: GameplaySnapshot;
     gameplayActive?: boolean;
@@ -299,7 +299,7 @@ function getVisibilityReason(
   gameplayPlayerId: string | null,
   options: {
     activeShotName: string | null;
-    appPhase: 'coinToss' | 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title';
+    appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title';
     gameplay: GameplaySnapshot;
     gameplayActive?: boolean;
     settings: PlayerLabelSettings;

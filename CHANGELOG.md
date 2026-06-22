@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.0] - 2026-06-22
+
+### Added
+
+- Added deterministic simulated kickoff transitions for opening kickoffs, second-half kickoffs, and post-score kickoffs using seeded kicker power/accuracy formulas, controlled ball arcs, landing targets, touchbacks, and abstract fielded-return start spots.
+- Added presentation-only kickoff formation staging, a reusable football flight presentation, a visible landing reticle tied to the authoritative kickoff target, and serialized kickoff-ready, kick-away, and kickoff-result announcer sequencing.
+- Added stable kicker ratings to roster specialists and F1 kickoff debug readback for kicker identity, ratings, target, landing type, reticle state, ball position, and commentary.
+
+### Changed
+
+- Updated exhibition match flow so the coin toss hands off to kickoff before user pre-snap or opponent-drive simulation, while scoring transitions schedule a single kickoff instead of jumping directly to the next possession.
+- Normalized fielded kickoff start spots into the existing drive-coordinate convention while preserving physical landing targets for the visible reticle and ball flight.
+
+### Tests
+
+- Added special-teams unit coverage for deterministic variation, power/accuracy spread, kickoff arc sampling, reticle synchronization, touchbacks, fielded starts, possession handoff, and post-score kickoff deduplication.
+- Updated browser smoke coverage for the title/setup/pregame/coin-toss/kickoff/pre-snap flow.
+
 ## [1.12.0] - 2026-06-22
 
 ### Added

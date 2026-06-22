@@ -6,6 +6,7 @@ import type {
 import type { RenderMetricsSnapshot } from '../../debugOverlay';
 import type { GameplayCameraDebugSnapshot } from '../../camera/GameplayCameraController';
 import type { CoinTossDebugSnapshot } from '../coinToss/CoinTossTypes';
+import type { KickoffFrameSnapshot } from '../../specialTeams/KickoffTypes';
 
 export class PregameLowerThird {
   readonly root: HTMLDivElement;
@@ -92,6 +93,7 @@ export function syncPregameDebugOverlay(
   renderMetrics: RenderMetricsSnapshot | null = null,
   cameraSnapshot: GameplayCameraDebugSnapshot | null = null,
   coinTossSnapshot: CoinTossDebugSnapshot | null = null,
+  kickoffSnapshot: KickoffFrameSnapshot | null = null,
 ): void {
   if (!snapshot) {
     overlay.textContent = 'Pregame: inactive';
@@ -158,5 +160,22 @@ export function syncPregameDebugOverlay(
           `coinBlockers: ${coinTossSnapshot.completionBlockers.join(',') || 'none'}`,
         ].join('\n')
       : 'coinToss: unavailable',
+    kickoffSnapshot
+      ? [
+          `kickoff: ${kickoffSnapshot.phase}`,
+          `kickSeq: ${kickoffSnapshot.sequenceIndex ?? 'none'}`,
+          `kicker: ${kickoffSnapshot.kickerRosterId ?? 'none'}`,
+          `kickTeams: ${kickoffSnapshot.kickingTeam ?? 'none'} -> ${kickoffSnapshot.receivingTeam ?? 'none'}`,
+          `kickLanding: ${kickoffSnapshot.landingType ?? 'none'}`,
+          kickoffSnapshot.result
+            ? `kickTarget: ${kickoffSnapshot.result.target.x.toFixed(1)},${kickoffSnapshot.result.target.z.toFixed(1)} radius ${kickoffSnapshot.result.uncertaintyRadiusYards.toFixed(1)}`
+            : 'kickTarget: none',
+          kickoffSnapshot.ballPosition
+            ? `kickBall: ${kickoffSnapshot.ballPosition.x.toFixed(1)},${kickoffSnapshot.ballPosition.y.toFixed(1)},${kickoffSnapshot.ballPosition.z.toFixed(1)}`
+            : 'kickBall: hidden',
+          `kickReticle: ${kickoffSnapshot.reticleVisible ? 'visible' : 'hidden'}`,
+          `kickCommentary: ${kickoffSnapshot.activeCommentary ?? 'none'}`,
+        ].join('\n')
+      : 'kickoff: unavailable',
   ].join('\n');
 }

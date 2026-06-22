@@ -323,6 +323,18 @@ export class FootballApplication {
       this.matchController.update(delta, this.gameplay.gameplayModel, gameplaySnapshot);
     }
     const matchSnapshot = this.getMatchSnapshot();
+    if (
+      matchActive &&
+      this.lifecycle.phase === 'gameplay' &&
+      matchSnapshot?.phase === 'kickoff' &&
+      !pauseSettingsVisible
+    ) {
+      this.startKickoffPresentation();
+    }
+    const kickoffActive =
+      this.lifecycle.phase === 'kickoff' &&
+      !pauseSettingsVisible &&
+      matchActive;
     this.updateAdaptiveQuality(delta, gameplaySnapshot);
     if (this.performanceProfiler.enabled) {
       this.performanceProfiler.measure('stadiumUpdate', () => {
@@ -366,6 +378,17 @@ export class FootballApplication {
       }
       if (result.completed) {
         this.finishCoinTossAndStartGameplay();
+      }
+    } else if (kickoffActive) {
+      const result = this.presentation.updateKickoffFrame({
+        deltaSeconds: presentationDelta,
+        gameplaySnapshot,
+        matchSnapshot,
+        playerVisuals: this.playerVisuals.visuals,
+        profiler: this.performanceProfiler,
+      });
+      if (result.completed) {
+        this.finishKickoffAndContinue();
       }
     } else {
       this.presentation.updateGameplayFrame({
@@ -464,6 +487,7 @@ export class FootballApplication {
       activePrimaryPlayer,
       cameraSnapshot: this.presentation.cameraDebugSnapshot,
       coinTossSnapshot: this.presentation.getCoinTossSnapshot(this.getMatchSnapshot()),
+      kickoffSnapshot: this.presentation.getKickoffSnapshot(),
       controlledPlayerLabelSnapshot: this.presentation.getControlledPlayerLabelSnapshot(),
       crowdPresentationSnapshot: this.presentation.getCrowdPresentationSnapshot(),
       crowdPreviewSnapshot: this.presentation.getCrowdPreviewSnapshot(),
@@ -634,6 +658,9 @@ export class FootballApplication {
 
     this.matchController.continue(this.gameplay.gameplayModel);
     this.syncAfterGameplayRebuild();
+    if (this.matchController.getSnapshot().phase === 'kickoff') {
+      this.startKickoffPresentation();
+    }
   }
 
   private rematch(): void {
@@ -788,7 +815,37 @@ export class FootballApplication {
 
     const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
     this.presentation.finishCoinToss(gameplaySnapshot);
-    this.matchController.beginAfterCoinToss(this.gameplay.gameplayModel);
+    const kickoffStarted = this.matchController.beginOpeningKickoffAfterCoinToss(
+      this.gameplay.gameplayModel,
+    );
+    this.syncAfterGameplayRebuild();
+    if (kickoffStarted) {
+      this.startKickoffPresentation();
+    } else {
+      this.matchController.beginAfterCoinToss(this.gameplay.gameplayModel);
+      this.syncAfterGameplayRebuild();
+      this.lifecycle.startGameplay();
+    }
+  }
+
+  private startKickoffPresentation(): void {
+    if (!this.isExhibitionMatchActive()) {
+      this.lifecycle.startGameplay();
+      return;
+    }
+
+    this.presentation.startKickoff(this.matchController.getSnapshot());
+    this.lifecycle.startKickoff();
+  }
+
+  private finishKickoffAndContinue(): void {
+    if (!this.isExhibitionMatchActive() || this.lifecycle.phase !== 'kickoff') {
+      return;
+    }
+
+    const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
+    this.presentation.finishKickoff(gameplaySnapshot);
+    this.matchController.completeKickoff(this.gameplay.gameplayModel);
     this.syncAfterGameplayRebuild();
     this.lifecycle.startGameplay();
   }

@@ -35,7 +35,10 @@ export type PregamePresentationCommentaryLineId =
 export type PregameCommentaryLineId =
   | PregamePresentationCommentaryLineId
   | 'coinTossResult'
-  | 'coinTossSetup';
+  | 'coinTossSetup'
+  | 'kickoffInFlight'
+  | 'kickoffReady'
+  | 'kickoffResult';
 
 export interface PregameSequenceStep {
   commentaryLineId?: PregamePresentationCommentaryLineId;
