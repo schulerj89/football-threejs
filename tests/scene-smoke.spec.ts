@@ -6,7 +6,9 @@ const EXTENDED_SMOKE_ENABLED = process.env.FOOTBALL_EXTENDED_SMOKE === '1';
 const TITLE_SETUP_CYCLE_COUNT = EXTENDED_SMOKE_ENABLED ? 25 : 8;
 const RESOURCE_RESET_CYCLE_COUNT = EXTENDED_SMOKE_ENABLED ? 100 : 40;
 
-function extendedSmokeTest(title: string, body: Parameters<typeof test>[1]): void {
+type SceneSmokeTestBody = (args: { page: Page }, testInfo: TestInfo) => Promise<void> | void;
+
+function extendedSmokeTest(title: string, body: SceneSmokeTestBody): void {
   if (EXTENDED_SMOKE_ENABLED) {
     test(title, body);
   }
@@ -1074,7 +1076,15 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   await expect(page.locator('.match-setup-customize')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Your Team' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Opponent' })).toBeVisible();
+  await expect(page.locator('.match-team-card[data-side="user"] .match-team-display-name')).toBeVisible();
+  await expect(page.locator('.match-team-card[data-side="opponent"] .match-team-display-name')).toBeVisible();
+  await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-preview')).toBeVisible();
+  await expect(page.locator('.match-team-card[data-side="opponent"] .team-helmet-preview')).toBeVisible();
+  await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(1);
   await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-badge')).toBeVisible();
+  await expect.poll(async () =>
+    page.locator('.match-team-card[data-side="user"] .team-helmet-preview').getAttribute('data-preview'),
+  { timeout: 5000 }).toBe('glb');
   const registeredTeamNames = listTeamProfiles().map((profile) => profile.displayName);
   await expect(page.locator('.match-team-card[data-side="user"] select').first().locator('option'))
     .toHaveText(registeredTeamNames);

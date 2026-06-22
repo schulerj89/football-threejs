@@ -77,8 +77,10 @@ describe('helmet visual integration', () => {
   it('uses helmet shell and faceguard colors from the active uniform palette', () => {
     const shellMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
     const faceguardMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const accentMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
     const shell = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), shellMaterial);
     const faceguard = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), faceguardMaterial);
+    const accent = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), accentMaterial);
     const teamProfiles = updateTeamColorOverride(
       DEFAULT_TEAM_PROFILE_SETTINGS,
       DEFAULT_USER_TEAM_ID,
@@ -91,6 +93,7 @@ describe('helmet visual integration', () => {
 
     applyHelmetTeamMaterials(
       {
+        accentMeshes: [accent],
         faceguardMeshes: [faceguard],
         shellMeshes: [shell],
       },
@@ -100,6 +103,9 @@ describe('helmet visual integration', () => {
 
     expect((shell.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0x654321);
     expect((faceguard.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0x101820);
+    expect((accent.material as THREE.MeshStandardMaterial).color.getHex()).toBe(
+      parseInt(theme.offense.uniform.stripe.slice(1), 16),
+    );
   });
 
   it('reuses cached helmet parts when the team color is unchanged', () => {

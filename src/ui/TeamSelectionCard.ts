@@ -5,7 +5,10 @@ import {
   type TeamProfileSettings,
 } from '../teams/TeamProfileStore';
 import type { TeamSide } from '../teams/TeamProfile';
-import type { UniformVariant } from '../teams/UniformPalette';
+import type { UniformPalette, UniformVariant } from '../teams/UniformPalette';
+import {
+  getReadableTextColor,
+} from '../teams/TeamThemeApplier';
 import { createTeamHelmetBadge, syncTeamHelmetBadge } from './TeamHelmetBadge';
 
 export interface TeamSelectionCardOptions {
@@ -20,6 +23,9 @@ export class TeamSelectionCard {
   readonly root = document.createElement('section');
 
   private readonly badge: SVGSVGElement;
+  private readonly displayName = document.createElement('strong');
+  private readonly identityPanel = document.createElement('div');
+  private readonly previewHost = document.createElement('div');
   private readonly teamOptions = listTeamProfiles();
   private readonly teamSelect = document.createElement('select');
   private readonly uniformSelect = document.createElement('select');
@@ -39,6 +45,19 @@ export class TeamSelectionCard {
     this.sync(options.settings);
   }
 
+  getHelmetFallbackBadge(): SVGSVGElement {
+    return this.badge;
+  }
+
+  getHelmetPreviewHost(): HTMLElement {
+    return this.previewHost;
+  }
+
+  getUniformPalette(): UniformPalette {
+    const profile = resolveCustomizedTeamProfile(this.getTeamId(), this.settings);
+    return this.getUniform() === 'away' ? profile.awayUniform : profile.homeUniform;
+  }
+
   sync(settings: TeamProfileSettings): void {
     this.settings = settings;
     const teamId = this.getTeamId();
@@ -49,7 +68,12 @@ export class TeamSelectionCard {
 
     this.teamSelect.value = teamId;
     this.uniformSelect.value = uniformVariant;
+    this.displayName.textContent = profile.displayName;
     this.abbreviation.textContent = profile.abbreviation;
+    this.identityPanel.style.setProperty('--team-panel-primary', profile.colors.primary);
+    this.identityPanel.style.setProperty('--team-panel-secondary', profile.colors.secondary);
+    this.abbreviation.style.setProperty('--team-abbreviation-bg', profile.colors.primary);
+    this.abbreviation.style.setProperty('--team-abbreviation-fg', getReadableTextColor(profile.colors.primary));
     syncTeamHelmetBadge(this.badge, uniform);
     this.swatches.replaceChildren(
       createSwatch('Primary', profile.colors.primary),
@@ -68,8 +92,17 @@ export class TeamSelectionCard {
     const header = document.createElement('header');
     const title = document.createElement('h3');
     title.textContent = titleText;
+    header.append(title);
+
+    this.identityPanel.className = 'match-team-identity';
+    this.displayName.className = 'match-team-display-name';
     this.abbreviation.className = 'match-team-abbreviation';
-    header.append(title, this.abbreviation);
+    this.identityPanel.append(this.displayName, this.abbreviation);
+    this.previewHost.className = 'team-helmet-preview';
+    this.previewHost.dataset.preview = 'fallback';
+    this.previewHost.setAttribute('role', 'img');
+    this.previewHost.setAttribute('aria-label', `${titleText} helmet preview`);
+    this.previewHost.append(this.badge);
 
     const teamLabel = document.createElement('label');
     teamLabel.className = 'match-setup-control';
@@ -123,7 +156,7 @@ export class TeamSelectionCard {
     this.swatches.className = 'match-team-swatches';
     this.quarterback.className = 'match-team-quarterback';
 
-    fragment.append(header, this.badge, controls, this.swatches, this.quarterback);
+    fragment.append(header, this.identityPanel, this.previewHost, controls, this.swatches, this.quarterback);
     const wrapper = document.createElement('div');
     wrapper.append(fragment);
     return wrapper;

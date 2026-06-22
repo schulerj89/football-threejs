@@ -1,0 +1,321 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import helmetUrl from '../../../low_poly_helmet.glb?url';
+import type { PlayerTeam } from '../../playerModel';
+import { getUniformColorNumber } from '../../teams/TeamThemeApplier';
+import type { UniformPalette } from '../../teams/UniformPalette';
+
+export type HelmetAssetStatus = 'idle' | 'loading' | 'loaded' | 'error';
+export type HelmetPart = 'accent' | 'faceguard' | 'shell';
+
+export interface HelmetAssetLoadSnapshot {
+  assetId: string;
+  errorMessage: string | null;
+  faceguardMeshNames: string[];
+  shellMeshNames: string[];
+  status: HelmetAssetStatus;
+}
+
+export interface HelmetPartMeshes {
+  accentMeshes?: THREE.Mesh[];
+  faceguardMeshes: THREE.Mesh[];
+  shellMeshes: THREE.Mesh[];
+}
+
+export const HELMET_ASSET_ID = 'low_poly_helmet';
+
+export const HELMET_ASSET_CONFIG = {
+  accentMeshNames: ['stripe', 'helmetstripe', 'accent', 'trim'],
+  assetUrl: helmetUrl,
+  faceguardMeshNames: ['faceguard', 'face-guard', 'face_guard', 'facemask', 'face-mask', 'guard'],
+  faceguardOffset: {
+    position: { x: 0, y: -0.04, z: 0.48 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+  },
+  shellMeshNames: ['helmet_shell', 'helmet-shell', 'shell', 'helmet', 'mesh1.0'],
+  teamColors: {
+    defense: {
+      faceguard: 0x24282e,
+      shell: 0xb83737,
+    },
+    offense: {
+      faceguard: 0xf3f5f8,
+      shell: 0x2f66d8,
+    },
+  },
+} as const;
+
+const helmetAssetState: HelmetAssetLoadSnapshot = {
+  assetId: HELMET_ASSET_ID,
+  errorMessage: null,
+  faceguardMeshNames: [],
+  shellMeshNames: [],
+  status: 'idle',
+};
+
+const loader = new GLTFLoader();
+const helmetMaterialCache = new Map<string, THREE.Material>();
+let helmetTemplatePromise: Promise<THREE.Group> | null = null;
+
+export async function loadHelmetTemplate(): Promise<THREE.Group> {
+  if (!helmetTemplatePromise) {
+    helmetAssetState.status = 'loading';
+    helmetAssetState.errorMessage = null;
+    helmetTemplatePromise = new Promise((resolve, reject) => {
+      loader.load(
+        HELMET_ASSET_CONFIG.assetUrl,
+        (gltf) => {
+          const template = gltf.scene;
+          template.name = 'low-poly-helmet-template';
+          const parts = findHelmetPartMeshes(template);
+          helmetAssetState.shellMeshNames = parts.shellMeshes.map((mesh) => mesh.name);
+          helmetAssetState.faceguardMeshNames = parts.faceguardMeshes.map((mesh) => mesh.name);
+          helmetAssetState.status = 'loaded';
+          resolve(template);
+        },
+        undefined,
+        (error) => {
+          helmetAssetState.status = 'error';
+          helmetAssetState.errorMessage = error instanceof Error ? error.message : String(error);
+          reject(error);
+        },
+      );
+    });
+  }
+
+  return helmetTemplatePromise;
+}
+
+export async function cloneHelmetAsset(name = 'low-poly-helmet'): Promise<THREE.Group> {
+  const template = await loadHelmetTemplate();
+  const helmet = template.clone(true);
+  helmet.name = name;
+  helmet.userData.assetId = HELMET_ASSET_ID;
+  return helmet;
+}
+
+export function getHelmetAssetLoadSnapshot(): HelmetAssetLoadSnapshot {
+  return {
+    assetId: helmetAssetState.assetId,
+    errorMessage: helmetAssetState.errorMessage,
+    faceguardMeshNames: [...helmetAssetState.faceguardMeshNames],
+    shellMeshNames: [...helmetAssetState.shellMeshNames],
+    status: helmetAssetState.status,
+  };
+}
+
+export function findHelmetPartMeshes(root: THREE.Object3D): HelmetPartMeshes {
+  const meshes = findMeshes(root);
+  const faceguardMeshes = meshes.filter((mesh) =>
+    matchesMeshOrMaterialName(mesh, HELMET_ASSET_CONFIG.faceguardMeshNames),
+  );
+  const accentMeshes = meshes.filter((mesh) =>
+    matchesMeshOrMaterialName(mesh, HELMET_ASSET_CONFIG.accentMeshNames) &&
+    !faceguardMeshes.includes(mesh),
+  );
+  const shellMeshes = meshes.filter((mesh) =>
+    matchesMeshOrMaterialName(mesh, HELMET_ASSET_CONFIG.shellMeshNames) &&
+    !faceguardMeshes.includes(mesh) &&
+    !accentMeshes.includes(mesh),
+  );
+
+  return {
+    accentMeshes,
+    faceguardMeshes,
+    shellMeshes: shellMeshes.length > 0
+      ? shellMeshes
+      : meshes.filter((mesh) => !faceguardMeshes.includes(mesh) && !accentMeshes.includes(mesh)),
+  };
+}
+
+export function ensureHelmetFaceguard(root: THREE.Object3D): HelmetPartMeshes {
+  const parts = findHelmetPartMeshes(root);
+
+  if (parts.faceguardMeshes.length > 0) {
+    return parts;
+  }
+
+  const fallbackFaceguard = createFallbackFaceguard();
+  root.add(fallbackFaceguard);
+  return findHelmetPartMeshes(root);
+}
+
+export function applyHelmetUniformMaterials(
+  parts: HelmetPartMeshes,
+  uniform: UniformPalette,
+  materialScope: string,
+): void {
+  for (const shellMesh of parts.shellMeshes) {
+    assignUniformMaterial(shellMesh, 'shell', uniform, materialScope);
+  }
+
+  for (const faceguardMesh of parts.faceguardMeshes) {
+    assignUniformMaterial(faceguardMesh, 'faceguard', uniform, materialScope);
+  }
+
+  for (const accentMesh of parts.accentMeshes ?? []) {
+    assignUniformMaterial(accentMesh, 'accent', uniform, materialScope);
+  }
+}
+
+export function applyHelmetTeamMaterialsForUniforms(
+  parts: HelmetPartMeshes,
+  team: PlayerTeam,
+  teamUniforms: Record<PlayerTeam, UniformPalette>,
+): void {
+  applyHelmetUniformMaterials(
+    parts,
+    teamUniforms[team],
+    createHelmetMaterialScope(team, teamUniforms),
+  );
+}
+
+export function createHelmetMaterialScope(
+  team: PlayerTeam,
+  teamUniforms: Record<PlayerTeam, UniformPalette>,
+): string {
+  const palette = teamUniforms[team];
+  return `${team}:${palette.helmetShell}:${palette.faceguard}:${palette.stripe}`;
+}
+
+export function applyHelmetOffset(
+  object: THREE.Object3D,
+  offset: {
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+    scale: { x: number; y: number; z: number };
+  },
+): void {
+  object.position.set(offset.position.x, offset.position.y, offset.position.z);
+  object.rotation.set(offset.rotation.x, offset.rotation.y, offset.rotation.z);
+  object.scale.set(offset.scale.x, offset.scale.y, offset.scale.z);
+}
+
+export function measureHelmetBounds(root: THREE.Object3D): THREE.Box3 {
+  return new THREE.Box3().setFromObject(root);
+}
+
+function assignUniformMaterial(
+  mesh: THREE.Mesh,
+  part: HelmetPart,
+  uniform: UniformPalette,
+  materialScope: string,
+): void {
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  const assignedMaterials = materials.map((material) =>
+    getUniformMaterial(material, part, uniform, materialScope),
+  );
+
+  mesh.material = Array.isArray(mesh.material) ? assignedMaterials : assignedMaterials[0];
+}
+
+function getUniformMaterial(
+  sourceMaterial: THREE.Material,
+  part: HelmetPart,
+  uniform: UniformPalette,
+  materialScope: string,
+): THREE.Material {
+  const color = resolveHelmetPartColor(part, uniform);
+  const cacheKey = `${materialScope}:${part}:${color}:${sourceMaterial.uuid}`;
+  const cachedMaterial = helmetMaterialCache.get(cacheKey);
+
+  if (cachedMaterial) {
+    return cachedMaterial;
+  }
+
+  const material = sourceMaterial.clone();
+
+  if ('color' in material && material.color instanceof THREE.Color) {
+    material.color.setHex(color);
+  }
+
+  material.name = `${HELMET_ASSET_ID}-${materialScope}-${part}`;
+  material.needsUpdate = true;
+  helmetMaterialCache.set(cacheKey, material);
+  return material;
+}
+
+function resolveHelmetPartColor(part: HelmetPart, uniform: UniformPalette): number {
+  if (part === 'faceguard') {
+    return getUniformColorNumber(uniform.faceguard);
+  }
+
+  if (part === 'accent') {
+    return getUniformColorNumber(uniform.stripe);
+  }
+
+  return getUniformColorNumber(uniform.helmetShell);
+}
+
+function createFallbackFaceguard(): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'helmet-faceguard-fallback';
+  group.userData.helmetPart = 'faceguard';
+  applyHelmetOffset(group, HELMET_ASSET_CONFIG.faceguardOffset);
+
+  const verticalBarGeometry = new THREE.BoxGeometry(0.08, 0.56, 0.08);
+  const horizontalBarGeometry = new THREE.BoxGeometry(0.62, 0.08, 0.08);
+  const material = new THREE.MeshStandardMaterial({
+    color: HELMET_ASSET_CONFIG.teamColors.offense.faceguard,
+    metalness: 0.1,
+    roughness: 0.55,
+  });
+
+  const centerBar = new THREE.Mesh(verticalBarGeometry, material);
+  centerBar.name = 'helmet-faceguard-center';
+  centerBar.position.set(0, -0.02, 0);
+  group.add(centerBar);
+
+  const leftBar = new THREE.Mesh(verticalBarGeometry.clone(), material);
+  leftBar.name = 'helmet-faceguard-left';
+  leftBar.position.set(-0.28, -0.02, 0);
+  group.add(leftBar);
+
+  const rightBar = new THREE.Mesh(verticalBarGeometry.clone(), material);
+  rightBar.name = 'helmet-faceguard-right';
+  rightBar.position.set(0.28, -0.02, 0);
+  group.add(rightBar);
+
+  const topBar = new THREE.Mesh(horizontalBarGeometry, material);
+  topBar.name = 'helmet-faceguard-top';
+  topBar.position.set(0, 0.18, 0);
+  group.add(topBar);
+
+  const bottomBar = new THREE.Mesh(horizontalBarGeometry.clone(), material);
+  bottomBar.name = 'helmet-faceguard-bottom';
+  bottomBar.position.set(0, -0.18, 0);
+  group.add(bottomBar);
+
+  return group;
+}
+
+function findMeshes(root: THREE.Object3D): THREE.Mesh[] {
+  const meshes: THREE.Mesh[] = [];
+
+  root.traverse((object) => {
+    if (object instanceof THREE.Mesh) {
+      meshes.push(object);
+    }
+  });
+
+  return meshes;
+}
+
+function matchesMeshOrMaterialName(mesh: THREE.Mesh, names: readonly string[]): boolean {
+  const candidateNames = [mesh.name, ...getMaterialNames(mesh.material)].map(normalizeName);
+
+  return names.some((name) => {
+    const normalizedName = normalizeName(name);
+
+    return candidateNames.some((candidateName) => candidateName.includes(normalizedName));
+  });
+}
+
+function getMaterialNames(material: THREE.Material | THREE.Material[]): string[] {
+  return (Array.isArray(material) ? material : [material]).map((candidate) => candidate.name);
+}
+
+function normalizeName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+}

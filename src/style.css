@@ -1638,25 +1638,88 @@ body[data-game-mode="exhibition"] .score-counter {
   font-size: 16px;
 }
 
+.match-team-identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 5px solid var(--team-panel-primary, #2f66d8);
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, rgba(4, 8, 9, 0.94), rgba(12, 19, 18, 0.9)),
+    linear-gradient(135deg, var(--team-panel-primary, #2f66d8), var(--team-panel-secondary, #f2d94b));
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.match-team-display-name {
+  min-width: 0;
+  color: #f7fbf8;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
 .match-team-abbreviation {
   display: inline-flex;
   min-width: 44px;
   justify-content: center;
   padding: 5px 7px;
   border-radius: 5px;
-  background: rgba(242, 217, 75, 0.16);
-  color: #f2d94b;
+  background: var(--team-abbreviation-bg, rgba(242, 217, 75, 0.16));
+  color: var(--team-abbreviation-fg, #f7fbf8);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   font-weight: 900;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.team-helmet-preview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: clamp(148px, 18vw, 198px);
+  margin: 8px 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.14), transparent 42%),
+    linear-gradient(180deg, rgba(7, 12, 14, 0.92), rgba(2, 5, 6, 0.68));
+  overflow: hidden;
+}
+
+.team-helmet-preview::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
 }
 
 .team-helmet-badge {
   display: block;
-  width: min(168px, 70%);
+  width: min(178px, 72%);
   height: auto;
-  margin: 10px auto;
+  margin: 0 auto;
   filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.36));
+  transition: opacity 160ms ease;
+}
+
+.team-helmet-preview[data-preview="glb"] .team-helmet-badge {
+  opacity: 0;
+}
+
+.match-helmet-preview-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 62;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
 }
 
 .team-helmet-shell {

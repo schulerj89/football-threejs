@@ -1,4 +1,5 @@
 import type { GameExperienceSettings } from '../config/GameExperienceSettings';
+import { MatchSetupHelmetPreviewRenderer } from './MatchSetupHelmetPreview';
 import { TeamSelectionCard } from './TeamSelectionCard';
 import { MatchupSummary } from './MatchupSummary';
 import {
@@ -23,6 +24,7 @@ export class MatchSetupScreen {
 
   private readonly userCard: TeamSelectionCard;
   private readonly opponentCard: TeamSelectionCard;
+  private readonly helmetPreview: MatchSetupHelmetPreviewRenderer;
   private readonly summary = new MatchupSummary();
   private readonly confirmButton = document.createElement('button');
   private readonly correctionButton = document.createElement('button');
@@ -67,6 +69,19 @@ export class MatchSetupScreen {
     this.root.setAttribute('aria-labelledby', 'match-setup-heading');
     this.root.tabIndex = -1;
     this.root.append(this.createContent());
+    this.helmetPreview = new MatchSetupHelmetPreviewRenderer(this.root);
+    this.helmetPreview.registerPreview(
+      'user',
+      this.userCard.getHelmetPreviewHost(),
+      this.userCard.getHelmetFallbackBadge(),
+      this.userCard.getUniformPalette(),
+    );
+    this.helmetPreview.registerPreview(
+      'opponent',
+      this.opponentCard.getHelmetPreviewHost(),
+      this.opponentCard.getHelmetFallbackBadge(),
+      this.opponentCard.getUniformPalette(),
+    );
     this.root.addEventListener('pointerdown', () => this.handleFirstGesture(), {
       capture: true,
     });
@@ -94,6 +109,7 @@ export class MatchSetupScreen {
   setVisible(visible: boolean): void {
     this.visible = visible;
     this.root.hidden = !visible;
+    this.helmetPreview.setVisible(visible);
     if (visible) {
       this.root.focus({ preventScroll: true });
     }
@@ -104,6 +120,7 @@ export class MatchSetupScreen {
   }
 
   dispose(): void {
+    this.helmetPreview.dispose();
     this.root.remove();
   }
 
@@ -163,6 +180,8 @@ export class MatchSetupScreen {
     const validation = validateMatchSetupSelection(this.selection);
     this.userCard.sync(this.selection.teamProfiles);
     this.opponentCard.sync(this.selection.teamProfiles);
+    this.helmetPreview.syncPreview('user', this.userCard.getUniformPalette());
+    this.helmetPreview.syncPreview('opponent', this.opponentCard.getUniformPalette());
     this.summary.sync(this.selection.teamProfiles, validation);
     this.correctionButton.hidden = !validation.uniformConflict;
     this.confirmButton.disabled = !validation.canConfirm;
