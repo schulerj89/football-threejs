@@ -299,6 +299,9 @@ export class FootballApplication {
     }
 
     const pauseSettingsVisible = this.lifecycle.isPauseSettingsVisible();
+    const menuPhaseActive =
+      this.lifecycle.phase === 'title' ||
+      this.lifecycle.phase === 'matchSetup';
     const matchActive = this.isExhibitionMatchActive();
     const matchSnapshotBefore = this.getMatchSnapshot();
     const pregameActive =
@@ -313,7 +316,7 @@ export class FootballApplication {
       this.lifecycle.phase === 'gameplay' &&
       !pauseSettingsVisible &&
       (!matchActive || matchSnapshotBefore?.phase === 'userPossession');
-    const presentationDelta = pauseSettingsVisible ? 0 : delta;
+    const presentationDelta = pauseSettingsVisible || menuPhaseActive ? 0 : delta;
     this.presentation.updateMenuMusicChrome(
       this.lifecycle.phase,
       pauseSettingsVisible,
@@ -358,7 +361,13 @@ export class FootballApplication {
       );
       this.playerVisuals.sync(this.getActivePlayers());
     }
-    if (pregameActive) {
+    if (menuPhaseActive) {
+      this.presentation.updateMenuFrame({
+        appPhase: this.lifecycle.phase,
+        ball: this.gameplay.formationPreviewModel?.ball ?? this.gameplay.gameplayModel.ball,
+        profiler: this.performanceProfiler,
+      });
+    } else if (pregameActive) {
       const result = this.presentation.updatePregameFrame({
         ball: this.gameplay.formationPreviewModel?.ball ?? this.gameplay.gameplayModel.ball,
         deltaSeconds: presentationDelta,

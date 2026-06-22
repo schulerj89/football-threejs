@@ -171,6 +171,12 @@ export interface PresentationFrameOptions {
   profiler?: FramePerformanceProfiler;
 }
 
+export interface MenuPresentationFrameOptions {
+  appPhase: AppPhase;
+  ball: BallModel;
+  profiler?: FramePerformanceProfiler;
+}
+
 export interface PregamePresentationFrameOptions {
   ball: BallModel;
   deltaSeconds: number;
@@ -523,6 +529,16 @@ export class PresentationRuntime {
     this.crowdPreviewController.updateBeforeRender();
     renderer.render(this.scene, this.crowdPreviewController.camera);
     this.crowdPreviewController.recordFrame(deltaSeconds, renderer);
+  }
+
+  updateMenuFrame({ appPhase, ball, profiler }: MenuPresentationFrameOptions): void {
+    if (profiler?.enabled) {
+      profiler.measure('footballVisualUpdate', () => syncBallVisual(this.ballVisual, ball));
+    } else {
+      syncBallVisual(this.ballVisual, ball);
+    }
+    this.routeArtRenderer.group.visible = false;
+    this.controlledPlayerLabels.setApplicationPhase(appPhase);
   }
 
   updateGameplayFrame({

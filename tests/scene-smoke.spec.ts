@@ -1349,6 +1349,28 @@ test('keeps the gameplay camera still while scrolling pause settings', async ({ 
   expect(vector3Distance(after.targetPosition, before.targetPosition)).toBeLessThan(0.001);
 });
 
+test('keeps the gameplay camera still while using match setup', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 620 });
+  await page.goto('/');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  await page.getByRole('button', { name: 'Start Game' }).click();
+  const panel = page.locator('.match-setup-panel');
+  await expect(page.locator('.match-setup-screen')).toBeVisible();
+  await expect(panel).toBeVisible();
+  await page.waitForTimeout(100);
+
+  const before = await getCameraSnapshot(page);
+  await page.getByRole('button', { name: 'Next Your Team team' }).click();
+  await panel.hover();
+  await page.mouse.wheel(0, 520);
+  await page.waitForTimeout(500);
+
+  const after = await getCameraSnapshot(page);
+  expect(vector3Distance(after.cameraPosition, before.cameraPosition)).toBeLessThan(0.001);
+  expect(vector3Distance(after.targetPosition, before.targetPosition)).toBeLessThan(0.001);
+});
+
 test('cycles title and match setup without exposing debug helpers', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 720 });
