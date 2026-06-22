@@ -50,6 +50,12 @@ export function createPregameSequence(cinematics: CinematicsSetting): PregameSeq
         waitForCommentaryLineId: 'matchup',
       },
       {
+        commentaryLineId: 'weather',
+        minimumSeconds: PREGAME_SHOT_DURATIONS.weatherAndField,
+        shotId: 'weatherAndField',
+        waitForCommentaryLineId: 'weather',
+      },
+      {
         commentaryLineId: 'quarterback',
         minimumSeconds: PREGAME_SHOT_DURATIONS.quarterbackSpotlight,
         shotId: 'quarterbackSpotlight',

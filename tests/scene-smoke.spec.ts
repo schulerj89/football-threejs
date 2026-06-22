@@ -446,19 +446,20 @@ interface AudioRuntimeSnapshot {
   };
 }
 
+type PregameSmokeShotId =
+  | 'matchupCombined'
+  | 'matchupWide'
+  | 'opponentTeamPan'
+  | 'quarterbackSpotlight'
+  | 'stadiumEstablish'
+  | 'transitionToGameplay'
+  | 'userTeamTunnelOrSideline'
+  | 'weatherAndField';
+
 interface PregamePresentationSnapshot {
   activeCommentary: string | null;
   completed: boolean;
-  currentShot:
-    | 'matchupCombined'
-    | 'matchupWide'
-    | 'opponentTeamPan'
-    | 'quarterbackSpotlight'
-    | 'stadiumEstablish'
-    | 'transitionToGameplay'
-    | 'userTeamTunnelOrSideline'
-    | 'weatherAndField'
-    | null;
+  currentShot: PregameSmokeShotId | null;
   activeSubject?: string | null;
   activeTeam?: 'opponent' | 'user' | null;
   crowdState?: {
@@ -474,6 +475,7 @@ interface PregamePresentationSnapshot {
   phase: 'completed' | 'idle' | 'running' | 'skipped';
   presentationCloneCount?: number;
   progress: number;
+  sequence: PregameSmokeShotId[];
   skipState: 'available' | 'completed' | 'idle' | 'skipped';
   sidelineCounts?: {
     sideline: number;
@@ -985,6 +987,7 @@ test('shows the title screen, opens match setup, and holds gameplay until confir
   await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
   await expect(page.locator('.gameplay-hud')).toBeHidden();
   await expect(page.locator('.play-call-ui')).toBeHidden();
+  await expectNoDebugHelpers(page);
 
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.locator('.title-settings-overlay')).toBeVisible();
@@ -1083,6 +1086,13 @@ test('shows the title screen, opens match setup, and holds gameplay until confir
     skipState: 'available',
   });
   const pregamePresentation = await getPregamePresentationSnapshot(page);
+  expect(pregamePresentation.sequence).toEqual([
+    'stadiumEstablish',
+    'matchupWide',
+    'weatherAndField',
+    'quarterbackSpotlight',
+    'transitionToGameplay',
+  ]);
   expect(pregamePresentation.musicState).toMatchObject({
     loopActive: expect.any(Boolean),
     state: expect.any(String),
@@ -1095,6 +1105,7 @@ test('shows the title screen, opens match setup, and holds gameplay until confir
   expect(pregamePresentation.sidelineCounts?.sideline).toBeGreaterThanOrEqual(0);
   expect(pregamePresentation.sidelineCounts?.tunnel).toBeGreaterThanOrEqual(0);
   expect(pregamePresentation.presentationCloneCount).toEqual(expect.any(Number));
+  await expectNoDebugHelpers(page);
 
   const started = await getGameplaySnapshot(page);
   const experience = await getGameExperienceSnapshot(page);
@@ -1193,6 +1204,7 @@ test('shows the title screen, opens match setup, and holds gameplay until confir
   await expect(page.locator('body[data-app-phase="gameplay"]')).toBeAttached();
   await expect(page.locator('.gameplay-hud')).toBeVisible();
   await expect(page.locator('.play-call-ui')).toBeVisible();
+  await expectNoDebugHelpers(page);
   await expect.poll(() => getGameplaySnapshot(page).then((snapshot) => snapshot.playState)).toBe('preSnap');
   expect(started.selectedPlay).toMatchObject({
     displayName: 'Inside Zone 11',
@@ -4132,6 +4144,21 @@ async function getPregamePresentationSnapshot(page: Page): Promise<PregamePresen
 
     return debugApi.getPregamePresentationSnapshot();
   });
+}
+
+async function expectNoDebugHelpers(page: Page): Promise<void> {
+  await expect(page.locator('.debug-panel')).toBeHidden();
+  await expect(page.locator('.debug-overlay')).toBeHidden();
+  await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
+  await expect(page.locator('.field-audit-overlay')).toHaveCount(0);
+  await expect(page.locator('.formation-audit-overlay')).toHaveCount(0);
+  await expect(page.locator('.route-audit-overlay')).toHaveCount(0);
+  await expect(page.locator('.pass-audit-overlay')).toHaveCount(0);
+  await expect(page.locator('.memory-debug-panel')).toBeHidden();
+  await expect(page.locator('.presentation-audit-overlay')).toHaveCount(0);
+  await expect(page.locator('.presentation-hardening-audit-overlay')).toHaveCount(0);
+  await expect(page.locator('.pregame-debug-overlay')).toHaveCount(0);
+  await expect(page.locator('.camera-debug-overlay')).toHaveCount(0);
 }
 
 async function getSevenAuditSnapshot(page: Page): Promise<SevenAuditSnapshot> {

@@ -119,6 +119,7 @@ describe('pregame presentation sequence', () => {
     expect(createPregameSequence('brief').map((step) => step.shotId)).toEqual([
       'stadiumEstablish',
       'matchupWide',
+      'weatherAndField',
       'quarterbackSpotlight',
       'transitionToGameplay',
     ]);
@@ -164,6 +165,9 @@ describe('pregame presentation sequence', () => {
     advancePregameFrames(director, context, 43);
     audio.completedLineIds.add('matchup');
     director.update(0, context);
+    advancePregameFrames(director, context, 36);
+    audio.completedLineIds.add('weather');
+    director.update(0, context);
     director.update(0.1, context);
 
     expect(director.getSnapshot()).toMatchObject({
@@ -200,6 +204,9 @@ describe('pregame presentation sequence', () => {
     advancePregameFrames(director, context, 43);
     audio.completedLineIds.add('matchup');
     director.update(0, context);
+    advancePregameFrames(director, context, 36);
+    audio.completedLineIds.add('weather');
+    director.update(0, context);
     director.update(0.1, context);
     expect(director.getSnapshot().currentShot).toBe('quarterbackSpotlight');
 
@@ -208,6 +215,7 @@ describe('pregame presentation sequence', () => {
     expect(director.getSnapshot().sequence).toEqual([
       'stadiumEstablish',
       'matchupWide',
+      'weatherAndField',
       'transitionToGameplay',
     ]);
   });
@@ -227,6 +235,9 @@ describe('pregame presentation sequence', () => {
     director.update(0, context);
     advancePregameFrames(director, context, 43);
     audio.completedLineIds.add('matchup');
+    director.update(0, context);
+    advancePregameFrames(director, context, 36);
+    audio.completedLineIds.add('weather');
     director.update(0, context);
     director.update(0.1, context);
     expect(director.getSnapshot().currentShot).toBe('quarterbackSpotlight');

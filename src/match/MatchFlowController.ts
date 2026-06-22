@@ -124,6 +124,9 @@ export class MatchFlowController {
     if (!this.model.coinToss.completed) {
       return false;
     }
+    if (this.model.phase !== 'coinToss') {
+      return false;
+    }
 
     this.lastProcessedPlayResultId = null;
     this.lastOpponentSimulationDriveNumber = null;

@@ -4,10 +4,15 @@ import { createKickLandingReticle } from '../../src/presentation/KickLandingReti
 import { MatchFlowController } from '../../src/match/MatchFlowController';
 import { resolveCoinTossFace } from '../../src/match/CoinTossModel';
 import { DEFAULT_MATCH_RULES } from '../../src/match/MatchTypes';
+import type { MatchPossession } from '../../src/match/MatchTypes';
+import { BROADCAST_EXPERIENCE_SETTINGS } from '../../src/config/GameExperienceSettings';
+import { createGameplayRosterBinding } from '../../src/roster/GameplayRosterBinding';
+import { resolveTeamPresentationTheme } from '../../src/teams/TeamThemeApplier';
 import {
   DEFAULT_OPPONENT_TEAM_ID,
   DEFAULT_USER_TEAM_ID,
 } from '../../src/teams/TeamRegistry';
+import { KickoffPresentationDirector } from '../../src/specialTeams/KickoffPresentationDirector';
 import {
   KICKOFF_SIMULATION_CONFIG,
   createKickoffSimulationInput,
@@ -84,7 +89,37 @@ describe('deterministic kickoff simulation', () => {
 });
 
 describe('kickoff match flow', () => {
-  it('uses coin-toss opening possession to choose the receiving and kicking teams', () => {
+  it.each([
+    ['user wins', 20260620, 'user', 'opponent'],
+    ['opponent wins', 20260621, 'opponent', 'user'],
+  ] as const)('uses coin-toss opening possession when %s', (
+    _label,
+    seed,
+    receivingTeam,
+    kickingTeam,
+  ) => {
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const controller = createController(seed);
+    controller.prepareForPregame(gameplay);
+    controller.enterCoinToss();
+    const resolvedFace = resolveCoinTossFace(seed);
+    controller.resolveOpeningCoinToss(
+      receivingTeam === 'user' ? resolvedFace : oppositeFace(resolvedFace),
+    );
+
+    expect(controller.beginOpeningKickoffAfterCoinToss(gameplay)).toBe(true);
+    const kickoff = controller.getSnapshot().kickoff;
+
+    expect(controller.getSnapshot().phase).toBe('kickoff');
+    expect(kickoff.receivingTeam).toBe(receivingTeam);
+    expect(kickoff.kickingTeam).toBe(kickingTeam);
+    expect(kickoff.kickerRosterId).toBe(
+      `${kickingTeam === 'user' ? DEFAULT_USER_TEAM_ID : DEFAULT_OPPONENT_TEAM_ID}-k-5`,
+    );
+    expect(kickoff.result).not.toBeNull();
+  });
+
+  it('does not schedule the opening kickoff more than once for a match', () => {
     const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
     const controller = createController(20260620);
     controller.prepareForPregame(gameplay);
@@ -92,13 +127,10 @@ describe('kickoff match flow', () => {
     controller.resolveOpeningCoinToss(resolveCoinTossFace(20260620));
 
     expect(controller.beginOpeningKickoffAfterCoinToss(gameplay)).toBe(true);
-    const kickoff = controller.getSnapshot().kickoff;
+    const firstKickoff = controller.getSnapshot().kickoff;
 
-    expect(controller.getSnapshot().phase).toBe('kickoff');
-    expect(kickoff.receivingTeam).toBe('user');
-    expect(kickoff.kickingTeam).toBe('opponent');
-    expect(kickoff.kickerRosterId).toBe(`${DEFAULT_OPPONENT_TEAM_ID}-k-5`);
-    expect(kickoff.result).not.toBeNull();
+    expect(controller.beginOpeningKickoffAfterCoinToss(gameplay)).toBe(false);
+    expect(controller.getSnapshot().kickoff).toEqual(firstKickoff);
   });
 
   it('hands a user-received kickoff to the user offense at the calculated spot', () => {
@@ -136,6 +168,46 @@ describe('kickoff match flow', () => {
     expect(snapshot.driveSummaries).toHaveLength(1);
   });
 
+  it.each([
+    ['touchback', 'user'],
+    ['fielded', 'user'],
+    ['touchback', 'opponent'],
+    ['fielded', 'opponent'],
+  ] as const)('hands off a %s kickoff to %s possession using the result start spot', (
+    landingType,
+    receivingTeam,
+  ) => {
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const controller = createController(findSeedForOpeningKickoff(landingType, receivingTeam));
+    controller.prepareForPregame(gameplay);
+    controller.enterCoinToss();
+    const resolvedFace = resolveCoinTossFace(controller.getSnapshot().deterministicSeed);
+    controller.resolveOpeningCoinToss(
+      receivingTeam === 'user' ? resolvedFace : oppositeFace(resolvedFace),
+    );
+    controller.beginOpeningKickoffAfterCoinToss(gameplay);
+    const kickoff = controller.getSnapshot().kickoff;
+
+    expect(kickoff.receivingTeam).toBe(receivingTeam);
+    expect(kickoff.result?.landingType).toBe(landingType);
+
+    const result = controller.completeKickoff(gameplay);
+    const snapshot = controller.getSnapshot();
+
+    expect(result?.receivingStartSpot).toEqual(kickoff.result?.receivingStartSpot);
+    if (receivingTeam === 'user') {
+      expect(snapshot.phase).toBe('userPossession');
+      expect(snapshot.currentFieldPosition).toEqual(kickoff.result?.receivingStartSpot);
+      expect(snapshotGameplayModel(gameplay).drive.lineOfScrimmage.z)
+        .toBeCloseTo(kickoff.result?.receivingStartSpot.z ?? 0, 5);
+    } else {
+      expect(snapshot.previousDriveSummary?.possession).toBe('opponent');
+      expect(snapshot.previousDriveSummary?.startingFieldPosition).toEqual(
+        kickoff.result?.receivingStartSpot,
+      );
+    }
+  });
+
   it('schedules a post-touchdown kickoff once instead of immediately simulating the next drive', () => {
     const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
     const controller = createController(20260620);
@@ -160,6 +232,79 @@ describe('kickoff match flow', () => {
     expect(first.kickoff.receivingTeam).toBe('opponent');
     expect(first.driveSummaries).toHaveLength(1);
     expect(second.driveSummaries).toHaveLength(1);
+  });
+
+  it.each([
+    ['user' as const],
+    ['opponent' as const],
+  ])('schedules the second-half kickoff once for %s possession', (secondHalfPossession) => {
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const controller = createController(20260620);
+    controller.prepareForPregame(gameplay);
+    controller.model.phase = 'halftime';
+    controller.model.quarter = 2;
+    controller.model.secondHalfPossession = secondHalfPossession;
+
+    controller.continue(gameplay);
+    const first = controller.getSnapshot();
+    controller.continue(gameplay);
+    const second = controller.getSnapshot();
+
+    expect(first.phase).toBe('kickoff');
+    expect(first.quarter).toBe(3);
+    expect(first.kickoff.reason).toBe('secondHalf');
+    expect(first.kickoff.receivingTeam).toBe(secondHalfPossession);
+    expect(second.kickoff).toEqual(first.kickoff);
+  });
+
+  it('serializes kickoff commentary through ready, in-flight, and result phases', () => {
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const controller = createController(20260620);
+    const audio = createFakeKickoffAudioCoordinator();
+    controller.prepareForPregame(gameplay);
+    controller.enterCoinToss();
+    controller.resolveOpeningCoinToss(resolveCoinTossFace(20260620));
+    controller.beginOpeningKickoffAfterCoinToss(gameplay);
+    const matchSnapshot = controller.getSnapshot();
+    const director = new KickoffPresentationDirector({
+      audioCoordinator: audio as never,
+      ballVisualStyle: 'football',
+      rosterBinding: createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+      teamTheme: resolveTeamPresentationTheme(BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+    });
+
+    director.start(matchSnapshot);
+    updateKickoffFrames(director, gameplay, matchSnapshot, 30);
+    expect(audio.startedLines).toEqual(['kickoffReady']);
+    expect(director.getSnapshot()).toMatchObject({
+      phase: 'ready',
+      reticleVisible: false,
+    });
+
+    audio.complete('kickoffReady');
+    updateKickoffFrames(director, gameplay, matchSnapshot, 1);
+    expect(audio.startedLines).toEqual(['kickoffReady', 'kickoffInFlight']);
+    expect(director.getSnapshot().phase).toBe('flight');
+
+    updateKickoffFrames(director, gameplay, matchSnapshot, 260);
+    expect(audio.startedLines).toEqual([
+      'kickoffReady',
+      'kickoffInFlight',
+      'kickoffResult',
+    ]);
+    expect(director.getSnapshot()).toMatchObject({
+      phase: 'result',
+      reticleVisible: false,
+    });
+
+    audio.complete('kickoffResult');
+    updateKickoffFrames(director, gameplay, matchSnapshot, 40);
+    expect(director.getSnapshot()).toMatchObject({
+      completed: true,
+      phase: 'completed',
+    });
+
+    director.dispose();
   });
 });
 
@@ -230,4 +375,80 @@ function createController(seed: number): MatchFlowController {
 
 function oppositeFace(face: 'heads' | 'tails'): 'heads' | 'tails' {
   return face === 'heads' ? 'tails' : 'heads';
+}
+
+function updateKickoffFrames(
+  director: KickoffPresentationDirector,
+  gameplay: ReturnType<typeof createGameplayModel>,
+  matchSnapshot: ReturnType<MatchFlowController['getSnapshot']>,
+  frames: number,
+): void {
+  for (let frame = 0; frame < frames; frame += 1) {
+    director.update({
+      deltaSeconds: 1 / 30,
+      gameplaySnapshot: snapshotGameplayModel(gameplay),
+      matchSnapshot,
+    });
+  }
+}
+
+function createFakeKickoffAudioCoordinator() {
+  const completed = new Set<string>();
+  const startedLines: string[] = [];
+  return {
+    startedLines,
+    complete: (lineId: string) => {
+      completed.add(lineId);
+    },
+    fadeTitleMusicToGameplay: () => undefined,
+    getSnapshot: () => ({
+      activeLine: null,
+      completedLineIds: [...completed],
+      crowdActiveLoopIds: [],
+      crowdDuckingGain: 1,
+      crowdGain: 1,
+      failedLineIds: [],
+      history: [],
+      musicGain: 0,
+      musicLoopActive: false,
+      musicState: 'idle',
+      playbackState: 'idle',
+      queuedLine: null,
+    }),
+    isLineComplete: (lineId: string) => completed.has(lineId),
+    reset: () => {
+      completed.clear();
+      startedLines.length = 0;
+    },
+    startLine: (lineId: string) => {
+      startedLines.push(lineId);
+    },
+    updateAmbience: () => undefined,
+  };
+}
+
+function findSeedForOpeningKickoff(
+  landingType: 'fielded' | 'touchback',
+  receivingTeam: MatchPossession,
+): number {
+  for (let seed = 1; seed < 20_000; seed += 1) {
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const controller = createController(seed);
+    controller.prepareForPregame(gameplay);
+    controller.enterCoinToss();
+    const resolvedFace = resolveCoinTossFace(seed);
+    controller.resolveOpeningCoinToss(
+      receivingTeam === 'user' ? resolvedFace : oppositeFace(resolvedFace),
+    );
+    controller.beginOpeningKickoffAfterCoinToss(gameplay);
+    const kickoff = controller.getSnapshot().kickoff;
+    if (
+      kickoff.receivingTeam === receivingTeam &&
+      kickoff.result?.landingType === landingType
+    ) {
+      return seed;
+    }
+  }
+
+  throw new Error(`Unable to find ${landingType} opening kickoff for ${receivingTeam}`);
 }

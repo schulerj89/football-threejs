@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.1] - 2026-06-22
+
+### Changed
+
+- Hardened the normal Exhibition opening sequence so the brief pregame flow now consistently runs stadium establish, matchup, weather, quarterback showcase, coin toss, opening kickoff, and playable possession handoff before pre-snap.
+- Guarded opening kickoff scheduling so the coin-toss handoff cannot queue a second kickoff after the match phase has already advanced.
+- Clarified that normal post-play presentation stays on the dead-ball spot, scorer, or kickoff/gameplay focus; crowd cutaway shots remain available only through explicit development shot-preview tooling.
+
+### Tests
+
+- Expanded kickoff unit coverage for user/opponent toss winners, touchback and fielded-kick possession starts, second-half kickoff idempotency, and serialized kickoff commentary.
+- Strengthened pregame and browser smoke coverage for the weather shot, debug-free plain launch, title -> setup -> pregame -> coin toss -> kickoff -> pre-snap flow, and normal presentation readiness.
+
 ## [1.13.0] - 2026-06-22
 
 ### Added
