@@ -406,6 +406,7 @@ export class DevelopmentToolsRuntime {
         this.pregameDebugOverlay,
         frame.pregamePresentationSnapshot,
         frame.renderMetrics,
+        frame.cameraSnapshot,
       );
     }
     if (this.memoryDebugPanel && frame.memoryDebugSnapshot) {

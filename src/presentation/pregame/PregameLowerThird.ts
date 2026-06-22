@@ -4,6 +4,7 @@ import type {
   PregamePresentationSnapshot,
 } from './PregamePresentationTypes';
 import type { RenderMetricsSnapshot } from '../../debugOverlay';
+import type { GameplayCameraDebugSnapshot } from '../../camera/GameplayCameraController';
 
 export class PregameLowerThird {
   readonly root: HTMLDivElement;
@@ -88,6 +89,7 @@ export function syncPregameDebugOverlay(
   overlay: HTMLDivElement,
   snapshot: PregamePresentationSnapshot | null,
   renderMetrics: RenderMetricsSnapshot | null = null,
+  cameraSnapshot: GameplayCameraDebugSnapshot | null = null,
 ): void {
   if (!snapshot) {
     overlay.textContent = 'Pregame: inactive';
@@ -98,12 +100,17 @@ export function syncPregameDebugOverlay(
   overlay.textContent = [
     `phase: ${snapshot.phase}`,
     `shot: ${snapshot.currentShot ?? 'none'}`,
+    `nextShot: ${snapshot.nextShot ?? 'none'}`,
     `progress: ${(snapshot.progress * 100).toFixed(0)}%`,
     `elapsed: ${snapshot.elapsedSeconds.toFixed(2)}s`,
     `shotElapsed: ${snapshot.shotElapsedSeconds.toFixed(2)}s`,
+    `lastTransition: ${snapshot.lastStepTransitionSeconds?.toFixed(2) ?? 'none'}`,
     `commentary: ${snapshot.activeCommentary ?? 'none'}`,
+    `queuedCommentary: ${snapshot.audio.queuedLine?.lineId ?? 'none'}`,
+    `playback: ${snapshot.audio.playbackState} ended ${snapshot.audio.activeLine?.actualEndedAtSeconds?.toFixed(2) ?? 'none'} remaining ${snapshot.audio.activeLine?.remainingSeconds.toFixed(2) ?? 'none'}`,
     `activeTeam: ${snapshot.activeTeam ?? 'none'}`,
     `activeSubject: ${snapshot.activeSubject ?? 'none'}`,
+    `subjectReady: ${snapshot.subjectReady ? 'yes' : 'no'}`,
     `music: ${snapshot.musicState.state} loop ${snapshot.musicState.loopActive ? 'yes' : 'no'} gain ${snapshot.musicState.gain.toFixed(2)}`,
     `crowd: loops ${snapshot.crowdState.activeLoops.join(',') || 'none'} gain ${snapshot.crowdState.gain.toFixed(2)} duck ${snapshot.crowdState.duckingGain.toFixed(2)}`,
     `sideline: ${snapshot.sidelineCounts.sideline} tunnel ${snapshot.sidelineCounts.tunnel}`,
@@ -131,5 +138,8 @@ export function syncPregameDebugOverlay(
     renderMetrics
       ? `frame: ${renderMetrics.frameTimeMs.toFixed(2)}ms calls ${renderMetrics.calls} tris ${renderMetrics.triangles}`
       : 'frame: unavailable',
+    cameraSnapshot
+      ? `camera: displacement ${cameraSnapshot.stability.perFrameDisplacement.toFixed(2)} angular ${cameraSnapshot.stability.perFrameAngularChange.toFixed(3)}`
+      : 'camera: unavailable',
   ].join('\n');
 }

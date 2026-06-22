@@ -1,4 +1,8 @@
 import type { AudioMixerSnapshot } from '../../audio/AudioMixer';
+import type {
+  AudioPlaybackCompletion,
+  AudioPlaybackHandle,
+} from '../../audio/AudioMixer';
 import type { AudioPlaybackCategory } from '../../audio/AudioAssetManifest';
 import type { GameAudioDirector } from '../../audio/GameAudioDirector';
 import {
@@ -24,6 +28,7 @@ export interface PregameAudioPort {
   getCurrentTime(): number;
   getSnapshot(): AudioMixerSnapshot;
   playOneShot(assetId: string): Promise<boolean>;
+  playOneShotTracked?(assetId: string): Promise<AudioPlaybackHandle | null>;
   setCrowdDuckingGain(gain: number): void;
   setSettings(patch: Partial<AudioSettings>): AudioSettings;
   stopOneShotsByCategory(category: AudioPlaybackCategory): number;
@@ -32,29 +37,41 @@ export interface PregameAudioPort {
 export interface PregameAudioCoordinatorOptions {
   activeSpeechPaddingSeconds?: number;
   crowdDuckGain?: number;
+  quietGapSeconds?: number;
+  safetyTimeoutPaddingSeconds?: number;
   titleMusicDuckGain?: number;
 }
 
 interface ActivePregameLine extends PregameAudioLineSnapshot {
+  handle: AudioPlaybackHandle | null;
   endsAtSeconds: number;
   startedAtSeconds: number;
 }
 
+interface QueuedPregameLine {
+  lineId: PregameCommentaryLineId;
+  selection: PregameCommentarySelection;
+}
+
 const DEFAULT_PREGAME_AUDIO_CONFIG = {
-  activeSpeechPaddingSeconds: 0.18,
   crowdDuckGain: 0.78,
+  quietGapSeconds: 0.32,
+  safetyTimeoutPaddingSeconds: 1.6,
   titleMusicDuckGain: 0.34,
 } as const;
 
 export class PregameAudioCoordinator {
-  private readonly activeSpeechPaddingSeconds: number;
   private readonly crowdDuckGain: number;
   private readonly history: PregameAudioCoordinatorSnapshot['history'] = [];
   private readonly pendingAudioTasks: Promise<void>[] = [];
+  private readonly quietGapSeconds: number;
+  private readonly safetyTimeoutPaddingSeconds: number;
   private readonly titleMusicDuckGain: number;
   private activeLine: ActivePregameLine | null = null;
+  private queuedLine: QueuedPregameLine | null = null;
   private readonly completedLineIds = new Set<PregameCommentaryLineId>();
   private readonly failedLineIds = new Set<PregameCommentaryLineId>();
+  private readonly requestedLineIds = new Set<PregameCommentaryLineId>();
   private readonly startedLineIds = new Set<PregameCommentaryLineId>();
 
   constructor(
@@ -63,9 +80,12 @@ export class PregameAudioCoordinator {
     private readonly gameAudioDirector: GameAudioDirector,
     options: PregameAudioCoordinatorOptions = {},
   ) {
-    this.activeSpeechPaddingSeconds =
-      options.activeSpeechPaddingSeconds ?? DEFAULT_PREGAME_AUDIO_CONFIG.activeSpeechPaddingSeconds;
     this.crowdDuckGain = options.crowdDuckGain ?? DEFAULT_PREGAME_AUDIO_CONFIG.crowdDuckGain;
+    this.quietGapSeconds = options.quietGapSeconds ??
+      options.activeSpeechPaddingSeconds ??
+      DEFAULT_PREGAME_AUDIO_CONFIG.quietGapSeconds;
+    this.safetyTimeoutPaddingSeconds =
+      options.safetyTimeoutPaddingSeconds ?? DEFAULT_PREGAME_AUDIO_CONFIG.safetyTimeoutPaddingSeconds;
     this.titleMusicDuckGain = options.titleMusicDuckGain ?? DEFAULT_PREGAME_AUDIO_CONFIG.titleMusicDuckGain;
   }
 
@@ -107,61 +127,117 @@ export class PregameAudioCoordinator {
 
   updateAmbience(snapshot: GameplaySnapshot, deltaSeconds: number): void {
     this.gameAudioDirector.processEvents(snapshot, [], deltaSeconds);
-    this.finishExpiredSpeech();
+    this.updateSpeechState();
   }
 
   startLine(lineId: PregameCommentaryLineId, selection: PregameCommentarySelection): void {
-    if (this.startedLineIds.has(lineId)) {
+    this.updateSpeechState();
+
+    if (
+      this.requestedLineIds.has(lineId) ||
+      this.completedLineIds.has(lineId) ||
+      this.failedLineIds.has(lineId)
+    ) {
       return;
     }
 
+    this.requestedLineIds.add(lineId);
+    if (this.activeLine) {
+      this.queuedLine = { lineId, selection };
+      this.recordHistory(lineId, selection.assetId, 'queued', 'activeLine');
+      return;
+    }
+
+    this.startLineNow(lineId, selection);
+  }
+
+  private startLineNow(
+    lineId: PregameCommentaryLineId,
+    selection: PregameCommentarySelection,
+  ): void {
     this.startedLineIds.add(lineId);
 
     if (!selection.assetId || !selection.clip) {
       this.failedLineIds.add(lineId);
       this.completedLineIds.add(lineId);
-      this.recordHistory(lineId, selection.assetId, 'suppressed', selection.fallbackReason ?? 'missingAsset');
+      this.recordHistory(lineId, selection.assetId, 'suppressed', selection.fallbackReason ?? 'missingAsset', {
+        catalogDurationSeconds: null,
+      });
       return;
     }
+    const clip = selection.clip;
 
     const suppressionReason = this.getPlaybackSuppressionReason();
     if (suppressionReason) {
       this.failedLineIds.add(lineId);
       this.completedLineIds.add(lineId);
-      this.recordHistory(lineId, selection.assetId, 'suppressed', suppressionReason);
+      this.recordHistory(lineId, selection.assetId, 'suppressed', suppressionReason, {
+        catalogDurationSeconds: selection.clip.durationSeconds,
+      });
       return;
     }
 
     const now = this.mixer.getCurrentTime();
     this.activeLine = {
+      actualEndedAtSeconds: null,
       assetId: selection.assetId,
+      catalogDurationSeconds: clip.durationSeconds,
       caption: selection.caption,
       completed: false,
-      endsAtSeconds: now + selection.clip.durationSeconds + this.activeSpeechPaddingSeconds,
+      endsAtSeconds: now + clip.durationSeconds + this.quietGapSeconds,
       failed: false,
+      handle: null,
       lineId,
-      remainingSeconds: selection.clip.durationSeconds + this.activeSpeechPaddingSeconds,
+      playbackState: 'starting',
+      remainingSeconds: clip.durationSeconds + this.quietGapSeconds,
+      safetyEndsAtSeconds: now + clip.durationSeconds + this.safetyTimeoutPaddingSeconds,
       started: true,
       startedAtSeconds: now,
     };
     this.titleMusic.setPregameDucking(true, this.titleMusicDuckGain);
     this.mixer.setCrowdDuckingGain(this.crowdDuckGain);
-    this.recordHistory(lineId, selection.assetId, 'started', null);
+    this.recordHistory(lineId, selection.assetId, 'started', null, {
+      actualStartedAtSeconds: now,
+      catalogDurationSeconds: clip.durationSeconds,
+    });
 
-    const task = this.mixer.playOneShot(selection.assetId)
-      .then((played) => {
-        if (!played && this.activeLine?.lineId === lineId) {
-          this.failedLineIds.add(lineId);
-          this.completedLineIds.add(lineId);
-          this.activeLine = null;
-          this.restoreDucking();
-          this.recordHistory(lineId, selection.assetId, 'suppressed', 'missingAsset');
+    const task = this.playTrackedOneShot(selection.assetId)
+      .then((handle) => {
+        if (!handle) {
+          if (this.activeLine?.lineId === lineId) {
+            this.failedLineIds.add(lineId);
+            this.completedLineIds.add(lineId);
+            this.activeLine = null;
+            this.restoreDucking();
+            this.recordHistory(lineId, selection.assetId, 'suppressed', 'missingAsset', {
+              catalogDurationSeconds: clip.durationSeconds,
+            });
+            this.startQueuedLineIfReady();
+          }
           return;
         }
 
-        if (played) {
-          this.recordHistory(lineId, selection.assetId, 'played', null);
+        if (this.activeLine?.lineId !== lineId || this.activeLine.actualEndedAtSeconds !== null) {
+          handle.stop(0.02);
+          return;
         }
+
+        this.activeLine.handle = handle;
+        this.activeLine.startedAtSeconds = handle.startedAt;
+        this.activeLine.safetyEndsAtSeconds =
+          handle.startedAt + clip.durationSeconds + this.safetyTimeoutPaddingSeconds;
+        this.activeLine.endsAtSeconds =
+          handle.startedAt + clip.durationSeconds + this.quietGapSeconds;
+        this.activeLine.playbackState = 'playing';
+        this.recordHistory(lineId, selection.assetId, 'played', null, {
+          actualStartedAtSeconds: handle.startedAt,
+          catalogDurationSeconds: clip.durationSeconds,
+        });
+
+        const completionTask = handle.ended.then((completion) => {
+          this.handlePlaybackEnded(lineId, completion);
+        });
+        this.pendingAudioTasks.push(completionTask);
       });
     this.pendingAudioTasks.push(task);
   }
@@ -177,26 +253,32 @@ export class PregameAudioCoordinator {
   skip(): void {
     if (this.activeLine) {
       this.recordHistory(this.activeLine.lineId, this.activeLine.assetId, 'skipped', 'skip');
+      this.activeLine.handle?.stop(0.08);
     }
     this.mixer.stopOneShotsByCategory('announcer');
     this.activeLine = null;
+    this.queuedLine = null;
     this.completedLineIds.clear();
     this.failedLineIds.clear();
+    this.requestedLineIds.clear();
     this.startedLineIds.clear();
     this.restoreDucking();
     this.titleMusic.fadeOutForGameplay(0.35);
   }
 
   reset(): void {
+    this.activeLine?.handle?.stop(0.08);
     this.activeLine = null;
+    this.queuedLine = null;
     this.completedLineIds.clear();
     this.failedLineIds.clear();
+    this.requestedLineIds.clear();
     this.startedLineIds.clear();
     this.restoreDucking();
   }
 
   getSnapshot(): PregameAudioCoordinatorSnapshot {
-    this.finishExpiredSpeech();
+    this.updateSpeechState();
     const mixerSnapshot = this.mixer.getSnapshot();
     const titleMusicSnapshot = this.titleMusic.getSnapshot();
     return {
@@ -210,6 +292,11 @@ export class PregameAudioCoordinator {
       musicGain: titleMusicSnapshot.loopGain,
       musicLoopActive: titleMusicSnapshot.loopActive,
       musicState: titleMusicSnapshot.state,
+      playbackState: normalizeCoordinatorPlaybackState(this.activeLine?.playbackState) ??
+        (this.queuedLine ? 'queued' : 'idle'),
+      queuedLine: this.queuedLine
+        ? serializeQueuedLine(this.queuedLine, this.mixer.getCurrentTime())
+        : null,
     };
   }
 
@@ -218,21 +305,109 @@ export class PregameAudioCoordinator {
     this.pendingAudioTasks.length = 0;
   }
 
-  private finishExpiredSpeech(): void {
+  private async playTrackedOneShot(assetId: string): Promise<AudioPlaybackHandle | null> {
+    if (this.mixer.playOneShotTracked) {
+      return this.mixer.playOneShotTracked(assetId);
+    }
+
+    const played = await this.mixer.playOneShot(assetId);
+    if (!played) {
+      return null;
+    }
+
+    const startedAt = this.mixer.getCurrentTime();
+    let stopped = false;
+    let resolveCompletion: (completion: AudioPlaybackCompletion) => void = () => undefined;
+    const ended = new Promise<AudioPlaybackCompletion>((resolve) => {
+      resolveCompletion = resolve;
+    });
+    return {
+      assetId,
+      category: 'announcer',
+      ended,
+      startedAt,
+      stop: () => {
+        stopped = true;
+        resolveCompletion({
+          assetId,
+          category: 'announcer',
+          endedAt: this.mixer.getCurrentTime(),
+          reason: 'stopped',
+          startedAt,
+          stopped,
+        });
+      },
+    };
+  }
+
+  private updateSpeechState(): void {
     if (!this.activeLine) {
+      this.startQueuedLineIfReady();
       return;
     }
 
     const now = this.mixer.getCurrentTime();
     this.activeLine.remainingSeconds = Math.max(0, this.activeLine.endsAtSeconds - now);
-    if (now < this.activeLine.endsAtSeconds) {
+    if (
+      this.activeLine.actualEndedAtSeconds === null &&
+      this.activeLine.safetyEndsAtSeconds !== null &&
+      now >= this.activeLine.safetyEndsAtSeconds
+    ) {
+      this.activeLine.handle?.stop(0.08);
+      this.activeLine.actualEndedAtSeconds = now;
+      this.activeLine.endsAtSeconds = now + this.quietGapSeconds;
+      this.activeLine.playbackState = 'quietGap';
+      this.recordHistory(this.activeLine.lineId, this.activeLine.assetId, 'ended', 'safetyTimeout', {
+        actualEndedAtSeconds: now,
+        actualStartedAtSeconds: this.activeLine.startedAtSeconds,
+        catalogDurationSeconds: this.activeLine.catalogDurationSeconds,
+      });
       return;
     }
 
-    this.completedLineIds.add(this.activeLine.lineId);
-    this.recordHistory(this.activeLine.lineId, this.activeLine.assetId, 'completed', null);
+    if (this.activeLine.actualEndedAtSeconds === null || now < this.activeLine.endsAtSeconds) {
+      return;
+    }
+
+    const completedLine = this.activeLine;
+    this.completedLineIds.add(completedLine.lineId);
+    this.recordHistory(completedLine.lineId, completedLine.assetId, 'completed', null, {
+      actualEndedAtSeconds: completedLine.actualEndedAtSeconds,
+      actualStartedAtSeconds: completedLine.startedAtSeconds,
+      catalogDurationSeconds: completedLine.catalogDurationSeconds,
+    });
     this.activeLine = null;
     this.restoreDucking();
+    this.startQueuedLineIfReady();
+  }
+
+  private handlePlaybackEnded(
+    lineId: PregameCommentaryLineId,
+    completion: AudioPlaybackCompletion,
+  ): void {
+    if (!this.activeLine || this.activeLine.lineId !== lineId) {
+      return;
+    }
+
+    this.activeLine.actualEndedAtSeconds = completion.endedAt;
+    this.activeLine.endsAtSeconds = completion.endedAt + this.quietGapSeconds;
+    this.activeLine.playbackState = 'quietGap';
+    this.activeLine.remainingSeconds = Math.max(0, this.activeLine.endsAtSeconds - this.mixer.getCurrentTime());
+    this.recordHistory(lineId, completion.assetId, 'ended', completion.reason, {
+      actualEndedAtSeconds: completion.endedAt,
+      actualStartedAtSeconds: completion.startedAt,
+      catalogDurationSeconds: this.activeLine.catalogDurationSeconds,
+    });
+  }
+
+  private startQueuedLineIfReady(): void {
+    if (this.activeLine || !this.queuedLine) {
+      return;
+    }
+
+    const queued = this.queuedLine;
+    this.queuedLine = null;
+    this.startLineNow(queued.lineId, queued.selection);
   }
 
   private getPlaybackSuppressionReason(): string | null {
@@ -263,12 +438,21 @@ export class PregameAudioCoordinator {
     assetId: string | null,
     status: PregameAudioCoordinatorSnapshot['history'][number]['status'],
     reason: string | null,
+    timing: {
+      actualEndedAtSeconds?: number | null;
+      actualStartedAtSeconds?: number | null;
+      catalogDurationSeconds?: number | null;
+    } = {},
   ): void {
     this.history.unshift({
+      actualEndedAtSeconds: timing.actualEndedAtSeconds,
+      actualStartedAtSeconds: timing.actualStartedAtSeconds,
       assetId,
+      catalogDurationSeconds: timing.catalogDurationSeconds,
       lineId,
       reason,
       status,
+      timeSeconds: this.mixer.getCurrentTime(),
     });
     this.history.splice(20);
   }
@@ -279,12 +463,46 @@ function serializeActiveLine(
   now: number,
 ): PregameAudioLineSnapshot {
   return {
+    actualEndedAtSeconds: line.actualEndedAtSeconds,
     assetId: line.assetId,
+    catalogDurationSeconds: line.catalogDurationSeconds,
     caption: line.caption,
-    completed: false,
+    completed: line.completed,
     failed: line.failed,
     lineId: line.lineId,
+    playbackState: line.playbackState,
     remainingSeconds: Math.max(0, line.endsAtSeconds - now),
+    safetyEndsAtSeconds: line.safetyEndsAtSeconds,
     started: line.started,
+    startedAtSeconds: line.startedAtSeconds,
   };
+}
+
+function serializeQueuedLine(
+  line: QueuedPregameLine,
+  _now: number,
+): PregameAudioLineSnapshot {
+  return {
+    actualEndedAtSeconds: null,
+    assetId: line.selection.assetId,
+    catalogDurationSeconds: line.selection.clip?.durationSeconds ?? null,
+    caption: line.selection.caption,
+    completed: false,
+    failed: false,
+    lineId: line.lineId,
+    playbackState: 'queued',
+    remainingSeconds: line.selection.clip?.durationSeconds ?? 0,
+    safetyEndsAtSeconds: null,
+    started: false,
+    startedAtSeconds: null,
+  };
+}
+
+function normalizeCoordinatorPlaybackState(
+  state: PregameAudioLineSnapshot['playbackState'] | undefined,
+): PregameAudioCoordinatorSnapshot['playbackState'] | null {
+  if (!state || state === 'failed' || state === 'suppressed') {
+    return null;
+  }
+  return state;
 }

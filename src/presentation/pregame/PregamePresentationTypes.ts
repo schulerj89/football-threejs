@@ -12,6 +12,7 @@ export type PregamePresentationPhase = 'completed' | 'idle' | 'running' | 'skipp
 
 export type PregameShotId =
   | 'matchupCombined'
+  | 'matchupWide'
   | 'opponentTeamPan'
   | 'quarterbackSpotlight'
   | 'stadiumEstablish'
@@ -69,6 +70,7 @@ export interface PregamePresentationSnapshot {
   activeCommentary: string | null;
   activeSubject: string | null;
   activeTeam: 'opponent' | 'user' | null;
+  audio: PregameAudioCoordinatorSnapshot;
   completed: boolean;
   crowdState: {
     activeLoops: readonly string[];
@@ -78,6 +80,7 @@ export interface PregamePresentationSnapshot {
   currentShot: PregameShotId | null;
   elapsedSeconds: number;
   holdReason: string | null;
+  lastStepTransitionSeconds: number | null;
   lowerThird: PregameLowerThirdState;
   musicState: {
     gain: number;
@@ -96,19 +99,26 @@ export interface PregamePresentationSnapshot {
   };
   skipState: 'available' | 'completed' | 'idle' | 'skipped';
   spotlight: PlayerSpotlightStageSnapshot;
+  nextShot: PregameShotId | null;
+  subjectReady: boolean;
   subjectBounds: PregameSubjectBounds | null;
   targetGameplayCamera: GameplayCameraMode;
   weatherCondition: PregameWeatherCondition;
 }
 
 export interface PregameAudioLineSnapshot {
+  actualEndedAtSeconds: number | null;
+  catalogDurationSeconds: number | null;
   assetId: string | null;
   caption: string | null;
   completed: boolean;
   failed: boolean;
   lineId: PregameCommentaryLineId;
+  playbackState: 'failed' | 'playing' | 'queued' | 'quietGap' | 'starting' | 'suppressed';
   remainingSeconds: number;
+  safetyEndsAtSeconds: number | null;
   started: boolean;
+  startedAtSeconds: number | null;
 }
 
 export interface PregameAudioCoordinatorSnapshot {
@@ -119,12 +129,18 @@ export interface PregameAudioCoordinatorSnapshot {
   crowdDuckingGain: number;
   failedLineIds: PregameCommentaryLineId[];
   history: {
+    actualEndedAtSeconds?: number | null;
+    actualStartedAtSeconds?: number | null;
     assetId: string | null;
+    catalogDurationSeconds?: number | null;
     lineId: PregameCommentaryLineId;
     reason: string | null;
-    status: 'completed' | 'played' | 'skipped' | 'started' | 'suppressed';
+    status: 'completed' | 'ended' | 'played' | 'queued' | 'skipped' | 'started' | 'suppressed';
+    timeSeconds: number;
   }[];
   musicLoopActive: boolean;
   musicGain: number;
   musicState: string;
+  playbackState: 'idle' | 'playing' | 'queued' | 'quietGap' | 'starting';
+  queuedLine: PregameAudioLineSnapshot | null;
 }

@@ -122,6 +122,9 @@ function formatPregame(snapshot: PregameAudioCoordinatorSnapshot | undefined): s
 
   return [
     `active:${snapshot.activeLine?.lineId ?? 'none'}`,
+    `queued:${snapshot.queuedLine?.lineId ?? 'none'}`,
+    `state:${snapshot.playbackState}`,
+    `ended:${snapshot.activeLine?.actualEndedAtSeconds?.toFixed(2) ?? 'none'}`,
     `completed:${snapshot.completedLineIds.join(',') || 'none'}`,
     `failed:${snapshot.failedLineIds.join(',') || 'none'}`,
     `music:${snapshot.musicGain.toFixed(2)}`,

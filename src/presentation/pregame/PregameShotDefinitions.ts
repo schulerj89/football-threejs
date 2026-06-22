@@ -16,6 +16,7 @@ import {
 
 export const PREGAME_SHOT_DURATIONS = {
   matchupCombined: 3.4,
+  matchupWide: 4.2,
   opponentTeamPan: 5,
   quarterbackSpotlight: QUARTERBACK_SPOTLIGHT_CONFIG.minimumSeconds,
   stadiumEstablish: 2.5,
@@ -42,8 +43,8 @@ export function createPregameSequence(cinematics: CinematicsSetting): PregameSeq
       },
       {
         commentaryLineId: 'matchup',
-        minimumSeconds: PREGAME_SHOT_DURATIONS.matchupCombined,
-        shotId: 'matchupCombined',
+        minimumSeconds: PREGAME_SHOT_DURATIONS.matchupWide,
+        shotId: 'matchupWide',
         waitForCommentaryLineId: 'matchup',
       },
       {
@@ -68,14 +69,8 @@ export function createPregameSequence(cinematics: CinematicsSetting): PregameSeq
     },
     {
       commentaryLineId: 'matchup',
-      lowerThirdTeamSide: 'user',
-      minimumSeconds: PREGAME_SHOT_DURATIONS.userTeamTunnelOrSideline,
-      shotId: 'userTeamTunnelOrSideline',
-    },
-    {
-      lowerThirdTeamSide: 'opponent',
-      minimumSeconds: PREGAME_SHOT_DURATIONS.opponentTeamPan,
-      shotId: 'opponentTeamPan',
+      minimumSeconds: PREGAME_SHOT_DURATIONS.matchupWide,
+      shotId: 'matchupWide',
       waitForCommentaryLineId: 'matchup',
     },
     {
@@ -143,7 +138,7 @@ export function resolvePregameSubjectBounds(
     );
   }
 
-  if (shotId === 'matchupCombined') {
+  if (shotId === 'matchupCombined' || shotId === 'matchupWide') {
     const user = findPreferredTeamZone(context, 'user-sideline', 'user-tunnel');
     const opponent = findPreferredTeamZone(context, 'opponent-sideline', 'opponent-tunnel');
     if (user && opponent) {
@@ -161,7 +156,7 @@ export function resolvePregameSubjectBounds(
           x: Math.abs(opponent.center.x - user.center.x),
           z: Math.max(user.bounds.maxZ - user.bounds.minZ, opponent.bounds.maxZ - opponent.bounds.minZ),
         },
-        source: 'field',
+        source: shotId === 'matchupWide' ? 'matchupWide' : 'field',
       };
     }
   }
@@ -208,7 +203,7 @@ function createShotVectors(
     };
   }
 
-  if (shotId === 'matchupCombined') {
+  if (shotId === 'matchupCombined' || shotId === 'matchupWide') {
     const lateral = Math.sin((progress - 0.5) * Math.PI) * 6;
     return {
       fieldOfView: 46,

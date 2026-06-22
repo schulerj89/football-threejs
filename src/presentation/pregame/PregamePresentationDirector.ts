@@ -51,6 +51,7 @@ export class PregamePresentationDirector {
   private phase: PregamePresentationPhase = 'idle';
   private readonly baseSequence: PregameSequenceStep[];
   private sequence: PregameSequenceStep[];
+  private lastStepTransitionSeconds: number | null = null;
   private latestSidelineCounts = { sideline: 0, tunnel: 0 };
   private selections: PregameCommentarySelections | null = null;
   private shotElapsedSeconds = 0;
@@ -73,6 +74,7 @@ export class PregamePresentationDirector {
   ) {
     this.baseSequence = createPregameSequence(options.settings.cinematics);
     this.sequence = this.baseSequence;
+    this.lastStepTransitionSeconds = null;
   }
 
   start(context: PregamePresentationContext): boolean {
@@ -210,6 +212,7 @@ export class PregamePresentationDirector {
       activeCommentary: audioSnapshot.activeLine?.lineId ?? null,
       activeSubject: resolveActiveSubject(step, lowerThirdSnapshot),
       activeTeam: resolveActiveTeam(step),
+      audio: audioSnapshot,
       completed: this.completed,
       crowdState: {
         activeLoops: audioSnapshot.crowdActiveLoopIds,
@@ -219,8 +222,9 @@ export class PregamePresentationDirector {
       currentShot: step?.shotId ?? null,
       elapsedSeconds: this.elapsedSeconds,
       holdReason: step?.waitForCommentaryLineId
-        ? `commentary:${step.waitForCommentaryLineId}`
-        : null,
+        ? this.resolveHoldReason(step, audioSnapshot.completedLineIds)
+        : this.resolveHoldReason(step, audioSnapshot.completedLineIds),
+      lastStepTransitionSeconds: this.lastStepTransitionSeconds,
       lowerThird: lowerThirdSnapshot,
       musicState: {
         gain: audioSnapshot.musicGain,
@@ -257,6 +261,8 @@ export class PregamePresentationDirector {
         lowerThirdVisible: lowerThirdSnapshot.visible,
         speechRemainingSeconds: activeSpeech?.remainingSeconds ?? null,
       }),
+      nextShot: this.sequence[this.currentStepIndex + 1]?.shotId ?? null,
+      subjectReady: step ? isSubjectReady(step, this.subjectBounds) : false,
       subjectBounds: this.subjectBounds,
       targetGameplayCamera: this.targetGameplayCamera,
       weatherCondition: this.weatherCondition,
@@ -309,6 +315,7 @@ export class PregamePresentationDirector {
   private advanceStep(context: PregamePresentationContext): void {
     this.currentStepIndex += 1;
     this.shotElapsedSeconds = 0;
+    this.lastStepTransitionSeconds = this.elapsedSeconds;
 
     const nextStep = this.sequence[this.currentStepIndex];
     if (!nextStep) {
@@ -345,6 +352,18 @@ export class PregamePresentationDirector {
       blockers.push(`commentary:${step.waitForCommentaryLineId}`);
     }
     return blockers;
+  }
+
+  private resolveHoldReason(
+    step: PregameSequenceStep | null,
+    completedLineIds: readonly PregameCommentaryLineId[],
+  ): string | null {
+    if (!step) {
+      return null;
+    }
+
+    const blockers = this.resolveCompletionBlockers(step, completedLineIds);
+    return blockers.length > 0 ? blockers.join(',') : null;
   }
 }
 
@@ -388,6 +407,19 @@ function resolveLowerThirdState(
     );
   }
 
+  if (step.shotId === 'matchupWide' && context.matchSnapshot) {
+    return {
+      abbreviation: `${context.matchSnapshot.userTeam.abbreviation}/${context.matchSnapshot.opponentTeam.abbreviation}`,
+      accentColor: context.teamTheme.offense.profile.colors.accent,
+      caption: step.commentaryLineId && selections
+        ? selections[step.commentaryLineId].caption
+        : null,
+      detail: 'Pregame Matchup',
+      displayName: `${context.matchSnapshot.userTeam.displayName} vs ${context.matchSnapshot.opponentTeam.displayName}`,
+      visible: true,
+    };
+  }
+
   if (!step.lowerThirdTeamSide || !context.matchSnapshot) {
     return createHiddenLowerThirdState();
   }
@@ -406,6 +438,21 @@ function resolveLowerThirdState(
     displayName: team.profile.displayName,
     visible: true,
   };
+}
+
+function isSubjectReady(
+  step: PregameSequenceStep,
+  bounds: PregameSubjectBounds | null,
+): boolean {
+  if (!bounds) {
+    return false;
+  }
+
+  if (step.shotId === 'matchupWide') {
+    return bounds.source !== 'field';
+  }
+
+  return true;
 }
 
 function resolveTeamAccent(team: TeamUniformTheme): string {

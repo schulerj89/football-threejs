@@ -46,6 +46,23 @@ export interface AudioLoopStartOptions {
   rampSeconds?: number;
 }
 
+export interface AudioPlaybackCompletion {
+  assetId: string;
+  category: AudioPlaybackCategory;
+  endedAt: number;
+  reason: 'ended' | 'stopped';
+  startedAt: number;
+  stopped: boolean;
+}
+
+export interface AudioPlaybackHandle {
+  assetId: string;
+  category: AudioPlaybackCategory;
+  ended: Promise<AudioPlaybackCompletion>;
+  startedAt: number;
+  stop(fadeSeconds?: number): void;
+}
+
 export interface AudioMixerOptions {
   audioContextFactory?: () => AudioContext;
   flags?: AudioFeatureFlags;
@@ -185,43 +202,89 @@ export class AudioMixer {
   }
 
   async playOneShot(assetId: string): Promise<boolean> {
+    return (await this.playOneShotTracked(assetId)) !== null;
+  }
+
+  async playOneShotTracked(assetId: string): Promise<AudioPlaybackHandle | null> {
     if (!this.canPlay()) {
-      return false;
+      return null;
     }
 
     const asset = this.loader.getAsset(assetId);
 
     if (!asset || asset.loadingStrategy !== 'buffer' || !this.isCategoryEnabled(asset.category)) {
-      return false;
+      return null;
     }
 
     const activeCount = this.activeOneShotsByAsset.get(asset.assetId) ?? 0;
 
     if (activeCount >= asset.maxSimultaneousInstances) {
-      return false;
+      return null;
     }
 
     const decodedAsset = await this.loader.loadDecodedBuffer(asset.assetId);
 
     if (!decodedAsset) {
-      return false;
+      return null;
     }
 
     const source = this.context.createBufferSource();
     const gain = this.context.createGain();
+    const startedAt = this.context.currentTime;
     source.buffer = decodedAsset.buffer;
-    setGainNow(gain.gain, 0, this.context.currentTime);
-    scheduleGain(gain.gain, asset.defaultGain, this.context.currentTime, ONE_SHOT_ATTACK_SECONDS);
+    setGainNow(gain.gain, 0, startedAt);
+    scheduleGain(gain.gain, asset.defaultGain, startedAt, ONE_SHOT_ATTACK_SECONDS);
     source.connect(gain);
     gain.connect(this.getBusForCategory(asset.category));
     this.activeOneShotsByAsset.set(asset.assetId, activeCount + 1);
     const oneShotNodes = { asset, gain, source };
     this.activeOneShotNodes.add(oneShotNodes);
-    source.onended = (): void => {
+    let stopped = false;
+    let settled = false;
+    let resolveCompletion: (completion: AudioPlaybackCompletion) => void = () => undefined;
+    const ended = new Promise<AudioPlaybackCompletion>((resolve) => {
+      resolveCompletion = resolve;
+    });
+    const complete = (reason: AudioPlaybackCompletion['reason']): void => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
       this.releaseOneShot(oneShotNodes);
+      resolveCompletion({
+        assetId: asset.assetId,
+        category: asset.category,
+        endedAt: this.context.currentTime,
+        reason,
+        startedAt,
+        stopped: reason === 'stopped',
+      });
+    };
+    source.onended = (): void => {
+      complete(stopped ? 'stopped' : 'ended');
     };
     source.start();
-    return true;
+    return {
+      assetId: asset.assetId,
+      category: asset.category,
+      ended,
+      startedAt,
+      stop: (fadeSeconds = ONE_SHOT_ATTACK_SECONDS): void => {
+        if (settled) {
+          return;
+        }
+
+        stopped = true;
+        const stopAt = this.context.currentTime + Math.max(0, fadeSeconds);
+        scheduleGain(gain.gain, 0, this.context.currentTime, fadeSeconds);
+        try {
+          source.stop(stopAt);
+        } catch {
+          complete('stopped');
+        }
+      },
+    };
   }
 
   stopOneShotsByCategory(category: AudioPlaybackCategory): number {

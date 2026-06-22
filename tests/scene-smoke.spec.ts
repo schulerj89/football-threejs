@@ -451,6 +451,7 @@ interface PregamePresentationSnapshot {
   completed: boolean;
   currentShot:
     | 'matchupCombined'
+    | 'matchupWide'
     | 'opponentTeamPan'
     | 'quarterbackSpotlight'
     | 'stadiumEstablish'

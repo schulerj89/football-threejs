@@ -3,7 +3,17 @@ import { createGameplayModel, snapshotGameplayModel } from '../src/playState';
 import { BROADCAST_EXPERIENCE_SETTINGS } from '../src/config/GameExperienceSettings';
 import { resolveTeamPresentationTheme } from '../src/teams/TeamThemeApplier';
 import { createGameplayRosterBinding } from '../src/roster/GameplayRosterBinding';
-import type { PregameAudioCoordinator } from '../src/presentation/pregame/PregameAudioCoordinator';
+import {
+  PregameAudioCoordinator,
+  type PregameAudioPort,
+} from '../src/presentation/pregame/PregameAudioCoordinator';
+import type {
+  AudioMixerSnapshot,
+  AudioPlaybackCompletion,
+  AudioPlaybackHandle,
+} from '../src/audio/AudioMixer';
+import type { TitleMusicController } from '../src/audio/TitleMusicController';
+import type { GameAudioDirector } from '../src/audio/GameAudioDirector';
 import {
   PregamePresentationDirector,
 } from '../src/presentation/pregame/PregamePresentationDirector';
@@ -63,7 +73,7 @@ describe('pregame presentation sequence', () => {
     audio.completedLineIds.add('welcome');
     director.update(0, context);
 
-    expect(director.getSnapshot().currentShot).toBe('matchupCombined');
+    expect(director.getSnapshot().currentShot).toBe('matchupWide');
   });
 
   it('clears commentary and marks the sequence skipped', () => {
@@ -98,14 +108,13 @@ describe('pregame presentation sequence', () => {
   it('includes the quarterback spotlight in brief and full sequences but not off', () => {
     expect(createPregameSequence('brief').map((step) => step.shotId)).toEqual([
       'stadiumEstablish',
-      'matchupCombined',
+      'matchupWide',
       'quarterbackSpotlight',
       'transitionToGameplay',
     ]);
     expect(createPregameSequence('full').map((step) => step.shotId)).toEqual([
       'stadiumEstablish',
-      'userTeamTunnelOrSideline',
-      'opponentTeamPan',
+      'matchupWide',
       'weatherAndField',
       'quarterbackSpotlight',
       'transitionToGameplay',
@@ -138,7 +147,7 @@ describe('pregame presentation sequence', () => {
     advancePregameFrames(director, context, 30);
     audio.completedLineIds.add('welcome');
     director.update(0, context);
-    advancePregameFrames(director, context, 34);
+    advancePregameFrames(director, context, 43);
     audio.completedLineIds.add('matchup');
     director.update(0, context);
     director.update(0.1, context);
@@ -174,7 +183,7 @@ describe('pregame presentation sequence', () => {
     advancePregameFrames(director, context, 30);
     audio.completedLineIds.add('welcome');
     director.update(0, context);
-    advancePregameFrames(director, context, 34);
+    advancePregameFrames(director, context, 43);
     audio.completedLineIds.add('matchup');
     director.update(0, context);
     director.update(0.1, context);
@@ -184,7 +193,7 @@ describe('pregame presentation sequence', () => {
 
     expect(director.getSnapshot().sequence).toEqual([
       'stadiumEstablish',
-      'matchupCombined',
+      'matchupWide',
       'transitionToGameplay',
     ]);
   });
@@ -202,7 +211,7 @@ describe('pregame presentation sequence', () => {
     advancePregameFrames(director, context, 30);
     audio.completedLineIds.add('welcome');
     director.update(0, context);
-    advancePregameFrames(director, context, 34);
+    advancePregameFrames(director, context, 43);
     audio.completedLineIds.add('matchup');
     director.update(0, context);
     director.update(0.1, context);
@@ -233,6 +242,176 @@ describe('pregame presentation sequence', () => {
     expect(subject.formattedName).toBe('J. CARTER');
     expect(subject.gameplayPlayerId).toBe('offense-qb');
     expect(subject.fallbackReason).toBe('missingLineup');
+  });
+
+  it('keeps matchup commentary on one continuous wide shot', () => {
+    const audio = createFakePregameAudioCoordinator();
+    const director = new PregamePresentationDirector({
+      audioCoordinator: audio as unknown as PregameAudioCoordinator,
+      lowerThird: createFakeLowerThird() as unknown as PregameLowerThird,
+      settings: { cinematics: 'full' },
+    });
+    const context = createContext();
+
+    director.start(context);
+    advancePregameFrames(director, context, 30);
+    audio.completedLineIds.add('welcome');
+    director.update(0, context);
+
+    expect(director.getSnapshot()).toMatchObject({
+      activeSubject: 'matchupWide',
+      activeTeam: null,
+      currentShot: 'matchupWide',
+      nextShot: 'weatherAndField',
+      subjectReady: true,
+    });
+
+    advancePregameFrames(director, context, 60);
+
+    expect(director.getSnapshot().currentShot).toBe('matchupWide');
+  });
+
+  it('uses a stable field shot instead of an empty team pan when team zones are unavailable', () => {
+    const audio = createFakePregameAudioCoordinator();
+    const director = new PregamePresentationDirector({
+      audioCoordinator: audio as unknown as PregameAudioCoordinator,
+      lowerThird: createFakeLowerThird() as unknown as PregameLowerThird,
+      settings: { cinematics: 'brief' },
+    });
+    const context: PregamePresentationContext = {
+      ...createContext(),
+      sidelineSnapshot: {
+        ...createContext().sidelineSnapshot,
+        zones: [],
+      },
+    };
+
+    director.start(context);
+    advancePregameFrames(director, context, 30);
+    audio.completedLineIds.add('welcome');
+    director.update(0, context);
+
+    const snapshot = director.getSnapshot();
+    expect(snapshot.currentShot).toBe('matchupWide');
+    expect(snapshot.subjectBounds?.source).toBe('field');
+    expect(snapshot.subjectReady).toBe(false);
+  });
+});
+
+describe('pregame audio coordinator', () => {
+  it('queues a second pregame line until the active clip actually ends plus the quiet gap', async () => {
+    const mixer = new FakePregameMixer();
+    const titleMusic = createFakeTitleMusicController();
+    const coordinator = new PregameAudioCoordinator(
+      mixer,
+      titleMusic as unknown as TitleMusicController,
+      createFakeGameAudioDirector() as unknown as GameAudioDirector,
+      {
+        quietGapSeconds: 0.32,
+        safetyTimeoutPaddingSeconds: 3,
+      },
+    );
+
+    coordinator.startLine('welcome', createSelection('pregame_welcome_test', 0.1));
+    await waitForMicrotasks();
+    coordinator.startLine('matchup', createSelection('pregame_matchup_test', 0.1));
+
+    expect(mixer.playedAssetIds).toEqual(['pregame_welcome_test']);
+    expect(coordinator.getSnapshot()).toMatchObject({
+      activeLine: { lineId: 'welcome', playbackState: 'playing' },
+      playbackState: 'playing',
+      queuedLine: { lineId: 'matchup', playbackState: 'queued' },
+    });
+
+    mixer.finish('pregame_welcome_test');
+    await waitForMicrotasks();
+    mixer.advance(0.31);
+    coordinator.getSnapshot();
+
+    expect(mixer.playedAssetIds).toEqual(['pregame_welcome_test']);
+    expect(coordinator.isLineComplete('welcome')).toBe(false);
+
+    mixer.advance(0.02);
+    coordinator.getSnapshot();
+    await waitForMicrotasks();
+
+    expect(coordinator.isLineComplete('welcome')).toBe(true);
+    expect(mixer.playedAssetIds).toEqual([
+      'pregame_welcome_test',
+      'pregame_matchup_test',
+    ]);
+    expect(coordinator.getSnapshot()).toMatchObject({
+      activeLine: { lineId: 'matchup' },
+      queuedLine: null,
+    });
+  });
+
+  it('does not complete a pregame line from catalog duration alone', async () => {
+    const mixer = new FakePregameMixer();
+    const coordinator = new PregameAudioCoordinator(
+      mixer,
+      createFakeTitleMusicController() as unknown as TitleMusicController,
+      createFakeGameAudioDirector() as unknown as GameAudioDirector,
+      {
+        quietGapSeconds: 0.2,
+        safetyTimeoutPaddingSeconds: 5,
+      },
+    );
+
+    coordinator.startLine('welcome', createSelection('pregame_welcome_test', 0.1));
+    await waitForMicrotasks();
+    mixer.advance(1);
+    coordinator.getSnapshot();
+
+    expect(coordinator.isLineComplete('welcome')).toBe(false);
+
+    mixer.finish('pregame_welcome_test');
+    await waitForMicrotasks();
+    mixer.advance(0.2);
+    coordinator.getSnapshot();
+
+    expect(coordinator.isLineComplete('welcome')).toBe(true);
+  });
+
+  it('releases a failed pregame clip without hanging the sequence', async () => {
+    const mixer = new FakePregameMixer({ failAssets: new Set(['pregame_welcome_test']) });
+    const coordinator = new PregameAudioCoordinator(
+      mixer,
+      createFakeTitleMusicController() as unknown as TitleMusicController,
+      createFakeGameAudioDirector() as unknown as GameAudioDirector,
+    );
+
+    coordinator.startLine('welcome', createSelection('pregame_welcome_test', 0.1));
+    await coordinator.flushPendingAudioForTests();
+
+    expect(coordinator.isLineComplete('welcome')).toBe(true);
+    expect(coordinator.getSnapshot().failedLineIds).toEqual(['welcome']);
+  });
+
+  it('skip clears active and queued pregame lines', async () => {
+    const mixer = new FakePregameMixer();
+    const coordinator = new PregameAudioCoordinator(
+      mixer,
+      createFakeTitleMusicController() as unknown as TitleMusicController,
+      createFakeGameAudioDirector() as unknown as GameAudioDirector,
+    );
+
+    coordinator.startLine('welcome', createSelection('pregame_welcome_test', 0.5));
+    await waitForMicrotasks();
+    coordinator.startLine('matchup', createSelection('pregame_matchup_test', 0.5));
+
+    expect(coordinator.getSnapshot().queuedLine?.lineId).toBe('matchup');
+
+    coordinator.skip();
+
+    expect(coordinator.getSnapshot()).toMatchObject({
+      activeLine: null,
+      completedLineIds: [],
+      failedLineIds: [],
+      playbackState: 'idle',
+      queuedLine: null,
+    });
+    expect(mixer.stoppedCategories).toEqual(['announcer']);
   });
 });
 
@@ -345,6 +524,8 @@ function createFakePregameAudioCoordinator() {
       musicGain: 0.72,
       musicLoopActive: false,
       musicState: 'idle',
+      playbackState: 'idle',
+      queuedLine: null,
     }),
     isLineComplete: (lineId: PregameCommentaryLineId) => completedLineIds.has(lineId),
     reset: () => {
@@ -361,7 +542,7 @@ function createFakePregameAudioCoordinator() {
   };
 }
 
-function createSelection(scriptId: string) {
+function createSelection(scriptId: string, durationSeconds = 4) {
   return {
     assetId: scriptId,
     available: true,
@@ -370,7 +551,7 @@ function createSelection(scriptId: string) {
       assetId: scriptId,
       caption: scriptId,
       category: 'welcome' as const,
-      durationSeconds: 4,
+      durationSeconds,
       script: scriptId,
       scriptId,
       variant: 1,
@@ -379,4 +560,165 @@ function createSelection(scriptId: string) {
     script: scriptId,
     scriptId,
   };
+}
+
+function createFakeTitleMusicController() {
+  return {
+    fadeOutForGameplay: () => undefined,
+    getSnapshot: () => ({
+      assetId: 'title',
+      attempted: false,
+      handoffRequested: false,
+      loopActive: false,
+      loopGain: 0.72,
+      state: 'idle',
+    }),
+    setPregameDucking: () => undefined,
+  };
+}
+
+function createFakeGameAudioDirector() {
+  return {
+    processEvents: () => undefined,
+  };
+}
+
+async function waitForMicrotasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+class FakePregameMixer implements PregameAudioPort {
+  readonly playedAssetIds: string[] = [];
+  readonly stoppedCategories: string[] = [];
+  private readonly failAssets: ReadonlySet<string>;
+  private readonly handles = new Map<string, FakePlaybackHandle>();
+  private timeSeconds = 0;
+
+  constructor(options: { failAssets?: ReadonlySet<string> } = {}) {
+    this.failAssets = options.failAssets ?? new Set();
+  }
+
+  advance(seconds: number): void {
+    this.timeSeconds += seconds;
+  }
+
+  finish(assetId: string): void {
+    const handle = this.handles.get(assetId);
+    if (!handle) {
+      throw new Error(`No fake handle for ${assetId}`);
+    }
+    handle.finish(this.timeSeconds);
+  }
+
+  getCurrentTime(): number {
+    return this.timeSeconds;
+  }
+
+  getSnapshot(): AudioMixerSnapshot {
+    return {
+      activeAudioNodeCount: this.handles.size,
+      activeBuses: ['master', 'announcer'],
+      activeLoops: [],
+      activeOneShots: this.handles.size,
+      activeSourceCount: this.handles.size,
+      announcerEnabled: true,
+      busGains: {
+        announcer: 1,
+        crowd: 1,
+        gameplaySfx: 1,
+        master: 1,
+        music: 1,
+        ui: 1,
+      },
+      captionsEnabled: false,
+      contextState: 'running',
+      crowdDuckingGain: 1,
+      decodedAssetIds: [],
+      decodedBufferBytes: 0,
+      enabled: true,
+      lastUnlockError: null,
+      loadedAssetIds: [],
+      loadedCompressedBytes: 0,
+      longestLoadedClipSeconds: null,
+      missingOptionalAssetIds: [],
+      muted: false,
+      preparedMediaElementSourceCount: 0,
+      streamedAssetIds: [],
+      userGestureUnlocked: true,
+    };
+  }
+
+  playOneShot(assetId: string): Promise<boolean> {
+    return this.playOneShotTracked(assetId).then((handle) => handle !== null);
+  }
+
+  playOneShotTracked(assetId: string): Promise<AudioPlaybackHandle | null> {
+    if (this.failAssets.has(assetId)) {
+      return Promise.resolve(null);
+    }
+    this.playedAssetIds.push(assetId);
+    const handle = new FakePlaybackHandle(assetId, this.timeSeconds);
+    this.handles.set(assetId, handle);
+    handle.ended.then(() => {
+      this.handles.delete(assetId);
+    });
+    return Promise.resolve(handle);
+  }
+
+  setCrowdDuckingGain(): void {
+    return undefined;
+  }
+
+  setSettings() {
+    return {} as never;
+  }
+
+  stopOneShotsByCategory(category: 'announcer' | 'crowd' | 'gameplaySfx' | 'music' | 'ui'): number {
+    this.stoppedCategories.push(category);
+    const handles = [...this.handles.values()].filter((handle) => handle.category === category);
+    for (const handle of handles) {
+      handle.stop();
+    }
+    return handles.length;
+  }
+}
+
+class FakePlaybackHandle implements AudioPlaybackHandle {
+  readonly category = 'announcer' as const;
+  readonly ended: Promise<AudioPlaybackCompletion>;
+  private resolveEnded: (completion: AudioPlaybackCompletion) => void = () => undefined;
+  private settled = false;
+
+  constructor(
+    readonly assetId: string,
+    readonly startedAt: number,
+  ) {
+    this.ended = new Promise((resolve) => {
+      this.resolveEnded = resolve;
+    });
+  }
+
+  finish(endedAt: number): void {
+    this.resolve('ended', endedAt);
+  }
+
+  stop(): void {
+    this.resolve('stopped', this.startedAt);
+  }
+
+  private resolve(reason: AudioPlaybackCompletion['reason'], endedAt: number): void {
+    if (this.settled) {
+      return;
+    }
+    this.settled = true;
+    this.resolveEnded({
+      assetId: this.assetId,
+      category: this.category,
+      endedAt,
+      reason,
+      startedAt: this.startedAt,
+      stopped: reason === 'stopped',
+    });
+  }
 }

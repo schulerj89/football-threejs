@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.3] - 2026-06-22
+
+### Fixed
+
+- Serialized pregame announcer playback so a second pregame line waits for the active clip's actual audio completion plus a short quiet gap instead of relying on catalog duration alone.
+- Prevented late or failed pregame audio handles from hanging or reactivating a completed line, with safety-timeout fallback and skip cleanup for queued speech.
+- Simplified brief and full pregame camera sequencing to use one continuous matchup-wide shot instead of separate user/opponent team camera flips.
+
+### Changed
+
+- Kept team-specific pregame pan shots available only as development shot-preview subjects while normal pregame presentation now favors stable stadium, matchup, weather, quarterback, and gameplay-transition shots.
+- Expanded pregame F1 diagnostics with active/queued commentary, playback state, actual end timing, subject readiness, shot transition timing, and camera displacement/angle readouts.
+
+### Tests
+
+- Added pregame audio coordinator coverage for non-overlap, actual-playback completion, duration-metadata non-advancement, failed-clip release, and skip queue cleanup.
+- Updated pregame sequence coverage for the continuous `matchupWide` shot and unavailable-team-zone fallback.
+
 ## [1.7.2] - 2026-06-22
 
 ### Fixed
