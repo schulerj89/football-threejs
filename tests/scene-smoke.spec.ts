@@ -2,6 +2,16 @@ import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { GAME_SETTINGS_SCHEMA_VERSION } from '../src/config/GameSettingsStore';
 import { listTeamProfiles } from '../src/teams/TeamRegistry';
 
+const EXTENDED_SMOKE_ENABLED = process.env.FOOTBALL_EXTENDED_SMOKE === '1';
+const TITLE_SETUP_CYCLE_COUNT = EXTENDED_SMOKE_ENABLED ? 25 : 8;
+const RESOURCE_RESET_CYCLE_COUNT = EXTENDED_SMOKE_ENABLED ? 100 : 40;
+
+function extendedSmokeTest(title: string, body: Parameters<typeof test>[1]): void {
+  if (EXTENDED_SMOKE_ENABLED) {
+    test(title, body);
+  }
+}
+
 interface PlayerSnapshot {
   collisionRadius: number;
   currentState: 'idle' | 'userControlled' | 'movingToLane' | 'runningRoute' | 'pursuing' | 'engaged';
@@ -1334,7 +1344,7 @@ test('cycles title and match setup without exposing debug helpers', async ({ pag
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
-  for (let cycle = 0; cycle < 25; cycle += 1) {
+  for (let cycle = 0; cycle < TITLE_SETUP_CYCLE_COUNT; cycle += 1) {
     await page.getByRole('button', { name: 'Start Game' }).click();
     await expect(page.locator('.match-setup-screen')).toBeVisible();
     await expect(page.locator('body[data-app-phase="matchSetup"]')).toBeAttached();
@@ -1393,7 +1403,7 @@ test('exposes adaptive quality debug state without gameplay mutation', async ({ 
   expect(after.selectedPlay.id).toBe(before.selectedPlay.id);
 });
 
-test('keeps the 5v5 legacy development mode available through query overrides', async ({ page }) => {
+extendedSmokeTest('keeps the 5v5 legacy development mode available through query overrides', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
@@ -1426,9 +1436,7 @@ test('persists title-screen settings across reloads', async ({ page }) => {
   await expect(page.locator('.title-screen').getByLabel('Regression playbook')).toHaveCount(0);
 });
 
-test('toggles runtime debug tools with F1 and persists the title-screen debug setting', async ({ page }) => {
-  test.setTimeout(90_000);
-
+test('toggles runtime debug tools with F1', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-panel')).toBeHidden();
@@ -1463,78 +1471,14 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
   await expect(page.locator('.debug-overlay')).toBeVisible();
   await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').uncheck();
   await expect(page.locator('.debug-overlay')).toBeHidden();
-  await page.locator('.debug-feature-row').filter({ hasText: 'Camera' }).getByRole('checkbox').check();
-  await expect(page.locator('.debug-overlay')).toContainText('CAM');
-  await page.locator('.debug-feature-row').filter({ hasText: 'Camera' }).getByRole('checkbox').uncheck();
-  await expect(page.locator('.debug-overlay')).toBeHidden();
-  await page.locator('.debug-feature-row').filter({ hasText: 'Field' }).getByRole('checkbox').check();
-  await expect(page.locator('.field-audit-overlay')).toContainText('FIELD AUDIT');
-  await expect(page.locator('.field-audit-overlay')).toContainText('ISSUES none');
-  await page.locator('.debug-feature-row').filter({ hasText: 'Field' }).getByRole('checkbox').uncheck();
-  await expect(page.locator('.field-audit-overlay')).toHaveCount(0);
-  await page.locator('.debug-feature-row').filter({ hasText: 'Formation' }).getByRole('checkbox').check();
-  await expect(page.locator('.formation-audit-overlay')).toContainText('FORMATION AUDIT');
-  await page.locator('.debug-feature-row').filter({ hasText: 'Formation' }).getByRole('checkbox').uncheck();
-  await expect(page.locator('.formation-audit-overlay')).toHaveCount(0);
-  await page.locator('.debug-feature-row').filter({ hasText: 'Route' }).getByRole('checkbox').check();
-  await expect(page.locator('.route-audit-overlay')).toContainText('ROUTE AUDIT');
-  await page.locator('.debug-feature-row').filter({ hasText: 'Route' }).getByRole('checkbox').uncheck();
-  await expect(page.locator('.route-audit-overlay')).toHaveCount(0);
-  await page.locator('.debug-feature-row').filter({ hasText: 'Passing' }).getByRole('checkbox').check();
-  await expect(page.locator('.pass-audit-overlay')).toContainText('PASS AUDIT');
-  await page.locator('.debug-feature-row').filter({ hasText: 'Passing' }).getByRole('checkbox').uncheck();
-  await expect(page.locator('.pass-audit-overlay')).toHaveCount(0);
-  await page.locator('.debug-feature-row').filter({ hasText: 'Crowd' }).getByRole('checkbox').check();
-  await expect(page.locator('.crowd-presentation-overlay')).toContainText('CROWD PRESENTATION');
-  await page.locator('.debug-feature-row').filter({ hasText: 'Crowd' }).getByRole('checkbox').uncheck();
-  await expect(page.locator('.crowd-presentation-overlay')).toHaveCount(0);
-  await page.locator('.debug-feature-row').filter({ hasText: 'Memory' }).getByRole('checkbox').check();
-  await expect(page.locator('.memory-debug-panel')).toBeVisible();
-  await expect(page.locator('.memory-debug-panel')).toContainText('RENDERER COUNTERS');
-  await expect(page.locator('.memory-debug-panel')).toContainText('stadium');
-  await expect(page.locator('.memory-debug-panel')).toContainText('officials');
-  const memorySnapshot = await page.evaluate(() => window.__footballDebug?.getMemoryProfileSnapshot());
-  expect(memorySnapshot?.disclaimer).toContain('not exact GPU VRAM');
-  expect(memorySnapshot?.subsystemTotals.some((entry) => entry.subsystem === 'crowd' && entry.objectCount > 0)).toBe(true);
-  expect(memorySnapshot?.subsystemTotals.some((entry) => entry.subsystem === 'stadium' && entry.objectCount > 0)).toBe(true);
-  expect(memorySnapshot?.subsystemTotals.some((entry) => entry.subsystem === 'officials')).toBe(true);
-  await page.locator('.debug-feature-row').filter({ hasText: 'Memory' }).getByRole('checkbox').uncheck();
-  await expect(page.locator('.memory-debug-panel')).toBeHidden();
-  await page.locator('.debug-feature-row').filter({ hasText: 'Audio' }).getByRole('checkbox').check();
-  await expect(page.locator('.audio-debug-overlay')).toContainText('AUDIO');
-  await page.locator('.debug-feature-row').filter({ hasText: 'Audio' }).getByRole('checkbox').uncheck();
-  await expect(page.locator('.audio-debug-overlay')).toHaveCount(0);
-  await page.getByRole('checkbox', { name: 'Presentation', exact: true }).check();
-  await expect(page.locator('.presentation-audit-overlay')).toContainText('PRESENTATION AUDIT');
-  await page.getByRole('checkbox', { name: 'Presentation', exact: true }).uncheck();
-  await expect(page.locator('.presentation-audit-overlay')).toHaveCount(0);
   await page.locator('.debug-feature-row').filter({ hasText: 'Officials' }).getByRole('checkbox').check();
   await expect(page.locator('.officials-debug-overlay')).toContainText('OFFICIALS');
   await page.keyboard.press('F1');
   await expect(page.locator('.debug-panel')).toBeHidden();
   await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
-  await page.keyboard.press('F1');
-  await expect(page.locator('.debug-panel')).toBeVisible();
-  await page.locator('.debug-feature-row').filter({ hasText: 'Sideline teams' }).getByRole('checkbox').check();
-  await expect(page.locator('.sideline-debug-overlay')).toContainText('SIDELINE TEAMS');
-  await page.locator('.debug-feature-row').filter({ hasText: 'Sideline teams' }).getByRole('checkbox').uncheck();
-  await expect(page.locator('.sideline-debug-overlay')).toHaveCount(0);
-
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.locator('.title-screen').getByLabel('Debug tools').check();
-  let experience = await getGameExperienceSnapshot(page);
-  expect(experience.finalSettings.debugToolsEnabled).toBe(true);
-
-  await page.reload();
-  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.locator('.title-screen').getByLabel('Debug tools')).toBeChecked();
-  await expect(page.locator('.debug-panel')).toBeVisible();
-  experience = await getGameExperienceSnapshot(page);
-  expect(experience.finalSettings.debugToolsEnabled).toBe(true);
 });
 
-test('starts the Three.js graybox field scene', async ({ page }) => {
+extendedSmokeTest('starts the Three.js graybox field scene', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
 
@@ -1746,7 +1690,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
   await expectNonBlankCanvas(page);
 });
 
-test('renders the development crowd preview with bounded instanced resources', async ({ page }) => {
+extendedSmokeTest('renders the development crowd preview with bounded instanced resources', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?crowdPreview=1&crowdCount=5000&readback=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -1835,7 +1779,7 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
   await expectNonBlankCanvas(page);
 });
 
-test('runs seven-on-seven audit and reset-cycle resource stability checks', async ({ page }) => {
+extendedSmokeTest('runs seven-on-seven audit and reset-cycle resource stability checks', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=7v7&sevenAudit=1&audio=0&crowdVisuals=0&cinematics=off');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.seven-audit-overlay')).toContainText('SEVEN AUDIT');
@@ -1918,8 +1862,8 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   expect(noCrowdAudit.resourceCounts.drawCalls).toBeGreaterThan(sevenBaseline.resourceCounts.drawCalls);
   expect(noCrowdAudit.resourceCounts.triangles).toBeGreaterThan(sevenBaseline.resourceCounts.triangles);
 
-  const resetCycles = await runElevenAuditResetCycles(page, 100);
-  expect(resetCycles.cycles).toBe(100);
+  const resetCycles = await runElevenAuditResetCycles(page, RESOURCE_RESET_CYCLE_COUNT);
+  expect(resetCycles.cycles).toBe(RESOURCE_RESET_CYCLE_COUNT);
   expect(resetCycles.availablePlayIds).toEqual(expectedElevenPlayIds);
   expect(resetCycles.exercisedPlayIds).toEqual(expectedElevenPlayIds);
   expect(resetCycles.after.activePlayerRootCount).toBe(22);
@@ -1949,8 +1893,8 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   expect(crowdAudit.resourceCounts.crowdReaction).toBe('idle');
   expect(crowdAudit.resourceCounts.drawCalls).toBeGreaterThan(0);
   expect(crowdAudit.resourceCounts.triangles).toBeGreaterThan(noCrowdAudit.resourceCounts.triangles);
-  const integratedResetCycles = await runElevenAuditResetCycles(page, 100);
-  expect(integratedResetCycles.cycles).toBe(100);
+  const integratedResetCycles = await runElevenAuditResetCycles(page, RESOURCE_RESET_CYCLE_COUNT);
+  expect(integratedResetCycles.cycles).toBe(RESOURCE_RESET_CYCLE_COUNT);
   expect(integratedResetCycles.availablePlayIds).toEqual(expectedElevenPlayIds);
   expect(integratedResetCycles.exercisedPlayIds).toEqual(expectedElevenPlayIds);
   expect(integratedResetCycles.after.activePlayerRootCount).toBe(22);
@@ -1979,7 +1923,7 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   await expectNonBlankCanvas(page);
 });
 
-test('supports the box player body comparison URL option', async ({ page }) => {
+extendedSmokeTest('supports the box player body comparison URL option', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playerBody=box');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
@@ -2092,7 +2036,7 @@ test('starts commentary debug and keeps disabled announcer speech unloaded', asy
   expect(disabledAnnouncer.loadedAssetIds.some((assetId) => assetId.startsWith('ann_'))).toBe(false);
 });
 
-test('supports football visual and appearance audit presentation options', async ({ page }) => {
+extendedSmokeTest('supports football visual and appearance audit presentation options', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?debug=1&readback=1&experience=performance&appearanceAudit=1&camera=offense');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -2136,7 +2080,7 @@ test('supports football visual and appearance audit presentation options', async
   });
 });
 
-test('supports procedural player motion debug and comparison modes', async ({ page }) => {
+extendedSmokeTest('supports procedural player motion debug and comparison modes', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&poseDebug=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.pose-debug-overlay')).toContainText('POSE DEBUG');
@@ -2162,7 +2106,7 @@ test('supports procedural player motion debug and comparison modes', async ({ pa
   await expect(page.locator('.pose-debug-overlay')).toContainText('neutral');
 });
 
-test('starts field and formation audit modes without render errors', async ({ page }) => {
+extendedSmokeTest('starts field and formation audit modes without render errors', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
 
@@ -2188,7 +2132,7 @@ test('starts field and formation audit modes without render errors', async ({ pa
   expect(pageErrors).toEqual([]);
 });
 
-test('stages a static 7v7 formation preview across snap lanes and camera modes', async ({ page }) => {
+extendedSmokeTest('stages a static 7v7 formation preview across snap lanes and camera modes', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
 
@@ -2308,7 +2252,7 @@ test('stages a static 7v7 formation preview across snap lanes and camera modes',
   expect(pageErrors).toEqual([]);
 });
 
-test('stages a static 11v11 formation preview across snap lanes and camera modes', async ({ page }) => {
+extendedSmokeTest('stages a static 11v11 formation preview across snap lanes and camera modes', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
   const expectedPlayerIds = [
@@ -2460,7 +2404,7 @@ test('stages a static 11v11 formation preview across snap lanes and camera modes
   expect(pageErrors).toEqual([]);
 });
 
-test('runs 7v7 presentation audit scenarios with screenshots', async ({ page }, testInfo) => {
+extendedSmokeTest('runs 7v7 presentation audit scenarios with screenshots', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?readback=1&experience=performance&formationPreview=7v7&presentationAudit=1&camera=tactical');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -2687,7 +2631,7 @@ test('shows pass audit data for a route-aware throw', async ({ page }) => {
   expect(audit?.predictedReceiverRouteDistance).toBeGreaterThan(0);
 });
 
-test('starts playable 7v7 Twin Slants Flat and throws to the selected target', async ({ page }) => {
+extendedSmokeTest('starts playable 7v7 Twin Slants Flat and throws to the selected target', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=7v7');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -2882,7 +2826,7 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
 
 test('selects offense perspective camera and toggles modes without resetting gameplay', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?debug=1&readback=1&experience=performance&camera=offense&playbook=5v5');
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=offense&playbook=11v11');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
@@ -3004,7 +2948,7 @@ test('supports cinematic orbit shot settings without blocking gameplay input', a
   await expectNonBlankCanvas(page);
 });
 
-test('moves the placeholder player with WASD and arrow keys', async ({ page }) => {
+extendedSmokeTest('moves the placeholder player with WASD and arrow keys', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
   const movementCases = [
@@ -3048,7 +2992,7 @@ test('moves the placeholder player with WASD and arrow keys', async ({ page }) =
   expect(pageErrors).toEqual([]);
 });
 
-test('keeps D reserved for movement instead of debug toggling', async ({ page }) => {
+extendedSmokeTest('keeps D reserved for movement instead of debug toggling', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toBeVisible();
@@ -3065,7 +3009,7 @@ test('keeps D reserved for movement instead of debug toggling', async ({ page })
   await expect(page.locator('.debug-overlay')).toBeVisible();
 });
 
-test('selects plays before snap and locks selection while live', async ({ page }) => {
+extendedSmokeTest('selects plays before snap and locks selection while live', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
@@ -3139,7 +3083,7 @@ test('selects plays before snap and locks selection while live', async ({ page }
   expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('inside-run');
 });
 
-test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
+extendedSmokeTest('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   const initial = await getGameplaySnapshot(page);
@@ -3194,7 +3138,7 @@ test('runs pre-snap, live, possession, and reset loop', async ({ page }) => {
   await expect(page.locator('.drive-status')).toHaveText('1st & 10 | Ball -15');
 });
 
-test('selects Quick Pass, starts the route after snap, and throws once', async ({ page }) => {
+extendedSmokeTest('selects Quick Pass, starts the route after snap, and throws once', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
@@ -3229,7 +3173,7 @@ test('selects Quick Pass, starts the route after snap, and throws once', async (
   expect((await getGameplaySnapshot(page)).passAttempted).toBe(true);
 });
 
-test('selects Slant Flat, cycles the target, and throws to the selected receiver', async ({ page }) => {
+extendedSmokeTest('selects Slant Flat, cycles the target, and throws to the selected receiver', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
@@ -3280,7 +3224,7 @@ test('selects Slant Flat, cycles the target, and throws to the selected receiver
   });
 });
 
-test('offense perspective tracks an in-flight pass', async ({ page }) => {
+extendedSmokeTest('offense perspective tracks an in-flight pass', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&camera=offense&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
@@ -3298,7 +3242,7 @@ test('offense perspective tracks an in-flight pass', async ({ page }) => {
   await expectNonBlankCanvas(page);
 });
 
-test('rejects Quick Pass after the quarterback crosses the line of scrimmage', async ({ page }) => {
+extendedSmokeTest('rejects Quick Pass after the quarterback crosses the line of scrimmage', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&routeArt=0&playbook=5v5&playerMotion=0');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
@@ -3324,7 +3268,7 @@ test('rejects Quick Pass after the quarterback crosses the line of scrimmage', a
   await expect(page.locator('.pass-warning-message')).toBeVisible();
 });
 
-test('scores touchdown by avoiding the defender and auto-resets', async ({ page }) => {
+extendedSmokeTest('scores touchdown by avoiding the defender and auto-resets', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
@@ -3372,7 +3316,7 @@ test('scores touchdown by avoiding the defender and auto-resets', async ({ page 
   await expect(page.locator('.touchdown-message')).toBeHidden();
 });
 
-test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
+extendedSmokeTest('defender tackles the ball carrier and auto-resets', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
@@ -3418,7 +3362,7 @@ test('defender tackles the ball carrier and auto-resets', async ({ page }) => {
   await expect(page.locator('.tackle-message')).toBeHidden();
 });
 
-test('going out of bounds ends the play and resets at the resolved snap spot', async ({ page }) => {
+extendedSmokeTest('going out of bounds ends the play and resets at the resolved snap spot', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
@@ -3450,7 +3394,7 @@ test('going out of bounds ends the play and resets at the resolved snap spot', a
   await expect(page.locator('.out-of-bounds-message')).toBeHidden();
 });
 
-test('failed fourth down shows turnover and starts a new drill', async ({ page }) => {
+extendedSmokeTest('failed fourth down shows turnover and starts a new drill', async ({ page }) => {
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 

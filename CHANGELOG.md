@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.3] - 2026-06-22
+
+### Changed
+
+- Trimmed the default browser smoke gate by moving legacy 5v5, staged 7v7, preview/audit-only, and old score-attack browser probes behind an opt-in extended smoke lane.
+- Shortened default title/setup and 11v11 reset-cycle stress counts while preserving the previous deeper counts in extended smoke.
+- Narrowed the default F1 debug-panel smoke to registry visibility and representative helper disposal instead of toggling every debug feature through the browser.
+- Added `npm run test:smoke:extended` for intentionally running the broader legacy/development browser coverage when needed.
+
+### Tests
+
+- Verified `npm run build`, `npm run test:unit`, `npm run test:smoke`, and `npm run test:smoke:extended -- "keeps the 5v5 legacy"`.
+
 ## [1.21.2] - 2026-06-22
 
 ### Changed
