@@ -57,7 +57,7 @@ describe('gameplay camera controller', () => {
       allowPrePlayOrbit: false,
     });
     expect(resolveCameraShotPolicy('offensePerspective', 'full')).toMatchObject({
-      allowCrowdCutaway: true,
+      allowCrowdCutaway: false,
       allowPrePlayOrbit: false,
     });
     expect(resolveCameraShotPolicy('cinematicBroadcast', 'off')).toMatchObject({
@@ -66,7 +66,7 @@ describe('gameplay camera controller', () => {
       allowPrePlayOrbit: false,
     });
     expect(resolveCameraShotPolicy('cinematicBroadcast', 'full')).toMatchObject({
-      allowCrowdCutaway: true,
+      allowCrowdCutaway: false,
       allowPostPlayOrbit: true,
       allowPrePlayOrbit: true,
     });

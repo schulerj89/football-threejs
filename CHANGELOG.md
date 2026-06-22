@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.2] - 2026-06-22
+
+### Fixed
+
+- Removed normal-game first-down, touchdown, and out-of-bounds crowd cutaway camera shots while keeping crowd reactions, audio, commentary, captions, and touchdown scorer focus intact.
+- Reset debug tools and officials debug labels to off when migrating older persisted settings so a plain launch stays free of debug overlays.
+- Closing the F1 debug panel now disables and disposes enabled debug helpers instead of leaving overlays active behind the panel.
+
+### Changed
+
+- Kept crowd cutaway shot implementations available only through explicit development shot previews.
+- Removed the officials debug-label control from the player-facing Settings screen; official diagnostics now live in the F1 debug panel.
+- Bumped the persisted game-settings schema to `9`.
+
+### Tests
+
+- Added coverage for no normal crowd cutaways on first down, touchdown, and out-of-bounds results, plus development shot-preview availability.
+- Added migration coverage for clearing legacy debug flags while preserving normal audio, camera, crowd, stadium, and official settings.
+- Extended browser smoke coverage for plain-launch debug-free presentation, enabled normal officials, F1 official diagnostics, and F1 helper disposal.
+
 ## [1.7.1] - 2026-06-22
 
 ### Fixed

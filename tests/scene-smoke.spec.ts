@@ -932,6 +932,7 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.locator('.title-settings-overlay')).toBeVisible();
   await expect(page.getByLabel('Settings').getByText('Music volume')).toBeVisible();
+  await expect(page.getByText('Officials debug labels')).toHaveCount(0);
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
   await expect.poll(() =>
     getAudioSnapshot(page).then((snapshot) =>
@@ -1059,9 +1060,11 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   });
   const officials = await getOfficialsSnapshot(page);
   expect(officials).toMatchObject({
+    debugLabelsEnabled: false,
     enabled: true,
     visibleOfficialCount: 2,
   });
+  await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
   await expect.poll(async () => {
     const labels = await getControlledPlayerLabelSnapshot(page);
     return labels.labels.find((label) => label.kind === 'controlled');
@@ -1273,8 +1276,11 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
   await expect(page.locator('.presentation-audit-overlay')).toHaveCount(0);
   await page.locator('.debug-feature-row').filter({ hasText: 'Officials' }).getByRole('checkbox').check();
   await expect(page.locator('.officials-debug-overlay')).toContainText('OFFICIALS');
-  await page.locator('.debug-feature-row').filter({ hasText: 'Officials' }).getByRole('checkbox').uncheck();
+  await page.keyboard.press('F1');
+  await expect(page.locator('.debug-panel')).toBeHidden();
   await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
+  await page.keyboard.press('F1');
+  await expect(page.locator('.debug-panel')).toBeVisible();
   await page.locator('.debug-feature-row').filter({ hasText: 'Sideline teams' }).getByRole('checkbox').check();
   await expect(page.locator('.sideline-debug-overlay')).toContainText('SIDELINE TEAMS');
   await page.locator('.debug-feature-row').filter({ hasText: 'Sideline teams' }).getByRole('checkbox').uncheck();
@@ -1424,6 +1430,15 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?readback=1');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.debug-panel')).toBeHidden();
+  await expect(page.locator('.debug-overlay')).toBeHidden();
+  await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
+  await expect(page.locator('.field-audit-overlay')).toHaveCount(0);
+  await expect(page.locator('.formation-audit-overlay')).toHaveCount(0);
+  await expect(page.locator('.route-audit-overlay')).toHaveCount(0);
+  await expect(page.locator('.pass-audit-overlay')).toHaveCount(0);
+  await expect(page.locator('.memory-debug-panel')).toBeHidden();
+  await expect(page.locator('.presentation-audit-overlay')).toHaveCount(0);
 
   const experience = await getGameExperienceSnapshot(page);
   expect(experience.effectivePreset).toBe('broadcast');
@@ -1431,7 +1446,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     customSettings: null,
     preset: 'broadcast',
     settings: null,
-    version: 8,
+    version: 9,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({

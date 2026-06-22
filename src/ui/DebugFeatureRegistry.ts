@@ -81,6 +81,12 @@ export class DebugFeatureRegistry {
     }
   }
 
+  disableAll(): void {
+    for (const id of this.features.keys()) {
+      this.setEnabled(id, false);
+    }
+  }
+
   toggle(id: string): void {
     this.setEnabled(id, !this.isEnabled(id));
   }

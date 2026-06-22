@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 8;
+export const GAME_SETTINGS_SCHEMA_VERSION = 9;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -46,7 +46,8 @@ function migrateOfficialSettings(value: unknown): unknown {
       gameMode: value.gameMode ?? 'exhibition',
       matchDifficulty: value.matchDifficulty ?? 'pro',
       musicVolume: value.musicVolume ?? 0.72,
-      officialsDebugLabels: value.officialsDebugLabels ?? false,
+      debugToolsEnabled: false,
+      officialsDebugLabels: false,
       officialsEnabled: true,
       quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
       selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
@@ -63,7 +64,8 @@ function migrateOfficialSettings(value: unknown): unknown {
       gameMode: value.gameMode ?? 'exhibition',
       matchDifficulty: value.matchDifficulty ?? 'pro',
       musicVolume: value.musicVolume ?? 0.72,
-      officialsDebugLabels: value.officialsDebugLabels ?? false,
+      debugToolsEnabled: false,
+      officialsDebugLabels: false,
       officialsEnabled: false,
       quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
       selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
@@ -79,7 +81,8 @@ function migrateOfficialSettings(value: unknown): unknown {
     gameMode: value.gameMode ?? 'exhibition',
     matchDifficulty: value.matchDifficulty ?? 'pro',
     musicVolume: value.musicVolume ?? 0.72,
-    officialsDebugLabels: value.officialsDebugLabels ?? false,
+    debugToolsEnabled: false,
+    officialsDebugLabels: false,
     quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
     selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
     sidelineDensity: value.sidelineDensity ?? 'medium',

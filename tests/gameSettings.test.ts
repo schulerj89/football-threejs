@@ -90,6 +90,7 @@ describe('game settings facade', () => {
         ...BROADCAST_GAME_SETTINGS,
         captionsEnabled: true,
         debugToolsEnabled: true,
+        officialsDebugLabels: true,
         preset: 'custom',
       },
     }));
@@ -102,8 +103,47 @@ describe('game settings facade', () => {
     expect(resolved.persistedSettings.version).toBe(GAME_SETTINGS_SCHEMA_VERSION);
     expect(resolved.settings).toMatchObject({
       captionsEnabled: true,
-      debugToolsEnabled: true,
+      debugToolsEnabled: false,
+      officialsDebugLabels: false,
       preset: 'custom',
+    });
+  });
+
+  it('migrates previous-schema debug settings to off while preserving normal settings', () => {
+    const storage = createMemoryStorage();
+    storage.setItem(GAME_SETTINGS_COMPAT_STORAGE_KEY, JSON.stringify({
+      preset: 'custom',
+      settings: {
+        ...BROADCAST_GAME_SETTINGS,
+        audioEnabled: false,
+        crowdDensity: 'high',
+        debugToolsEnabled: true,
+        gameplayCamera: 'cinematic',
+        masterVolume: 0.37,
+        officialsDebugLabels: true,
+        officialsEnabled: true,
+        preset: 'custom',
+        stadiumEnabled: false,
+      },
+      version: GAME_SETTINGS_SCHEMA_VERSION - 1,
+    }));
+
+    const resolved = resolveGameSettings({
+      searchParams: new URLSearchParams(),
+      storage,
+    });
+
+    expect(resolved.persistedSettings.version).toBe(GAME_SETTINGS_SCHEMA_VERSION);
+    expect(resolved.settings).toMatchObject({
+      audioEnabled: false,
+      crowdDensity: 'high',
+      debugToolsEnabled: false,
+      gameplayCamera: 'cinematic',
+      masterVolume: 0.37,
+      officialsDebugLabels: false,
+      officialsEnabled: true,
+      preset: 'custom',
+      stadiumEnabled: false,
     });
   });
 

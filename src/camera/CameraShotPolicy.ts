@@ -21,7 +21,7 @@ export function resolveCameraShotPolicy(
 
   if (cameraMode === 'offensePerspective') {
     return {
-      allowCrowdCutaway: cinematicsSetting === 'full',
+      allowCrowdCutaway: false,
       allowPerspectiveOverride: cinematicsSetting !== 'off',
       allowPostPlayOrbit: cinematicsSetting !== 'off',
       allowPrePlayOrbit: false,
@@ -30,7 +30,7 @@ export function resolveCameraShotPolicy(
   }
 
   return {
-    allowCrowdCutaway: cinematicsSetting === 'full',
+    allowCrowdCutaway: false,
     allowPerspectiveOverride: cinematicsSetting !== 'off',
     allowPostPlayOrbit: cinematicsSetting !== 'off',
     allowPrePlayOrbit: cinematicsSetting === 'full',
@@ -52,4 +52,3 @@ export function isPresentationShotAllowed(
 
   return policy.allowPostPlayOrbit;
 }
-

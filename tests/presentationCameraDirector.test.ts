@@ -192,7 +192,7 @@ describe('presentation camera director', () => {
     expect(director.update(snapshot, camera, 0.016).activeShotName).toBeNull();
   });
 
-  it('uses a full-cinematics first-down fan cutaway when crowd cutaways are enabled', () => {
+  it('keeps first down on the dead-ball spot instead of starting a crowd cutaway', () => {
     const snapshot = createDeadSnapshot('tackle', { x: 6, z: 2 });
     const director = new PresentationCameraDirector({ cinematics: 'full' });
     const debug = director.update(snapshot, new THREE.PerspectiveCamera(), 0, {
@@ -200,9 +200,10 @@ describe('presentation camera director', () => {
       presentationEvents: [makeEvent('firstDown', 11, snapshot)],
     });
 
-    expect(debug.activeShotName).toBe('firstDownCrowdCutaway');
+    expect(debug.activeShotName).toBeNull();
     expect(debug.phase).toBe('deadBallResult');
-    expect(debug.orbitCenter?.x).toBeGreaterThan(20);
+    expect(debug.focusTarget.x).toBeCloseTo(6);
+    expect(debug.focusTarget.z).toBeCloseTo(2);
   });
 
   it('does not use a fan cutaway when crowd cutaways are disabled', () => {
@@ -216,29 +217,48 @@ describe('presentation camera director', () => {
     expect(debug.activeShotName).toBeNull();
   });
 
-  it('chains a full touchdown fan cutaway into the scorer orbit', () => {
+  it('keeps out-of-bounds results on the sideline dead-ball spot without a crowd cutaway', () => {
+    const sidelineSpot = { x: 26.666, z: 41 };
+    const snapshot = createDeadSnapshot('outOfBounds', sidelineSpot);
+    const director = new PresentationCameraDirector({ cinematics: 'full' });
+    const debug = director.update(snapshot, new THREE.PerspectiveCamera(), 0, {
+      crowdCutawaysEnabled: true,
+      presentationEvents: [makeEvent('outOfBounds', 14, snapshot)],
+    });
+
+    expect(debug.activeShotName).toBeNull();
+    expect(debug.phase).toBe('deadBallResult');
+    expect(debug.focusTarget.x).toBeCloseTo(sidelineSpot.x);
+    expect(debug.focusTarget.z).toBeCloseTo(sidelineSpot.z);
+  });
+
+  it('starts touchdown scorer presentation without a crowd cutaway', () => {
     const snapshot = createDeadSnapshot('touchdown', { x: -4, z: 50 });
     const director = new PresentationCameraDirector({ cinematics: 'full' });
     const camera = new THREE.PerspectiveCamera();
-    const cutaway = director.update(snapshot, camera, 0, {
+    const debug = director.update(snapshot, camera, 0, {
       crowdCutawaysEnabled: true,
       presentationEvents: [makeEvent('touchdown', 13, snapshot)],
     });
 
-    expect(cutaway.activeShotName).toBe('touchdownCrowdCutaway');
+    expect(debug.activeShotName).toBe('touchdownOrbit360');
+    expect(debug.focusTarget.x).toBeCloseTo(-4);
+    expect(debug.focusTarget.z).toBeCloseTo(50);
+  });
 
-    let orbit = cutaway;
+  it('keeps crowd cutaway implementations available through explicit shot preview', () => {
+    const snapshot = createDeadSnapshot('tackle', { x: 6, z: 2 });
+    const director = new PresentationCameraDirector({
+      cinematics: 'full',
+      shotPreview: 'firstDownCrowdCutaway',
+    });
+    const debug = director.update(snapshot, new THREE.PerspectiveCamera(), 0, {
+      crowdCutawaysEnabled: false,
+      presentationEvents: [],
+    });
 
-    for (let frame = 0; frame < 30; frame += 1) {
-      orbit = director.update(snapshot, camera, 0.05, {
-        crowdCutawaysEnabled: true,
-        presentationEvents: [],
-      });
-    }
-
-    expect(orbit.activeShotName).toBe('touchdownOrbit360');
-    expect(orbit.focusTarget.x).toBeCloseTo(-4);
-    expect(orbit.focusTarget.z).toBeCloseTo(50);
+    expect(debug.activeShotName).toBe('firstDownCrowdCutaway');
+    expect(debug.shotProgress).not.toBeNull();
   });
 
   it('respects the off cinematics setting while preserving normal cinematic phases', () => {

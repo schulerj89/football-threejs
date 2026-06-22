@@ -353,9 +353,7 @@ export class FootballApplication {
         active: gameplayActive,
         ball: this.gameplay.formationPreviewModel?.ball ?? this.gameplay.gameplayModel.ball,
         commentaryActive: !this.gameplay.formationPreviewModel,
-        crowdCutawaysEnabled: !!this.presentation.crowdPresentation &&
-          this.gameExperience.crowdPresentationSettings.crowdVisualsEnabled &&
-          this.gameExperience.crowdPresentationSettings.crowdReactionsEnabled,
+        crowdCutawaysEnabled: false,
         deltaSeconds: presentationDelta,
         gameplaySnapshot,
         playerVisuals: this.playerVisuals.visuals,

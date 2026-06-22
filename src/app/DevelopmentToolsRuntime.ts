@@ -483,6 +483,9 @@ export class DevelopmentToolsRuntime {
   }
 
   setDebugToolsEnabled(enabled: boolean): void {
+    if (!enabled) {
+      this.debugFeatureRegistry.disableAll();
+    }
     this.debugPanel.setVisible(enabled);
   }
 
@@ -756,7 +759,13 @@ export class DevelopmentToolsRuntime {
     }
 
     event.preventDefault();
-    this.debugPanel.toggleVisible();
+    if (this.debugPanel.isVisible()) {
+      this.debugFeatureRegistry.disableAll();
+      this.debugPanel.setVisible(false);
+      return;
+    }
+
+    this.debugPanel.setVisible(true);
   }
 
   private addListener(

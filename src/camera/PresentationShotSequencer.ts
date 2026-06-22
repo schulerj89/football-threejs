@@ -318,7 +318,7 @@ export class PresentationShotSequencer {
 
   private resolveShotPolicy(options: PresentationCameraUpdateOptions): CameraShotPolicy {
     return options.cameraShotPolicy ?? {
-      allowCrowdCutaway: this.cinematics === 'full',
+      allowCrowdCutaway: false,
       allowPerspectiveOverride: this.cinematics !== 'off',
       allowPostPlayOrbit: this.cinematics !== 'off',
       allowPrePlayOrbit: false,

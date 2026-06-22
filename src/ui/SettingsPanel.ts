@@ -200,7 +200,6 @@ export class SettingsPanel {
       this.createCheckboxRow('Selected receiver label', this.selectedReceiverLabelInput),
       this.createCheckboxRow('Player motion', this.playerMotionInput),
       this.createCheckboxRow('Officials', this.officialsInput),
-      this.createCheckboxRow('Officials debug labels', this.officialsDebugLabelsInput),
     );
 
     content.append(primary, custom);
@@ -412,11 +411,6 @@ export class SettingsPanel {
     });
     this.officialsInput.addEventListener('change', () => {
       this.updateCustomSettings({ officialsEnabled: this.officialsInput.checked });
-    });
-    this.officialsDebugLabelsInput.addEventListener('change', () => {
-      this.updateCustomSettings({
-        officialsDebugLabels: this.officialsDebugLabelsInput.checked,
-      });
     });
   }
 

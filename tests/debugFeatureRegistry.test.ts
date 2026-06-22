@@ -56,4 +56,27 @@ describe('DebugFeatureRegistry', () => {
     expect(disposed).toBe(1);
     expect(registry.isEnabled('general')).toBe(false);
   });
+
+  it('disables every active feature at once', () => {
+    const registry = new DebugFeatureRegistry();
+    const disposed: string[] = [];
+
+    for (const id of ['camera', 'officials']) {
+      registry.register({
+        create: () => ({
+          dispose: () => {
+            disposed.push(id);
+          },
+        }),
+        enabled: true,
+        id,
+        label: id,
+      });
+    }
+
+    registry.disableAll();
+
+    expect(disposed.sort()).toEqual(['camera', 'officials']);
+    expect(registry.getSnapshots().every((feature) => !feature.enabled)).toBe(true);
+  });
 });
