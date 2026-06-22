@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0] - 2026-06-22
+
+### Added
+
+- Added a runtime pregame broadcast presentation phase between `Start Game` and playable pre-snap for normal Exhibition starts.
+- Added data-defined brief/full pregame shot sequences for stadium establish, matchup, team sideline/tunnel pans, weather/field, and transition-to-gameplay shots using the existing camera rig.
+- Added pregame audio coordination for title-music duck/fade, crowd ambience, pre-rendered pregame announcer clips, captions, skip handling, lower thirds, and F1/debug readback.
+
+### Changed
+
+- Kept gameplay simulation, AI, match clock, snap input, HUD, and play cards paused while the pregame sequence is running.
+- Scoped pregame presentation to Exhibition mode so legacy score-attack regression starts remain immediate.
+- Extended the local runtime audio manifest to include pregame announcer assets under `public/audio/announcer/pregame`.
+
+### Tests
+
+- Added pregame presentation unit coverage and browser smoke coverage for title-to-pregame-to-preSnap, skip behavior, score-clock pause, debug registry integration, and legacy 5v5 score-attack behavior.
+
 ## [1.5.0] - 2026-06-22
 
 ### Added

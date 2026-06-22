@@ -441,8 +441,26 @@ interface AudioRuntimeSnapshot {
     attempted: boolean;
     handoffRequested: boolean;
     loopActive: boolean;
+    loopGain: number;
     state: string;
   };
+}
+
+interface PregamePresentationSnapshot {
+  activeCommentary: string | null;
+  completed: boolean;
+  currentShot:
+    | 'matchupCombined'
+    | 'opponentTeamPan'
+    | 'stadiumEstablish'
+    | 'transitionToGameplay'
+    | 'userTeamTunnelOrSideline'
+    | 'weatherAndField'
+    | null;
+  phase: 'completed' | 'idle' | 'running' | 'skipped';
+  progress: number;
+  skipState: 'available' | 'completed' | 'idle' | 'skipped';
+  targetGameplayCamera: CameraSnapshot['mode'];
 }
 
 interface CrowdPreviewSnapshot {
@@ -935,8 +953,9 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   await page.getByRole('button', { name: 'Start Game' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('.title-screen')).toBeHidden();
-  await expect(page.locator('.gameplay-hud')).toBeVisible();
-  await expect(page.locator('.play-call-ui')).toBeVisible();
+  await expect(page.locator('body[data-app-phase="pregamePresentation"]')).toBeAttached();
+  await expect(page.locator('.gameplay-hud')).toBeHidden();
+  await expect(page.locator('.play-call-ui')).toBeHidden();
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
   await expect.poll(() =>
     getAudioSnapshot(page).then((snapshot) => snapshot.activeLoops.includes('football-js-title')),
@@ -944,6 +963,11 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   await expect.poll(() =>
     getAudioSnapshot(page).then((snapshot) => snapshot.titleMusic?.state),
   ).toBe('handoff');
+  await expect.poll(() => getPregamePresentationSnapshot(page)).toMatchObject({
+    currentShot: 'stadiumEstablish',
+    phase: 'running',
+    skipState: 'available',
+  });
 
   const started = await getGameplaySnapshot(page);
   const experience = await getGameExperienceSnapshot(page);
@@ -965,6 +989,19 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
     possession: 'user',
     quarter: 1,
   });
+  await page.waitForTimeout(500);
+  expect((await getGameplaySnapshot(page)).playState).toBe('preSnap');
+  await expect.poll(() => getMatchSnapshot(page)).toMatchObject({
+    clock: {
+      remainingSeconds: 180,
+      running: false,
+    },
+  });
+  await page.keyboard.press('Space');
+  await expect(page.locator('body[data-app-phase="gameplay"]')).toBeAttached();
+  await expect(page.locator('.gameplay-hud')).toBeVisible();
+  await expect(page.locator('.play-call-ui')).toBeVisible();
+  await expect.poll(() => getGameplaySnapshot(page).then((snapshot) => snapshot.playState)).toBe('preSnap');
   expect(started.selectedPlay).toMatchObject({
     displayName: 'Inside Zone 11',
     id: 'inside-zone-11',
@@ -1130,7 +1167,7 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
 
   await page.keyboard.press('F1');
   await expect(page.locator('.debug-panel')).toBeVisible();
-  await expect(page.locator('.debug-feature-row')).toHaveCount(20);
+  await expect(page.locator('.debug-feature-row')).toHaveCount(21);
   await expect(page.locator('.debug-feature-row span')).toContainText([
     '11v11 audit',
     '7v7 audit',
@@ -1146,6 +1183,7 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
     'Officials',
     'Passing',
     'Player motion',
+    'Pregame',
     'Presentation',
     'Presentation hardening',
     'Quality',
@@ -3853,6 +3891,24 @@ async function getGamePresentationRuntimeSnapshot(page: Page): Promise<GamePrese
     }
 
     return debugApi.getGamePresentationRuntimeSnapshot();
+  });
+}
+
+async function getPregamePresentationSnapshot(page: Page): Promise<PregamePresentationSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getPregamePresentationSnapshot: () => PregamePresentationSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getPregamePresentationSnapshot();
   });
 }
 

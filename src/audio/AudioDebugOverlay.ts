@@ -1,9 +1,11 @@
 import type { GameAudioDirectorSnapshot } from './GameAudioDirector';
 import type { BroadcastCommentarySnapshot } from './BroadcastCommentaryDirector';
 import type { TitleMusicControllerSnapshot } from './TitleMusicController';
+import type { PregameAudioCoordinatorSnapshot } from '../presentation/pregame/PregamePresentationTypes';
 
 export type RuntimeAudioDebugSnapshot = GameAudioDirectorSnapshot & {
   commentary?: BroadcastCommentarySnapshot;
+  pregame?: PregameAudioCoordinatorSnapshot;
   titleMusic?: TitleMusicControllerSnapshot;
 };
 
@@ -42,6 +44,7 @@ export function syncAudioDebugOverlay(
     `EVENTS ${snapshot.recentEvents.map((event) => event.type).join(',') || 'none'}`,
     `EVENT_HISTORY ${formatEventHistory(snapshot.eventHistory)}`,
     `COMMENTARY ${formatCommentary(snapshot.commentary)}`,
+    `PREGAME ${formatPregame(snapshot.pregame)}`,
     `TITLE_MUSIC ${formatTitleMusic(snapshot.titleMusic)}`,
     `UNLOCK_ERROR ${snapshot.lastUnlockError ?? 'none'}`,
   ].join('\n');
@@ -108,5 +111,20 @@ function formatTitleMusic(snapshot: TitleMusicControllerSnapshot | undefined): s
     `state:${snapshot.state}`,
     `loop:${snapshot.loopActive}`,
     `handoff:${snapshot.handoffRequested}`,
+    `gain:${snapshot.loopGain.toFixed(2)}`,
+  ].join(' ');
+}
+
+function formatPregame(snapshot: PregameAudioCoordinatorSnapshot | undefined): string {
+  if (!snapshot) {
+    return 'none';
+  }
+
+  return [
+    `active:${snapshot.activeLine?.lineId ?? 'none'}`,
+    `completed:${snapshot.completedLineIds.join(',') || 'none'}`,
+    `failed:${snapshot.failedLineIds.join(',') || 'none'}`,
+    `music:${snapshot.musicGain.toFixed(2)}`,
+    `crowd:${snapshot.crowdGain.toFixed(2)}`,
   ].join(' ');
 }

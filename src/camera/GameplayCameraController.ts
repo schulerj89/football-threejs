@@ -19,6 +19,7 @@ import type {
   PresentationOrbitShotName,
 } from './CameraTypes';
 import { PresentationCameraDirector } from './PresentationCameraDirector';
+import type { PresentationCameraShot } from './PresentationShotDefinitions';
 
 export type {
   CinematicsSetting,
@@ -157,6 +158,39 @@ export class GameplayCameraController {
     }
 
     this.finishCameraUpdate(snapshot, targetChangeReason);
+  }
+
+  updatePregamePresentation(shot: PresentationCameraShot, deltaSeconds: number): void {
+    const cameraDeltaSeconds = Math.min(
+      Math.max(0, deltaSeconds),
+      GAMEPLAY_CAMERA_CONFIG.offensePerspective.maxDeltaSeconds,
+    );
+    this.presentationOverrideActive = this.mode !== 'cinematicBroadcast';
+    this.cinematicDebug = this.presentationDirector.applyExternalShot(
+      this.rig.perspectiveCamera,
+      shot,
+      cameraDeltaSeconds,
+      {
+        preSnapSequenceId: this.preSnapSequenceId,
+      },
+    );
+    this.cameraState = 'cinematicBroadcast';
+    this.lastGameplayFocus = null;
+    this.rig.usePresentationTargets(this.cinematicDebug.focusTarget, this.cinematicDebug.lookTarget);
+
+    if (this.mode !== 'tacticalOrthographic') {
+      this.isPerspectiveInitialized = true;
+    }
+  }
+
+  finishPregamePresentation(snapshot?: GameplaySnapshot): void {
+    this.presentationOverrideActive = false;
+    this.presentationDirector.reset();
+    this.cinematicDebug = this.presentationDirector.getDebugSnapshot();
+
+    if (snapshot) {
+      this.update(snapshot, 0);
+    }
   }
 
   getDebugSnapshot(): GameplayCameraDebugSnapshot {

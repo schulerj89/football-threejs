@@ -337,14 +337,14 @@ export class AudioMixer {
     return this.activeLoops.has(assetId);
   }
 
-  stopLoop(assetId: string): boolean {
+  stopLoop(assetId: string, rampSeconds = LOOP_GAIN_RAMP_SECONDS): boolean {
     const activeLoop = this.activeLoops.get(assetId);
 
     if (!activeLoop) {
       return false;
     }
 
-    this.rampLoopGain(activeLoop, 0);
+    this.rampLoopGain(activeLoop, 0, rampSeconds);
     if (activeLoop.stopTimer) {
       clearTimeout(activeLoop.stopTimer);
     }
@@ -355,7 +355,7 @@ export class AudioMixer {
 
       activeLoop.element.pause();
       this.activeLoops.delete(assetId);
-    }, LOOP_GAIN_RAMP_SECONDS * 1000);
+    }, Math.max(0, rampSeconds) * 1000);
     return true;
   }
 

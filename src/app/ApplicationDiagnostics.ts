@@ -311,6 +311,8 @@ export class ApplicationDiagnostics {
       getStadiumSnapshot: () => this.options.presentation.getStadiumSnapshot(),
       getPlayerBodyVisualSnapshots: () => this.options.playerVisuals.getBodySnapshots(),
       getPlayerPoseSnapshots: () => this.options.presentation.getPlayerPoseSnapshots(),
+      getPregamePresentationSnapshot: () =>
+        this.options.presentation.getPregamePresentationSnapshot(),
       getPlayerSnapshot: () =>
         snapshotPlayerModel(this.options.gameplay.getActivePrimaryPlayer()),
       getRenderMetrics: () => this.latestRenderMetrics ?? this.createRenderMetricsSnapshot(0),
@@ -525,6 +527,7 @@ function countActiveDebugOverlays(): number {
     '.pose-debug-overlay',
     '.presentation-audit-overlay',
     '.presentation-hardening-audit-overlay',
+    '.pregame-debug-overlay',
     '.route-audit-overlay',
     '.seven-audit-overlay',
     '.sideline-debug-overlay',

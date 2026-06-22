@@ -5,7 +5,7 @@ import { SettingsPanel } from '../ui/SettingsPanel';
 import type { TitleLoadingState } from '../ui/TitleScreen';
 import { TitleScreenController } from '../ui/TitleScreenController';
 
-export type AppPhase = 'gameplay' | 'title';
+export type AppPhase = 'gameplay' | 'pregamePresentation' | 'title';
 
 export interface ApplicationLifecycleOptions {
   crowdPreviewEnabled: boolean;
@@ -109,6 +109,13 @@ export class ApplicationLifecycle {
 
   startGameplay(): void {
     this.phaseValue = 'gameplay';
+    this.titleController?.setVisible(false);
+    this.setPauseSettingsVisible(false, false);
+    this.syncChrome();
+  }
+
+  startPregamePresentation(): void {
+    this.phaseValue = 'pregamePresentation';
     this.titleController?.setVisible(false);
     this.setPauseSettingsVisible(false, false);
     this.syncChrome();

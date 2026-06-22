@@ -139,6 +139,29 @@ export class PresentationCameraDirector {
     return this.getDebugSnapshot();
   }
 
+  applyExternalShot(
+    camera: THREE.PerspectiveCamera,
+    shot: PresentationCameraShot,
+    deltaSeconds: number,
+    options: {
+      formationBounds?: PresentationCameraDebugSnapshot['formationBounds'];
+      preSnapSequenceId?: number;
+    } = {},
+  ): PresentationCameraDebugSnapshot {
+    const delta = clamp(deltaSeconds, 0, this.config.maxDeltaSeconds);
+    this.applyShot(camera, shot, delta);
+    this.debugSnapshot = createDebugSnapshot({
+      activePhase: shot.phase,
+      camera,
+      formationBounds: options.formationBounds ?? calculateFormationBounds([]),
+      lookTarget: this.presentationRig.smoothedTarget,
+      preSnapSequenceId: options.preSnapSequenceId ?? 0,
+      stabilityMetrics: this.presentationRig.getStabilityMetrics(),
+      shot,
+    });
+    return this.getDebugSnapshot();
+  }
+
   getDebugSnapshot(): PresentationCameraDebugSnapshot {
     return {
       activeShotName: this.debugSnapshot.activeShotName,

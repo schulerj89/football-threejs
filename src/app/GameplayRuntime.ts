@@ -206,6 +206,10 @@ export class GameplayRuntime {
     this.rebuildForPlaybook(playbookId, true, gameMode);
   }
 
+  discardPendingPlayControls(): void {
+    this.playControls.consumeRequests();
+  }
+
   handleFormationPreviewLaneControls(event: KeyboardEvent, resetCamera: () => void): void {
     if (!this.formationPreviewModel || event.ctrlKey || event.metaKey || event.altKey) {
       return;

@@ -101,6 +101,23 @@ import {
   SidelineTeamController,
   type SidelineTeamControllerSnapshot,
 } from '../presentation/teams/SidelineTeamController';
+import type { MatchSnapshot } from '../match/MatchTypes';
+import type { AppPhase } from './ApplicationLifecycle';
+import {
+  PregameAudioCoordinator,
+} from '../presentation/pregame/PregameAudioCoordinator';
+import {
+  PregameLowerThird,
+} from '../presentation/pregame/PregameLowerThird';
+import {
+  PregamePresentationDirector,
+  type PregamePresentationUpdateResult,
+} from '../presentation/pregame/PregamePresentationDirector';
+import type {
+  PregamePresentationContext,
+  PregamePresentationSnapshot,
+} from '../presentation/pregame/PregamePresentationTypes';
+import type { PregameWeatherCondition } from '../audio/PregameCommentaryCatalog';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -125,6 +142,15 @@ export interface PresentationFrameOptions {
   profiler?: FramePerformanceProfiler;
 }
 
+export interface PregamePresentationFrameOptions {
+  ball: BallModel;
+  deltaSeconds: number;
+  gameplaySnapshot: GameplaySnapshot;
+  matchSnapshot: MatchSnapshot | null;
+  playerVisuals: Map<string, THREE.Group>;
+  profiler?: FramePerformanceProfiler;
+}
+
 export class PresentationRuntime {
   readonly audioMixer: AudioMixer;
   readonly ballVisual: THREE.Group;
@@ -135,6 +161,7 @@ export class PresentationRuntime {
   readonly gameAudioDirector: GameAudioDirector;
   readonly gameplayHud = createGameplayHud();
   readonly playerPoseController: PlayerPoseController;
+  readonly pregameLowerThird: PregameLowerThird;
   readonly routeArtRenderer: RouteArtRenderer;
   readonly stadiumController: StadiumController;
   readonly sidelineTeamController: SidelineTeamController;
@@ -151,6 +178,8 @@ export class PresentationRuntime {
   private readonly gamePresentationRuntime: GamePresentationRuntime;
   private readonly holdCinematicPreSnapEstablish: boolean;
   private playCallUi: PlayCallUi | null;
+  private pregameAudioCoordinator: PregameAudioCoordinator;
+  private pregamePresentationDirector: PregamePresentationDirector;
   private presentationHoldDirector: PresentationHoldDirector;
   private readonly searchParams: URLSearchParams;
   private readonly shotPreview: ReturnType<typeof resolvePresentationShotPreview>;
@@ -278,6 +307,13 @@ export class PresentationRuntime {
     this.broadcastCommentaryDirector = new BroadcastCommentaryDirector(this.audioMixer, {
       enabled: true,
     });
+    this.pregameLowerThird = new PregameLowerThird();
+    this.pregameAudioCoordinator = new PregameAudioCoordinator(
+      this.audioMixer,
+      this.titleMusicController,
+      this.gameAudioDirector,
+    );
+    this.pregamePresentationDirector = this.createPregamePresentationDirector();
     this.presentationHoldDirector = new PresentationHoldDirector(
       gameExperience.settings.cinematics,
     );
@@ -326,6 +362,7 @@ export class PresentationRuntime {
   skipPresentation(): void {
     this.cameraController.skipPresentationShot();
     this.gamePresentationRuntime.skipPresentation();
+    this.pregamePresentationDirector.skip();
   }
 
   skipPresentationHold(): void {
@@ -453,6 +490,70 @@ export class PresentationRuntime {
     }
   }
 
+  startPregamePresentation(
+    gameplaySnapshot: GameplaySnapshot,
+    matchSnapshot: MatchSnapshot | null,
+  ): boolean {
+    if (this.crowdPreviewController || this.gameExperience.settings.cinematics === 'off') {
+      this.pregamePresentationDirector.reset();
+      return false;
+    }
+
+    return this.pregamePresentationDirector.start(
+      this.createPregameContext(gameplaySnapshot, matchSnapshot),
+    );
+  }
+
+  updatePregameFrame({
+    ball,
+    deltaSeconds,
+    gameplaySnapshot,
+    matchSnapshot,
+    playerVisuals,
+    profiler,
+  }: PregamePresentationFrameOptions): PregamePresentationUpdateResult {
+    const context = this.createPregameContext(gameplaySnapshot, matchSnapshot);
+
+    if (profiler?.enabled) {
+      profiler.measure('footballVisualUpdate', () => syncBallVisual(this.ballVisual, ball));
+      profiler.measure('proceduralPlayerPosing', () => {
+        this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+      });
+      profiler.measure('officialsUpdate', () => {
+        this.officialsController.update(gameplaySnapshot, deltaSeconds, false);
+      });
+      profiler.measure('sidelineTeamsUpdate', () => {
+        this.sidelineTeamController.update();
+      });
+    } else {
+      syncBallVisual(this.ballVisual, ball);
+      this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+      this.officialsController.update(gameplaySnapshot, deltaSeconds, false);
+      this.sidelineTeamController.update();
+    }
+
+    const result = this.pregamePresentationDirector.update(deltaSeconds, context);
+    if (result.shot) {
+      this.cameraController.updatePregamePresentation(result.shot, deltaSeconds);
+    }
+    this.syncPregameCaptions();
+    return result;
+  }
+
+  finishPregamePresentation(
+    gameplaySnapshot: GameplaySnapshot,
+    options: { skipped?: boolean } = {},
+  ): void {
+    if (options.skipped) {
+      this.pregamePresentationDirector.skip();
+    } else {
+      this.pregamePresentationDirector.complete();
+    }
+    this.cameraController.finishPregamePresentation(gameplaySnapshot);
+    this.broadcastCaptions.hidden = true;
+    this.broadcastCaptions.textContent = '';
+  }
+
   syncPlayCallUi(gameplaySnapshot: GameplaySnapshot, visible: boolean): void {
     if (this.playCallUi && visible) {
       syncPlayCallUi(this.playCallUi, gameplaySnapshot);
@@ -461,14 +562,16 @@ export class PresentationRuntime {
     }
   }
 
-  syncApplicationChrome(appPhase: 'gameplay' | 'title'): void {
+  syncApplicationChrome(appPhase: AppPhase): void {
     document.body.dataset.appPhase = appPhase;
     this.gameplayHud.root.hidden = appPhase !== 'gameplay';
     this.controlledPlayerLabels.setApplicationPhase(appPhase);
     if (appPhase !== 'gameplay') {
       this.playCallUi?.hide();
-      this.broadcastCaptions.hidden = true;
-      this.broadcastCaptions.textContent = '';
+      if (appPhase !== 'pregamePresentation') {
+        this.broadcastCaptions.hidden = true;
+        this.broadcastCaptions.textContent = '';
+      }
     }
   }
 
@@ -529,6 +632,7 @@ export class PresentationRuntime {
     this.presentationHoldDirector = new PresentationHoldDirector(
       gameExperience.settings.cinematics,
     );
+    this.pregamePresentationDirector = this.createPregamePresentationDirector();
 
     if (!areCrowdSettingsEqual(previousCrowdSettings, this.crowdPresentationSettings)) {
       this.rebuildCrowdPresentationController();
@@ -553,6 +657,7 @@ export class PresentationRuntime {
     return {
       ...this.gameAudioDirector.getSnapshot(),
       commentary: this.broadcastCommentaryDirector.getSnapshot(),
+      pregame: this.pregameAudioCoordinator.getSnapshot(),
       titleMusic: this.titleMusicController.getSnapshot(),
     };
   }
@@ -605,6 +710,10 @@ export class PresentationRuntime {
     return this.gamePresentationRuntime.getSnapshot();
   }
 
+  getPregamePresentationSnapshot(): PregamePresentationSnapshot {
+    return this.pregamePresentationDirector.getSnapshot();
+  }
+
   getPlayerPoseSnapshots(): PlayerPoseSnapshot[] {
     return this.playerPoseController.getPoseSnapshots();
   }
@@ -631,6 +740,7 @@ export class PresentationRuntime {
     this.scene.remove(this.controlledPlayerLabels.group);
     this.routeArtRenderer.dispose();
     this.controlledPlayerLabels.dispose();
+    this.pregameLowerThird.dispose();
     if (this.crowdPreviewController) {
       this.scene.remove(this.crowdPreviewController.group);
       this.crowdPreviewController.dispose();
@@ -682,6 +792,45 @@ export class PresentationRuntime {
     });
     this.crowdPresentationController.setPageActive(!document.hidden && document.hasFocus());
     this.scene.add(this.crowdPresentationController.group);
+  }
+
+  private createPregamePresentationDirector(): PregamePresentationDirector {
+    return new PregamePresentationDirector({
+      audioCoordinator: this.pregameAudioCoordinator,
+      lowerThird: this.pregameLowerThird,
+      settings: {
+        cinematics: this.gameExperience.settings.cinematics,
+      },
+    });
+  }
+
+  private createPregameContext(
+    gameplaySnapshot: GameplaySnapshot,
+    matchSnapshot: MatchSnapshot | null,
+  ): PregamePresentationContext {
+    return {
+      aspectRatio: Math.max(0.1, window.innerWidth / Math.max(1, window.innerHeight)),
+      gameplaySnapshot,
+      matchSnapshot,
+      sidelineSnapshot: this.sidelineTeamController.getSnapshot(),
+      stadiumSnapshot: this.stadiumController.getSnapshot(),
+      targetGameplayCamera: this.cameraController.getMode(),
+      teamTheme: this.teamTheme,
+      weatherCondition: resolvePregameWeatherCondition(this.searchParams.get('pregameWeather')),
+    };
+  }
+
+  private syncPregameCaptions(): void {
+    const audioSnapshot = this.pregameAudioCoordinator.getSnapshot();
+    const caption = audioSnapshot.activeLine?.caption ?? null;
+    if (!this.gameExperience.settings.captionsEnabled || !caption) {
+      this.broadcastCaptions.hidden = true;
+      this.broadcastCaptions.textContent = '';
+      return;
+    }
+
+    this.broadcastCaptions.hidden = false;
+    this.broadcastCaptions.textContent = caption;
   }
 
   private applyStadiumSettings(): void {
@@ -745,4 +894,18 @@ function shouldUseStadiumUpperTier(
   return gameExperience.settings.stadiumEnabled &&
     gameExperience.settings.preset !== 'performance' &&
     quality.tier !== 'performance';
+}
+
+function resolvePregameWeatherCondition(value: string | null): PregameWeatherCondition {
+  if (
+    value === 'clear' ||
+    value === 'overcast' ||
+    value === 'rain' ||
+    value === 'snow' ||
+    value === 'windy'
+  ) {
+    return value;
+  }
+
+  return 'clear';
 }

@@ -6,7 +6,7 @@ import {
 } from './QualityProfile';
 
 export interface QualityTransitionContext {
-  appPhase: 'gameplay' | 'title';
+  appPhase: 'gameplay' | 'pregamePresentation' | 'title';
   playState: PlayState;
 }
 

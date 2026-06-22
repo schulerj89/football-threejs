@@ -225,6 +225,7 @@ export class FootballApplication {
       performanceDebugEnabled: searchParams.has('qualityDebug') ||
         searchParams.has('performanceDebug'),
       presentationAuditEnabled: searchParams.has('presentationAudit'),
+      pregameDebugEnabled: searchParams.has('pregameDebug'),
       officialsDebugEnabled: this.gameExperience.settings.officialsDebugLabels ||
         searchParams.has('officialsDebug') ||
         searchParams.has('officialsDebugLabels'),
@@ -235,6 +236,7 @@ export class FootballApplication {
       sevenAuditEnabled: searchParams.has('sevenAudit'),
     });
     document.addEventListener('visibilitychange', this.syncAudioPageActivity);
+    window.addEventListener('keydown', this.handlePregameSkipKeyDown);
     window.addEventListener('keydown', this.handleMatchTransitionKeyDown);
     window.addEventListener('blur', this.syncAudioPageActivity);
     window.addEventListener('focus', this.syncAudioPageActivity);
@@ -254,6 +256,7 @@ export class FootballApplication {
   dispose(): void {
     this.loop.dispose();
     document.removeEventListener('visibilitychange', this.syncAudioPageActivity);
+    window.removeEventListener('keydown', this.handlePregameSkipKeyDown);
     window.removeEventListener('keydown', this.handleMatchTransitionKeyDown);
     window.removeEventListener('blur', this.syncAudioPageActivity);
     window.removeEventListener('focus', this.syncAudioPageActivity);
@@ -297,6 +300,10 @@ export class FootballApplication {
     const pauseSettingsVisible = this.lifecycle.isPauseSettingsVisible();
     const matchActive = this.isExhibitionMatchActive();
     const matchSnapshotBefore = this.getMatchSnapshot();
+    const pregameActive =
+      this.lifecycle.phase === 'pregamePresentation' &&
+      !pauseSettingsVisible &&
+      matchActive;
     const gameplayActive =
       this.lifecycle.phase === 'gameplay' &&
       !pauseSettingsVisible &&
@@ -329,19 +336,33 @@ export class FootballApplication {
       );
       this.playerVisuals.sync(this.getActivePlayers());
     }
-    this.presentation.updateGameplayFrame({
-      active: gameplayActive,
-      ball: this.gameplay.formationPreviewModel?.ball ?? this.gameplay.gameplayModel.ball,
-      commentaryActive: !this.gameplay.formationPreviewModel,
-      crowdCutawaysEnabled: !!this.presentation.crowdPresentation &&
-        this.gameExperience.crowdPresentationSettings.crowdVisualsEnabled &&
-        this.gameExperience.crowdPresentationSettings.crowdReactionsEnabled,
-      deltaSeconds: presentationDelta,
-      gameplaySnapshot,
-      playerVisuals: this.playerVisuals.visuals,
-      profiler: this.performanceProfiler,
-      selectedPlay: this.gameplay.gameplayModel.selectedPlay,
-    });
+    if (pregameActive) {
+      const result = this.presentation.updatePregameFrame({
+        ball: this.gameplay.formationPreviewModel?.ball ?? this.gameplay.gameplayModel.ball,
+        deltaSeconds: presentationDelta,
+        gameplaySnapshot,
+        matchSnapshot,
+        playerVisuals: this.playerVisuals.visuals,
+        profiler: this.performanceProfiler,
+      });
+      if (result.completed) {
+        this.finishPregamePresentation(false);
+      }
+    } else {
+      this.presentation.updateGameplayFrame({
+        active: gameplayActive,
+        ball: this.gameplay.formationPreviewModel?.ball ?? this.gameplay.gameplayModel.ball,
+        commentaryActive: !this.gameplay.formationPreviewModel,
+        crowdCutawaysEnabled: !!this.presentation.crowdPresentation &&
+          this.gameExperience.crowdPresentationSettings.crowdVisualsEnabled &&
+          this.gameExperience.crowdPresentationSettings.crowdReactionsEnabled,
+        deltaSeconds: presentationDelta,
+        gameplaySnapshot,
+        playerVisuals: this.playerVisuals.visuals,
+        profiler: this.performanceProfiler,
+        selectedPlay: this.gameplay.gameplayModel.selectedPlay,
+      });
+    }
     if (this.performanceProfiler.enabled) {
       this.performanceProfiler.measure('hudDomUpdate', () => {
         this.presentation.syncPlayCallUi(gameplaySnapshot, gameplayActive);
@@ -440,6 +461,7 @@ export class FootballApplication {
       playerVisuals: this.playerVisuals.visuals,
       presentationAuditSnapshot: this.diagnostics.getPresentationAuditSnapshot(),
       presentationHardeningAuditSnapshot: this.diagnostics.getPresentationHardeningAuditSnapshot(),
+      pregamePresentationSnapshot: this.presentation.getPregamePresentationSnapshot(),
       renderMetrics: this.diagnostics.latestRenderMetrics,
       routeArtSnapshot: this.presentation.getRouteArtSnapshot(),
       runtimeAudioSnapshot: this.presentation.getRuntimeAudioSnapshot(),
@@ -468,10 +490,22 @@ export class FootballApplication {
       this.matchController.start(this.gameplay.gameplayModel);
     }
     this.syncAfterGameplayRebuild();
-    this.lifecycle.startGameplay();
     void this.presentation.titleMusicController.startFromUserGesture();
     this.presentation.titleMusicController.handoffToPregame();
     this.presentation.resetCameraPresentation();
+    const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
+    const matchSnapshot = this.getMatchSnapshot();
+    const pregameStarted = this.isExhibitionMatchActive() &&
+      this.presentation.startPregamePresentation(
+        gameplaySnapshot,
+        matchSnapshot,
+      );
+    if (pregameStarted) {
+      this.lifecycle.startPregamePresentation();
+    } else {
+      this.presentation.finishPregamePresentation(gameplaySnapshot);
+      this.lifecycle.startGameplay();
+    }
   }
 
   private handlePauseSettingsChange(settings: GameExperienceSettings): void {
@@ -682,6 +716,32 @@ export class FootballApplication {
       event.preventDefault();
     }
   };
+
+  private readonly handlePregameSkipKeyDown = (event: KeyboardEvent): void => {
+    if (
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      this.lifecycle.phase !== 'pregamePresentation' ||
+      (event.key !== 'Enter' && event.key !== ' ')
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    this.finishPregamePresentation(true);
+  };
+
+  private finishPregamePresentation(skipped: boolean): void {
+    if (this.lifecycle.phase !== 'pregamePresentation') {
+      return;
+    }
+
+    this.gameplay.discardPendingPlayControls();
+    const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
+    this.presentation.finishPregamePresentation(gameplaySnapshot, { skipped });
+    this.lifecycle.startGameplay();
+  }
 
   private updateAdaptiveQuality(
     deltaSeconds: number,

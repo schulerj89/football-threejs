@@ -293,7 +293,19 @@ describe('runtime audio mixer', () => {
     expect(titleMusic.getSnapshot()).toMatchObject({
       handoffRequested: true,
       loopActive: true,
+      loopGain: 0.72,
       state: 'handoff',
+    });
+
+    titleMusic.setPregameDucking(true, 0.31, 0.2);
+    expect(titleMusic.getSnapshot().loopGain).toBe(0.31);
+    titleMusic.setPregameDucking(false, 0.31, 0.2);
+    expect(titleMusic.getSnapshot().loopGain).toBe(0.72);
+    titleMusic.fadeOutForGameplay(0.4);
+    expect(titleMusic.getSnapshot()).toMatchObject({
+      handoffRequested: false,
+      loopGain: 0,
+      state: 'fadingOut',
     });
   });
 
