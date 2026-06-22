@@ -24,6 +24,7 @@ export interface RenderMetricsSnapshot {
   sceneMaterialCount: number;
   sceneMeshCount: number;
   shadowCastingObjectCount: number;
+  sidelineMeshCount: number;
   stadiumDrawCallEstimate: number;
   stadiumMeshCount: number;
   textures: number;
@@ -154,6 +155,7 @@ export class DebugOverlay {
         `FOOTBALL_MESHES ${renderMetrics.footballMeshCount}`,
         `PLAYER_MESHES ${renderMetrics.playerBodyMeshCount}`,
         `OFFICIAL_MESHES ${renderMetrics.officialMeshCount}`,
+        `SIDELINE_MESHES ${renderMetrics.sidelineMeshCount}`,
         `CROWD_INSTANCES ${renderMetrics.crowdInstanceCount}`,
         `SCENE_MESHES ${renderMetrics.sceneMeshCount}`,
         `MATERIALS ${renderMetrics.sceneMaterialCount}`,

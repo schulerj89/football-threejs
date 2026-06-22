@@ -44,6 +44,7 @@ import {
   isTeamProfileId,
 } from '../teams/TeamRegistry';
 import type { UniformVariant } from '../teams/UniformPalette';
+import type { SidelineDensity } from '../presentation/teams/SidelineTeamTypes';
 
 export type ExperiencePreset =
   | 'broadcast'
@@ -80,8 +81,11 @@ export interface GameExperienceSettings {
   qualityMode: QualityMode;
   routeArtEnabled: boolean;
   selectedReceiverLabelEnabled: boolean;
+  sidelineDensity: SidelineDensity;
+  sidelinePlayersEnabled: boolean;
   stadiumEnabled: boolean;
   teamProfiles: TeamProfileSettings;
+  tunnelTableauEnabled: boolean;
 }
 
 export interface PersistedGameExperienceSettings {
@@ -119,8 +123,11 @@ export interface GameExperienceQueryOverrides {
   qualityMode?: QualityMode;
   routeArtEnabled?: boolean;
   selectedReceiverLabelEnabled?: boolean;
+  sidelineDensity?: SidelineDensity;
+  sidelinePlayersEnabled?: boolean;
   stadiumEnabled?: boolean;
   teamProfiles?: TeamProfileSettings;
+  tunnelTableauEnabled?: boolean;
 }
 
 export interface DevelopmentModeFlags {
@@ -201,8 +208,11 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   qualityMode: DEFAULT_QUALITY_MODE,
   routeArtEnabled: true,
   selectedReceiverLabelEnabled: false,
+  sidelineDensity: 'medium',
+  sidelinePlayersEnabled: true,
   stadiumEnabled: true,
   teamProfiles: DEFAULT_TEAM_PROFILE_SETTINGS,
+  tunnelTableauEnabled: true,
 } as const;
 
 export const PERFORMANCE_EXPERIENCE_SETTINGS: GameExperienceSettings = {
@@ -213,7 +223,10 @@ export const PERFORMANCE_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   officialsEnabled: false,
   preset: 'performance',
   qualityMode: DEFAULT_QUALITY_MODE,
+  sidelineDensity: 'low',
+  sidelinePlayersEnabled: false,
   stadiumEnabled: true,
+  tunnelTableauEnabled: false,
 } as const;
 
 export function resolveGameExperienceSettings({
@@ -368,10 +381,17 @@ export function normalizeGameExperienceSettings(
     routeArtEnabled: settings.routeArtEnabled ?? presetDefaults.routeArtEnabled,
     selectedReceiverLabelEnabled:
       settings.selectedReceiverLabelEnabled ?? presetDefaults.selectedReceiverLabelEnabled,
+    sidelineDensity: isSidelineDensity(settings.sidelineDensity)
+      ? settings.sidelineDensity
+      : presetDefaults.sidelineDensity,
+    sidelinePlayersEnabled:
+      settings.sidelinePlayersEnabled ?? presetDefaults.sidelinePlayersEnabled,
     stadiumEnabled: settings.stadiumEnabled ?? presetDefaults.stadiumEnabled,
     teamProfiles: normalizeTeamProfileSettings(
       settings.teamProfiles ?? presetDefaults.teamProfiles,
     ),
+    tunnelTableauEnabled:
+      settings.tunnelTableauEnabled ?? presetDefaults.tunnelTableauEnabled,
   };
 }
 
@@ -385,6 +405,7 @@ export function resolveGameExperienceQueryOverrides(
   const cameraValue = searchParams.get('camera');
   const cinematicsValue = searchParams.get('cinematics');
   const crowdDensityValue = searchParams.get('crowdDensity');
+  const sidelineDensityValue = searchParams.get('sidelineDensity');
   const qualityValue = searchParams.get('quality') ?? searchParams.get('qualityMode');
 
   if (isExperiencePreset(presetValue)) {
@@ -431,6 +452,10 @@ export function resolveGameExperienceQueryOverrides(
     overrides.crowdDensity = crowdDensityValue;
   }
 
+  if (isSidelineDensity(sidelineDensityValue)) {
+    overrides.sidelineDensity = sidelineDensityValue;
+  }
+
   if (qualityValue !== null) {
     overrides.qualityMode = normalizeQualityMode(qualityValue);
   } else if (searchParams.get('perfProfile') === '1') {
@@ -467,7 +492,9 @@ export function resolveGameExperienceQueryOverrides(
     'selectedReceiverLabel',
   );
   applyBooleanOverride(overrides, 'playerMotionEnabled', searchParams, 'playerMotion');
+  applyBooleanOverride(overrides, 'sidelinePlayersEnabled', searchParams, 'sidelinePlayers');
   applyBooleanOverride(overrides, 'stadiumEnabled', searchParams, 'stadium');
+  applyBooleanOverride(overrides, 'tunnelTableauEnabled', searchParams, 'tunnelTableau');
   applyVolumeOverride(overrides, 'announcerVolume', searchParams, 'announcerVolume');
   applyVolumeOverride(overrides, 'crowdVolume', searchParams, 'crowdVolume');
   applyVolumeOverride(overrides, 'masterVolume', searchParams, 'masterVolume');
@@ -633,7 +660,9 @@ function applyBooleanOverride(
     | 'playerMotionEnabled'
     | 'routeArtEnabled'
     | 'selectedReceiverLabelEnabled'
+    | 'sidelinePlayersEnabled'
     | 'stadiumEnabled'
+    | 'tunnelTableauEnabled'
   >,
   searchParams: URLSearchParams,
   queryKey: string,
@@ -710,6 +739,10 @@ function isCinematicsSetting(value: unknown): value is CinematicsSetting {
 }
 
 function isCrowdDensity(value: unknown): value is CrowdDensity {
+  return value === 'high' || value === 'low' || value === 'medium';
+}
+
+function isSidelineDensity(value: unknown): value is SidelineDensity {
   return value === 'high' || value === 'low' || value === 'medium';
 }
 

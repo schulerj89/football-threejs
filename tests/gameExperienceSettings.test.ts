@@ -29,6 +29,9 @@ describe('game experience settings', () => {
       crowdVisualsEnabled: true,
     });
     expect(resolved.settings.playbookId).toBe('11v11');
+    expect(resolved.settings.sidelinePlayersEnabled).toBe(true);
+    expect(resolved.settings.sidelineDensity).toBe('medium');
+    expect(resolved.settings.tunnelTableauEnabled).toBe(true);
     expect(resolved.settings.stadiumEnabled).toBe(true);
     expect(toGameplayCameraMode(resolved.settings.gameplayCamera)).toBe('offensePerspective');
   });
@@ -48,7 +51,10 @@ describe('game experience settings', () => {
       gameplayCamera: 'offense',
       playerMotionEnabled: true,
       playbookId: '11v11',
+      sidelineDensity: 'low',
+      sidelinePlayersEnabled: false,
       stadiumEnabled: true,
+      tunnelTableauEnabled: false,
     });
   });
 
@@ -111,7 +117,7 @@ describe('game experience settings', () => {
     const storedBefore = storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY);
 
     const resolved = resolveGameExperienceSettings({
-      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&announcer=0&captions=1&playbook=5v5&stadium=0&musicVolume=0.33'),
+      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&sidelinePlayers=0&sidelineDensity=high&tunnelTableau=0&announcer=0&captions=1&playbook=5v5&stadium=0&musicVolume=0.33'),
       storage,
     });
 
@@ -126,7 +132,10 @@ describe('game experience settings', () => {
       musicVolume: 0.33,
       playbookId: '5v5',
       preset: 'performance',
+      sidelineDensity: 'high',
+      sidelinePlayersEnabled: false,
       stadiumEnabled: false,
+      tunnelTableauEnabled: false,
     });
     expect(resolved.hasQueryOverrides).toBe(true);
     expect(resolved.queryOverrides).toMatchObject({
@@ -138,7 +147,10 @@ describe('game experience settings', () => {
       gameMode: 'scoreAttack',
       musicVolume: 0.33,
       playbookId: '5v5',
+      sidelineDensity: 'high',
+      sidelinePlayersEnabled: false,
       stadiumEnabled: false,
+      tunnelTableauEnabled: false,
     });
     expect(storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY)).toBe(storedBefore);
   });

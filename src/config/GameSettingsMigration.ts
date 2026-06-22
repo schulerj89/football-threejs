@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 7;
+export const GAME_SETTINGS_SCHEMA_VERSION = 8;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -50,6 +50,9 @@ function migrateOfficialSettings(value: unknown): unknown {
       officialsEnabled: true,
       quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
       selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
+      sidelineDensity: value.sidelineDensity ?? 'medium',
+      sidelinePlayersEnabled: value.sidelinePlayersEnabled ?? true,
+      tunnelTableauEnabled: value.tunnelTableauEnabled ?? true,
     };
   }
 
@@ -64,6 +67,9 @@ function migrateOfficialSettings(value: unknown): unknown {
       officialsEnabled: false,
       quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
       selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
+      sidelineDensity: value.sidelineDensity ?? 'low',
+      sidelinePlayersEnabled: value.sidelinePlayersEnabled ?? false,
+      tunnelTableauEnabled: value.tunnelTableauEnabled ?? false,
     };
   }
 
@@ -76,5 +82,8 @@ function migrateOfficialSettings(value: unknown): unknown {
     officialsDebugLabels: value.officialsDebugLabels ?? false,
     quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
     selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
+    sidelineDensity: value.sidelineDensity ?? 'medium',
+    sidelinePlayersEnabled: value.sidelinePlayersEnabled ?? true,
+    tunnelTableauEnabled: value.tunnelTableauEnabled ?? true,
   };
 }

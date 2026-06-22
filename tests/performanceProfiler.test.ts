@@ -134,6 +134,7 @@ function createSceneMetrics() {
     officialMeshCount: 0,
     playerMeshCount: 352,
     shadowCastingObjectCount: 0,
+    sidelineMeshCount: 0,
     stadiumMeshCount: 1,
     visibleMeshCount: 382,
   };

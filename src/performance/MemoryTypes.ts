@@ -7,6 +7,7 @@ export type MemorySubsystemId =
   | 'other'
   | 'players'
   | 'routeArt'
+  | 'sidelineTeams'
   | 'stadium'
   | 'uiRenderTargets';
 

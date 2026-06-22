@@ -19,6 +19,7 @@ export interface SceneStructureMetrics {
   officialMeshCount: number;
   playerMeshCount: number;
   shadowCastingObjectCount: number;
+  sidelineMeshCount: number;
   stadiumMeshCount: number;
   visibleMeshCount: number;
 }
@@ -55,6 +56,7 @@ export function collectSceneStructureMetrics(
   let officialMeshCount = 0;
   let playerMeshCount = 0;
   let shadowCastingObjectCount = 0;
+  let sidelineMeshCount = 0;
   let stadiumMeshCount = 0;
   let visibleMeshCount = 0;
 
@@ -93,6 +95,10 @@ export function collectSceneStructureMetrics(
       officialMeshCount += 1;
     }
 
+    if (isSidelineObject(object)) {
+      sidelineMeshCount += 1;
+    }
+
     if (isFootballObject(object)) {
       footballMeshCount += 1;
     }
@@ -116,6 +122,7 @@ export function collectSceneStructureMetrics(
     officialMeshCount,
     playerMeshCount,
     shadowCastingObjectCount,
+    sidelineMeshCount,
     stadiumMeshCount,
     visibleMeshCount,
   };
@@ -177,6 +184,19 @@ function isCrowdObject(object: THREE.Object3D): boolean {
 
 function isOfficialObject(object: THREE.Object3D): boolean {
   return /official|referee/i.test(object.name);
+}
+
+function isSidelineObject(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object;
+
+  while (current) {
+    if (current.userData.sidelinePresentation || current.name.includes('sideline-player')) {
+      return true;
+    }
+    current = current.parent;
+  }
+
+  return false;
 }
 
 function isFootballObject(object: THREE.Object3D): boolean {

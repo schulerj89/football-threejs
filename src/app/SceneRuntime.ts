@@ -113,6 +113,7 @@ export class SceneRuntime {
     let footballMeshCount = 0;
     let officialMeshCount = 0;
     let sceneMeshCount = 0;
+    let sidelineMeshCount = 0;
     let playerBodyMeshCount = 0;
     let shadowCastingObjectCount = 0;
     let stadiumDrawCallEstimate = 0;
@@ -146,6 +147,9 @@ export class SceneRuntime {
       if (isOfficialObject(object)) {
         officialMeshCount += 1;
       }
+      if (isSidelineObject(object)) {
+        sidelineMeshCount += 1;
+      }
       if (isStadiumObject(object)) {
         stadiumMeshCount += 1;
         stadiumDrawCallEstimate += materials.length;
@@ -172,6 +176,7 @@ export class SceneRuntime {
       sceneMaterialCount: sceneMaterials.size,
       sceneMeshCount,
       shadowCastingObjectCount,
+      sidelineMeshCount,
       stadiumDrawCallEstimate,
       stadiumMeshCount,
       textures: this.renderer.info.memory.textures,
@@ -245,6 +250,19 @@ function isOfficialObject(object: THREE.Object3D): boolean {
       current.name.includes('official') ||
       current.name.includes('referee')
     ) {
+      return true;
+    }
+    current = current.parent;
+  }
+
+  return false;
+}
+
+function isSidelineObject(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object;
+
+  while (current) {
+    if (current.userData.sidelinePresentation || current.name.includes('sideline-player')) {
       return true;
     }
     current = current.parent;

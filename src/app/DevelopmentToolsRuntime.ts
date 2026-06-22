@@ -34,6 +34,11 @@ import {
   syncOfficialsDebugOverlay,
 } from '../officials/OfficialsPresentationController';
 import type { OfficialsPresentationSnapshot } from '../officials/OfficialTypes';
+import {
+  createSidelineDebugOverlay,
+  syncSidelineDebugOverlay,
+  type SidelineTeamControllerSnapshot,
+} from '../presentation/teams/SidelineTeamController';
 import { DebugOverlay, type RenderMetricsSnapshot } from '../debugOverlay';
 import { createFieldAuditOverlay } from '../field/FieldAuditOverlay';
 import {
@@ -135,6 +140,7 @@ export interface SevenAuditResetCycleResourceSnapshot {
   materialCount: number;
   officialMeshCount: number;
   presentationHistoryCount: number;
+  sidelineMeshCount: number;
   stadiumMeshCount: number;
   textureCount: number;
   visualRootCount: number;
@@ -179,6 +185,7 @@ export interface FootballDebugApi {
   getGamePresentationRuntimeSnapshot: () => GamePresentationRuntimeSnapshot;
   getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
   getOfficialsSnapshot: () => OfficialsPresentationSnapshot;
+  getSidelineTeamSnapshot: () => SidelineTeamControllerSnapshot;
   getCrowdCapacityBenchmarkSnapshot: () => CrowdCapacityBenchmarkSnapshot;
   getMemoryProfileSnapshot: () => SceneResourceProfileSnapshot;
   getPassAuditSnapshot: () => PassAuditSnapshot | null;
@@ -233,6 +240,7 @@ export interface DevelopmentToolsRuntimeOptions {
   routeAuditEnabled: boolean;
   searchParams: URLSearchParams;
   sevenAuditEnabled: boolean;
+  sidelineTeamsDebugEnabled: boolean;
   renderer: THREE.WebGLRenderer;
   activePlayer: () => PlayerModel;
   debugApi: FootballDebugApi;
@@ -266,6 +274,7 @@ export interface DevelopmentOverlayFrame {
   qualityDebugSnapshot: QualityDebugSnapshot;
   memoryDebugSnapshot: MemoryDebugSnapshot | null;
   officialsSnapshot: OfficialsPresentationSnapshot;
+  sidelineTeamsSnapshot: SidelineTeamControllerSnapshot;
   sevenAuditSnapshot: SevenAuditSnapshot | null;
   playerVisuals: Map<string, THREE.Group>;
 }
@@ -282,6 +291,7 @@ export class DevelopmentToolsRuntime {
   private passAuditOverlay: HTMLDivElement | null = null;
   private memoryDebugPanel: MemoryDebugPanel | null = null;
   private officialsDebugOverlay: HTMLDivElement | null = null;
+  private sidelineTeamsDebugOverlay: HTMLDivElement | null = null;
   private performanceDebugOverlay: HTMLDivElement | null = null;
   private poseDebugOverlay: HTMLDivElement | null = null;
   private presentationAuditOverlay: HTMLDivElement | null = null;
@@ -332,6 +342,7 @@ export class DevelopmentToolsRuntime {
       !!this.passAuditOverlay ||
       !!this.memoryDebugPanel ||
       !!this.officialsDebugOverlay ||
+      !!this.sidelineTeamsDebugOverlay ||
       !!this.controlledPlayerLabelOverlay ||
       !!this.performanceDebugOverlay ||
       !!this.sevenAuditOverlay ||
@@ -385,6 +396,9 @@ export class DevelopmentToolsRuntime {
     }
     if (this.officialsDebugOverlay) {
       syncOfficialsDebugOverlay(this.officialsDebugOverlay, frame.officialsSnapshot);
+    }
+    if (this.sidelineTeamsDebugOverlay) {
+      syncSidelineDebugOverlay(this.sidelineTeamsDebugOverlay, frame.sidelineTeamsSnapshot);
     }
     if (this.controlledPlayerLabelOverlay) {
       syncControlledPlayerLabelOverlay(
@@ -543,6 +557,15 @@ export class DevelopmentToolsRuntime {
       createOfficialsDebugOverlay,
       (element) => {
         this.officialsDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'sidelineTeams',
+      'Sideline teams',
+      options.sidelineTeamsDebugEnabled,
+      createSidelineDebugOverlay,
+      (element) => {
+        this.sidelineTeamsDebugOverlay = element;
       },
     );
     registerElementFeature(
@@ -732,6 +755,7 @@ export class DevelopmentToolsRuntime {
       options.presentationAuditEnabled ||
       options.appearanceAuditEnabled ||
       options.officialsDebugEnabled ||
+      options.sidelineTeamsDebugEnabled ||
       options.sevenAuditEnabled ||
       options.elevenAuditEnabled ||
       options.audioDebugEnabled ||

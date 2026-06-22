@@ -228,6 +228,7 @@ export class FootballApplication {
       officialsDebugEnabled: this.gameExperience.settings.officialsDebugLabels ||
         searchParams.has('officialsDebug') ||
         searchParams.has('officialsDebugLabels'),
+      sidelineTeamsDebugEnabled: searchParams.has('sidelineDebug'),
       renderer: this.sceneRuntime.renderer,
       routeAuditEnabled: searchParams.has('routeAudit'),
       searchParams,
@@ -450,6 +451,7 @@ export class FootballApplication {
           }
         : null,
       officialsSnapshot: this.presentation.getOfficialsSnapshot(),
+      sidelineTeamsSnapshot: this.presentation.getSidelineTeamSnapshot(),
       sevenAuditSnapshot: this.diagnostics.getSevenAuditSnapshot(),
     });
   }

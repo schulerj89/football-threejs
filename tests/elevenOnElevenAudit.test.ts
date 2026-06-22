@@ -535,6 +535,7 @@ function createRenderMetrics(snapshot: GameplaySnapshot): RenderMetricsSnapshot 
     sceneMaterialCount: 12,
     sceneMeshCount: snapshot.players.length,
     shadowCastingObjectCount: 0,
+    sidelineMeshCount: 0,
     stadiumDrawCallEstimate: 0,
     stadiumMeshCount: 0,
     textures: 0,

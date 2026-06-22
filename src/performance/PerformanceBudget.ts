@@ -13,6 +13,7 @@ export type PerformancePhase =
   | 'proceduralPlayerPosing'
   | 'footballVisualUpdate'
   | 'officialsUpdate'
+  | 'sidelineTeamsUpdate'
   | 'crowdBehaviorUpdate'
   | 'crowdInstanceUpdates'
   | 'stadiumUpdate'
@@ -42,6 +43,7 @@ export const PERFORMANCE_PHASES: readonly PerformancePhaseDefinition[] = [
   { id: 'proceduralPlayerPosing', displayName: 'Procedural player posing' },
   { id: 'footballVisualUpdate', displayName: 'Football visual update' },
   { id: 'officialsUpdate', displayName: 'Officials update' },
+  { id: 'sidelineTeamsUpdate', displayName: 'Sideline teams update' },
   { id: 'crowdBehaviorUpdate', displayName: 'Crowd behavior update' },
   { id: 'crowdInstanceUpdates', displayName: 'Crowd instance updates' },
   { id: 'stadiumUpdate', displayName: 'Stadium update' },

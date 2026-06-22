@@ -31,7 +31,10 @@ describe('game settings facade', () => {
       playbookId: '11v11',
       preset: 'broadcast',
       routeArtEnabled: true,
+      sidelineDensity: 'medium',
+      sidelinePlayersEnabled: true,
       stadiumEnabled: true,
+      tunnelTableauEnabled: true,
     });
   });
 

@@ -187,6 +187,7 @@ function createSubsystemStates(): Map<MemorySubsystemId, SubsystemState> {
     'football',
     'routeArt',
     'crowd',
+    'sidelineTeams',
     'stadium',
     'uiRenderTargets',
     'other',
@@ -216,7 +217,9 @@ function createSubsystemLookup(
 
   scene.traverse((object) => {
     const name = object.name.toLowerCase();
-    if (name === 'low-poly-helmet' || name.includes('helmet-')) {
+    if (object.userData.sidelinePresentation || name.includes('sideline-player')) {
+      assignSubsystem(object, 'sidelineTeams', lookup);
+    } else if (name === 'low-poly-helmet' || name.includes('helmet-')) {
       assignSubsystem(object, 'helmets', lookup);
     } else if (
       name === 'football-field' ||
@@ -271,6 +274,9 @@ function classifyObject(object: THREE.Object3D): MemorySubsystemId {
   }
   if (name.includes('helmet')) {
     return 'helmets';
+  }
+  if (object.userData.sidelinePresentation || name.includes('sideline-player')) {
+    return 'sidelineTeams';
   }
   if (name.includes('player')) {
     return 'players';

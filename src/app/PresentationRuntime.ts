@@ -97,6 +97,10 @@ import {
   ControlledPlayerLabelRenderer,
   type ControlledPlayerLabelSnapshot,
 } from '../presentation/ControlledPlayerLabel';
+import {
+  SidelineTeamController,
+  type SidelineTeamControllerSnapshot,
+} from '../presentation/teams/SidelineTeamController';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -133,6 +137,7 @@ export class PresentationRuntime {
   readonly playerPoseController: PlayerPoseController;
   readonly routeArtRenderer: RouteArtRenderer;
   readonly stadiumController: StadiumController;
+  readonly sidelineTeamController: SidelineTeamController;
   readonly titleMusicController: TitleMusicController;
   readonly officialsController: OfficialsPresentationController;
   readonly controlledPlayerLabels: ControlledPlayerLabelRenderer;
@@ -216,6 +221,17 @@ export class PresentationRuntime {
     });
     if (!this.crowdPreviewController) {
       this.scene.add(this.officialsController.group);
+    }
+
+    this.sidelineTeamController = new SidelineTeamController({
+      density: gameExperience.settings.sidelineDensity,
+      enabled: !this.crowdPreviewController && gameExperience.settings.sidelinePlayersEnabled,
+      rosterBinding: this.rosterBinding,
+      teamTheme: this.teamTheme,
+      tunnelTableauEnabled: gameExperience.settings.tunnelTableauEnabled,
+    });
+    if (!this.crowdPreviewController) {
+      this.scene.add(this.sidelineTeamController.group);
     }
 
     this.crowdPresentationController =
@@ -393,6 +409,9 @@ export class PresentationRuntime {
       profiler.measure('officialsUpdate', () => {
         this.officialsController.update(gameplaySnapshot, deltaSeconds, active);
       });
+      profiler.measure('sidelineTeamsUpdate', () => {
+        this.sidelineTeamController.update();
+      });
       profiler.measure('cameraUpdate', () => {
         this.cameraController.update(gameplaySnapshot, deltaSeconds, {
           crowdCutawaysEnabled,
@@ -402,6 +421,7 @@ export class PresentationRuntime {
     } else {
       this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
       this.officialsController.update(gameplaySnapshot, deltaSeconds, active);
+      this.sidelineTeamController.update();
       this.cameraController.update(gameplaySnapshot, deltaSeconds, {
         crowdCutawaysEnabled,
         presentationEvents,
@@ -481,6 +501,13 @@ export class PresentationRuntime {
     this.officialsController.applySettings({
       debugLabelsEnabled: gameExperience.settings.officialsDebugLabels,
       enabled: !this.crowdPreviewController && gameExperience.settings.officialsEnabled,
+    });
+    this.sidelineTeamController.applySettings({
+      density: gameExperience.settings.sidelineDensity,
+      enabled: !this.crowdPreviewController && gameExperience.settings.sidelinePlayersEnabled,
+      rosterBinding: this.rosterBinding,
+      teamTheme: this.teamTheme,
+      tunnelTableauEnabled: gameExperience.settings.tunnelTableauEnabled,
     });
     this.applyStadiumSettings();
     this.broadcastCommentaryDirector.setAnnouncerEnabled(
@@ -570,6 +597,10 @@ export class PresentationRuntime {
     return this.officialsController.getSnapshot();
   }
 
+  getSidelineTeamSnapshot(): SidelineTeamControllerSnapshot {
+    return this.sidelineTeamController.getSnapshot();
+  }
+
   getGamePresentationRuntimeSnapshot(): GamePresentationRuntimeSnapshot {
     return this.gamePresentationRuntime.getSnapshot();
   }
@@ -612,6 +643,8 @@ export class PresentationRuntime {
     this.stadiumController.dispose();
     this.scene.remove(this.officialsController.group);
     this.officialsController.dispose();
+    this.scene.remove(this.sidelineTeamController.group);
+    this.sidelineTeamController.dispose();
     this.playCallUi?.dispose();
     this.gameplayHud.root.remove();
     this.broadcastCaptions.remove();

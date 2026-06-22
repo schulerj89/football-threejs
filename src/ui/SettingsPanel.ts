@@ -15,6 +15,7 @@ import type { CrowdDensity } from '../presentation/CrowdPresentationController';
 import type { QualityMode } from '../performance/QualityProfile';
 import { getPlaybookOptions } from '../playbook';
 import type { PlaybookId } from '../roster';
+import type { SidelineDensity } from '../presentation/teams/SidelineTeamTypes';
 import { TeamCustomizationPanel } from './TeamCustomizationPanel';
 import { RosterPreviewPanel } from './RosterPreviewPanel';
 
@@ -48,6 +49,9 @@ export class SettingsPanel {
   private readonly stadiumInput = document.createElement('input');
   private readonly crowdDensitySelect = document.createElement('select');
   private readonly crowdReactionsInput = document.createElement('input');
+  private readonly sidelinePlayersInput = document.createElement('input');
+  private readonly sidelineDensitySelect = document.createElement('select');
+  private readonly tunnelTableauInput = document.createElement('input');
   private readonly audioEnabledInput = document.createElement('input');
   private readonly mutedInput = document.createElement('input');
   private readonly masterVolumeInput = document.createElement('input');
@@ -175,6 +179,13 @@ export class SettingsPanel {
         ['high', 'High'],
       ]),
       this.createCheckboxRow('Crowd reactions', this.crowdReactionsInput),
+      this.createCheckboxRow('Sideline teams', this.sidelinePlayersInput),
+      this.createSelectRow('Sideline density', this.sidelineDensitySelect, [
+        ['low', 'Low'],
+        ['medium', 'Medium'],
+        ['high', 'High'],
+      ]),
+      this.createCheckboxRow('Tunnel tableau', this.tunnelTableauInput),
       this.createCheckboxRow('Master audio', this.audioEnabledInput),
       this.createCheckboxRow('Muted', this.mutedInput),
       this.createRangeRow('Master volume', this.masterVolumeInput),
@@ -347,6 +358,15 @@ export class SettingsPanel {
     this.crowdReactionsInput.addEventListener('change', () => {
       this.updateCustomSettings({ crowdReactionsEnabled: this.crowdReactionsInput.checked });
     });
+    this.sidelinePlayersInput.addEventListener('change', () => {
+      this.updateCustomSettings({ sidelinePlayersEnabled: this.sidelinePlayersInput.checked });
+    });
+    this.sidelineDensitySelect.addEventListener('change', () => {
+      this.updateCustomSettings({ sidelineDensity: this.sidelineDensitySelect.value as SidelineDensity });
+    });
+    this.tunnelTableauInput.addEventListener('change', () => {
+      this.updateCustomSettings({ tunnelTableauEnabled: this.tunnelTableauInput.checked });
+    });
     this.audioEnabledInput.addEventListener('change', () => {
       this.updateCustomSettings({ audioEnabled: this.audioEnabledInput.checked });
     });
@@ -429,6 +449,9 @@ export class SettingsPanel {
     this.stadiumInput.checked = this.settings.stadiumEnabled;
     this.crowdDensitySelect.value = this.settings.crowdDensity;
     this.crowdReactionsInput.checked = this.settings.crowdReactionsEnabled;
+    this.sidelinePlayersInput.checked = this.settings.sidelinePlayersEnabled;
+    this.sidelineDensitySelect.value = this.settings.sidelineDensity;
+    this.tunnelTableauInput.checked = this.settings.tunnelTableauEnabled;
     this.audioEnabledInput.checked = this.settings.audioEnabled;
     this.mutedInput.checked = this.settings.muted;
     this.masterVolumeInput.value = String(this.settings.masterVolume);

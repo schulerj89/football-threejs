@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-06-22
+
+### Added
+
+- Added presentation-only sideline team and tunnel tableau staging with mathematical user/opponent zones, low/medium/high density settings, and optional tunnel starter subjects.
+- Added an instanced low-poly sideline visual factory using shared primitive geometry, team uniform colors, deterministic skin tones, bounded draw calls, and resource/disposal metrics.
+- Added F1/debug support for sideline counts, zones, draw calls, triangles, instance bytes, and update cadence.
+
+### Changed
+
+- Extended broadcast/performance/custom experience settings and the pause settings panel with sideline players, sideline density, and tunnel tableau controls.
+- Included sideline teams in renderer, memory, diagnostics, and reset-cycle resource snapshots without adding gameplay actors, collision, assignments, AI, or roster entries.
+
+### Tests
+
+- Added sideline presentation tests for density counts, protected-field exclusion, zone symmetry, stadium tunnel alignment, instanced resource budgets, deterministic appearance variation, lifecycle disposal, and gameplay-roster isolation.
+
 ## [1.4.0] - 2026-06-22
 
 ### Added

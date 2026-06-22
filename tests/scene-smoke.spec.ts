@@ -1122,7 +1122,7 @@ test('persists title-screen settings across reloads', async ({ page }) => {
 });
 
 test('toggles runtime debug tools with F1 and persists the title-screen debug setting', async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
 
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -1130,7 +1130,7 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
 
   await page.keyboard.press('F1');
   await expect(page.locator('.debug-panel')).toBeVisible();
-  await expect(page.locator('.debug-feature-row')).toHaveCount(19);
+  await expect(page.locator('.debug-feature-row')).toHaveCount(20);
   await expect(page.locator('.debug-feature-row span')).toContainText([
     '11v11 audit',
     '7v7 audit',
@@ -1151,6 +1151,7 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
     'Quality',
     'Roster labels',
     'Route',
+    'Sideline teams',
   ]);
   await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').check();
   await expect(page.locator('.debug-overlay')).toBeVisible();
@@ -1205,6 +1206,10 @@ test('toggles runtime debug tools with F1 and persists the title-screen debug se
   await expect(page.locator('.officials-debug-overlay')).toContainText('OFFICIALS');
   await page.locator('.debug-feature-row').filter({ hasText: 'Officials' }).getByRole('checkbox').uncheck();
   await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
+  await page.locator('.debug-feature-row').filter({ hasText: 'Sideline teams' }).getByRole('checkbox').check();
+  await expect(page.locator('.sideline-debug-overlay')).toContainText('SIDELINE TEAMS');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Sideline teams' }).getByRole('checkbox').uncheck();
+  await expect(page.locator('.sideline-debug-overlay')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.locator('.title-screen').getByLabel('Debug tools').check();
@@ -1357,7 +1362,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     customSettings: null,
     preset: 'broadcast',
     settings: null,
-    version: 7,
+    version: 8,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({
@@ -1390,7 +1395,10 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     quarterLengthSeconds: 180,
     routeArtEnabled: true,
     selectedReceiverLabelEnabled: false,
+    sidelineDensity: 'medium',
+    sidelinePlayersEnabled: true,
     stadiumEnabled: true,
+    tunnelTableauEnabled: true,
   });
   expect(experience.assetReadiness).toMatchObject({
     audioEnabled: true,

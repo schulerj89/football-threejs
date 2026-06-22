@@ -407,6 +407,7 @@ function createAudit(snapshot: ReturnType<typeof snapshotGameplayModel>, play = 
       sceneMaterialCount: 0,
       sceneMeshCount: 0,
       shadowCastingObjectCount: 0,
+      sidelineMeshCount: 0,
       stadiumDrawCallEstimate: 0,
       stadiumMeshCount: 0,
       textures: 0,

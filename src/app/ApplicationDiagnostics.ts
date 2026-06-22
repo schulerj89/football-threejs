@@ -290,6 +290,7 @@ export class ApplicationDiagnostics {
         this.options.presentation.getGamePresentationRuntimeSnapshot(),
       getHelmetAssetSnapshot,
       getOfficialsSnapshot: () => this.options.presentation.getOfficialsSnapshot(),
+      getSidelineTeamSnapshot: () => this.options.presentation.getSidelineTeamSnapshot(),
       getCrowdCapacityBenchmarkSnapshot: () =>
         this.options.getCrowdCapacityBenchmarkSnapshot(),
       getMemoryProfileSnapshot: () => this.options.getMemoryProfileSnapshot(),
@@ -452,6 +453,7 @@ export class ApplicationDiagnostics {
     const hold = this.options.presentation.holdSnapshot;
     const crowd = this.options.presentation.getCrowdPresentationSnapshot();
     const officials = this.options.presentation.getOfficialsSnapshot();
+    const sidelineTeams = this.options.presentation.getSidelineTeamSnapshot();
     const stadium = this.options.presentation.getStadiumSnapshot();
     return {
       activeAudioNodes: audio.activeAudioNodeCount,
@@ -469,6 +471,7 @@ export class ApplicationDiagnostics {
       officialMeshCount: metrics.officialMeshCount,
       presentationHistoryCount:
         this.options.presentation.getGamePresentationRuntimeSnapshot().history.length,
+      sidelineMeshCount: sidelineTeams.meshCount,
       stadiumGeometryCount: stadium.geometryCount,
       stadiumMeshCount: metrics.stadiumMeshCount,
       textureCount: metrics.textures,
@@ -490,6 +493,7 @@ export class ApplicationDiagnostics {
       officialMeshCount: metrics.officialMeshCount,
       presentationHistoryCount:
         this.options.presentation.getGamePresentationRuntimeSnapshot().history.length,
+      sidelineMeshCount: metrics.sidelineMeshCount,
       stadiumMeshCount: metrics.stadiumMeshCount,
       textureCount: metrics.textures,
       visualRootCount: this.options.playerVisuals.size,
@@ -523,5 +527,6 @@ function countActiveDebugOverlays(): number {
     '.presentation-hardening-audit-overlay',
     '.route-audit-overlay',
     '.seven-audit-overlay',
+    '.sideline-debug-overlay',
   ].join(',')).length;
 }
