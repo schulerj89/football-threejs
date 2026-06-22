@@ -1,0 +1,21 @@
+{
+  "assetId": "candidate-a-tails",
+  "background": "opaque",
+  "coinSetId": "candidate-a",
+  "compressedBytes": 244502,
+  "contentHash": "2ff5a36db928d0c959aecbb979a80c5435b096217a8b50cd65f1199fc8a79a57",
+  "face": "tails",
+  "generatedAt": "2026-06-22T05:04:55.919Z",
+  "generationMetadata": {
+    "apiEndpoint": "images/edits",
+    "referenceAssetId": "candidate-a-heads",
+    "referenceMode": "imageEdit",
+    "revisedPrompt": null
+  },
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "outputPath": "public/branding/coin/candidate-a-tails.webp",
+  "prompt": "Create the matching reverse side of the same fictional Football JS ceremonial coin. Preserve identical metal, identical rim, identical lighting, identical relief depth, and identical visual style as the matching heads face. Reverse design: stylized football with prominent laces, field hash marks, subtle goalpost or stadium-light geometry, original raised-relief composition. Opaque background. Straight top-down view. Perfectly centered circular coin. No perspective distortion. Designed as a square WebP texture for a rotating 3D coin. Do not include words, letters, numbers, denomination, country name, national seal, political symbol, real currency design, real team logo, league logo, watermark, or readable text. Do not include perspective distortion, angled camera, cropped coin edges, transparent background, or off-center composition. Candidate A style: match the dark gunmetal silver and cool blue highlights from candidate-a-heads.",
+  "quality": "high",
+  "requestedSize": "1024x1024"
+}

@@ -19,7 +19,22 @@ import {
   selectBrandAssets,
   writeBrandAssetReportFiles,
 } from '../tools/branding/brandAssetReport';
+import {
+  FOOTBALL_JS_COIN_ASSET_PLAN,
+  validateFootballJsCoinAssetPlan,
+} from '../tools/branding/coinAssetPlan';
+import {
+  COIN_GALLERY_PATH,
+  COIN_REPORT_PATH,
+  COIN_SELECTION_PATH,
+  FOOTBALL_JS_COIN_HEADS_RUNTIME_PATH,
+  FOOTBALL_JS_COIN_TAILS_RUNTIME_PATH,
+  createCoinAssetReport,
+  selectCoinAssets,
+  writeCoinAssetReportFiles,
+} from '../tools/branding/coinAssetReport';
 import { generateBrandImages } from '../tools/branding/generateBrandImages';
+import { generateCoinAssets } from '../tools/branding/generateCoinAssets';
 import {
   BRAND_GALLERY_PATH,
   BRAND_REPORT_PATH,
@@ -28,6 +43,7 @@ import {
   FOOTBALL_JS_TITLE_RUNTIME_PATH,
   assertCanWriteBrandAsset,
   findBrowserOpenAISecretReferences,
+  parseBrandGenerateOptions,
   requireOpenAIApiKey,
   validateBrandAssetPlan,
   type BrandGenerateOptions,
@@ -126,6 +142,44 @@ describe('Football JS brand asset pipeline', () => {
       expect(requestCalled).toBe(false);
       expect(existsSync(join(cwd, 'public/branding/title/football-js-title-01.webp'))).toBe(false);
     });
+  });
+
+  it('accepts explicit npm-run flag handoff without changing dry-run defaults', () => {
+    const originalExecute = process.env.npm_config_execute;
+    const originalForce = process.env.npm_config_force;
+    const originalMaxFiles = process.env.npm_config_max_files;
+    const originalAsset = process.env.npm_config_asset;
+    const originalBrandMaxFiles = process.env.BRAND_IMAGE_MAX_FILES;
+
+    try {
+      delete process.env.BRAND_IMAGE_MAX_FILES;
+      delete process.env.npm_config_execute;
+      delete process.env.npm_config_force;
+      delete process.env.npm_config_max_files;
+      delete process.env.npm_config_asset;
+      expect(parseBrandGenerateOptions([])).toMatchObject({
+        execute: false,
+        force: false,
+        maxFiles: 4,
+      });
+
+      process.env.npm_config_execute = 'true';
+      process.env.npm_config_force = 'true';
+      process.env.npm_config_max_files = '2';
+      process.env.npm_config_asset = 'candidate-a-heads';
+      expect(parseBrandGenerateOptions([])).toMatchObject({
+        execute: true,
+        force: true,
+        maxFiles: 2,
+        onlyAssetId: 'candidate-a-heads',
+      });
+    } finally {
+      restoreOptionalEnv('npm_config_execute', originalExecute);
+      restoreOptionalEnv('npm_config_force', originalForce);
+      restoreOptionalEnv('npm_config_max_files', originalMaxFiles);
+      restoreOptionalEnv('npm_config_asset', originalAsset);
+      restoreOptionalEnv('BRAND_IMAGE_MAX_FILES', originalBrandMaxFiles);
+    }
   });
 
   it('skips existing generated files unless force is supplied', async () => {
@@ -242,6 +296,179 @@ describe('Football JS brand asset pipeline', () => {
   });
 });
 
+describe('Football JS coin asset pipeline', () => {
+  it('validates the typed GPT Image 2 coin generation plan', () => {
+    expect(validateFootballJsCoinAssetPlan()).toEqual([]);
+    expect(FOOTBALL_JS_COIN_ASSET_PLAN).toHaveLength(4);
+    expect(FOOTBALL_JS_COIN_ASSET_PLAN.filter((asset) => asset.coinSetId === 'candidate-a')).toHaveLength(2);
+    expect(FOOTBALL_JS_COIN_ASSET_PLAN.filter((asset) => asset.coinSetId === 'candidate-b')).toHaveLength(2);
+    expect(FOOTBALL_JS_COIN_ASSET_PLAN.filter((asset) => asset.face === 'heads')).toHaveLength(2);
+    expect(FOOTBALL_JS_COIN_ASSET_PLAN.filter((asset) => asset.face === 'tails')).toHaveLength(2);
+    expect(FOOTBALL_JS_COIN_ASSET_PLAN.every((asset) => asset.model === 'gpt-image-2')).toBe(true);
+    expect(FOOTBALL_JS_COIN_ASSET_PLAN.every((asset) => asset.requestedSize === '1024x1024')).toBe(true);
+    expect(FOOTBALL_JS_COIN_ASSET_PLAN.every((asset) => asset.quality === 'high')).toBe(true);
+    expect(FOOTBALL_JS_COIN_ASSET_PLAN.every((asset) => asset.outputFormat === 'webp')).toBe(true);
+    expect(FOOTBALL_JS_COIN_ASSET_PLAN.every((asset) => asset.background === 'opaque')).toBe(true);
+  });
+
+  it('keeps coin dry-run generation from making an API request or writing files', async () => {
+    await withTemporaryCwd(async (cwd) => {
+      let requestCalled = false;
+      const summary = await generateCoinAssets(
+        FOOTBALL_JS_COIN_ASSET_PLAN,
+        {
+          ...DEFAULT_GENERATE_OPTIONS,
+          maxFiles: 4,
+        },
+        {
+          requestImage: async () => {
+            requestCalled = true;
+            throw new Error('dry-run should not request coin images');
+          },
+        },
+      );
+
+      expect(summary).toEqual({
+        dryRun: true,
+        generated: [],
+        skipped: [
+          'candidate-a-heads',
+          'candidate-a-tails',
+          'candidate-b-heads',
+          'candidate-b-tails',
+        ],
+      });
+      expect(requestCalled).toBe(false);
+      expect(existsSync(join(cwd, 'public/branding/coin/candidate-a-heads.webp'))).toBe(false);
+    });
+  });
+
+  it('fails paid coin execution when OPENAI_API_KEY is missing', async () => {
+    await withTemporaryCwd(async () => {
+      delete process.env.OPENAI_API_KEY;
+
+      await expect(
+        generateCoinAssets(FOOTBALL_JS_COIN_ASSET_PLAN, {
+          ...DEFAULT_GENERATE_OPTIONS,
+          execute: true,
+          maxFiles: 1,
+        }),
+      ).rejects.toThrow(/Missing OPENAI_API_KEY/);
+    });
+  });
+
+  it('skips existing coin files unless force is supplied', async () => {
+    await withTemporaryCwd(async (cwd) => {
+      process.env.OPENAI_API_KEY = 'test-key';
+      const existingPath = join(cwd, 'public/branding/coin/candidate-a-heads.webp');
+      mkdirSync(join(cwd, 'public/branding/coin'), { recursive: true });
+      writeFileSync(existingPath, 'existing coin placeholder');
+      writeFileSync(`${existingPath}.json`, '{}');
+      let requestCalled = false;
+
+      const summary = await generateCoinAssets(
+        FOOTBALL_JS_COIN_ASSET_PLAN,
+        {
+          ...DEFAULT_GENERATE_OPTIONS,
+          execute: true,
+          maxFiles: 1,
+        },
+        {
+          requestImage: async () => {
+            requestCalled = true;
+            return {
+              content: Buffer.from('new coin image'),
+              metadata: {
+                apiEndpoint: 'images/generations',
+                referenceMode: 'none',
+              },
+            };
+          },
+        },
+      );
+
+      expect(summary).toEqual({
+        dryRun: false,
+        generated: [],
+        skipped: ['candidate-a-heads'],
+      });
+      expect(requestCalled).toBe(false);
+      expect(readFileSync(existingPath, 'utf8')).toBe('existing coin placeholder');
+    });
+  });
+
+  it('generates coin report, gallery, selection manifest, and stable runtime filenames', async () => {
+    await withTemporaryCwd(async (cwd) => {
+      process.env.OPENAI_API_KEY = 'test-key';
+      const referenceAssets: string[] = [];
+      const summary = await generateCoinAssets(
+        FOOTBALL_JS_COIN_ASSET_PLAN,
+        {
+          ...DEFAULT_GENERATE_OPTIONS,
+          execute: true,
+          maxFiles: 4,
+        },
+        {
+          requestImage: async (asset, _apiKey, referenceImage) => {
+            if (referenceImage) {
+              referenceAssets.push(asset.assetId);
+            }
+
+            return {
+              content: Buffer.from(`coin-image-bytes-${asset.assetId}`),
+              metadata: {
+                apiEndpoint: referenceImage ? 'images/edits' : 'images/generations',
+                referenceAssetId: asset.referenceAssetId,
+                referenceMode: referenceImage ? 'imageEdit' : 'none',
+              },
+            };
+          },
+        },
+      );
+      const selection = selectCoinAssets(FOOTBALL_JS_COIN_ASSET_PLAN, {
+        force: false,
+        selectedAt: '2026-06-22T00:00:00.000Z',
+        selectedSetId: 'candidate-a',
+      });
+      const report = createCoinAssetReport();
+      writeCoinAssetReportFiles(report);
+
+      expect(summary.generated).toEqual([
+        'candidate-a-heads',
+        'candidate-a-tails',
+        'candidate-b-heads',
+        'candidate-b-tails',
+      ]);
+      expect(referenceAssets).toEqual(['candidate-a-tails', 'candidate-b-tails']);
+      expect(report.validationErrors).toEqual([]);
+      expect(report.generatedCount).toBe(4);
+      expect(selection.heads.runtimeImageUrl).toBe('/branding/coin/football-js-coin-heads.webp');
+      expect(selection.tails.runtimeImageUrl).toBe('/branding/coin/football-js-coin-tails.webp');
+      expect(existsSync(join(cwd, FOOTBALL_JS_COIN_HEADS_RUNTIME_PATH))).toBe(true);
+      expect(existsSync(join(cwd, FOOTBALL_JS_COIN_TAILS_RUNTIME_PATH))).toBe(true);
+      expect(existsSync(join(cwd, COIN_SELECTION_PATH))).toBe(true);
+      expect(existsSync(join(cwd, COIN_REPORT_PATH))).toBe(true);
+      expect(existsSync(join(cwd, COIN_GALLERY_PATH))).toBe(true);
+      expect(readFileSync(join(cwd, COIN_GALLERY_PATH), 'utf8')).toContain('Football JS Coin Gallery');
+    });
+  });
+
+  it('does not put OpenAI secrets or API calls in coin browser-facing manifests', async () => {
+    await withTemporaryCwd(async (cwd) => {
+      selectCoinAssetsFixture(cwd);
+
+      const files = [
+        {
+          path: COIN_SELECTION_PATH,
+          text: readFileSync(join(cwd, COIN_SELECTION_PATH), 'utf8'),
+        },
+      ];
+
+      expect(findBrowserOpenAISecretReferences(files)).toEqual([]);
+    });
+  });
+});
+
 async function withTemporaryCwd(action: (cwd: string) => Promise<void> | void): Promise<void> {
   const cwd = mkdtempSync(join(tmpdir(), 'football-brand-assets-'));
   process.chdir(cwd);
@@ -267,4 +494,26 @@ function selectBrandAssetsFixture(cwd: string): unknown {
     selectedAt: '2026-06-21T00:00:00.000Z',
     titleAssetId: 'football-js-title-01',
   });
+}
+
+function selectCoinAssetsFixture(cwd: string): unknown {
+  const headsPath = join(cwd, FOOTBALL_JS_COIN_ASSET_PLAN[0].outputPath);
+  const tailsPath = join(cwd, FOOTBALL_JS_COIN_ASSET_PLAN[1].outputPath);
+  mkdirSync(join(cwd, 'public/branding/coin'), { recursive: true });
+  writeFileSync(headsPath, 'heads fixture');
+  writeFileSync(tailsPath, 'tails fixture');
+
+  return selectCoinAssets(FOOTBALL_JS_COIN_ASSET_PLAN, {
+    force: false,
+    selectedAt: '2026-06-22T00:00:00.000Z',
+    selectedSetId: 'candidate-a',
+  });
+}
+
+function restoreOptionalEnv(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
 }

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.0] - 2026-06-22
+
+### Added
+
+- Added a Node-only GPT Image 2 coin asset pipeline for Football JS ceremonial heads/tails image generation with dry-run defaults, explicit paid execution, overwrite protection, provenance sidecars, reports, and an HTML gallery.
+- Generated two matching WebP coin-face candidate sets under `public/branding/coin` and selected candidate B as the provisional stable runtime heads/tails pair.
+- Added stable runtime coin texture paths at `public/branding/coin/football-js-coin-heads.webp` and `public/branding/coin/football-js-coin-tails.webp`.
+
+### Tests
+
+- Added brand-pipeline unit coverage for the coin plan, dry-run behavior, missing-key failure, existing-file protection, reference-backed tails generation, report/gallery writing, runtime selection, and browser-secret scanning.
+- Verified the full unit suite, production build, and browser smoke suite.
+
 ## [1.10.0] - 2026-06-22
 
 ### Added

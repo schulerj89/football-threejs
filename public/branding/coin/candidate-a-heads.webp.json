@@ -1,0 +1,20 @@
+{
+  "assetId": "candidate-a-heads",
+  "background": "opaque",
+  "coinSetId": "candidate-a",
+  "compressedBytes": 265810,
+  "contentHash": "f8550c840825ec25e17e009de0f6ae94b0f1136ad54061d97dc3dc17171fb266",
+  "face": "heads",
+  "generatedAt": "2026-06-22T05:02:24.729Z",
+  "generationMetadata": {
+    "apiEndpoint": "images/generations",
+    "referenceMode": "none",
+    "revisedPrompt": null
+  },
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "outputPath": "public/branding/coin/candidate-a-heads.webp",
+  "prompt": "Create an original ceremonial coin face for the fictional Football JS video game. Design: circular brushed-metal commemorative coin, stylized low-poly American-football helmet or helmeted player silhouette, strong raised relief, geometric ring pattern, subtle field-hash motifs, premium sports-broadcast presentation, perfectly centered, directly overhead, clean lighting. Opaque background. Straight top-down view. Perfectly centered circular coin. No perspective distortion. Designed as a square WebP texture for a rotating 3D coin. Do not include words, letters, numbers, denomination, country name, national seal, political symbol, real currency design, real team logo, league logo, watermark, or readable text. Do not include perspective distortion, angled camera, cropped coin edges, transparent background, or off-center composition. Candidate A style: dark gunmetal silver with cool blue highlights, crisp broadcast lighting, restrained premium contrast.",
+  "quality": "high",
+  "requestedSize": "1024x1024"
+}

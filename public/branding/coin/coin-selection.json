@@ -1,0 +1,18 @@
+{
+  "heads": {
+    "assetId": "candidate-b-heads",
+    "contentHash": "01952f16661e040e71dcf9c46178fcdec1efd2ca1a24de8bd1d7a063cd835dd0",
+    "outputPath": "public/branding/coin/candidate-b-heads.webp",
+    "runtimeImageUrl": "/branding/coin/football-js-coin-heads.webp",
+    "runtimePath": "public/branding/coin/football-js-coin-heads.webp"
+  },
+  "selectedAt": "2026-06-22T05:10:46.621Z",
+  "selectedSetId": "candidate-b",
+  "tails": {
+    "assetId": "candidate-b-tails",
+    "contentHash": "14c39c3d2e1dcdc1cc7e368d64f6505b01c6b65c4da42e9f936e6625734568f0",
+    "outputPath": "public/branding/coin/candidate-b-tails.webp",
+    "runtimeImageUrl": "/branding/coin/football-js-coin-tails.webp",
+    "runtimePath": "public/branding/coin/football-js-coin-tails.webp"
+  }
+}

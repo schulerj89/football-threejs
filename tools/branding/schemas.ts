@@ -191,7 +191,10 @@ export function validateBrandImageSize(asset: BrandImageAssetPlan): string[] {
 
 export function parseBrandGenerateOptions(args: readonly string[]): BrandGenerateOptions {
   let maxFiles = readPositiveInteger(process.env.BRAND_IMAGE_MAX_FILES, DEFAULT_BRAND_MAX_FILES_PER_EXECUTION);
-  let onlyAssetId: string | undefined;
+  if (process.env.npm_config_max_files) {
+    maxFiles = readPositiveInteger(process.env.npm_config_max_files, DEFAULT_BRAND_MAX_FILES_PER_EXECUTION);
+  }
+  let onlyAssetId: string | undefined = process.env.npm_config_asset;
 
   for (const arg of args) {
     if (arg.startsWith('--max-files=')) {
@@ -206,12 +209,16 @@ export function parseBrandGenerateOptions(args: readonly string[]): BrandGenerat
   }
 
   return {
-    execute: args.includes('--execute'),
-    force: args.includes('--force'),
+    execute: args.includes('--execute') || readCliBoolean(process.env.npm_config_execute),
+    force: args.includes('--force') || readCliBoolean(process.env.npm_config_force),
     maxFiles,
     onlyAssetId,
     retryCount: MAX_BRAND_AUTOMATIC_RETRIES,
   };
+}
+
+function readCliBoolean(value: string | undefined): boolean {
+  return value === '1' || value === 'true';
 }
 
 export function selectBrandAssetsForGeneration(
