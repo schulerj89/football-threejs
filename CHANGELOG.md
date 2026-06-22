@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
 ### Tests
 
 - Expanded kickoff unit coverage for user/opponent toss winners, touchback and fielded-kick possession starts, second-half kickoff idempotency, and serialized kickoff commentary.
-- Strengthened pregame and browser smoke coverage for the weather shot, debug-free plain launch, title -> setup -> pregame -> coin toss -> kickoff -> pre-snap flow, and normal presentation readiness.
+- Strengthened pregame and browser smoke coverage for the weather shot, debug-free plain launch, repeated title/setup cycling, title -> setup -> pregame -> coin toss -> kickoff -> pre-snap flow, and normal presentation readiness.
 
 ## [1.13.0] - 2026-06-22
 

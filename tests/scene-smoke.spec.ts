@@ -1285,6 +1285,27 @@ test('keeps the gameplay camera still while scrolling pause settings', async ({ 
   expect(vector3Distance(after.targetPosition, before.targetPosition)).toBeLessThan(0.001);
 });
 
+test('cycles title and match setup without exposing debug helpers', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+
+  for (let cycle = 0; cycle < 25; cycle += 1) {
+    await page.getByRole('button', { name: 'Start Game' }).click();
+    await expect(page.locator('.match-setup-screen')).toBeVisible();
+    await expect(page.locator('body[data-app-phase="matchSetup"]')).toBeAttached();
+    await expectNoDebugHelpers(page);
+
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('.title-screen')).toBeVisible();
+    await expect(page.locator('body[data-app-phase="title"]')).toBeAttached();
+    await expect(page.locator('.gameplay-hud')).toBeHidden();
+    await expect(page.locator('.play-call-ui')).toBeHidden();
+    await expectNoDebugHelpers(page);
+  }
+});
+
 test('starts the performance preset without visual crowd or cinematics', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
