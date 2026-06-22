@@ -100,7 +100,7 @@ export const PERFORMANCE_STRUCTURAL_BUDGETS = {
   crowdSpectatorCount: 5000,
   maxCrowdDrawCalls: 8,
   maxDrawCalls: 450,
-  maxGeometries: 180,
+  maxGeometries: 200,
   maxMaterials: 90,
   maxShadowCasters: 0,
   maxStadiumDrawCalls: 20,

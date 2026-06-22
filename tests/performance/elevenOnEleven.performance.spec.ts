@@ -33,18 +33,36 @@ interface ElevenPerformanceMatrixReport {
   fullBroadcastRuns: ScenarioRun[];
   generatedAt: string;
   profileDescriptions: Record<string, string>;
+  runMode: PerformanceRunMode;
   sevenOnSevenBaseline: ScenarioRun | null;
   summaryText: string;
 }
 
+type PerformanceRunMode = 'full' | 'smoke';
+
+const PERFORMANCE_RUN_MODE: PerformanceRunMode =
+  process.env.FOOTBALL_PERF_MODE === 'full' ? 'full' : 'smoke';
+const PERFORMANCE_SMOKE_SCENARIOS: readonly PerformanceScenarioName[] = [
+  'eleven-presnap',
+  'eleven-run-interior',
+  'eleven-pass-flight',
+  'eleven-touchdown-presentation',
+] as const;
+const COMPARISON_SMOKE_SCENARIOS: readonly PerformanceScenarioName[] = [
+  'eleven-presnap',
+] as const;
+
 const FULL_SAMPLE_DURATION_MS = Number(
-  process.env.FOOTBALL_PERF_SAMPLE_MS ?? PERFORMANCE_REFERENCE_PROFILE.sampleDurationMs,
+  process.env.FOOTBALL_PERF_SAMPLE_MS ??
+    (PERFORMANCE_RUN_MODE === 'full' ? PERFORMANCE_REFERENCE_PROFILE.sampleDurationMs : 2_500),
 );
 const COMPARISON_SAMPLE_DURATION_MS = Number(
-  process.env.FOOTBALL_PERF_COMPARISON_SAMPLE_MS ?? 3_000,
+  process.env.FOOTBALL_PERF_COMPARISON_SAMPLE_MS ??
+    (PERFORMANCE_RUN_MODE === 'full' ? 3_000 : 1_500),
 );
 const WARMUP_MS = Number(
-  process.env.FOOTBALL_PERF_WARMUP_MS ?? PERFORMANCE_REFERENCE_PROFILE.warmupMs,
+  process.env.FOOTBALL_PERF_WARMUP_MS ??
+    (PERFORMANCE_RUN_MODE === 'full' ? PERFORMANCE_REFERENCE_PROFILE.warmupMs : 750),
 );
 const STRICT_PERFORMANCE_GATE = process.env.PERF_STRICT === '1';
 
@@ -150,6 +168,12 @@ test('profiles deterministic 11v11 production scenarios', async ({ browser }, te
   const fullBroadcastRuns: ScenarioRun[] = [];
   const comparisonRuns: ScenarioRun[] = [];
   let sevenOnSevenBaseline: ScenarioRun | null = null;
+  const fullBroadcastScenarios = PERFORMANCE_RUN_MODE === 'full'
+    ? PERFORMANCE_SCENARIOS
+    : PERFORMANCE_SMOKE_SCENARIOS;
+  const comparisonScenarios = PERFORMANCE_RUN_MODE === 'full'
+    ? PERFORMANCE_SCENARIOS
+    : COMPARISON_SMOKE_SCENARIOS;
 
   const fullPage = await browser.newPage({
     deviceScaleFactor: PERFORMANCE_REFERENCE_PROFILE.deviceScaleFactor,
@@ -161,7 +185,7 @@ test('profiles deterministic 11v11 production scenarios', async ({ browser }, te
   await preparePerformancePage(fullPage, FULL_BROADCAST_QUERY);
   const environment = await createEnvironmentSnapshot(fullPage);
 
-  for (const scenario of PERFORMANCE_SCENARIOS) {
+  for (const scenario of fullBroadcastScenarios) {
     fullBroadcastRuns.push(await runScenario(
       fullPage,
       'full-broadcast',
@@ -203,7 +227,7 @@ test('profiles deterministic 11v11 production scenarios', async ({ browser }, te
     await preparePerformancePage(page, profile.query);
     const profileEnvironment = await createEnvironmentSnapshot(page);
 
-    for (const scenario of PERFORMANCE_SCENARIOS) {
+    for (const scenario of comparisonScenarios) {
       comparisonRuns.push(await runScenario(
         page,
         profile.id,
@@ -222,7 +246,7 @@ test('profiles deterministic 11v11 production scenarios', async ({ browser }, te
     contentType: 'application/json',
   });
 
-  expect(fullBroadcastRuns).toHaveLength(PERFORMANCE_SCENARIOS.length);
+  expect(fullBroadcastRuns).toHaveLength(fullBroadcastScenarios.length);
   for (const run of fullBroadcastRuns) {
     expect(run.report.frame.sampleCount).toBeGreaterThan(0);
     expect(run.report.scene.playerMeshCount).toBeGreaterThan(0);
@@ -402,7 +426,7 @@ function createMatrixReport(
       `p95 ${entry.p95Ms.toFixed(2)} ms`)
     .join('\n') ?? 'No bottlenecks recorded.';
   const summaryText = [
-    `11v11 performance profile generated for ${fullBroadcastRuns.length} full scenarios ` +
+    `11v11 ${PERFORMANCE_RUN_MODE} performance profile generated for ${fullBroadcastRuns.length} full scenarios ` +
       `and ${comparisonRuns.length} isolation comparisons.`,
     slowestRun
       ? `Slowest full-broadcast scenario by p95 frame time: ${slowestRun.scenario} ` +
@@ -416,6 +440,7 @@ function createMatrixReport(
     fullBroadcastRuns,
     generatedAt: new Date().toISOString(),
     profileDescriptions: PROFILE_DESCRIPTIONS,
+    runMode: PERFORMANCE_RUN_MODE,
     sevenOnSevenBaseline,
     summaryText,
   };

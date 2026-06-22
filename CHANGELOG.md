@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.2] - 2026-06-22
+
+### Changed
+
+- Optimized the default `npm run perf:11v11` command into a shorter production smoke benchmark that samples representative 11v11 states and one isolation comparison per profile.
+- Preserved the full long-running reference matrix behind `npm run perf:11v11:full` for release profiling and deeper performance investigations.
+
+### Tests
+
+- Verified `npx vitest run tests/referenceBenchmark.test.ts tests/performanceProfiler.test.ts` and `npm run perf:11v11`.
+
 ## [1.21.1] - 2026-06-22
 
 ### Changed
