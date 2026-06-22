@@ -5,12 +5,20 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   PREGAME_COMMENTARY_CATALOG,
   listKnownStartingQuarterbacks,
+  resolveCoinTossResult,
+  resolveCoinTossSetup,
+  resolveKickoffInFlight,
+  resolveKickoffReady,
+  resolveKickoffResult,
   resolveMatchupLine,
   resolvePregameWelcome,
+  resolveQuarterbackArchetypeLine,
   resolveQuarterbackSpotlight,
+  resolveWarmupTransition,
   resolveWeatherLine,
   validatePregameCommentaryCatalog,
 } from '../src/audio/PregameCommentaryCatalog';
+import { createQuarterbackScoutingProfile } from '../src/roster/QuarterbackScoutingProfile';
 import { listTeamProfiles } from '../src/teams/TeamRegistry';
 import {
   PREGAME_AUDITION_PAGE_PATH,
@@ -52,9 +60,16 @@ describe('pregame commentary catalog', () => {
     expect(validatePregameCommentaryCatalog()).toEqual([]);
     expect(validatePregameScriptCatalog()).toEqual([]);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'welcome')).toHaveLength(3);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'warmupTransition')).toHaveLength(2);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'matchup')).toHaveLength(orderedPairCount * 2);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'weather')).toHaveLength(10);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'quarterback')).toHaveLength(quarterbacks.length * 3);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'quarterbackArchetype')).toHaveLength(quarterbacks.length * 2);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'coinTossSetup')).toHaveLength(2);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'coinTossResult')).toHaveLength((teams.length * 2) + 2);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'kickoffReady')).toHaveLength(3);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'kickoffInFlight')).toHaveLength(2);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'kickoffResult')).toHaveLength(8);
     expect(PREGAME_COMMENTARY_CATALOG.every((clip) => clip.caption === clip.script)).toBe(true);
   });
 
@@ -118,6 +133,80 @@ describe('pregame commentary catalog', () => {
     });
   });
 
+  it('resolves trait-aware quarterback scouting lines for every known starter', () => {
+    for (const quarterback of listKnownStartingQuarterbacks()) {
+      const profile = createQuarterbackScoutingProfile(quarterback.player);
+      const selection = resolveQuarterbackArchetypeLine({
+        matchSeed: 'qb-trait',
+        rosterPlayerId: quarterback.rosterPlayerId,
+      });
+
+      expect(selection.available).toBe(true);
+      expect(selection.clip).toMatchObject({
+        qbArchetype: profile.archetype,
+        rosterPlayerId: quarterback.rosterPlayerId,
+        teamId: quarterback.teamId,
+      });
+      expect(selection.caption).toContain(quarterback.player.displayName);
+      expect(selection.caption).toContain(`number ${quarterback.jerseyNumber}`);
+    }
+
+    expect(resolveQuarterbackArchetypeLine({ rosterPlayerId: 'missing-qb' })).toMatchObject({
+      available: false,
+      fallbackReason: 'unknownContext',
+    });
+  });
+
+  it('resolves warmup, coin-toss, and kickoff categories deterministically', () => {
+    const teams = listTeamProfiles();
+
+    expect(resolveWarmupTransition({ matchSeed: 'warmup' })).toMatchObject({
+      available: true,
+      clip: expect.objectContaining({ matchPhaseEligibility: 'warmup' }),
+    });
+    expect(resolveCoinTossSetup({ matchSeed: 'coin' })).toMatchObject({
+      available: true,
+      clip: expect.objectContaining({ matchPhaseEligibility: 'coinToss' }),
+    });
+
+    for (const team of teams) {
+      for (const outcome of ['kick', 'receive'] as const) {
+        const selection = resolveCoinTossResult({
+          matchSeed: 'coin',
+          outcome,
+          teamId: team.id,
+        });
+
+        expect(selection.available).toBe(true);
+        expect(selection.clip).toMatchObject({
+          coinTossOutcome: outcome,
+          teamId: team.id,
+        });
+        expect(selection.caption).toContain(team.displayName);
+      }
+    }
+
+    expect(resolveCoinTossResult({ matchSeed: 'coin' })).toMatchObject({
+      available: true,
+      clip: expect.objectContaining({ coinTossOutcome: 'generic' }),
+    });
+    expect(resolveKickoffReady({ matchSeed: 'kick' })).toMatchObject({
+      available: true,
+      clip: expect.objectContaining({ matchPhaseEligibility: 'kickoff' }),
+    });
+    expect(resolveKickoffInFlight({ matchSeed: 'kick' })).toMatchObject({
+      available: true,
+      clip: expect.objectContaining({ category: 'kickoffInFlight' }),
+    });
+
+    for (const resultType of ['deepKick', 'returnedKick', 'shortKick', 'touchback'] as const) {
+      expect(resolveKickoffResult({ matchSeed: 'kick', resultType })).toMatchObject({
+        available: true,
+        clip: expect.objectContaining({ kickoffResultType: resultType }),
+      });
+    }
+  });
+
   it('maps weather conditions and defaults unsupported values to clear', () => {
     for (const condition of ['clear', 'overcast', 'rain', 'snow', 'windy'] as const) {
       const selection = resolveWeatherLine({ condition, matchSeed: 'weather' });
@@ -176,9 +265,22 @@ describe('pregame commentary catalog', () => {
       expect(captions.scripts.every((entry) => entry.caption === entry.script)).toBe(true);
       expect(captions.scripts.every((entry) => entry.voiceId === 'voice-test')).toBe(true);
       expect(new Set(captions.scripts.map((entry) => entry.category))).toEqual(
-        new Set(['matchup', 'quarterback', 'weather', 'welcome']),
+        new Set([
+          'coinTossResult',
+          'coinTossSetup',
+          'kickoffInFlight',
+          'kickoffReady',
+          'kickoffResult',
+          'matchup',
+          'quarterback',
+          'quarterbackArchetype',
+          'warmupTransition',
+          'weather',
+          'welcome',
+        ]),
       );
       expect(readFileSync(join(cwd, PREGAME_AUDITION_PAGE_PATH), 'utf8')).toContain('Pregame Audition');
+      expect(readFileSync(join(cwd, PREGAME_AUDITION_PAGE_PATH), 'utf8')).toContain('QB Scouting');
     });
   });
 

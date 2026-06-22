@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_kickoff_result_touchback_02",
+  "caption": "No return here. The offense will start after the touchback.",
+  "category": "announcer",
+  "compressedBytes": 49781,
+  "contentHash": "3914a44fd262bd9e37d5e0a196d40dba34935638ea5623a64b31dd402359cb2c",
+  "durationSeconds": 3.04,
+  "eventCategory": "pregame:kickoffResult",
+  "generatedAt": "2026-06-22T04:44:03.188Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null,
+    "kickoffResultType": "touchback",
+    "matchPhaseEligibility": "kickoff",
+    "priority": 40
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.1,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "No return here. The offense will start after the touchback.",
+  "scriptId": "pregame_kickoff_result_touchback_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

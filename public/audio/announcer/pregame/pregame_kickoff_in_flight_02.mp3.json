@@ -1,0 +1,32 @@
+{
+  "assetId": "pregame_kickoff_in_flight_02",
+  "caption": "And we're underway.",
+  "category": "announcer",
+  "compressedBytes": 18852,
+  "contentHash": "e1ca550c2522ec21aa1e54babaadc40909d0ea6fb95c1dea19a1286e863a0983",
+  "durationSeconds": 1.12,
+  "eventCategory": "pregame:kickoffInFlight",
+  "generatedAt": "2026-06-22T04:44:00.307Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffInFlight",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "kickoff",
+    "priority": 46
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 1.6,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "And we're underway.",
+  "scriptId": "pregame_kickoff_in_flight_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

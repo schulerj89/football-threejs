@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_kickoff_result_deep_kick_02",
+  "caption": "That kick has plenty of distance, and the coverage is moving downhill.",
+  "category": "announcer",
+  "compressedBytes": 56050,
+  "contentHash": "1c4fab3778114917b77bd90d63b100c3a1cb9cf621a035ed5965f6c597b57c03",
+  "durationSeconds": 3.44,
+  "eventCategory": "pregame:kickoffResult",
+  "generatedAt": "2026-06-22T04:44:13.296Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null,
+    "kickoffResultType": "deepKick",
+    "matchPhaseEligibility": "kickoff",
+    "priority": 40
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.5,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "That kick has plenty of distance, and the coverage is moving downhill.",
+  "scriptId": "pregame_kickoff_result_deep_kick_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

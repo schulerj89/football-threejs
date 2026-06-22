@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_qb_archetype_summit-forge-qb-14_02",
+  "caption": "That throwing arm is the strength for Cyrus Ward, number 14. Expect this offense to test space downfield.",
+  "category": "announcer",
+  "compressedBytes": 108713,
+  "contentHash": "6979b1f5d1cc1088b556c4abd5981f98920972d27c257cd48d3745d34375d139",
+  "durationSeconds": 6.72,
+  "eventCategory": "pregame:quarterbackArchetype",
+  "generatedAt": "2026-06-22T04:43:33.175Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 14,
+    "pregameCategory": "quarterbackArchetype",
+    "pronunciation": "SY-rus WORD",
+    "rosterPlayerId": "summit-forge-qb-14",
+    "teamId": "summit-forge",
+    "variant": 2,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "warmup",
+    "priority": 32,
+    "qbArchetype": "Strong Arm"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 6.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "That throwing arm is the strength for Cyrus Ward, number 14. Expect this offense to test space downfield.",
+  "scriptId": "pregame_qb_archetype_summit-forge-qb-14_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

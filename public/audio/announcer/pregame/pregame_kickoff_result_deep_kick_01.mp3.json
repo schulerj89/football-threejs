@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_kickoff_result_deep_kick_01",
+  "caption": "A deep kick drives the returner back toward the goal line.",
+  "category": "announcer",
+  "compressedBytes": 52288,
+  "contentHash": "aee1da553fad034d1578e74eac3cf50d2683ebc6a6becc5f1e3e8047a5bbcb2d",
+  "durationSeconds": 3.2,
+  "eventCategory": "pregame:kickoffResult",
+  "generatedAt": "2026-06-22T04:44:11.725Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null,
+    "kickoffResultType": "deepKick",
+    "matchPhaseEligibility": "kickoff",
+    "priority": 40
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "A deep kick drives the returner back toward the goal line.",
+  "scriptId": "pregame_kickoff_result_deep_kick_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

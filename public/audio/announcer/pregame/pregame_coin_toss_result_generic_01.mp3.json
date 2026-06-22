@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_coin_toss_result_generic_01",
+  "caption": "The toss goes to the receiving team.",
+  "category": "announcer",
+  "compressedBytes": 33062,
+  "contentHash": "fc2d60b9f5b11809c952301f7eba881c034470dbb64f84183f48669dcd1fcb7a",
+  "durationSeconds": 2,
+  "eventCategory": "pregame:coinTossResult",
+  "generatedAt": "2026-06-22T04:43:52.651Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null,
+    "coinTossOutcome": "generic",
+    "matchPhaseEligibility": "coinToss",
+    "priority": 42
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.5,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The toss goes to the receiving team.",
+  "scriptId": "pregame_coin_toss_result_generic_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

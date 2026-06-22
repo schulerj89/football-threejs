@@ -1,0 +1,32 @@
+{
+  "assetId": "pregame_warmup_transition_02",
+  "caption": "The players are on the field, making their final preparations.",
+  "category": "announcer",
+  "compressedBytes": 52288,
+  "contentHash": "3accbde4a4ee322dd43f5b11b082696a49aa557e1fe1b1eb7c0a6b1a49b4bda4",
+  "durationSeconds": 3.2,
+  "eventCategory": "pregame:warmupTransition",
+  "generatedAt": "2026-06-22T04:43:16.275Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "warmupTransition",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "warmup",
+    "priority": 18
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The players are on the field, making their final preparations.",
+  "scriptId": "pregame_warmup_transition_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

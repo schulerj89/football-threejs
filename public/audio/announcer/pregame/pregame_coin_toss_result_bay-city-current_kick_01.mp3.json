@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_coin_toss_result_bay-city-current_kick_01",
+  "caption": "Bay City Current will kick to begin the game.",
+  "category": "announcer",
+  "compressedBytes": 39332,
+  "contentHash": "37524d7efc25362956d268ae71620ed6a134080953b2692bde0e4efaaaa87358",
+  "durationSeconds": 2.4,
+  "eventCategory": "pregame:coinTossResult",
+  "generatedAt": "2026-06-22T04:43:51.225Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": "bay-city-current",
+    "variant": 1,
+    "weatherCondition": null,
+    "coinTossOutcome": "kick",
+    "matchPhaseEligibility": "coinToss",
+    "priority": 42
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Bay City Current will kick to begin the game.",
+  "scriptId": "pregame_coin_toss_result_bay-city-current_kick_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

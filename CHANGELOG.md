@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.0] - 2026-06-22
+
+### Added
+
+- Added an expanded Grant Mercer pregame announcer catalog for warmup transitions, trait-aware quarterback scouting, coin toss setup/results, kickoff readiness, kick-in-flight calls, and kickoff result calls.
+- Generated 35 new ElevenLabs pregame announcer MP3 assets with exact captions and provenance sidecars under `public/audio/announcer/pregame`.
+- Added grouped pregame audition coverage for warmup, QB scouting, coin toss, and kickoff clips.
+
+### Changed
+
+- Extended pregame commentary metadata with match phase, priority, team/player/archetype, coin-toss, and kickoff result fields while preserving existing approved pregame assets.
+- Updated audio verification to audit the runtime pregame assets alongside the starter pack without folding long pregame clips into the starter-pack memory budget.
+
+### Tests
+
+- Added catalog coverage for every known starting quarterback's trait line, every known team's toss-result variants, kickoff category resolution, deterministic selection, and exact caption/script matching.
+- Verified the expanded audio readiness report, full unit suite, and production build.
+
 ## [1.9.0] - 2026-06-22
 
 ### Added

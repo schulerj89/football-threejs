@@ -1,0 +1,32 @@
+{
+  "assetId": "pregame_coin_toss_setup_01",
+  "caption": "The captains are at midfield for the coin toss.",
+  "category": "announcer",
+  "compressedBytes": 44765,
+  "contentHash": "9ef73f1ffc9cbeaba370ad40abe6826552fe56165ade388fd9926a0eb1012415",
+  "durationSeconds": 2.72,
+  "eventCategory": "pregame:coinTossSetup",
+  "generatedAt": "2026-06-22T04:43:39.400Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossSetup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "coinToss",
+    "priority": 38
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The captains are at midfield for the coin toss.",
+  "scriptId": "pregame_coin_toss_setup_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

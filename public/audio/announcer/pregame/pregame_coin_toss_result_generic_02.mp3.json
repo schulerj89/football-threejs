@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_coin_toss_result_generic_02",
+  "caption": "The kicking team will open this one by sending it away.",
+  "category": "announcer",
+  "compressedBytes": 48527,
+  "contentHash": "fac4da023146d355424c89055a66fa4403ead96ebe3cd7e05f3655e33c498f89",
+  "durationSeconds": 2.96,
+  "eventCategory": "pregame:coinTossResult",
+  "generatedAt": "2026-06-22T04:43:54.076Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null,
+    "coinTossOutcome": "generic",
+    "matchPhaseEligibility": "coinToss",
+    "priority": 42
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.1,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The kicking team will open this one by sending it away.",
+  "scriptId": "pregame_coin_toss_result_generic_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

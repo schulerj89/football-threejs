@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_qb_archetype_summit-forge-qb-14_01",
+  "caption": "Cyrus Ward, number 14, has the throw power to stretch the field. The defense has to respect that arm.",
+  "category": "announcer",
+  "compressedBytes": 93248,
+  "contentHash": "bcb6f8d06c69643386f896a653aaa93a49d332378f8452fccfabbd4e9df0cd11",
+  "durationSeconds": 5.76,
+  "eventCategory": "pregame:quarterbackArchetype",
+  "generatedAt": "2026-06-22T04:43:30.346Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 14,
+    "pregameCategory": "quarterbackArchetype",
+    "pronunciation": "SY-rus WORD",
+    "rosterPlayerId": "summit-forge-qb-14",
+    "teamId": "summit-forge",
+    "variant": 1,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "warmup",
+    "priority": 32,
+    "qbArchetype": "Strong Arm"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 5.9,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Cyrus Ward, number 14, has the throw power to stretch the field. The defense has to respect that arm.",
+  "scriptId": "pregame_qb_archetype_summit-forge-qb-14_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -22,7 +22,7 @@
   },
   "modelId": "eleven_v3",
   "outputFormat": "mp3_44100_128",
-  "requestedDurationSeconds": 4,
+  "requestedDurationSeconds": 5.7,
   "runtimeLoadingStrategy": "buffer",
   "script": "Grant Mercer welcomes you to Football JS. The lights are up, and the opening possession is next.",
   "scriptId": "pregame_welcome_01",

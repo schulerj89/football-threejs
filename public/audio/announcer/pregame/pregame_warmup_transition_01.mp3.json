@@ -1,0 +1,32 @@
+{
+  "assetId": "pregame_warmup_transition_01",
+  "caption": "Both teams are finishing their warmups, and we're getting closer to kickoff.",
+  "category": "announcer",
+  "compressedBytes": 57304,
+  "contentHash": "01b9cf9cc33edf9269f7378c63b18a29c18371e97a1ba5d1ef3fdf4dfbf4387a",
+  "durationSeconds": 3.52,
+  "eventCategory": "pregame:warmupTransition",
+  "generatedAt": "2026-06-22T04:43:14.622Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "warmupTransition",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "warmup",
+    "priority": 18
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.6,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Both teams are finishing their warmups, and we're getting closer to kickoff.",
+  "scriptId": "pregame_warmup_transition_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

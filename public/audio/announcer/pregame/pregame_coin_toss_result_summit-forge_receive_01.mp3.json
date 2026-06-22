@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_coin_toss_result_summit-forge_receive_01",
+  "caption": "Summit Forge have won the toss and will receive.",
+  "category": "announcer",
+  "compressedBytes": 46019,
+  "contentHash": "a8172c8725680b332873cdb2bdcaefac720fdb438ad11b14605a2a9b325bc5d5",
+  "durationSeconds": 2.8,
+  "eventCategory": "pregame:coinTossResult",
+  "generatedAt": "2026-06-22T04:43:47.013Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": "summit-forge",
+    "variant": 1,
+    "weatherCondition": null,
+    "coinTossOutcome": "receive",
+    "matchPhaseEligibility": "coinToss",
+    "priority": 42
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Summit Forge have won the toss and will receive.",
+  "scriptId": "pregame_coin_toss_result_summit-forge_receive_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

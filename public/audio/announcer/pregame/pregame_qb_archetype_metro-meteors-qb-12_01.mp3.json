@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_qb_archetype_metro-meteors-qb-12_01",
+  "caption": "Jalen Carter, number 12, has the throw power to stretch the field. The defense has to respect that arm.",
+  "category": "announcer",
+  "compressedBytes": 94502,
+  "contentHash": "8f737d12b5de49eaab306604b3283203719cbfcb8dd2cc2eb65ebdeb4b9a8f7e",
+  "durationSeconds": 5.84,
+  "eventCategory": "pregame:quarterbackArchetype",
+  "generatedAt": "2026-06-22T04:43:18.878Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 12,
+    "pregameCategory": "quarterbackArchetype",
+    "pronunciation": "JAY-len CAR-ter",
+    "rosterPlayerId": "metro-meteors-qb-12",
+    "teamId": "metro-meteors",
+    "variant": 1,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "warmup",
+    "priority": 32,
+    "qbArchetype": "Strong Arm"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 5.9,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Jalen Carter, number 12, has the throw power to stretch the field. The defense has to respect that arm.",
+  "scriptId": "pregame_qb_archetype_metro-meteors-qb-12_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

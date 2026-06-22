@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_coin_toss_result_lakefront-lights_kick_01",
+  "caption": "Lakefront Lights will kick to begin the game.",
+  "category": "announcer",
+  "compressedBytes": 38078,
+  "contentHash": "b730cae47bf64b0bb0ac5fb2eda36fed6d50bc706b5cb86bd7103287cd5f65d2",
+  "durationSeconds": 2.32,
+  "eventCategory": "pregame:coinTossResult",
+  "generatedAt": "2026-06-22T04:43:45.495Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": "lakefront-lights",
+    "variant": 1,
+    "weatherCondition": null,
+    "coinTossOutcome": "kick",
+    "matchPhaseEligibility": "coinToss",
+    "priority": 42
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Lakefront Lights will kick to begin the game.",
+  "scriptId": "pregame_coin_toss_result_lakefront-lights_kick_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_coin_toss_result_bay-city-current_receive_01",
+  "caption": "Bay City Current have won the toss and will receive.",
+  "category": "announcer",
+  "compressedBytes": 41839,
+  "contentHash": "9d01dbbd3bdb7016a7cfe505070f23ad7fe74918ccb3124ecebb2f8917d94321",
+  "durationSeconds": 2.56,
+  "eventCategory": "pregame:coinTossResult",
+  "generatedAt": "2026-06-22T04:43:49.829Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": "bay-city-current",
+    "variant": 1,
+    "weatherCondition": null,
+    "coinTossOutcome": "receive",
+    "matchPhaseEligibility": "coinToss",
+    "priority": 42
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Bay City Current have won the toss and will receive.",
+  "scriptId": "pregame_coin_toss_result_bay-city-current_receive_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_qb_archetype_bay-city-current-qb-6_01",
+  "caption": "Drew Barton, number 6, does his best work reading the field and putting the football in the right place.",
+  "category": "announcer",
+  "compressedBytes": 89487,
+  "contentHash": "e42ed7e5af86767f1a9ad2fcf60d7c8ea69ec8ce8f6c017ff3e20a68802c03ef",
+  "durationSeconds": 5.52,
+  "eventCategory": "pregame:quarterbackArchetype",
+  "generatedAt": "2026-06-22T04:43:35.534Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 6,
+    "pregameCategory": "quarterbackArchetype",
+    "pronunciation": "DROO BAR-tun",
+    "rosterPlayerId": "bay-city-current-qb-6",
+    "teamId": "bay-city-current",
+    "variant": 1,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "warmup",
+    "priority": 32,
+    "qbArchetype": "Field General"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 5.6,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Drew Barton, number 6, does his best work reading the field and putting the football in the right place.",
+  "scriptId": "pregame_qb_archetype_bay-city-current-qb-6_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -22,7 +22,7 @@
   },
   "modelId": "eleven_v3",
   "outputFormat": "mp3_44100_128",
-  "requestedDurationSeconds": 3,
+  "requestedDurationSeconds": 4.4,
   "runtimeLoadingStrategy": "buffer",
   "script": "A clean clear-weather setup today. No excuses on the opening drive.",
   "scriptId": "pregame_weather_clear_02",

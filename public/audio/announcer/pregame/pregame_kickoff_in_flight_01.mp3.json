@@ -1,0 +1,32 @@
+{
+  "assetId": "pregame_kickoff_in_flight_01",
+  "caption": "The kick is away.",
+  "category": "announcer",
+  "compressedBytes": 18852,
+  "contentHash": "4e9e49cb622486f898484c72e140c5ed511220471d89bb03539f334284ff001d",
+  "durationSeconds": 1.12,
+  "eventCategory": "pregame:kickoffInFlight",
+  "generatedAt": "2026-06-22T04:43:59.615Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffInFlight",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "kickoff",
+    "priority": 46
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 1.5,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The kick is away.",
+  "scriptId": "pregame_kickoff_in_flight_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

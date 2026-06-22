@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_coin_toss_result_lakefront-lights_receive_01",
+  "caption": "Lakefront Lights have won the toss and will receive.",
+  "category": "announcer",
+  "compressedBytes": 43511,
+  "contentHash": "95b335192f857b4335302613e704a30af1c36add944c04be0b629fadd85cdf2e",
+  "durationSeconds": 2.64,
+  "eventCategory": "pregame:coinTossResult",
+  "generatedAt": "2026-06-22T04:43:44.256Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": "lakefront-lights",
+    "variant": 1,
+    "weatherCondition": null,
+    "coinTossOutcome": "receive",
+    "matchPhaseEligibility": "coinToss",
+    "priority": 42
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Lakefront Lights have won the toss and will receive.",
+  "scriptId": "pregame_coin_toss_result_lakefront-lights_receive_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

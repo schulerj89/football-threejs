@@ -1,0 +1,32 @@
+{
+  "assetId": "pregame_coin_toss_setup_02",
+  "caption": "We're ready for the toss at midfield.",
+  "category": "announcer",
+  "compressedBytes": 33062,
+  "contentHash": "ce359bedf87b1c027fe07ab01b996198c1c71a3c818199d4aaa6b752b713ae78",
+  "durationSeconds": 2,
+  "eventCategory": "pregame:coinTossSetup",
+  "generatedAt": "2026-06-22T04:43:40.306Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossSetup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "coinToss",
+    "priority": 38
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "We're ready for the toss at midfield.",
+  "scriptId": "pregame_coin_toss_setup_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

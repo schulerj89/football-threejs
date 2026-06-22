@@ -22,7 +22,7 @@
   },
   "modelId": "eleven_v3",
   "outputFormat": "mp3_44100_128",
-  "requestedDurationSeconds": 3.3,
+  "requestedDurationSeconds": 4.6,
   "runtimeLoadingStrategy": "buffer",
   "script": "Jalen Carter, number 12, starts under center with a chance to set the tone.",
   "scriptId": "pregame_qb_metro-meteors-qb-12_03",

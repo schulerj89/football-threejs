@@ -1,0 +1,32 @@
+{
+  "assetId": "pregame_kickoff_ready_02",
+  "caption": "We're just about ready to kick this one off.",
+  "category": "announcer",
+  "compressedBytes": 36824,
+  "contentHash": "1ef4826182cf91d4eddf47eb670d2fd75745850ac65d95044bcee57ea1412c46",
+  "durationSeconds": 2.24,
+  "eventCategory": "pregame:kickoffReady",
+  "generatedAt": "2026-06-22T04:43:57.104Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffReady",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "kickoff",
+    "priority": 44
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.7,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "We're just about ready to kick this one off.",
+  "scriptId": "pregame_kickoff_ready_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

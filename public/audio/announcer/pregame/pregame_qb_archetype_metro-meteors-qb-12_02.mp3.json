@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_qb_archetype_metro-meteors-qb-12_02",
+  "caption": "That throwing arm is the strength for Jalen Carter, number 12. Expect this offense to test space downfield.",
+  "category": "announcer",
+  "compressedBytes": 103279,
+  "contentHash": "0eec192e081a2c6f8135d8428d0800b5f801b4438047d1b173591cc1e41cbe5a",
+  "durationSeconds": 6.4,
+  "eventCategory": "pregame:quarterbackArchetype",
+  "generatedAt": "2026-06-22T04:43:22.069Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 12,
+    "pregameCategory": "quarterbackArchetype",
+    "pronunciation": "JAY-len CAR-ter",
+    "rosterPlayerId": "metro-meteors-qb-12",
+    "teamId": "metro-meteors",
+    "variant": 2,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "warmup",
+    "priority": 32,
+    "qbArchetype": "Strong Arm"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 6.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "That throwing arm is the strength for Jalen Carter, number 12. Expect this offense to test space downfield.",
+  "scriptId": "pregame_qb_archetype_metro-meteors-qb-12_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

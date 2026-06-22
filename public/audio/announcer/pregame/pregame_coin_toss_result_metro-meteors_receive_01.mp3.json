@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_coin_toss_result_metro-meteors_receive_01",
+  "caption": "Metro Meteors have won the toss and will receive.",
+  "category": "announcer",
+  "compressedBytes": 44765,
+  "contentHash": "3aaccbadfb5a41be7637749e5e5ff3b308ab13b93fdcca6fe4e48402006c7298",
+  "durationSeconds": 2.72,
+  "eventCategory": "pregame:coinTossResult",
+  "generatedAt": "2026-06-22T04:43:41.623Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": "metro-meteors",
+    "variant": 1,
+    "weatherCondition": null,
+    "coinTossOutcome": "receive",
+    "matchPhaseEligibility": "coinToss",
+    "priority": 42
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Metro Meteors have won the toss and will receive.",
+  "scriptId": "pregame_coin_toss_result_metro-meteors_receive_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

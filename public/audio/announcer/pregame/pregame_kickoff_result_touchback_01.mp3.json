@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_kickoff_result_touchback_01",
+  "caption": "This one carries into the end zone for a touchback.",
+  "category": "announcer",
+  "compressedBytes": 41839,
+  "contentHash": "34c3e27c9476dae4922603bdc4c5cca407962362877afc02d44f2743a444a2e1",
+  "durationSeconds": 2.56,
+  "eventCategory": "pregame:kickoffResult",
+  "generatedAt": "2026-06-22T04:44:01.603Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null,
+    "kickoffResultType": "touchback",
+    "matchPhaseEligibility": "kickoff",
+    "priority": 40
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.9,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "This one carries into the end zone for a touchback.",
+  "scriptId": "pregame_kickoff_result_touchback_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

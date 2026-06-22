@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_qb_archetype_lakefront-lights-qb-8_02",
+  "caption": "For Reid Harper, number 8, accuracy is the calling card. The ball needs to come out on schedule.",
+  "category": "announcer",
+  "compressedBytes": 131701,
+  "contentHash": "e74c633e4a930d8f961414f8c1503358d31f04744c73c9343ad1635556a39421",
+  "durationSeconds": 8.16,
+  "eventCategory": "pregame:quarterbackArchetype",
+  "generatedAt": "2026-06-22T04:43:27.828Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 8,
+    "pregameCategory": "quarterbackArchetype",
+    "pronunciation": "REED HAR-per",
+    "rosterPlayerId": "lakefront-lights-qb-8",
+    "teamId": "lakefront-lights",
+    "variant": 2,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "warmup",
+    "priority": 32,
+    "qbArchetype": "Field General"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 8.2,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "For Reid Harper, number 8, accuracy is the calling card. The ball needs to come out on schedule.",
+  "scriptId": "pregame_qb_archetype_lakefront-lights-qb-8_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

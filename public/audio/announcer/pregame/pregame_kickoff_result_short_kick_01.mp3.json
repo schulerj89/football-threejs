@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_kickoff_result_short_kick_01",
+  "caption": "A shorter kick gives the return team a chance to set up quickly.",
+  "category": "announcer",
+  "compressedBytes": 52288,
+  "contentHash": "e6caa439c2e9b201bbddc7defdf151225fcd90b32fec73e1dc0a323ba4f955d8",
+  "durationSeconds": 3.2,
+  "eventCategory": "pregame:kickoffResult",
+  "generatedAt": "2026-06-22T04:44:08.349Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null,
+    "kickoffResultType": "shortKick",
+    "matchPhaseEligibility": "kickoff",
+    "priority": 40
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "A shorter kick gives the return team a chance to set up quickly.",
+  "scriptId": "pregame_kickoff_result_short_kick_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

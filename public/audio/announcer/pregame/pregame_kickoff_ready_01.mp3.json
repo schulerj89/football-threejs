@@ -1,0 +1,32 @@
+{
+  "assetId": "pregame_kickoff_ready_01",
+  "caption": "The teams are getting set for the opening kickoff.",
+  "category": "announcer",
+  "compressedBytes": 39332,
+  "contentHash": "c37aa75ec46e5079bfa5f68d6d6bd769c5928b1b1f8c5bb1c6986a623f3ca09b",
+  "durationSeconds": 2.4,
+  "eventCategory": "pregame:kickoffReady",
+  "generatedAt": "2026-06-22T04:43:55.705Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffReady",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "kickoff",
+    "priority": 44
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The teams are getting set for the opening kickoff.",
+  "scriptId": "pregame_kickoff_ready_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

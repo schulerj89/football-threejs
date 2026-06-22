@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_kickoff_result_returned_kick_02",
+  "caption": "The return is handled cleanly, and the offense is coming out.",
+  "category": "announcer",
+  "compressedBytes": 51035,
+  "contentHash": "0558adf90927d0ccdd3a83f15ef5d69e169bbdb02c2f6523caaf9207a7d54049",
+  "durationSeconds": 3.12,
+  "eventCategory": "pregame:kickoffResult",
+  "generatedAt": "2026-06-22T04:44:06.700Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null,
+    "kickoffResultType": "returnedKick",
+    "matchPhaseEligibility": "kickoff",
+    "priority": 40
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.2,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The return is handled cleanly, and the offense is coming out.",
+  "scriptId": "pregame_kickoff_result_returned_kick_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

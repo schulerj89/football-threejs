@@ -22,7 +22,7 @@
   },
   "modelId": "eleven_v3",
   "outputFormat": "mp3_44100_128",
-  "requestedDurationSeconds": 3,
+  "requestedDurationSeconds": 4.2,
   "runtimeLoadingStrategy": "buffer",
   "script": "Cyrus Ward, number 14, leads this offense with the first snap coming.",
   "scriptId": "pregame_qb_summit-forge-qb-14_01",

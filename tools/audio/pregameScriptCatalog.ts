@@ -25,14 +25,19 @@ export interface PregameCaptionEntry {
   awayTeamId: string | null;
   caption: string;
   category: PregameCommentaryCategory;
+  coinTossOutcome: string | null;
   compressedBytes: number;
   durationSeconds: number | null;
   exists: boolean;
   homeTeamId: string | null;
   jerseyNumber: number | null;
+  kickoffResultType: string | null;
+  matchPhaseEligibility: string | null;
   modelId: string;
   outputPath: string;
   pronunciation: string | null;
+  priority: number | null;
+  qbArchetype: string | null;
   rosterPlayerId: string | null;
   script: string;
   scriptId: string;
@@ -63,7 +68,7 @@ export function createPregameSpeechPlan(
     generationStatus: 'planned',
     kind: 'speech',
     loop: false,
-    maxBytes: 120_000,
+    maxBytes: 160_000,
     metadata: createPregameMetadata(script),
     modelId: ANNOUNCER_TTS_MODEL_ID,
     notes: `${ANNOUNCER_IDENTITY.displayName}; pregame ${script.category} variant ${script.variant}.`,
@@ -109,14 +114,19 @@ export function createPregameCaptionManifest(
           awayTeamId: readNullableString(metadata.awayTeamId),
           caption: asset.caption ?? asset.script ?? '',
           category: readPregameCategory(metadata.pregameCategory),
+          coinTossOutcome: readNullableString(metadata.coinTossOutcome),
           compressedBytes: exists ? statSync(outputPath).size : 0,
           durationSeconds: exists ? readAudioDurationSeconds(asset.outputPath) : null,
           exists,
           homeTeamId: readNullableString(metadata.homeTeamId),
           jerseyNumber: readNullableNumber(metadata.jerseyNumber),
+          kickoffResultType: readNullableString(metadata.kickoffResultType),
+          matchPhaseEligibility: readNullableString(metadata.matchPhaseEligibility),
           modelId: asset.modelId,
           outputPath: asset.outputPath,
           pronunciation: readNullableString(metadata.pronunciation),
+          priority: readNullableNumber(metadata.priority),
+          qbArchetype: readNullableString(metadata.qbArchetype),
           rosterPlayerId: readNullableString(metadata.rosterPlayerId),
           script: asset.script ?? '',
           scriptId: asset.scriptId ?? asset.assetId,
@@ -145,7 +155,7 @@ export function writePregameArtifacts(
 function createPregameMetadata(
   clip: PregameCommentaryClip,
 ): Record<string, boolean | null | number | string> {
-  return {
+  const metadata: Record<string, boolean | null | number | string> = {
     announcerName: ANNOUNCER_IDENTITY.displayName,
     awayTeamId: clip.awayTeamId ?? null,
     homeTeamId: clip.homeTeamId ?? null,
@@ -157,11 +167,51 @@ function createPregameMetadata(
     variant: clip.variant,
     weatherCondition: clip.weatherCondition ?? null,
   };
+
+  if (clip.coinTossOutcome) {
+    metadata.coinTossOutcome = clip.coinTossOutcome;
+  }
+  if (clip.kickoffResultType) {
+    metadata.kickoffResultType = clip.kickoffResultType;
+  }
+  if (clip.matchPhaseEligibility) {
+    metadata.matchPhaseEligibility = clip.matchPhaseEligibility;
+  }
+  if (clip.priority !== undefined) {
+    metadata.priority = clip.priority;
+  }
+  if (clip.qbArchetype) {
+    metadata.qbArchetype = clip.qbArchetype;
+  }
+
+  return metadata;
 }
 
 function createPregameAuditionHtml(manifest: PregameCaptionManifest): string {
-  const sections = (['welcome', 'matchup', 'weather', 'quarterback'] as const)
-    .map((category) => createCategorySection(category, manifest.scripts.filter((entry) => entry.category === category)))
+  const sections = [
+    {
+      categories: ['welcome', 'warmupTransition', 'matchup', 'weather'] as const,
+      label: 'Warmup',
+    },
+    {
+      categories: ['quarterback', 'quarterbackArchetype'] as const,
+      label: 'QB Scouting',
+    },
+    {
+      categories: ['coinTossSetup', 'coinTossResult'] as const,
+      label: 'Coin Toss',
+    },
+    {
+      categories: ['kickoffReady', 'kickoffInFlight', 'kickoffResult'] as const,
+      label: 'Kickoff',
+    },
+  ]
+    .map((section) =>
+      createCategorySection(
+        section.label,
+        manifest.scripts.filter((entry) => section.categories.includes(entry.category as never)),
+      ),
+    )
     .join('\n');
 
   return `<!doctype html>
@@ -189,7 +239,7 @@ ${sections}
 }
 
 function createCategorySection(
-  category: PregameCommentaryCategory,
+  label: string,
   entries: readonly PregameCaptionEntry[],
 ): string {
   const rows = entries.map((entry) => {
@@ -199,11 +249,16 @@ function createCategorySection(
       entry.awayTeamId && entry.homeTeamId ? `${entry.awayTeamId} at ${entry.homeTeamId}` : '',
       entry.weatherCondition ? `weather ${entry.weatherCondition}` : '',
       entry.rosterPlayerId ? `${entry.rosterPlayerId} #${entry.jerseyNumber ?? '?'}` : '',
+      entry.qbArchetype ? `QB ${entry.qbArchetype}` : '',
+      entry.coinTossOutcome ? `coin toss ${entry.coinTossOutcome}` : '',
+      entry.kickoffResultType ? `kickoff ${entry.kickoffResultType}` : '',
+      entry.teamId && !entry.rosterPlayerId ? `team ${entry.teamId}` : '',
     ].filter(Boolean).join('; ');
 
     return [
       '<tr>',
       `<td>${entry.variant}</td>`,
+      `<td>${escapeHtml(entry.category)}</td>`,
       `<td>${escapeHtml(entry.scriptId)}</td>`,
       `<td>${escapeHtml(context)}</td>`,
       `<td>${escapeHtml(entry.caption)}</td>`,
@@ -215,11 +270,12 @@ function createCategorySection(
   }).join('\n');
 
   return `<section>
-  <h2>${escapeHtml(category)}</h2>
+  <h2>${escapeHtml(label)}</h2>
   <table>
     <thead>
       <tr>
         <th>Variant</th>
+        <th>Category</th>
         <th>Script ID</th>
         <th>Context</th>
         <th>Caption</th>
@@ -237,8 +293,18 @@ ${rows}
 
 function getPregameStyle(category: PregameCommentaryCategory): number {
   switch (category) {
+    case 'coinTossResult':
+    case 'kickoffInFlight':
+    case 'kickoffResult':
+      return 0.38;
+    case 'quarterbackArchetype':
+      return 0.36;
     case 'quarterback':
       return 0.34;
+    case 'coinTossSetup':
+    case 'kickoffReady':
+    case 'warmupTransition':
+      return 0.32;
     case 'welcome':
     case 'matchup':
       return 0.3;
@@ -248,7 +314,17 @@ function getPregameStyle(category: PregameCommentaryCategory): number {
 }
 
 function readPregameCategory(value: unknown): PregameCommentaryCategory {
-  return value === 'matchup' || value === 'quarterback' || value === 'weather' || value === 'welcome'
+  return value === 'coinTossResult' ||
+    value === 'coinTossSetup' ||
+    value === 'kickoffInFlight' ||
+    value === 'kickoffReady' ||
+    value === 'kickoffResult' ||
+    value === 'matchup' ||
+    value === 'quarterback' ||
+    value === 'quarterbackArchetype' ||
+    value === 'warmupTransition' ||
+    value === 'weather' ||
+    value === 'welcome'
     ? value
     : 'welcome';
 }

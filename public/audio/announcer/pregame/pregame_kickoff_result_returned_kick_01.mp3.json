@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_kickoff_result_returned_kick_01",
+  "caption": "The return sets the offense up with decent field position.",
+  "category": "announcer",
+  "compressedBytes": 49781,
+  "contentHash": "34f99ef677b3378325ec47adff72897e24ccab4d114de2798f904fc58274da7d",
+  "durationSeconds": 3.04,
+  "eventCategory": "pregame:kickoffResult",
+  "generatedAt": "2026-06-22T04:44:04.946Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null,
+    "kickoffResultType": "returnedKick",
+    "matchPhaseEligibility": "kickoff",
+    "priority": 40
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The return sets the offense up with decent field position.",
+  "scriptId": "pregame_kickoff_result_returned_kick_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

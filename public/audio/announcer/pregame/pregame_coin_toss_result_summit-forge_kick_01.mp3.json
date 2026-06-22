@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_coin_toss_result_summit-forge_kick_01",
+  "caption": "Summit Forge will kick to begin the game.",
+  "category": "announcer",
+  "compressedBytes": 36824,
+  "contentHash": "0c6d2ee85ecf6df5c1c5ef77816aa4900ee2b94f13faa1cfd2b80ccb34cfb5d9",
+  "durationSeconds": 2.24,
+  "eventCategory": "pregame:coinTossResult",
+  "generatedAt": "2026-06-22T04:43:48.349Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "coinTossResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": "summit-forge",
+    "variant": 1,
+    "weatherCondition": null,
+    "coinTossOutcome": "kick",
+    "matchPhaseEligibility": "coinToss",
+    "priority": 42
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 2.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Summit Forge will kick to begin the game.",
+  "scriptId": "pregame_coin_toss_result_summit-forge_kick_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_qb_archetype_bay-city-current-qb-6_02",
+  "caption": "For Drew Barton, number 6, accuracy is the calling card. The ball needs to come out on schedule.",
+  "category": "announcer",
+  "compressedBytes": 90741,
+  "contentHash": "308ed6322c80004706ce0734fe21e875c4529b30f79be8a5f795362cfcdc5e33",
+  "durationSeconds": 5.6,
+  "eventCategory": "pregame:quarterbackArchetype",
+  "generatedAt": "2026-06-22T04:43:38.119Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 6,
+    "pregameCategory": "quarterbackArchetype",
+    "pronunciation": "DROO BAR-tun",
+    "rosterPlayerId": "bay-city-current-qb-6",
+    "teamId": "bay-city-current",
+    "variant": 2,
+    "weatherCondition": null,
+    "matchPhaseEligibility": "warmup",
+    "priority": 32,
+    "qbArchetype": "Field General"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 8.2,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "For Drew Barton, number 6, accuracy is the calling card. The ball needs to come out on schedule.",
+  "scriptId": "pregame_qb_archetype_bay-city-current-qb-6_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,33 @@
+{
+  "assetId": "pregame_kickoff_result_short_kick_02",
+  "caption": "The kick comes down short, and the return coverage has to close fast.",
+  "category": "announcer",
+  "compressedBytes": 56050,
+  "contentHash": "bebb6ff3908ce791e477c959bb3406a8cf51adab7651309f6c7e7e299d90cf01",
+  "durationSeconds": 3.44,
+  "eventCategory": "pregame:kickoffResult",
+  "generatedAt": "2026-06-22T04:44:10.050Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Grant Mercer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "kickoffResult",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null,
+    "kickoffResultType": "shortKick",
+    "matchPhaseEligibility": "kickoff",
+    "priority": 40
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.5,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The kick comes down short, and the return coverage has to close fast.",
+  "scriptId": "pregame_kickoff_result_short_kick_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

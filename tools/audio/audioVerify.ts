@@ -9,9 +9,14 @@ import {
   type LocalAudioAsset,
 } from '../../src/audio/AudioAssetManifest';
 import { COMMENTARY_CATALOG } from '../../src/audio/CommentaryCatalog';
-import { ANNOUNCER_SCRIPT_CATALOG } from './announcerScriptCatalog';
+import {
+  ANNOUNCER_SCRIPT_CATALOG,
+  ANNOUNCER_VOICE_ID_PLACEHOLDER,
+} from './announcerScriptCatalog';
+import { readConfiguredAnnouncerVoiceId } from './announcerVoice';
 import { FOOTBALL_AUDIO_PLAN } from './audioPlan';
 import { createFootballAudioReport } from './audioReport';
+import { createPregameSpeechPlan } from './pregameScriptCatalog';
 import {
   isDirectCli,
   readAudioDurationSeconds,
@@ -77,8 +82,15 @@ const REPORT_PATH = 'public/audio/audio-verification-report.json';
 const READINESS_PATH = 'public/audio/audio-readiness.json';
 const AUDITION_INDEX_PATH = 'public/audio/audition-index.html';
 
+export function createAudioVerificationPlan(): readonly AudioAssetPlan[] {
+  return [
+    ...FOOTBALL_AUDIO_PLAN,
+    ...createPregameSpeechPlan(readConfiguredAnnouncerVoiceId() ?? ANNOUNCER_VOICE_ID_PLACEHOLDER),
+  ];
+}
+
 export function createAudioVerificationReport(
-  plan: readonly AudioAssetPlan[] = FOOTBALL_AUDIO_PLAN,
+  plan: readonly AudioAssetPlan[] = createAudioVerificationPlan(),
   manifest: readonly LocalAudioAsset[] = LOCAL_AUDIO_ASSET_MANIFEST,
   generatedAt = new Date().toISOString(),
 ): AudioVerificationReport {
