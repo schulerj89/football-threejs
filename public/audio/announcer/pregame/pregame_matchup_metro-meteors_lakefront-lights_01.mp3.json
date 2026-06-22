@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_metro-meteors_lakefront-lights_01",
+  "caption": "Metro Meteors line up across from Lakefront Lights. The first possession should tell us plenty.",
+  "category": "announcer",
+  "compressedBytes": 72768,
+  "contentHash": "339a4f72f966cdd2776b5d58a4c521882d59ee6012d2de4910907845ca5943ec",
+  "durationSeconds": 4.48,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:23.325Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "metro-meteors",
+    "homeTeamId": "lakefront-lights",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Metro Meteors line up across from Lakefront Lights. The first possession should tell us plenty.",
+  "scriptId": "pregame_matchup_metro-meteors_lakefront-lights_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

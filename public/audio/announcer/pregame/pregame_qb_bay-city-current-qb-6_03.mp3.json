@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_bay-city-current-qb-6_03",
+  "caption": "Drew Barton, number 6, starts under center with a chance to set the tone.",
+  "category": "announcer",
+  "compressedBytes": 66499,
+  "contentHash": "d32f60b4361e04badb4fa8f7e27d5c1b1bc04749fdb89828a06fa924a3d90064",
+  "durationSeconds": 4.08,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:25.467Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 6,
+    "pregameCategory": "quarterback",
+    "pronunciation": "DROO BAR-tun",
+    "rosterPlayerId": "bay-city-current-qb-6",
+    "teamId": "bay-city-current",
+    "variant": 3,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Drew Barton, number 6, starts under center with a chance to set the tone.",
+  "scriptId": "pregame_qb_bay-city-current-qb-6_03",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

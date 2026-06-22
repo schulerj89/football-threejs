@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_weather_rain_02",
+  "caption": "A slick football night is forming. The first clean handle will be important.",
+  "category": "announcer",
+  "compressedBytes": 62319,
+  "contentHash": "4c8de8130a2f47da670dda43c0534a9628a0317377394583dd3f8e6b6899ffc9",
+  "durationSeconds": 3.84,
+  "eventCategory": "pregame:weather",
+  "generatedAt": "2026-06-22T00:07:03.568Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "weather",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": "rain"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "A slick football night is forming. The first clean handle will be important.",
+  "scriptId": "pregame_weather_rain_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

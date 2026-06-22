@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_lakefront-lights_bay-city-current_01",
+  "caption": "Lakefront Lights line up across from Bay City Current. The first possession should tell us plenty.",
+  "category": "announcer",
+  "compressedBytes": 74022,
+  "contentHash": "244de2e03ce98b30f706caf2e0de159a1cc7c179ba1542074e46dfa4b9db36b7",
+  "durationSeconds": 4.56,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:36.767Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "lakefront-lights",
+    "homeTeamId": "bay-city-current",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Lakefront Lights line up across from Bay City Current. The first possession should tell us plenty.",
+  "scriptId": "pregame_matchup_lakefront-lights_bay-city-current_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

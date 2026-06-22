@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_bay-city-current-qb-6_01",
+  "caption": "Drew Barton, number 6, leads this offense with the first snap coming.",
+  "category": "announcer",
+  "compressedBytes": 61066,
+  "contentHash": "670731ea4f6a3fa97412a99469c0c548e60f9c74544b37c0deb0dfcbd1271ce9",
+  "durationSeconds": 3.76,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:22.699Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 6,
+    "pregameCategory": "quarterback",
+    "pronunciation": "DROO BAR-tun",
+    "rosterPlayerId": "bay-city-current-qb-6",
+    "teamId": "bay-city-current",
+    "variant": 1,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Drew Barton, number 6, leads this offense with the first snap coming.",
+  "scriptId": "pregame_qb_bay-city-current-qb-6_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

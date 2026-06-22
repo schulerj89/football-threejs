@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_weather_overcast_01",
+  "caption": "A heavy overcast sky sits over the field. Visibility is steady, but the air feels tight.",
+  "category": "announcer",
+  "compressedBytes": 82799,
+  "contentHash": "d57095046da9bcc286bda6070ed239e633bcb113c224632692b3c83de38c432b",
+  "durationSeconds": 5.12,
+  "eventCategory": "pregame:weather",
+  "generatedAt": "2026-06-22T00:06:59.522Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "weather",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": "overcast"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.7,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "A heavy overcast sky sits over the field. Visibility is steady, but the air feels tight.",
+  "scriptId": "pregame_weather_overcast_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

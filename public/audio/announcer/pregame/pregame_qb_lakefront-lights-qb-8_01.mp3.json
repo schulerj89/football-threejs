@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_lakefront-lights-qb-8_01",
+  "caption": "Reid Harper, number 8, leads this offense with the first snap coming.",
+  "category": "announcer",
+  "compressedBytes": 61066,
+  "contentHash": "a43d042895d15db4f7584861b561d3040892a1bfe41e6b2a44841aa77edd2ce6",
+  "durationSeconds": 3.76,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:14.403Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 8,
+    "pregameCategory": "quarterback",
+    "pronunciation": "REED HAR-per",
+    "rosterPlayerId": "lakefront-lights-qb-8",
+    "teamId": "lakefront-lights",
+    "variant": 1,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Reid Harper, number 8, leads this offense with the first snap coming.",
+  "scriptId": "pregame_qb_lakefront-lights-qb-8_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

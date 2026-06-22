@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_lakefront-lights-qb-8_02",
+  "caption": "Keep an eye on Reid Harper, number 8. The read comes fast in this system.",
+  "category": "announcer",
+  "compressedBytes": 67753,
+  "contentHash": "9a5761f87d572442699534aad59fd52dddf77bc1f1e4b6ed15392cbaee7d4755",
+  "durationSeconds": 4.16,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:15.903Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 8,
+    "pregameCategory": "quarterback",
+    "pronunciation": "REED HAR-per",
+    "rosterPlayerId": "lakefront-lights-qb-8",
+    "teamId": "lakefront-lights",
+    "variant": 2,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Keep an eye on Reid Harper, number 8. The read comes fast in this system.",
+  "scriptId": "pregame_qb_lakefront-lights-qb-8_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

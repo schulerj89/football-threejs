@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_summit-forge_metro-meteors_02",
+  "caption": "Forge against Meteors. Clean execution early could tilt this one fast.",
+  "category": "announcer",
+  "compressedBytes": 69007,
+  "contentHash": "e7b294610a469f4fefb95849dac0fdb7d3194b754cc61856b73a27d8c5cd2207",
+  "durationSeconds": 4.24,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:40.944Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "summit-forge",
+    "homeTeamId": "metro-meteors",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Forge against Meteors. Clean execution early could tilt this one fast.",
+  "scriptId": "pregame_matchup_summit-forge_metro-meteors_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

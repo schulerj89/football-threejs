@@ -38,6 +38,7 @@ npm run build
 npm run audio:plan
 npm run audio:generate:sfx
 npm run audio:generate:speech
+npm run audio:generate:pregame
 npm run audio:report
 npm run audio:verify
 npm run music:plan
@@ -101,17 +102,19 @@ ElevenLabs is used for offline generation only. Production browser code must not
 - Project skills: `.codex/skills/football-audio-director` and `.codex/skills/football-broadcast-writer`.
 - Typed plan: `tools/audio/audioPlan.ts`.
 - Broadcast script catalog: `tools/audio/announcerScriptCatalog.ts`.
+- Pregame broadcast catalog and generator: `tools/audio/pregameScriptCatalog.ts` and `tools/audio/generatePregameSpeech.ts`.
 - Announcer caption manifest and audition page: `public/audio/announcer/announcer-captions.json` and `public/audio/announcer/announcer-audition.html`.
-- Generated starter pack: two streamed crowd loops, six crowd reactions, seven football one-shots, and 27 announcer speech clips.
+- Pregame caption manifest and audition page: `public/audio/announcer/pregame-captions.json` and `public/audio/announcer/pregame-audition.html`.
+- Generated starter pack: two streamed crowd loops, six crowd reactions, seven football one-shots, 27 gameplay announcer speech clips, and 49 pregame broadcast clips.
 - Safe local example: `.env.example`.
 - Title music plan and report: `tools/audio/musicPlan.ts`, `tools/audio/generateMusic.ts`, and `tools/audio/musicReport.ts`.
 - Output roots: `public/audio/sfx`, `public/audio/crowd`, `public/audio/announcer`, and `public/audio/music`.
 
-`npm run audio:generate:sfx` and `npm run audio:generate:speech` default to dry-run. Paid API calls require an explicit `--execute` flag, such as `npx tsx tools/audio/generateSoundEffects.ts --execute --max-files=15` or `npx tsx tools/audio/generateSpeech.ts --execute --max-files=27`; existing files require `--force` to replace, and one execution is capped by `--max-files` or `AUDIO_MAX_FILES`.
+`npm run audio:generate:sfx`, `npm run audio:generate:speech`, and `npm run audio:generate:pregame` default to dry-run. Paid API calls require direct execution with an explicit `--execute` flag, such as `npx tsx tools/audio/generateSoundEffects.ts --execute --max-files=15`, `npx tsx tools/audio/generateSpeech.ts --execute --max-files=27`, or `npx tsx tools/audio/generatePregameSpeech.ts --execute --max-files=49`; existing files require `--force` to replace.
 
-The richer report can be printed with `npm run audio:report` and written with `npx tsx tools/audio/audioReport.ts --write`. `npm run audio:verify` validates runtime-manifest filenames, non-empty decodable MP3s, duration bounds, provenance sidecars, caption metadata, compressed-size budget, decoded-buffer budget policy, readiness classification, and the audition page at `public/audio/audition-index.html`. The browser runtime mixer consumes local files only. Runtime announcer playback uses the local `public/audio/announcer/*.mp3` files, serializes commentary so clips do not overlap, and shows exact captions when enabled. The title screen streams the selected local `football-js-title` MP3 through the runtime music bus after a user gesture. Spatial player sounds, live text generation, second-commentator support, and gameplay/dynamic music are queued future tasks.
+The richer report can be printed with `npm run audio:report` and written with `npx tsx tools/audio/audioReport.ts --write`. `npm run audio:verify` validates runtime-manifest filenames, non-empty decodable MP3s, duration bounds, provenance sidecars, caption metadata, compressed-size budget, decoded-buffer budget policy, readiness classification, and the audition page at `public/audio/audition-index.html`. The browser runtime mixer consumes local files only. Runtime announcer playback uses the local `public/audio/announcer/*.mp3` files, serializes commentary so clips do not overlap, and shows exact captions when enabled. The pregame voice pack is generated and cataloged but not yet sequenced at runtime. The title screen streams the selected local `football-js-title` MP3 through the runtime music bus after a user gesture. Spatial player sounds, live text generation, second-commentator support, runtime pregame sequencing, and gameplay/dynamic music are queued future tasks.
 
-`npm run music:generate` defaults to dry-run. Paid ElevenLabs Music calls require direct execution with `--execute`, for example `npx tsx tools/audio/generateMusic.ts --execute --max-files=3`. Existing candidate or sidecar files are skipped unless `--force` is supplied. The current generated title-theme candidates are `public/audio/music/football-js-title-a.mp3`, `football-js-title-b.mp3`, and `football-js-title-c.mp3`; candidate A is copied to the stable provisional path `public/audio/music/football-js-title.mp3`. The audition page is `public/audio/music/music-audition.html`, and the selection manifest is `public/audio/music/music-selection.json`. These files are production assets only; no title-screen music playback is wired yet.
+`npm run music:generate` defaults to dry-run. Paid ElevenLabs Music calls require direct execution with `--execute`, for example `npx tsx tools/audio/generateMusic.ts --execute --max-files=3`. Existing candidate or sidecar files are skipped unless `--force` is supplied. The current generated title-theme candidates are `public/audio/music/football-js-title-a.mp3`, `football-js-title-b.mp3`, and `football-js-title-c.mp3`; candidate A is copied to the stable provisional path `public/audio/music/football-js-title.mp3`. The audition page is `public/audio/music/music-audition.html`, and the selection manifest is `public/audio/music/music-selection.json`. These files are production assets only and the selected title theme streams from the title screen after user gesture unlock.
 
 ## Brand Asset Production
 

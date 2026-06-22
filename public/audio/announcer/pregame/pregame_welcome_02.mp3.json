@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_welcome_02",
+  "caption": "This is Football JS, with Gridiron Local Prototype Announcer on the call. The offense is moments from the first snap.",
+  "category": "announcer",
+  "compressedBytes": 118744,
+  "contentHash": "341609835781cddb7627043f4ca7573530d07bced54ca43fcacd65b80ec28c47",
+  "durationSeconds": 7.36,
+  "eventCategory": "pregame:welcome",
+  "generatedAt": "2026-06-22T00:06:20.020Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "welcome",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 4.2,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "This is Football JS, with Gridiron Local Prototype Announcer on the call. The offense is moments from the first snap.",
+  "scriptId": "pregame_welcome_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

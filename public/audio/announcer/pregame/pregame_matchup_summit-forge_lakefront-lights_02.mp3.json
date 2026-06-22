@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_summit-forge_lakefront-lights_02",
+  "caption": "Forge against Lights. Clean execution early could tilt this one fast.",
+  "category": "announcer",
+  "compressedBytes": 65245,
+  "contentHash": "45c2ad6d8591909ffead05623e34a1c57d6705ebce8f536aea240f8983c993ab",
+  "durationSeconds": 4,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:43.692Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "summit-forge",
+    "homeTeamId": "lakefront-lights",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Forge against Lights. Clean execution early could tilt this one fast.",
+  "scriptId": "pregame_matchup_summit-forge_lakefront-lights_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

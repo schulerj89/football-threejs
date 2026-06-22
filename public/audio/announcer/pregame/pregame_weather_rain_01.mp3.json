@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_weather_rain_01",
+  "caption": "Light rain in the air. Ball security and short throws matter right away.",
+  "category": "announcer",
+  "compressedBytes": 66499,
+  "contentHash": "e4ba2e6cfa2847e206a799df30c0eebb1c2052dac4d1baca543a8c6c0f87eb3c",
+  "durationSeconds": 4.08,
+  "eventCategory": "pregame:weather",
+  "generatedAt": "2026-06-22T00:07:02.428Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "weather",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": "rain"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Light rain in the air. Ball security and short throws matter right away.",
+  "scriptId": "pregame_weather_rain_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

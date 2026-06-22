@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_metro-meteors_bay-city-current_01",
+  "caption": "Metro Meteors line up across from Bay City Current. The first possession should tell us plenty.",
+  "category": "announcer",
+  "compressedBytes": 77784,
+  "contentHash": "c43d44edff4f372191dc82d949a221d26e8c9ca6a80196f8e52855eca293c6b9",
+  "durationSeconds": 4.8,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:28.676Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "metro-meteors",
+    "homeTeamId": "bay-city-current",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Metro Meteors line up across from Bay City Current. The first possession should tell us plenty.",
+  "scriptId": "pregame_matchup_metro-meteors_bay-city-current_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

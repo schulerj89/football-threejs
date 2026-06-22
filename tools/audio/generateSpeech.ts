@@ -1,7 +1,10 @@
-import type { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import { FOOTBALL_AUDIO_PLAN } from './audioPlan';
 import { writeAnnouncerArtifacts } from './announcerArtifacts';
 import { ensureAnnouncerVoice } from './announcerVoice';
+import {
+  createElevenLabsClient,
+  type ElevenLabsClientInstance,
+} from './elevenLabsClient';
 import {
   assetOutputExists,
   assetOutputMatchesProvenance,
@@ -18,9 +21,6 @@ import {
   type GenerateOptions,
   type GenerateSummary,
 } from './schemas';
-
-type ElevenLabsModule = typeof import('@elevenlabs/elevenlabs-js');
-type ElevenLabsClientInstance = InstanceType<typeof ElevenLabsClient>;
 
 export interface SpeechGenerationDependencies {
   clientFactory?: (apiKey: string) => Promise<ElevenLabsClientInstance>;
@@ -48,7 +48,7 @@ export async function generateSpeech(
   const apiKey = requireElevenLabsApiKey();
   const client = dependencies.clientFactory
     ? await dependencies.clientFactory(apiKey)
-    : await createDefaultClient(apiKey);
+    : await createElevenLabsClient(apiKey);
   const announcerVoice = await ensureAnnouncerVoice(client, { execute: options.execute });
   const allMaterializedSpeechAssets = allSpeechAssets.map((asset) => ({
     ...asset,
@@ -105,11 +105,6 @@ export async function generateSpeech(
     generated,
     skipped,
   };
-}
-
-async function createDefaultClient(apiKey: string): Promise<ElevenLabsClientInstance> {
-  const module: ElevenLabsModule = await import('@elevenlabs/elevenlabs-js');
-  return new module.ElevenLabsClient({ apiKey });
 }
 
 async function withSingleRetry(retryCount: number, action: () => Promise<void>): Promise<void> {

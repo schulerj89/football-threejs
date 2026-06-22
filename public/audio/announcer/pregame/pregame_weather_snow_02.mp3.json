@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_weather_snow_02",
+  "caption": "Cold snow around the field. The team that stays balanced may settle in fastest.",
+  "category": "announcer",
+  "compressedBytes": 70261,
+  "contentHash": "ac7819bd4b281cb75fedf3d14b0acc6284e476d6ab0cc45e03dd74aa4a024903",
+  "durationSeconds": 4.32,
+  "eventCategory": "pregame:weather",
+  "generatedAt": "2026-06-22T00:07:06.211Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "weather",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": "snow"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.6,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Cold snow around the field. The team that stays balanced may settle in fastest.",
+  "scriptId": "pregame_weather_snow_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

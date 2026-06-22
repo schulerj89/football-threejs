@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_welcome_01",
+  "caption": "Gridiron Local Prototype Announcer welcomes you to Football JS. The lights are up, and the opening possession is next.",
+  "category": "announcer",
+  "compressedBytes": 103279,
+  "contentHash": "aedcc8f63f35b48fc3a8086027c6f20baa3e839b374764112906a8c784169e4d",
+  "durationSeconds": 6.4,
+  "eventCategory": "pregame:welcome",
+  "generatedAt": "2026-06-22T00:06:18.022Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "welcome",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Gridiron Local Prototype Announcer welcomes you to Football JS. The lights are up, and the opening possession is next.",
+  "scriptId": "pregame_welcome_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

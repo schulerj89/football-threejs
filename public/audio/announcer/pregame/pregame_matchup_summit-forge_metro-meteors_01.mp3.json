@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_summit-forge_metro-meteors_01",
+  "caption": "Summit Forge line up across from Metro Meteors. The first possession should tell us plenty.",
+  "category": "announcer",
+  "compressedBytes": 80292,
+  "contentHash": "10f28a5d670d203cac728e5373e06d502e3e5fac9175855d0c2f8bf453e601d1",
+  "durationSeconds": 4.96,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:39.675Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "summit-forge",
+    "homeTeamId": "metro-meteors",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Summit Forge line up across from Metro Meteors. The first possession should tell us plenty.",
+  "scriptId": "pregame_matchup_summit-forge_metro-meteors_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

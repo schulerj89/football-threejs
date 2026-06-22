@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_bay-city-current_summit-forge_01",
+  "caption": "Bay City Current line up across from Summit Forge. The first possession should tell us plenty.",
+  "category": "announcer",
+  "compressedBytes": 77784,
+  "contentHash": "5a98fb3eeef1223d3bdb75a5c9a5658e8f38db69fdaf86d5902777b41c313132",
+  "durationSeconds": 4.8,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:53.724Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "bay-city-current",
+    "homeTeamId": "summit-forge",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Bay City Current line up across from Summit Forge. The first possession should tell us plenty.",
+  "scriptId": "pregame_matchup_bay-city-current_summit-forge_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

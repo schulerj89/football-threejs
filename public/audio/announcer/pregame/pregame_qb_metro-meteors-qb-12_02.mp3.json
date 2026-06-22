@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_metro-meteors-qb-12_02",
+  "caption": "Keep an eye on Jalen Carter, number 12. The read comes fast in this system.",
+  "category": "announcer",
+  "compressedBytes": 69007,
+  "contentHash": "b953c8be0fbcabc0aca6ec17a416d388b5b53693b2217b109c5b89734f38f877",
+  "durationSeconds": 4.24,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:11.672Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 12,
+    "pregameCategory": "quarterback",
+    "pronunciation": "JAY-len CAR-ter",
+    "rosterPlayerId": "metro-meteors-qb-12",
+    "teamId": "metro-meteors",
+    "variant": 2,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Keep an eye on Jalen Carter, number 12. The read comes fast in this system.",
+  "scriptId": "pregame_qb_metro-meteors-qb-12_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

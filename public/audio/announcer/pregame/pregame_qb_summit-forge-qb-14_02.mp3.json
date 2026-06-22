@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_summit-forge-qb-14_02",
+  "caption": "Keep an eye on Cyrus Ward, number 14. The read comes fast in this system.",
+  "category": "announcer",
+  "compressedBytes": 67753,
+  "contentHash": "90e3f9f05ea8c921d67cce2a7801ba44b81320df9a2e728024caa2020777912d",
+  "durationSeconds": 4.16,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:19.981Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 14,
+    "pregameCategory": "quarterback",
+    "pronunciation": "SY-rus WORD",
+    "rosterPlayerId": "summit-forge-qb-14",
+    "teamId": "summit-forge",
+    "variant": 2,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Keep an eye on Cyrus Ward, number 14. The read comes fast in this system.",
+  "scriptId": "pregame_qb_summit-forge-qb-14_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

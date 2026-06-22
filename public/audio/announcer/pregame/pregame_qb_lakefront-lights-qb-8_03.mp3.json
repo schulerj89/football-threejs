@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_lakefront-lights-qb-8_03",
+  "caption": "Reid Harper, number 8, starts under center with a chance to set the tone.",
+  "category": "announcer",
+  "compressedBytes": 65245,
+  "contentHash": "1c9560056d8fc5068ae21ca670823a6453306b34209e90c9023b7ad237d88971",
+  "durationSeconds": 4,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:17.164Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 8,
+    "pregameCategory": "quarterback",
+    "pronunciation": "REED HAR-per",
+    "rosterPlayerId": "lakefront-lights-qb-8",
+    "teamId": "lakefront-lights",
+    "variant": 3,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Reid Harper, number 8, starts under center with a chance to set the tone.",
+  "scriptId": "pregame_qb_lakefront-lights-qb-8_03",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_metro-meteors-qb-12_03",
+  "caption": "Jalen Carter, number 12, starts under center with a chance to set the tone.",
+  "category": "announcer",
+  "compressedBytes": 74022,
+  "contentHash": "f8c9fd4c57cc8daaadc6d345ce1ee8001e3b02806042a1b17b29fde2b173f153",
+  "durationSeconds": 4.56,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:13.150Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 12,
+    "pregameCategory": "quarterback",
+    "pronunciation": "JAY-len CAR-ter",
+    "rosterPlayerId": "metro-meteors-qb-12",
+    "teamId": "metro-meteors",
+    "variant": 3,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Jalen Carter, number 12, starts under center with a chance to set the tone.",
+  "scriptId": "pregame_qb_metro-meteors-qb-12_03",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_bay-city-current_summit-forge_02",
+  "caption": "Current against Forge. Clean execution early could tilt this one fast.",
+  "category": "announcer",
+  "compressedBytes": 70261,
+  "contentHash": "3815b5a7cf5096683a0762a99b6158e39c06280b4f6dea0102a835cae1704f0d",
+  "durationSeconds": 4.32,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:54.929Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "bay-city-current",
+    "homeTeamId": "summit-forge",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Current against Forge. Clean execution early could tilt this one fast.",
+  "scriptId": "pregame_matchup_bay-city-current_summit-forge_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

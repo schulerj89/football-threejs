@@ -1,5 +1,8 @@
-import type { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import { FOOTBALL_AUDIO_PLAN } from './audioPlan';
+import {
+  createElevenLabsClient,
+  type ElevenLabsClientInstance,
+} from './elevenLabsClient';
 import {
   assetOutputExists,
   assertValidAudioPlan,
@@ -13,9 +16,6 @@ import {
   type GenerateOptions,
   type GenerateSummary,
 } from './schemas';
-
-type ElevenLabsModule = typeof import('@elevenlabs/elevenlabs-js');
-type ElevenLabsClientInstance = InstanceType<typeof ElevenLabsClient>;
 
 export interface SoundEffectsGenerationDependencies {
   clientFactory?: (apiKey: string) => Promise<ElevenLabsClientInstance>;
@@ -59,7 +59,7 @@ export async function generateSoundEffects(
   const apiKey = requireElevenLabsApiKey();
   const client = dependencies.clientFactory
     ? await dependencies.clientFactory(apiKey)
-    : await createDefaultClient(apiKey);
+    : await createElevenLabsClient(apiKey);
   const generated: string[] = [];
 
   for (const asset of assetsToGenerate) {
@@ -83,11 +83,6 @@ export async function generateSoundEffects(
     generated,
     skipped,
   };
-}
-
-async function createDefaultClient(apiKey: string): Promise<ElevenLabsClientInstance> {
-  const module: ElevenLabsModule = await import('@elevenlabs/elevenlabs-js');
-  return new module.ElevenLabsClient({ apiKey });
 }
 
 async function withSingleRetry(retryCount: number, action: () => Promise<void>): Promise<void> {

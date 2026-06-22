@@ -35,6 +35,7 @@ export interface AudioAssetPlan {
   generationStatus: AudioGenerationStatus;
   runtimeLoadingStrategy: AudioRuntimeLoadingStrategy;
   maxBytes: number;
+  metadata?: Record<string, boolean | null | number | string>;
   notes?: string;
 }
 
@@ -48,6 +49,7 @@ export interface AudioProvenance {
   eventCategory?: string;
   generatedAt: string;
   kind: AudioAssetKind;
+  metadata?: Record<string, boolean | null | number | string>;
   modelId: string;
   outputFormat: AudioOutputFormat;
   prompt?: string;
@@ -275,6 +277,7 @@ export function createProvenance(
     eventCategory: asset.eventCategory,
     generatedAt,
     kind: asset.kind,
+    metadata: asset.metadata,
     modelId: asset.modelId,
     outputFormat: asset.outputFormat,
     prompt: asset.prompt,
@@ -368,6 +371,7 @@ export function assetOutputMatchesProvenance(asset: AudioAssetPlan): boolean {
       sidecar.caption === asset.caption &&
       sidecar.scriptId === asset.scriptId &&
       sidecar.voiceId === asset.voiceId &&
+      JSON.stringify(sidecar.metadata ?? {}) === JSON.stringify(asset.metadata ?? {}) &&
       sidecar.modelId === asset.modelId &&
       sidecar.outputFormat === asset.outputFormat;
   } catch {

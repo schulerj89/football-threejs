@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_weather_windy_01",
+  "caption": "A firm wind is moving across the field. Timing and trajectory get tested early.",
+  "category": "announcer",
+  "compressedBytes": 72768,
+  "contentHash": "8453e8439f46ed5d9b5bc6ff1f7286ee099fb0614902f85707a6314d0ca28090",
+  "durationSeconds": 4.48,
+  "eventCategory": "pregame:weather",
+  "generatedAt": "2026-06-22T00:07:07.461Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": null,
+    "pregameCategory": "weather",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": "windy"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.5,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "A firm wind is moving across the field. Timing and trajectory get tested early.",
+  "scriptId": "pregame_weather_windy_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

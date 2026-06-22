@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-06-22
+
+### Added
+
+- Added a pure pregame commentary catalog for welcome, ordered team matchup, weather, and starting-quarterback spotlight lines generated from `GameBrand`, `TeamRegistry`, and roster identity data.
+- Added Node-only pregame ElevenLabs speech generation tooling with dry-run default, required `--execute --max-files` for paid runs, existing-file protection, metadata-rich provenance sidecars, captions, and a grouped pregame audition page.
+- Generated 49 pregame announcer MP3 clips under `public/audio/announcer/pregame` using the existing prototype announcer voice.
+
+### Changed
+
+- Added a Node-only ElevenLabs SDK import fallback for audio tooling when the package root entry is missing emitted runtime files, without adding any browser SDK usage.
+- Documented the pregame voice pack as generated local content while keeping runtime pregame sequencing as future scope.
+
+### Tests
+
+- Added pregame commentary coverage for deterministic selection, rematch repetition avoidance, team/QB/weather fallbacks, exact captions, dry-run safety, missing-key behavior, existing-file protection, provenance metadata, and browser-secret scanning.
+
 ## [1.3.0] - 2026-06-21
 
 ### Added

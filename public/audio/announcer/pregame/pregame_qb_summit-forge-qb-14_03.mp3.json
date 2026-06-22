@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_summit-forge-qb-14_03",
+  "caption": "Cyrus Ward, number 14, starts under center with a chance to set the tone.",
+  "category": "announcer",
+  "compressedBytes": 74022,
+  "contentHash": "fe71cef5cf66ecf067fa0acc9864279b9da33f801a2464f76e7e6305067a0bac",
+  "durationSeconds": 4.56,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:21.350Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 14,
+    "pregameCategory": "quarterback",
+    "pronunciation": "SY-rus WORD",
+    "rosterPlayerId": "summit-forge-qb-14",
+    "teamId": "summit-forge",
+    "variant": 3,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Cyrus Ward, number 14, starts under center with a chance to set the tone.",
+  "scriptId": "pregame_qb_summit-forge-qb-14_03",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

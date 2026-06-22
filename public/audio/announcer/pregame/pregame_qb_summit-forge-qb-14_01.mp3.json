@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_summit-forge-qb-14_01",
+  "caption": "Cyrus Ward, number 14, leads this offense with the first snap coming.",
+  "category": "announcer",
+  "compressedBytes": 67753,
+  "contentHash": "34e7c2e596a52b9e4423f582c84ccb9bfc6c6b0db4c654729aa4e316a9533499",
+  "durationSeconds": 4.16,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:18.575Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 14,
+    "pregameCategory": "quarterback",
+    "pronunciation": "SY-rus WORD",
+    "rosterPlayerId": "summit-forge-qb-14",
+    "teamId": "summit-forge",
+    "variant": 1,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Cyrus Ward, number 14, leads this offense with the first snap coming.",
+  "scriptId": "pregame_qb_summit-forge-qb-14_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

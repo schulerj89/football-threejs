@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_bay-city-current_lakefront-lights_02",
+  "caption": "Current against Lights. Clean execution early could tilt this one fast.",
+  "category": "announcer",
+  "compressedBytes": 67753,
+  "contentHash": "1a97e50b58aff72480ccc5de55600b66659815dee64d8f7b7fc634b2253fd5fe",
+  "durationSeconds": 4.16,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:52.232Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "bay-city-current",
+    "homeTeamId": "lakefront-lights",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Current against Lights. Clean execution early could tilt this one fast.",
+  "scriptId": "pregame_matchup_bay-city-current_lakefront-lights_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

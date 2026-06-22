@@ -83,7 +83,9 @@ export function createAudioVerificationReport(
   generatedAt = new Date().toISOString(),
 ): AudioVerificationReport {
   const planValidationErrors = validateAudioPlan(plan);
-  const runtimeAssets = manifest.filter((asset) => !asset.assetId.startsWith('runtime-test-'));
+  const runtimeAssets = manifest.filter(
+    (asset) => !asset.assetId.startsWith('runtime-test-') && asset.category !== 'music',
+  );
   const manifestByAssetId = new Map(runtimeAssets.map((asset) => [asset.assetId, asset]));
   const planByAssetId = new Map(plan.map((asset) => [asset.assetId, asset]));
   const runtimeManifestErrors = validateRuntimeManifest(plan, runtimeAssets);

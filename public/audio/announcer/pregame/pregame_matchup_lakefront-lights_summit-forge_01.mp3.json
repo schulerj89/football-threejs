@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_lakefront-lights_summit-forge_01",
+  "caption": "Lakefront Lights line up across from Summit Forge. The first possession should tell us plenty.",
+  "category": "announcer",
+  "compressedBytes": 79038,
+  "contentHash": "f2362e260da6a9889c7238c475f36aa3b76e929da70c7c3c325abea7c7722f51",
+  "durationSeconds": 4.88,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:33.940Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "lakefront-lights",
+    "homeTeamId": "summit-forge",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 1,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 4,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Lakefront Lights line up across from Summit Forge. The first possession should tell us plenty.",
+  "scriptId": "pregame_matchup_lakefront-lights_summit-forge_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

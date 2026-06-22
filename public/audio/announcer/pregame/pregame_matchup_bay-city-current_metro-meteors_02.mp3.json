@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_matchup_bay-city-current_metro-meteors_02",
+  "caption": "Current against Meteors. Clean execution early could tilt this one fast.",
+  "category": "announcer",
+  "compressedBytes": 70261,
+  "contentHash": "4df67421d4ec932cec0d5c2f9cc0f95e882b00d6ed6e2cb5aa7be257e2855fc6",
+  "durationSeconds": 4.32,
+  "eventCategory": "pregame:matchup",
+  "generatedAt": "2026-06-22T00:06:49.644Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": "bay-city-current",
+    "homeTeamId": "metro-meteors",
+    "jerseyNumber": null,
+    "pregameCategory": "matchup",
+    "pronunciation": null,
+    "rosterPlayerId": null,
+    "teamId": null,
+    "variant": 2,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.8,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Current against Meteors. Clean execution early could tilt this one fast.",
+  "scriptId": "pregame_matchup_bay-city-current_metro-meteors_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

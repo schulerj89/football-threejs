@@ -1,0 +1,30 @@
+{
+  "assetId": "pregame_qb_bay-city-current-qb-6_02",
+  "caption": "Keep an eye on Drew Barton, number 6. The read comes fast in this system.",
+  "category": "announcer",
+  "compressedBytes": 67753,
+  "contentHash": "077ec40c2bc676b5a88116e6666a27a2f8325aba6ce579537da16f53690ce075",
+  "durationSeconds": 4.16,
+  "eventCategory": "pregame:quarterback",
+  "generatedAt": "2026-06-22T00:07:24.030Z",
+  "kind": "speech",
+  "metadata": {
+    "announcerName": "Gridiron Local Prototype Announcer",
+    "awayTeamId": null,
+    "homeTeamId": null,
+    "jerseyNumber": 6,
+    "pregameCategory": "quarterback",
+    "pronunciation": "DROO BAR-tun",
+    "rosterPlayerId": "bay-city-current-qb-6",
+    "teamId": "bay-city-current",
+    "variant": 2,
+    "weatherCondition": null
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.3,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Keep an eye on Drew Barton, number 6. The read comes fast in this system.",
+  "scriptId": "pregame_qb_bay-city-current-qb-6_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}
