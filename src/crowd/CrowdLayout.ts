@@ -1,11 +1,21 @@
-import { createCrowdSeatTransforms } from '../stadium/SeatLayout';
+import { createSeatLayout } from '../stadium/SeatLayout';
 import type { CrowdPreviewPlacement } from './CrowdTypes';
 
-export function createCrowdPlacements(requestedCount: number): readonly CrowdPreviewPlacement[] {
-  return createCrowdSeatTransforms(requestedCount).map((seat, index) => ({
+export function createCrowdPlacements(
+  requestedCount: number,
+  options: { nearCount?: number } = {},
+): readonly CrowdPreviewPlacement[] {
+  const seats = createSeatLayout(undefined, { requestedCount }).seats;
+  const defaultNearCount = seats.filter((seat) => seat.lod === 'near').length;
+  const nearCount = Math.min(
+    seats.length,
+    Math.max(0, Math.floor(options.nearCount ?? defaultNearCount)),
+  );
+
+  return seats.map((seat, index) => ({
     colorSeed: stableHash(`${seat.sectionId}:${seat.row}:${seat.seatIndex}:${index}`),
     facingRadians: seat.facingRadians,
-    lod: seat.lod,
+    lod: index < nearCount ? 'near' : 'far',
     row: seat.row,
     scale: seat.scale,
     seatIndex: seat.seatIndex,

@@ -75,7 +75,7 @@ export function estimateSceneGeometryBufferBytes(
   const snapshot = createEmptyBufferMemorySnapshot();
 
   root.traverse((object) => {
-    if (!(object instanceof THREE.Mesh)) {
+    if (!(object instanceof THREE.Mesh || object instanceof THREE.Points)) {
       return;
     }
 

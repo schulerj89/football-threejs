@@ -14,7 +14,9 @@ import {
   loadCrowdPresentationSettings,
   normalizeCrowdPresentationSettings,
   type CrowdDensity,
+  type CrowdFullness,
   type CrowdPresentationSettings,
+  isCrowdFullness,
 } from '../presentation/CrowdPresentationController';
 import type { PlaybookId } from '../roster';
 import type {
@@ -62,6 +64,7 @@ export interface GameExperienceSettings {
   controlledPlayerLabelEnabled: boolean;
   crowdAudioEnabled: boolean;
   crowdDensity: CrowdDensity;
+  crowdFullness: CrowdFullness;
   crowdReactionsEnabled: boolean;
   crowdVolume: number;
   crowdVisualsEnabled: boolean;
@@ -104,6 +107,7 @@ export interface GameExperienceQueryOverrides {
   controlledPlayerLabelEnabled?: boolean;
   crowdAudioEnabled?: boolean;
   crowdDensity?: CrowdDensity;
+  crowdFullness?: CrowdFullness;
   crowdReactionsEnabled?: boolean;
   crowdVolume?: number;
   crowdVisualsEnabled?: boolean;
@@ -189,6 +193,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   controlledPlayerLabelEnabled: true,
   crowdAudioEnabled: true,
   crowdDensity: 'low',
+  crowdFullness: 'full',
   crowdReactionsEnabled: true,
   crowdVolume: DEFAULT_AUDIO_SETTINGS.crowdVolume,
   crowdVisualsEnabled: true,
@@ -264,6 +269,7 @@ export function resolveGameExperienceSettings({
   const resolvedCrowdSettings = normalizeCrowdPresentationSettings({
     ...existingCrowdSettings,
     crowdDensity: settings.crowdDensity,
+    crowdFullness: settings.crowdFullness,
     crowdReactionsEnabled: settings.crowdReactionsEnabled,
     crowdVisualsEnabled: settings.crowdVisualsEnabled,
   });
@@ -346,6 +352,9 @@ export function normalizeGameExperienceSettings(
     crowdDensity: isCrowdDensity(settings.crowdDensity)
       ? settings.crowdDensity
       : presetDefaults.crowdDensity,
+    crowdFullness: isCrowdFullness(settings.crowdFullness)
+      ? settings.crowdFullness
+      : presetDefaults.crowdFullness,
     crowdReactionsEnabled:
       settings.crowdReactionsEnabled ?? presetDefaults.crowdReactionsEnabled,
     crowdVolume: clampVolume(settings.crowdVolume ?? presetDefaults.crowdVolume),
@@ -405,6 +414,7 @@ export function resolveGameExperienceQueryOverrides(
   const cameraValue = searchParams.get('camera');
   const cinematicsValue = searchParams.get('cinematics');
   const crowdDensityValue = searchParams.get('crowdDensity');
+  const crowdFullnessValue = searchParams.get('crowdFullness');
   const sidelineDensityValue = searchParams.get('sidelineDensity');
   const qualityValue = searchParams.get('quality') ?? searchParams.get('qualityMode');
 
@@ -450,6 +460,20 @@ export function resolveGameExperienceQueryOverrides(
 
   if (isCrowdDensity(crowdDensityValue)) {
     overrides.crowdDensity = crowdDensityValue;
+    overrides.crowdFullness = crowdDensityValue === 'high'
+      ? 'full'
+      : crowdDensityValue === 'medium'
+        ? 'standard'
+        : 'sparse';
+  }
+
+  if (isCrowdFullness(crowdFullnessValue)) {
+    overrides.crowdFullness = crowdFullnessValue;
+    overrides.crowdDensity = crowdFullnessValue === 'full'
+      ? 'high'
+      : crowdFullnessValue === 'standard'
+        ? 'medium'
+        : 'low';
   }
 
   if (isSidelineDensity(sidelineDensityValue)) {
@@ -601,6 +625,7 @@ function createCustomSettingsFromExisting(
     announcerVolume: audioSettings.announcerVolume,
     captionsEnabled: audioSettings.captionsEnabled,
     crowdDensity: crowdPresentationSettings.crowdDensity,
+    crowdFullness: crowdPresentationSettings.crowdFullness,
     crowdReactionsEnabled: crowdPresentationSettings.crowdReactionsEnabled,
     crowdVisualsEnabled: crowdPresentationSettings.crowdVisualsEnabled,
     crowdVolume: audioSettings.crowdVolume,

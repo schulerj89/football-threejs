@@ -37,7 +37,10 @@ interface BenchmarkRenderMetrics {
 interface BenchmarkCrowdSnapshot {
   actualSpectatorCount: number;
   crowdDrawCalls: number;
+  crowdFullness: string;
   density: string;
+  farMosaicSeatCount: number;
+  nearInstanceCount: number;
   visualsEnabled: boolean;
 }
 
@@ -45,6 +48,7 @@ interface BenchmarkExperienceSnapshot {
   finalSettings: {
     cinematics: string;
     crowdDensity: string;
+    crowdFullness: string;
     crowdReactionsEnabled: boolean;
     crowdVisualsEnabled: boolean;
     gameplayCamera: string;
@@ -66,7 +70,7 @@ interface BenchmarkReport {
   debugHelpersVisible: boolean;
   renderer: ReturnType<typeof classifyRenderer>;
   requestedFeatures: {
-    lowDensityCrowd: boolean;
+    fullCrowdFullness: boolean;
     measuredCrowd: boolean;
     proceduralPlayerMotion: boolean;
     referees: boolean;
@@ -101,7 +105,7 @@ test('reference production frame pacing and structural budgets', async ({ page }
     'camera=offense',
     'cinematics=brief',
     'crowdVisuals=1',
-    'crowdDensity=low',
+    'crowdFullness=full',
     'crowdReactions=1',
     'playerMotion=1',
     'routeArt=1',
@@ -128,7 +132,7 @@ test('reference production frame pacing and structural budgets', async ({ page }
     debugHelpersVisible: await page.locator('.debug-overlay').isVisible(),
     renderer,
     requestedFeatures: {
-      lowDensityCrowd: true,
+      fullCrowdFullness: true,
       measuredCrowd: true,
       proceduralPlayerMotion: true,
       referees: true,
@@ -152,7 +156,8 @@ test('reference production frame pacing and structural budgets', async ({ page }
   expect(structural.gameplay.playerCount).toBe(REFERENCE_STRUCTURAL_BUDGETS.playerCount);
   expect(structural.experience.finalSettings).toMatchObject({
     cinematics: 'brief',
-    crowdDensity: 'low',
+    crowdDensity: 'high',
+    crowdFullness: 'full',
     crowdReactionsEnabled: true,
     crowdVisualsEnabled: true,
     gameplayCamera: 'offense',
@@ -162,7 +167,9 @@ test('reference production frame pacing and structural budgets', async ({ page }
   });
   expect(structural.crowd).toMatchObject({
     actualSpectatorCount: REFERENCE_STRUCTURAL_BUDGETS.crowdSpectatorCount,
-    density: 'low',
+    crowdFullness: 'full',
+    farMosaicSeatCount: 4500,
+    nearInstanceCount: 500,
     visualsEnabled: true,
   });
   expect(structural.renderMetrics.calls).toBeLessThanOrEqual(REFERENCE_STRUCTURAL_BUDGETS.maxDrawCalls);

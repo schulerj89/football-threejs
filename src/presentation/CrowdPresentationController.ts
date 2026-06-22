@@ -1,15 +1,20 @@
 import * as THREE from 'three';
 import type { PresentationAudioEvent } from '../audio/PresentationEventBridge';
 import type { StorageLike } from '../audio/AudioSettings';
-import { CrowdFrameMetrics, countCrowdDrawCalls, countCrowdTriangles, createPerInstanceStorageSnapshot } from '../crowd/CrowdMetrics';
+import {
+  CrowdFrameMetrics,
+  countCrowdDrawCalls,
+  countCrowdTriangles,
+  createPerInstanceStorageSnapshot,
+} from '../crowd/CrowdMetrics';
 import { markInstanceAttributesDirty, setPartMatrix } from '../crowd/CrowdMeshFactory';
 import {
-  CROWD_DENSITY_PRESETS as DENSITY_PRESETS,
   CROWD_PRESENTATION_CONFIG,
   CrowdReactionSequencer,
   DEFAULT_CROWD_PRESENTATION_SETTINGS as DEFAULT_SETTINGS,
   calculateCrowdPose,
   normalizeCrowdPresentationSettings as normalizeSettings,
+  resolveCrowdFullnessProfile,
 } from '../crowd/CrowdReactionModel';
 import { CrowdResourceOwner } from '../crowd/CrowdResourceOwner';
 import type {
@@ -19,6 +24,7 @@ import type {
   CrowdReactionHistoryEntry,
   CrowdReactionState,
 } from '../crowd/CrowdReactionModel';
+import type { CrowdFullness } from '../crowd/CrowdTypes';
 import type { GameplaySnapshot } from '../playState';
 import type { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
 
@@ -28,10 +34,13 @@ export type {
   CrowdReactionHistoryEntry,
   CrowdReactionState,
 } from '../crowd/CrowdReactionModel';
+export type { CrowdFullness } from '../crowd/CrowdTypes';
 export {
   CROWD_DENSITY_PRESETS,
+  CROWD_FULLNESS_PROFILES,
   DEFAULT_CROWD_PRESENTATION_SETTINGS,
   applyCrowdPresentationQuerySettings,
+  isCrowdFullness,
   normalizeCrowdPresentationSettings,
 } from '../crowd/CrowdReactionModel';
 
@@ -39,10 +48,13 @@ export interface CrowdPresentationSnapshot {
   actualSpectatorCount: number;
   averageFrameTimeMs: number;
   crowdDrawCalls: number;
+  crowdFullness: CrowdFullness;
   crowdTriangles: number;
   density: CrowdDensity;
   deterministicSubsets: boolean;
   estimatedInstanceBufferBytes: number;
+  estimatedStaticBufferBytes: number;
+  farMosaicSeatCount: number;
   farInstanceCount: number;
   frameCount: number;
   geometryCount: number;
@@ -79,7 +91,7 @@ export interface CrowdPresentationSnapshot {
 
 interface CrowdPresentationControllerOptions {
   accentColors?: readonly string[];
-  settings: CrowdPresentationSettings;
+  settings: Partial<CrowdPresentationSettings>;
 }
 
 const CROWD_PRESENTATION_STORAGE_KEY = 'football-threejs.crowdPresentationSettings.v1';
@@ -102,10 +114,15 @@ export class CrowdPresentationController {
   constructor({ accentColors = [], settings }: CrowdPresentationControllerOptions) {
     this.settings = normalizeSettings(settings);
     this.accentColorNumbers = accentColors.map(hexToNumber);
+    const profile = resolveCrowdFullnessProfile(this.settings.crowdFullness);
     this.resourceOwner = new CrowdResourceOwner(
-      DENSITY_PRESETS[this.settings.crowdDensity],
+      profile.visualSeatCount,
       'crowd-presentation',
       this.accentColorNumbers,
+      {
+        crowdFullness: profile.crowdFullness,
+        nearCount: profile.nearSpectatorCount,
+      },
     );
     this.resourceOwner.enableDynamicInstanceMatrices();
     this.group = this.resourceOwner.group;
@@ -198,10 +215,13 @@ export class CrowdPresentationController {
       actualSpectatorCount: base.actualSpectatorCount,
       averageFrameTimeMs: frame.averageFrameTimeMs,
       crowdDrawCalls: countCrowdDrawCalls(this.group),
+      crowdFullness: base.crowdFullness,
       crowdTriangles: countCrowdTriangles(this.group),
       density: this.settings.crowdDensity,
       deterministicSubsets: true,
       estimatedInstanceBufferBytes: base.estimatedInstanceBufferBytes,
+      estimatedStaticBufferBytes: base.estimatedStaticBufferBytes,
+      farMosaicSeatCount: base.farMosaicSeatCount,
       farInstanceCount: base.farInstanceCount,
       frameCount: frame.frameCount,
       geometryCount: base.geometryCount,
@@ -218,7 +238,7 @@ export class CrowdPresentationController {
       reactionsEnabled: this.settings.crowdReactionsEnabled,
       rendererMemory: frame.rendererMemory,
       rendererRender: frame.rendererRender,
-      requestedSpectatorCount: DENSITY_PRESETS[this.settings.crowdDensity],
+      requestedSpectatorCount: resolveCrowdFullnessProfile(this.settings.crowdFullness).visualSeatCount,
       settings: { ...this.settings },
       textureCount: base.textureCount,
       visualsEnabled: this.settings.crowdVisualsEnabled,
@@ -230,7 +250,6 @@ export class CrowdPresentationController {
     activeReaction: ActiveCrowdReaction | null,
   ): void {
     this.applyNearInstances(state, activeReaction);
-    this.applyFarInstances(state, activeReaction);
     this.lastRenderedState = state;
     this.reactionUpdateCount += 1;
   }
@@ -271,28 +290,6 @@ export class CrowdPresentationController {
       resources.detailedArmRight,
     );
   }
-
-  private applyFarInstances(
-    state: CrowdReactionState,
-    activeReaction: ActiveCrowdReaction | null,
-  ): void {
-    const matrix = this.scratchMatrix;
-    const resources = this.resourceOwner.resources;
-
-    resources.farPlacements.forEach((placement, index) => {
-      const pose = calculateCrowdPose({
-        activeReaction,
-        index: index + resources.nearPlacements.length,
-        placement,
-        state,
-        timeSeconds: this.reactionTimeSeconds,
-      });
-      setPartMatrix(matrix, placement, 0, 0.45 + pose.verticalOffset * 0.75, 0, 0, placement.scale, 1);
-      resources.farBody.setMatrixAt(index, matrix);
-    });
-
-    markInstanceAttributesDirty(resources.farBody);
-  }
 }
 
 export function loadCrowdPresentationSettings(
@@ -316,7 +313,7 @@ export function loadCrowdPresentationSettings(
 }
 
 export function saveCrowdPresentationSettings(
-  settings: CrowdPresentationSettings,
+  settings: Partial<CrowdPresentationSettings>,
   storage = getLocalStorage(),
 ): void {
   if (!storage) {
@@ -342,7 +339,8 @@ export function syncCrowdPresentationOverlay(
 ): void {
   element.textContent = [
     'CROWD PRESENTATION',
-    `VISUALS ${snapshot.visualsEnabled ? 'on' : 'off'} density ${snapshot.density} count ${snapshot.actualSpectatorCount}`,
+    `VISUALS ${snapshot.visualsEnabled ? 'on' : 'off'} fullness ${snapshot.crowdFullness} count ${snapshot.actualSpectatorCount}`,
+    `LOD near ${snapshot.nearInstanceCount} mosaic ${snapshot.farMosaicSeatCount}`,
     `REACTIONS ${snapshot.reactionsEnabled ? 'on' : 'off'} state ${snapshot.reactionState}`,
     `UPDATES ${snapshot.reactionUpdateCount} @ ${snapshot.reactionUpdateHz}hz`,
     `CALLS ${snapshot.crowdDrawCalls} TRIS ${snapshot.crowdTriangles}`,

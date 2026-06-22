@@ -4,7 +4,11 @@ import type {
 } from '../audio/PresentationEventBridge';
 import { CROWD_BENCHMARK_COUNTS } from './CrowdConfiguration';
 import { stableHash } from './CrowdLayout';
-import type { CrowdPreviewPlacement } from './CrowdTypes';
+import type {
+  CrowdFullness,
+  CrowdFullnessProfile,
+  CrowdPreviewPlacement,
+} from './CrowdTypes';
 
 export type CrowdDensity = 'high' | 'low' | 'medium';
 
@@ -17,6 +21,7 @@ export type CrowdReactionState =
 
 export interface CrowdPresentationSettings {
   crowdDensity: CrowdDensity;
+  crowdFullness: CrowdFullness;
   crowdReactionsEnabled: boolean;
   crowdVisualsEnabled: boolean;
 }
@@ -49,8 +54,39 @@ export const CROWD_DENSITY_PRESETS: Record<CrowdDensity, number> = {
   medium: CROWD_BENCHMARK_COUNTS[1],
 } as const;
 
+export const CROWD_FULLNESS_PROFILES: Readonly<Record<CrowdFullness, CrowdFullnessProfile>> = {
+  full: {
+    crowdFullness: 'full',
+    nearSpectatorCount: CROWD_BENCHMARK_COUNTS[0],
+    visualSeatCount: CROWD_BENCHMARK_COUNTS[2],
+  },
+  sparse: {
+    crowdFullness: 'sparse',
+    nearSpectatorCount: Math.floor(CROWD_BENCHMARK_COUNTS[0] * 0.58),
+    visualSeatCount: CROWD_BENCHMARK_COUNTS[0],
+  },
+  standard: {
+    crowdFullness: 'standard',
+    nearSpectatorCount: CROWD_BENCHMARK_COUNTS[0],
+    visualSeatCount: CROWD_BENCHMARK_COUNTS[1],
+  },
+} as const;
+
+export const CROWD_DENSITY_TO_FULLNESS: Readonly<Record<CrowdDensity, CrowdFullness>> = {
+  high: 'full',
+  low: 'sparse',
+  medium: 'standard',
+} as const;
+
+export const CROWD_FULLNESS_TO_DENSITY: Readonly<Record<CrowdFullness, CrowdDensity>> = {
+  full: 'high',
+  sparse: 'low',
+  standard: 'medium',
+} as const;
+
 export const DEFAULT_CROWD_PRESENTATION_SETTINGS: CrowdPresentationSettings = {
   crowdDensity: 'low',
+  crowdFullness: 'full',
   crowdReactionsEnabled: true,
   crowdVisualsEnabled: false,
 };
@@ -185,10 +221,16 @@ export class CrowdReactionSequencer {
 export function normalizeCrowdPresentationSettings(
   settings: Partial<CrowdPresentationSettings>,
 ): CrowdPresentationSettings {
+  const crowdDensity = isCrowdDensity(settings.crowdDensity)
+    ? settings.crowdDensity
+    : DEFAULT_CROWD_PRESENTATION_SETTINGS.crowdDensity;
   return {
-    crowdDensity: isCrowdDensity(settings.crowdDensity)
-      ? settings.crowdDensity
-      : DEFAULT_CROWD_PRESENTATION_SETTINGS.crowdDensity,
+    crowdDensity,
+    crowdFullness: isCrowdFullness(settings.crowdFullness)
+      ? settings.crowdFullness
+      : isCrowdDensity(settings.crowdDensity)
+        ? CROWD_DENSITY_TO_FULLNESS[crowdDensity]
+        : DEFAULT_CROWD_PRESENTATION_SETTINGS.crowdFullness,
     crowdReactionsEnabled:
       settings.crowdReactionsEnabled ??
       DEFAULT_CROWD_PRESENTATION_SETTINGS.crowdReactionsEnabled,
@@ -205,10 +247,17 @@ export function applyCrowdPresentationQuerySettings(
   const crowdVisualsQuery = searchParams.get('crowdVisuals');
   const crowdReactionsQuery = searchParams.get('crowdReactions');
   const densityQuery = searchParams.get('crowdDensity');
+  const fullnessQuery = searchParams.get('crowdFullness');
+  const queryFullness = isCrowdFullness(fullnessQuery)
+    ? fullnessQuery
+    : isCrowdDensity(densityQuery)
+      ? CROWD_DENSITY_TO_FULLNESS[densityQuery]
+      : settings.crowdFullness;
 
   return normalizeCrowdPresentationSettings({
     ...settings,
     crowdDensity: isCrowdDensity(densityQuery) ? densityQuery : settings.crowdDensity,
+    crowdFullness: queryFullness,
     crowdReactionsEnabled:
       crowdReactionsQuery === '0'
         ? false
@@ -222,6 +271,12 @@ export function applyCrowdPresentationQuerySettings(
           ? true
           : settings.crowdVisualsEnabled,
   });
+}
+
+export function resolveCrowdFullnessProfile(
+  fullness: CrowdFullness,
+): CrowdFullnessProfile {
+  return CROWD_FULLNESS_PROFILES[fullness];
 }
 
 export function calculateCrowdPose(options: {
@@ -381,6 +436,10 @@ function reactionFrequency(state: CrowdReactionState): number {
 
 function isCrowdDensity(value: unknown): value is CrowdDensity {
   return value === 'low' || value === 'medium' || value === 'high';
+}
+
+export function isCrowdFullness(value: unknown): value is CrowdFullness {
+  return value === 'sparse' || value === 'standard' || value === 'full';
 }
 
 function hashToUnit(value: string): number {

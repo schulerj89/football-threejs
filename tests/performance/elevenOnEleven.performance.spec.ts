@@ -50,7 +50,7 @@ const STRICT_PERFORMANCE_GATE = process.env.PERF_STRICT === '1';
 
 const PROFILE_DESCRIPTIONS: Record<string, string> = {
   'crowd-off': '11v11 with visual crowd disabled.',
-  'full-broadcast': '11v11 broadcast profile with low-density crowd, brief cinematics, audio permitted.',
+  'full-broadcast': '11v11 broadcast profile with full crowd fullness, brief cinematics, audio permitted.',
   'motion-off': '11v11 with procedural player motion disabled.',
   'officials-off': '11v11 with presentation-only officials disabled.',
   'players-only': '11v11 players and field with presentation, crowd, route art, and audio disabled.',
@@ -63,7 +63,7 @@ const FULL_BROADCAST_QUERY = {
   audio: '1',
   camera: 'offense',
   cinematics: 'brief',
-  crowdDensity: 'low',
+  crowdFullness: 'full',
   crowdReactions: '1',
   crowdVisuals: '1',
   experience: 'broadcast',

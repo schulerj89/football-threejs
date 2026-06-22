@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { PresentationAudioEvent } from '../src/audio/PresentationEventBridge';
 import {
   CROWD_DENSITY_PRESETS,
+  CROWD_FULLNESS_PROFILES,
   CrowdPresentationController,
   applyCrowdPresentationQuerySettings,
   loadCrowdPresentationSettings,
@@ -17,6 +18,19 @@ describe('crowd presentation controller', () => {
       low: 500,
       medium: 2000,
     });
+    expect(CROWD_FULLNESS_PROFILES).toMatchObject({
+      full: {
+        nearSpectatorCount: 500,
+        visualSeatCount: 5000,
+      },
+      sparse: {
+        visualSeatCount: 500,
+      },
+      standard: {
+        nearSpectatorCount: 500,
+        visualSeatCount: 2000,
+      },
+    });
   });
 
   it('persists settings and applies query overrides', () => {
@@ -24,12 +38,14 @@ describe('crowd presentation controller', () => {
 
     saveCrowdPresentationSettings({
       crowdDensity: 'medium',
+      crowdFullness: 'standard',
       crowdReactionsEnabled: false,
       crowdVisualsEnabled: true,
     }, storage);
 
     expect(loadCrowdPresentationSettings(storage)).toEqual({
       crowdDensity: 'medium',
+      crowdFullness: 'standard',
       crowdReactionsEnabled: false,
       crowdVisualsEnabled: true,
     });
@@ -41,21 +57,26 @@ describe('crowd presentation controller', () => {
       ),
     ).toEqual({
       crowdDensity: 'high',
+      crowdFullness: 'full',
       crowdReactionsEnabled: true,
       crowdVisualsEnabled: false,
     });
   });
 
-  it('uses bounded instanced resources without per-spectator Object3Ds', () => {
+  it('uses bounded near instances and a static far mosaic without per-spectator Object3Ds', () => {
     const controller = createController();
     const snapshot = controller.getSnapshot();
 
-    expect(snapshot.actualSpectatorCount).toBe(500);
+    expect(snapshot.actualSpectatorCount).toBe(5000);
     expect(snapshot.crowdDrawCalls).toBe(5);
     expect(snapshot.geometryCount).toBe(4);
     expect(snapshot.materialCount).toBe(3);
     expect(snapshot.noPerSpectatorObject3D).toBe(true);
-    expect(snapshot.nearInstanceCount + snapshot.farInstanceCount).toBe(500);
+    expect(snapshot.crowdFullness).toBe('full');
+    expect(snapshot.nearInstanceCount).toBe(500);
+    expect(snapshot.farInstanceCount).toBe(0);
+    expect(snapshot.farMosaicSeatCount).toBe(4500);
+    expect(snapshot.estimatedStaticBufferBytes).toBeGreaterThan(0);
     expect(countObjects(controller.group)).toBeLessThan(20);
 
     controller.dispose();
@@ -118,12 +139,29 @@ describe('crowd presentation controller', () => {
 
     controller.dispose();
   });
+
+  it('keeps the far mosaic static while reactions update the near tier', () => {
+    const controller = createController();
+    const farMosaic = controller.group.getObjectByName('crowd-far-seat-mosaic') as THREE.Points;
+    const positionAttribute = farMosaic.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const positionVersion = positionAttribute.version;
+
+    for (let frame = 0; frame < 12; frame += 1) {
+      controller.update(makeSnapshot('live'), [], 1 / 12);
+    }
+
+    expect(controller.getSnapshot().reactionUpdateCount).toBeGreaterThan(0);
+    expect((farMosaic.geometry.getAttribute('position') as THREE.BufferAttribute).version).toBe(positionVersion);
+
+    controller.dispose();
+  });
 });
 
 function createController(): CrowdPresentationController {
   return new CrowdPresentationController({
     settings: {
       crowdDensity: 'low',
+      crowdFullness: 'full',
       crowdReactionsEnabled: true,
       crowdVisualsEnabled: true,
     },

@@ -33,7 +33,6 @@ export {
 export { createCrowdPlacements, stableHash } from './crowd/CrowdLayout';
 export {
   applyDetailedInstances,
-  applyFarInstances,
   createCrowdResources,
   markInstanceAttributesDirty,
   resolveSkinColor,
@@ -195,7 +194,7 @@ export function syncCrowdPreviewOverlay(
     'CROWD PREVIEW',
     `REQUESTED ${snapshot.requestedSpectatorCount}`,
     `ACTUAL ${snapshot.actualSpectatorCount}`,
-    `LOD near ${snapshot.nearInstanceCount} far ${snapshot.farInstanceCount}`,
+    `LOD near ${snapshot.nearInstanceCount} mosaic ${snapshot.farMosaicSeatCount}`,
     `CAM ${snapshot.cameraView}`,
     `CROWD_CALLS ${snapshot.crowdDrawCalls}`,
     `CROWD_TRIS ${snapshot.crowdTriangles}`,
@@ -203,6 +202,7 @@ export function syncCrowdPreviewOverlay(
     `MATS ${snapshot.materialCount}`,
     `TEX ${snapshot.textureCount}`,
     `INSTANCE_BYTES ${snapshot.estimatedInstanceBufferBytes}`,
+    `STATIC_BYTES ${snapshot.estimatedStaticBufferBytes}`,
     `PER_INSTANCE matrix ${snapshot.perInstanceStorage.transformMatrixBytes} color ${snapshot.perInstanceStorage.colorBytes} reaction ${snapshot.perInstanceStorage.customReactionDataBytes}`,
     `AVG_FRAME_MS ${snapshot.averageFrameTimeMs.toFixed(2)}`,
     `MIN_FPS ${snapshot.minimumObservedFps.toFixed(1)}`,
@@ -239,6 +239,7 @@ function createBenchmarkReport(snapshot: CrowdPreviewSnapshot): CrowdPreviewBenc
     crowdDrawCalls: snapshot.crowdDrawCalls,
     crowdTriangles: snapshot.crowdTriangles,
     estimatedInstanceBufferBytes: snapshot.estimatedInstanceBufferBytes,
+    estimatedStaticBufferBytes: snapshot.estimatedStaticBufferBytes,
     frameCount: snapshot.frameCount,
     minimumObservedFps: snapshot.minimumObservedFps,
     requestedSpectatorCount: snapshot.requestedSpectatorCount,

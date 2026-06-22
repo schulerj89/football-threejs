@@ -97,7 +97,7 @@ export const PERFORMANCE_REFERENCE_PROFILE = {
 export const PERFORMANCE_RING_BUFFER_CAPACITY = 4_096;
 
 export const PERFORMANCE_STRUCTURAL_BUDGETS = {
-  crowdSpectatorCount: 500,
+  crowdSpectatorCount: 5000,
   maxCrowdDrawCalls: 8,
   maxDrawCalls: 450,
   maxGeometries: 180,

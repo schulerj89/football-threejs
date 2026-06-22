@@ -926,6 +926,11 @@ export class FootballApplication {
       this.applyExperienceSettings({
         ...this.gameExperience.settings,
         crowdDensity,
+        crowdFullness: crowdDensity === 'high'
+          ? 'full'
+          : crowdDensity === 'medium'
+            ? 'standard'
+            : 'sparse',
       }, { persist: true });
     });
   }

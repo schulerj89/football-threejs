@@ -129,17 +129,22 @@ export class SceneRuntime {
         crowdInstanceCount += object.count;
       }
 
-      if (!(object instanceof THREE.Mesh)) {
+      if (!(object instanceof THREE.Mesh || object instanceof THREE.Points)) {
         return;
       }
 
-      sceneMeshCount += 1;
+      if (object instanceof THREE.Mesh) {
+        sceneMeshCount += 1;
+      }
       if (object.visible) {
         visibleMeshCount += 1;
       }
       const materials = getMaterials(object.material);
       for (const material of materials) {
         sceneMaterials.add(material.uuid);
+      }
+      if (!(object instanceof THREE.Mesh)) {
+        return;
       }
       if (isFootballObject(object)) {
         footballMeshCount += 1;

@@ -8,7 +8,7 @@ The fixed reference profile is measured in production Chromium through `vite pre
 
 - Viewport: `1920 x 1080`, device scale factor `1`.
 - Gameplay: 11v11 active, default Inside Zone 11 / Spread Quick 11 playbook.
-- Presentation: offense camera, brief cinematics, low-density measured crowd, stadium enabled, procedural player motion enabled, debug helpers disabled.
+- Presentation: offense camera, brief cinematics, full measured crowd fullness, stadium enabled, procedural player motion enabled, debug helpers disabled.
 - Sampling: 3-second warm-up, at least 12 seconds per scenario, hidden-tab frames ignored.
 - Profiler runs use `quality=locked-broadcast` so adaptive quality cannot hide fixed-profile cost.
 
@@ -48,7 +48,7 @@ Budgets are based on the measured optimized reference build plus a small margin:
 - Crowd draw calls: `8`.
 - Stadium draw-call estimate: `4`.
 - Active gameplay players: `22`.
-- Low-density crowd spectators: `500`.
+- Crowd visible seats: `5000`, with a bounded `500`-spectator reacting near tier and static far-bowl mosaic.
 
 Do not raise these budgets without rerunning the fixed reference profile and recording the measured reason.
 
@@ -66,8 +66,8 @@ Query overrides:
 
 ## Adaptive Tiers
 
-- Broadcast High: pixel ratio cap `2`, measured low-density crowd, crowd reactions enabled.
-- Balanced: pixel ratio cap `1.5`, same measured low-density crowd, crowd reactions enabled.
+- Broadcast High: pixel ratio cap `2`, measured full crowd fullness, crowd reactions enabled.
+- Balanced: pixel ratio cap `1.5`, same measured full crowd fullness, crowd reactions enabled.
 - Performance: pixel ratio cap `1`, visual crowd disabled, crowd reactions disabled.
 
 Adaptive quality can reduce only render pixel ratio and crowd presentation. It must never change gameplay player count, roster, simulation results, collision precision, ball trajectory, route progression, blocking assignments, score, drive state, controlled-player input, or camera focus target.

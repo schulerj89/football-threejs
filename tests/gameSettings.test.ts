@@ -23,6 +23,7 @@ describe('game settings facade', () => {
       audioEnabled: true,
       cinematics: 'brief',
       crowdDensity: 'low',
+      crowdFullness: 'full',
       crowdVisualsEnabled: true,
       debugToolsEnabled: false,
       officialsDebugLabels: false,
@@ -137,6 +138,7 @@ describe('game settings facade', () => {
     expect(resolved.settings).toMatchObject({
       audioEnabled: false,
       crowdDensity: 'high',
+      crowdFullness: 'full',
       debugToolsEnabled: false,
       gameplayCamera: 'cinematic',
       masterVolume: 0.37,

@@ -9,6 +9,7 @@ export interface CrowdPreviewBenchmarkReport {
   crowdDrawCalls: number;
   crowdTriangles: number;
   estimatedInstanceBufferBytes: number;
+  estimatedStaticBufferBytes: number;
   frameCount: number;
   minimumObservedFps: number;
   requestedSpectatorCount: number;
@@ -29,8 +30,11 @@ export interface CrowdPreviewSnapshot {
   };
   cameraView: CrowdPreviewCameraView;
   crowdDrawCalls: number;
+  crowdFullness: CrowdFullness;
   crowdTriangles: number;
   estimatedInstanceBufferBytes: number;
+  estimatedStaticBufferBytes: number;
+  farMosaicSeatCount: number;
   farInstanceCount: number;
   frameCount: number;
   gameplayPlayerCount: number;
@@ -89,8 +93,11 @@ export interface CrowdRendererRenderSnapshot {
 export interface CrowdResourceSnapshotBase {
   actualSpectatorCount: number;
   crowdDrawCalls: number;
+  crowdFullness: CrowdFullness;
   crowdTriangles: number;
   estimatedInstanceBufferBytes: number;
+  estimatedStaticBufferBytes: number;
+  farMosaicSeatCount: number;
   farInstanceCount: number;
   geometryCount: number;
   materialCount: number;
@@ -103,11 +110,19 @@ export interface CrowdResources {
   detailedArmRight: THREE.InstancedMesh;
   detailedHead: THREE.InstancedMesh;
   detailedTorso: THREE.InstancedMesh;
-  farBody: THREE.InstancedMesh;
+  farMosaic: THREE.Points;
   farPlacements: readonly CrowdPreviewPlacement[];
   geometries: THREE.BufferGeometry[];
   group: THREE.Group;
   materials: THREE.Material[];
   nearPlacements: readonly CrowdPreviewPlacement[];
   snapshotBase: CrowdResourceSnapshotBase;
+}
+
+export type CrowdFullness = 'full' | 'sparse' | 'standard';
+
+export interface CrowdFullnessProfile {
+  crowdFullness: CrowdFullness;
+  nearSpectatorCount: number;
+  visualSeatCount: number;
 }

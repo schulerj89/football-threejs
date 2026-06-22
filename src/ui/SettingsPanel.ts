@@ -11,7 +11,7 @@ import type {
   ExhibitionGameMode,
   MatchDifficulty,
 } from '../match/MatchTypes';
-import type { CrowdDensity } from '../presentation/CrowdPresentationController';
+import type { CrowdDensity, CrowdFullness } from '../presentation/CrowdPresentationController';
 import type { QualityMode } from '../performance/QualityProfile';
 import { getPlaybookOptions } from '../playbook';
 import type { PlaybookId } from '../roster';
@@ -174,10 +174,10 @@ export class SettingsPanel {
       ]),
       this.createCheckboxRow('Crowd visuals', this.crowdVisualsInput),
       this.createCheckboxRow('Stadium', this.stadiumInput),
-      this.createSelectRow('Crowd density', this.crowdDensitySelect, [
-        ['low', 'Low'],
-        ['medium', 'Medium'],
-        ['high', 'High'],
+      this.createSelectRow('Crowd fullness', this.crowdDensitySelect, [
+        ['sparse', 'Sparse'],
+        ['standard', 'Standard'],
+        ['full', 'Full'],
       ]),
       this.createCheckboxRow('Crowd reactions', this.crowdReactionsInput),
       this.createCheckboxRow('Sideline teams', this.sidelinePlayersInput),
@@ -353,7 +353,11 @@ export class SettingsPanel {
       this.updateCustomSettings({ stadiumEnabled: this.stadiumInput.checked });
     });
     this.crowdDensitySelect.addEventListener('change', () => {
-      this.updateCustomSettings({ crowdDensity: this.crowdDensitySelect.value as CrowdDensity });
+      const crowdFullness = this.crowdDensitySelect.value as CrowdFullness;
+      this.updateCustomSettings({
+        crowdDensity: toLegacyCrowdDensity(crowdFullness),
+        crowdFullness,
+      });
     });
     this.crowdReactionsInput.addEventListener('change', () => {
       this.updateCustomSettings({ crowdReactionsEnabled: this.crowdReactionsInput.checked });
@@ -442,7 +446,7 @@ export class SettingsPanel {
     this.cinematicsSelect.value = this.settings.cinematics;
     this.crowdVisualsInput.checked = this.settings.crowdVisualsEnabled;
     this.stadiumInput.checked = this.settings.stadiumEnabled;
-    this.crowdDensitySelect.value = this.settings.crowdDensity;
+    this.crowdDensitySelect.value = this.settings.crowdFullness;
     this.crowdReactionsInput.checked = this.settings.crowdReactionsEnabled;
     this.sidelinePlayersInput.checked = this.settings.sidelinePlayersEnabled;
     this.sidelineDensitySelect.value = this.settings.sidelineDensity;
@@ -504,4 +508,16 @@ function getGameplayCameraDescription(mode: ExperienceCameraMode): string {
   }
 
   return 'Behind-offense gameplay camera; post-score presentation optional.';
+}
+
+function toLegacyCrowdDensity(fullness: CrowdFullness): CrowdDensity {
+  if (fullness === 'full') {
+    return 'high';
+  }
+
+  if (fullness === 'standard') {
+    return 'medium';
+  }
+
+  return 'low';
 }

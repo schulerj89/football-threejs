@@ -498,6 +498,7 @@ interface CrowdPreviewSnapshot {
       crowdDrawCalls: number;
       crowdTriangles: number;
       estimatedInstanceBufferBytes: number;
+      estimatedStaticBufferBytes: number;
       frameCount: number;
       minimumObservedFps: number;
       requestedSpectatorCount: number;
@@ -506,9 +507,12 @@ interface CrowdPreviewSnapshot {
   };
   cameraView: 'close' | 'endZone' | 'sideline' | 'wide';
   crowdDrawCalls: number;
+  crowdFullness: 'full' | 'sparse' | 'standard';
   crowdTriangles: number;
   estimatedInstanceBufferBytes: number;
+  estimatedStaticBufferBytes: number;
   farInstanceCount: number;
+  farMosaicSeatCount: number;
   frameCount: number;
   gameplayPlayerCount: number;
   geometryCount: number;
@@ -532,11 +536,14 @@ interface CrowdPresentationSnapshot {
   actualSpectatorCount: number;
   averageFrameTimeMs: number;
   crowdDrawCalls: number;
+  crowdFullness: 'full' | 'sparse' | 'standard';
   crowdTriangles: number;
   density: 'high' | 'low' | 'medium';
   deterministicSubsets: boolean;
   estimatedInstanceBufferBytes: number;
+  estimatedStaticBufferBytes: number;
   farInstanceCount: number;
+  farMosaicSeatCount: number;
   frameCount: number;
   geometryCount: number;
   materialCount: number;
@@ -1250,8 +1257,11 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   expect(stadium.drawCalls).toBeGreaterThan(0);
   const crowd = await getCrowdPresentationSnapshot(page);
   expect(crowd).toMatchObject({
-    actualSpectatorCount: 500,
+    actualSpectatorCount: 5000,
+    crowdFullness: 'full',
     density: 'low',
+    farMosaicSeatCount: 4500,
+    nearInstanceCount: 500,
     visualsEnabled: true,
   });
   const officials = await getOfficialsSnapshot(page);
@@ -1661,7 +1671,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     customSettings: null,
     preset: 'broadcast',
     settings: null,
-    version: 9,
+    version: 10,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({
@@ -1701,7 +1711,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
   });
   expect(experience.assetReadiness).toMatchObject({
     audioEnabled: true,
-    crowdSpectatorCount: 500,
+    crowdSpectatorCount: 5000,
     crowdVisualsAllocated: true,
   });
   const stadium = await getStadiumSnapshot(page);
@@ -1735,7 +1745,7 @@ test('renders the development crowd preview with bounded instanced resources', a
   const initial = await getCrowdPreviewSnapshot(page);
   expect(initial.requestedSpectatorCount).toBe(5000);
   expect(initial.actualSpectatorCount).toBe(5000);
-  expect(initial.nearInstanceCount + initial.farInstanceCount).toBe(5000);
+  expect(initial.nearInstanceCount + initial.farMosaicSeatCount).toBe(5000);
   expect(initial.gameplayPlayerCount).toBe(0);
   expect(initial.crowdDrawCalls).toBe(5);
   expect(initial.geometryCount).toBe(4);
@@ -1745,7 +1755,7 @@ test('renders the development crowd preview with bounded instanced resources', a
   expect(initial.perInstanceStorage).toMatchObject({
     colorBytes: 12,
     customReactionDataBytes: 0,
-    farMeshesPerSpectator: 1,
+    farMeshesPerSpectator: 0,
     nearMeshesPerSpectator: 4,
     transformMatrixBytes: 64,
   });
@@ -1771,6 +1781,7 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
   const crowd = await getCrowdPresentationSnapshot(page);
   expect(crowd).toMatchObject({
     actualSpectatorCount: 500,
+    crowdFullness: 'sparse',
     crowdDrawCalls: 5,
     density: 'low',
     deterministicSubsets: true,
@@ -1778,7 +1789,7 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
     reactionsEnabled: true,
     visualsEnabled: true,
   });
-  expect(crowd.nearInstanceCount + crowd.farInstanceCount).toBe(500);
+  expect(crowd.nearInstanceCount + crowd.farMosaicSeatCount).toBe(500);
   expect(crowd.reactionUpdateHz).toBeLessThanOrEqual(15);
 
   const audit = await getPresentationHardeningAuditSnapshot(page);

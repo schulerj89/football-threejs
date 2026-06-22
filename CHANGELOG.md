@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.15.0] - 2026-06-22
+
+### Added
+
+- Added visual crowd fullness profiles (`sparse`, `standard`, `full`) with the broadcast profile now using a measured full-stadium presentation: 500 reacting lower-bowl spectators plus 4,500 static seat-mosaic spectators.
+- Added a static far/upper-bowl crowd mosaic generated from stadium `SeatLayout` transforms, preserving deterministic section occupancy without adding gameplay objects or per-spectator `Object3D`s.
+
+### Changed
+
+- Reworked normal crowd presentation so reactions update only the bounded near InstancedMesh tier while the far mosaic remains static, reducing dynamic instance-buffer uploads at higher visual fullness.
+- Updated runtime/debug/resource metrics, memory profiling, crowd preview, adaptive-quality settings, and reference performance budgets to account separately for near instance buffers and static crowd-mosaic buffers.
+
+### Tests
+
+- Added deterministic crowd-distribution and static-mosaic regression coverage, updated browser smoke/readback expectations, and verified the full unit suite, production build, browser smoke suite, and reference performance benchmark.
+- Measured the current pre-change crowd cost at 500, 2,000, and 5,000 spectators; the final reference profile passes at 5,000 visible seats with 5 crowd draw calls, 40,000 crowd triangles, 152,000 dynamic instance bytes, and 108,000 static mosaic bytes.
+
 ## [1.14.0] - 2026-06-22
 
 ### Added

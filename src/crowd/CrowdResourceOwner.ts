@@ -1,14 +1,28 @@
 import * as THREE from 'three';
 import { applyCrowdAccentColors, createCrowdResources } from './CrowdMeshFactory';
+import type { CrowdFullness } from './CrowdTypes';
 import type { CrowdResources } from './CrowdTypes';
 
 export class CrowdResourceOwner {
   private currentResources: CrowdResources;
   private accentColors: readonly number[];
+  private crowdFullness: CrowdFullness;
+  private nearCount: number | undefined;
 
-  constructor(requestedCount: number, groupName: string, accentColors: readonly number[] = []) {
+  constructor(
+    requestedCount: number,
+    groupName: string,
+    accentColors: readonly number[] = [],
+    options: { crowdFullness?: CrowdFullness; nearCount?: number } = {},
+  ) {
     this.accentColors = accentColors;
-    this.currentResources = createCrowdResources(requestedCount, { accentColors });
+    this.crowdFullness = options.crowdFullness ?? 'sparse';
+    this.nearCount = options.nearCount;
+    this.currentResources = createCrowdResources(requestedCount, {
+      accentColors,
+      crowdFullness: this.crowdFullness,
+      nearCount: this.nearCount,
+    });
     this.currentResources.group.name = groupName;
   }
 
@@ -24,6 +38,8 @@ export class CrowdResourceOwner {
     this.dispose();
     this.currentResources = createCrowdResources(requestedCount, {
       accentColors: this.accentColors,
+      crowdFullness: this.crowdFullness,
+      nearCount: this.nearCount,
     });
     this.currentResources.group.name = groupName;
     return this.currentResources;
@@ -40,7 +56,6 @@ export class CrowdResourceOwner {
       this.currentResources.detailedHead,
       this.currentResources.detailedArmLeft,
       this.currentResources.detailedArmRight,
-      this.currentResources.farBody,
     ];
 
     for (const mesh of meshes) {

@@ -39,7 +39,7 @@ export const QUALITY_PROFILES: Readonly<Record<QualityTier, QualityProfileSnapsh
     displayName: 'Broadcast High',
     maxPixelRatio: 2,
     measuredBasis:
-      'Passing 11v11 broadcast reference: 500 spectators, 376 calls, 194500 triangles.',
+      'Passing 11v11 broadcast reference: 500 reacting spectators plus 4500 static mosaic seats.',
     tier: 'broadcastHigh',
   },
   balanced: {
@@ -49,7 +49,7 @@ export const QUALITY_PROFILES: Readonly<Record<QualityTier, QualityProfileSnapsh
     displayName: 'Balanced',
     maxPixelRatio: 1.5,
     measuredBasis:
-      'Uses the measured low-density crowd and reduces only render scale.',
+      'Preserves static crowd fullness and reduces only render scale.',
     tier: 'balanced',
   },
   performance: {

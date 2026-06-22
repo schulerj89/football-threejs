@@ -79,7 +79,7 @@ export function collectSceneStructureMetrics(
       crowdInstanceCount += object.count;
     }
 
-    if (!(object instanceof THREE.Mesh)) {
+    if (!(object instanceof THREE.Mesh || object instanceof THREE.Points)) {
       return;
     }
 
@@ -89,6 +89,10 @@ export function collectSceneStructureMetrics(
 
     if (object.visible) {
       visibleMeshCount += 1;
+    }
+
+    if (!(object instanceof THREE.Mesh)) {
+      return;
     }
 
     if (isOfficialObject(object)) {

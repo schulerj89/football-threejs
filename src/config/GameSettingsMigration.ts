@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 9;
+export const GAME_SETTINGS_SCHEMA_VERSION = 10;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -43,6 +43,7 @@ function migrateOfficialSettings(value: unknown): unknown {
     return {
       ...value,
       controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
+      crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
       gameMode: value.gameMode ?? 'exhibition',
       matchDifficulty: value.matchDifficulty ?? 'pro',
       musicVolume: value.musicVolume ?? 0.72,
@@ -61,6 +62,7 @@ function migrateOfficialSettings(value: unknown): unknown {
     return {
       ...value,
       controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
+      crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
       gameMode: value.gameMode ?? 'exhibition',
       matchDifficulty: value.matchDifficulty ?? 'pro',
       musicVolume: value.musicVolume ?? 0.72,
@@ -78,6 +80,7 @@ function migrateOfficialSettings(value: unknown): unknown {
   return {
     ...value,
     controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
+    crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
     gameMode: value.gameMode ?? 'exhibition',
     matchDifficulty: value.matchDifficulty ?? 'pro',
     musicVolume: value.musicVolume ?? 0.72,
@@ -89,4 +92,16 @@ function migrateOfficialSettings(value: unknown): unknown {
     sidelinePlayersEnabled: value.sidelinePlayersEnabled ?? true,
     tunnelTableauEnabled: value.tunnelTableauEnabled ?? true,
   };
+}
+
+function migrateCrowdDensityToFullness(value: unknown): 'full' | 'sparse' | 'standard' {
+  if (value === 'high') {
+    return 'full';
+  }
+
+  if (value === 'medium') {
+    return 'standard';
+  }
+
+  return 'sparse';
 }

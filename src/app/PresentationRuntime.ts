@@ -1075,6 +1075,7 @@ function areCrowdSettingsEqual(
   b: CrowdPresentationSettings,
 ): boolean {
   return a.crowdDensity === b.crowdDensity &&
+    a.crowdFullness === b.crowdFullness &&
     a.crowdReactionsEnabled === b.crowdReactionsEnabled &&
     a.crowdVisualsEnabled === b.crowdVisualsEnabled;
 }
@@ -1085,6 +1086,7 @@ function resolveEffectiveCrowdSettings(
 ): CrowdPresentationSettings {
   return {
     crowdDensity: minCrowdDensity(base.crowdDensity, quality.crowdDensity),
+    crowdFullness: base.crowdFullness,
     crowdReactionsEnabled: base.crowdReactionsEnabled && quality.crowdReactionsEnabled,
     crowdVisualsEnabled: base.crowdVisualsEnabled && quality.crowdVisualsEnabled,
   };

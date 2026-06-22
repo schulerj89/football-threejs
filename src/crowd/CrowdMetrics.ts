@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import {
   CUSTOM_REACTION_BYTES,
+  FAR_MOSAIC_COLOR_BYTES,
+  FAR_MOSAIC_VERTEX_BYTES,
   FAR_MESHES_PER_SPECTATOR,
   INSTANCE_COLOR_BYTES,
   NEAR_MESHES_PER_SPECTATOR,
@@ -83,6 +85,10 @@ export function estimateInstanceBufferBytes(nearCount: number, farCount: number)
   );
 }
 
+export function estimateStaticCrowdBufferBytes(farMosaicSeatCount: number): number {
+  return farMosaicSeatCount * (FAR_MOSAIC_VERTEX_BYTES + FAR_MOSAIC_COLOR_BYTES);
+}
+
 export function createCrowdMemoryBudgetSnapshot(
   snapshot: CrowdResourceSnapshotBase,
 ): {
@@ -112,7 +118,7 @@ export function countCrowdDrawCalls(group: THREE.Group): number {
   let drawCalls = 0;
 
   group.traverse((object) => {
-    if (object instanceof THREE.Mesh && object.visible) {
+    if ((object instanceof THREE.Mesh || object instanceof THREE.Points) && object.visible) {
       drawCalls += 1;
     }
   });

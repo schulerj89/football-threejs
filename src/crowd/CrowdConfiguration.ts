@@ -10,9 +10,11 @@ export const TRANSFORM_MATRIX_BYTES = 16 * Float32Array.BYTES_PER_ELEMENT;
 export const INSTANCE_COLOR_BYTES = 3 * Float32Array.BYTES_PER_ELEMENT;
 export const CUSTOM_REACTION_BYTES = 0;
 export const NEAR_MESHES_PER_SPECTATOR = 4;
-export const FAR_MESHES_PER_SPECTATOR = 1;
+export const FAR_MESHES_PER_SPECTATOR = 0;
 export const NEAR_LOD_RATIO = 0.58;
 export const NEAR_LOD_MAX = 2_500;
+export const FAR_MOSAIC_VERTEX_BYTES = 3 * Float32Array.BYTES_PER_ELEMENT;
+export const FAR_MOSAIC_COLOR_BYTES = 3 * Float32Array.BYTES_PER_ELEMENT;
 
 export const CROWD_PREVIEW_CONFIG = {
   endZone: {

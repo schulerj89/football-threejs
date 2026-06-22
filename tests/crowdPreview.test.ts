@@ -42,6 +42,24 @@ describe('crowd preview', () => {
     expect(first.every((placement) => placement.row >= 0 && placement.seatIndex >= 0)).toBe(true);
   });
 
+  it('distributes full crowd fullness across real unique stadium seats', () => {
+    const placements = createCrowdPlacements(5000, { nearCount: 500 });
+    const seatKeys = new Set(placements.map((placement) =>
+      `${placement.stand}:${placement.tier}:${placement.row}:${placement.seatIndex}`));
+    const sectionCounts = new Map<string, number>();
+
+    for (const placement of placements) {
+      sectionCounts.set(placement.stand, (sectionCounts.get(placement.stand) ?? 0) + 1);
+    }
+
+    expect(seatKeys.size).toBe(placements.length);
+    expect(placements.filter((placement) => placement.lod === 'near')).toHaveLength(500);
+    expect(placements.filter((placement) => placement.lod === 'far')).toHaveLength(4500);
+    expect([...sectionCounts.values()].every((count) => count > 0)).toBe(true);
+    expect(sectionCounts.size).toBeGreaterThanOrEqual(6);
+    expect(placements).toEqual(createCrowdPlacements(5000, { nearCount: 500 }));
+  });
+
   it('uses bounded instanced resources for ten thousand spectators', () => {
     const controller = new CrowdPreviewController({
       height: 720,
@@ -56,24 +74,26 @@ describe('crowd preview', () => {
     expect(snapshot.requestedSpectatorCount).toBe(10_000);
     expect(snapshot.actualSpectatorCount).toBe(10_000);
     expect(snapshot.nearInstanceCount).toBe(2500);
-    expect(snapshot.farInstanceCount).toBe(7500);
-    expect(snapshot.nearInstanceCount + snapshot.farInstanceCount).toBe(10_000);
+    expect(snapshot.farInstanceCount).toBe(0);
+    expect(snapshot.farMosaicSeatCount).toBe(7500);
+    expect(snapshot.nearInstanceCount + snapshot.farMosaicSeatCount).toBe(10_000);
     expect(snapshot.crowdDrawCalls).toBe(5);
     expect(snapshot.geometryCount).toBe(4);
     expect(snapshot.materialCount).toBe(3);
     expect(snapshot.textureCount).toBe(0);
-    expect(instancedMeshCount).toBe(5);
+    expect(instancedMeshCount).toBe(4);
     expect(sceneObjectCount).toBeLessThan(20);
     expect(snapshot.perInstanceStorage).toMatchObject({
       colorBytes: 12,
       customReactionDataBytes: 0,
-      farMeshesPerSpectator: 1,
+      farMeshesPerSpectator: 0,
       nearMeshesPerSpectator: 4,
       transformMatrixBytes: 64,
     });
     expect(snapshot.estimatedInstanceBufferBytes).toBe(
-      2500 * 4 * (64 + 12) + 7500 * (64 + 12),
+      2500 * 4 * (64 + 12),
     );
+    expect(snapshot.estimatedStaticBufferBytes).toBe(7500 * (12 + 12));
     expect(snapshot.gameplayPlayerCount).toBe(0);
 
     controller.dispose();
@@ -109,6 +129,7 @@ describe('crowd preview', () => {
       10_000,
     ]);
     expect(snapshot.benchmark.reports.every((report) => report.crowdDrawCalls === 5)).toBe(true);
+    expect(snapshot.benchmark.reports[2].crowdTriangles).toBeLessThan(230000);
     expect(snapshot.benchmark.reports[0]).toMatchObject({
       actualSpectatorCount: 500,
       requestedSpectatorCount: 500,
@@ -128,7 +149,7 @@ describe('crowd preview', () => {
     const materials = new Set<THREE.Material>();
 
     controller.group.traverse((object) => {
-      if (!(object instanceof THREE.Mesh)) {
+      if (!(object instanceof THREE.Mesh || object instanceof THREE.Points)) {
         return;
       }
 

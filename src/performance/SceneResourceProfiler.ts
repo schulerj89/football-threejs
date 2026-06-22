@@ -76,7 +76,7 @@ export function createSceneResourceProfileSnapshot({
     const state = subsystemStates.get(subsystem)!;
     state.objectCount += 1;
 
-    if (!(object instanceof THREE.Mesh)) {
+    if (!(object instanceof THREE.Mesh || object instanceof THREE.Points)) {
       return;
     }
 

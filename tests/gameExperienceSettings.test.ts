@@ -25,6 +25,7 @@ describe('game experience settings', () => {
     });
     expect(resolved.crowdPresentationSettings).toMatchObject({
       crowdDensity: 'low',
+      crowdFullness: 'full',
       crowdReactionsEnabled: true,
       crowdVisualsEnabled: true,
     });
@@ -65,6 +66,7 @@ describe('game experience settings', () => {
       ...BROADCAST_EXPERIENCE_SETTINGS,
       captionsEnabled: true,
       crowdDensity: 'medium',
+      crowdFullness: 'standard',
       crowdVisualsEnabled: false,
       gameplayCamera: 'cinematic',
       preset: 'custom',
@@ -79,6 +81,7 @@ describe('game experience settings', () => {
     expect(resolved.settings).toMatchObject({
       captionsEnabled: true,
       crowdDensity: 'medium',
+      crowdFullness: 'standard',
       crowdVisualsEnabled: false,
       gameplayCamera: 'cinematic',
       preset: 'custom',
@@ -126,6 +129,7 @@ describe('game experience settings', () => {
       captionsEnabled: true,
       cinematics: 'full',
       crowdDensity: 'high',
+      crowdFullness: 'full',
       crowdVisualsEnabled: true,
       gameplayCamera: 'cinematic',
       gameMode: 'scoreAttack',
@@ -142,6 +146,7 @@ describe('game experience settings', () => {
       announcerEnabled: false,
       captionsEnabled: true,
       crowdDensity: 'high',
+      crowdFullness: 'full',
       crowdVisualsEnabled: true,
       gameplayCamera: 'cinematic',
       gameMode: 'scoreAttack',

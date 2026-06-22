@@ -5,18 +5,21 @@ import {
   countCrowdDrawCalls,
   countCrowdTriangles,
   estimateInstanceBufferBytes,
+  estimateStaticCrowdBufferBytes,
 } from './CrowdMetrics';
 import type { CrowdPreviewPlacement, CrowdResources } from './CrowdTypes';
 
 export interface CrowdColorOptions {
   accentColors?: readonly number[];
+  crowdFullness?: CrowdResources['snapshotBase']['crowdFullness'];
+  nearCount?: number;
 }
 
 export function createCrowdResources(
   requestedCount: number,
   options: CrowdColorOptions = {},
 ): CrowdResources {
-  const placements = createCrowdPlacements(requestedCount);
+  const placements = createCrowdPlacements(requestedCount, { nearCount: options.nearCount });
   const nearPlacements = placements.filter((placement) => placement.lod === 'near');
   const farPlacements = placements.filter((placement) => placement.lod === 'far');
   const group = new THREE.Group();
@@ -29,8 +32,8 @@ export function createCrowdResources(
   const detailedHead = new THREE.InstancedMesh(geometries.head, materials.skin, nearPlacements.length);
   const detailedArmLeft = new THREE.InstancedMesh(geometries.arm, materials.uniform, nearPlacements.length);
   const detailedArmRight = new THREE.InstancedMesh(geometries.arm, materials.uniform, nearPlacements.length);
-  const farBody = new THREE.InstancedMesh(geometries.farBody, materials.farBody, farPlacements.length);
-  const crowdMeshes = [detailedTorso, detailedHead, detailedArmLeft, detailedArmRight, farBody];
+  const farMosaic = createFarMosaic(farPlacements, materials.farMosaic, options.accentColors);
+  const crowdMeshes = [detailedTorso, detailedHead, detailedArmLeft, detailedArmRight];
 
   for (const mesh of crowdMeshes) {
     mesh.name = `crowd-${mesh.geometry.name || 'instances'}`;
@@ -38,6 +41,9 @@ export function createCrowdResources(
     mesh.userData.crowdPreview = true;
     group.add(mesh);
   }
+  farMosaic.name = 'crowd-far-seat-mosaic';
+  farMosaic.userData.crowdPreview = true;
+  group.add(farMosaic);
 
   applyDetailedInstances(
     nearPlacements,
@@ -47,22 +53,21 @@ export function createCrowdResources(
     detailedArmRight,
     options.accentColors,
   );
-  applyFarInstances(farPlacements, farBody, options.accentColors);
 
   const ownedGeometries = [
     geometries.torso,
     geometries.head,
     geometries.arm,
-    geometries.farBody,
+    farMosaic.geometry,
   ];
-  const ownedMaterials = [materials.uniform, materials.skin, materials.farBody];
+  const ownedMaterials = [materials.uniform, materials.skin, materials.farMosaic];
 
   return {
     detailedArmLeft,
     detailedArmRight,
     detailedHead,
     detailedTorso,
-    farBody,
+    farMosaic,
     farPlacements,
     geometries: ownedGeometries,
     group,
@@ -71,9 +76,12 @@ export function createCrowdResources(
     snapshotBase: {
       actualSpectatorCount: placements.length,
       crowdDrawCalls: countCrowdDrawCalls(group),
+      crowdFullness: options.crowdFullness ?? 'sparse',
       crowdTriangles: countCrowdTriangles(group),
-      estimatedInstanceBufferBytes: estimateInstanceBufferBytes(nearPlacements.length, farPlacements.length),
-      farInstanceCount: farPlacements.length,
+      estimatedInstanceBufferBytes: estimateInstanceBufferBytes(nearPlacements.length, 0),
+      estimatedStaticBufferBytes: estimateStaticCrowdBufferBytes(farPlacements.length),
+      farInstanceCount: 0,
+      farMosaicSeatCount: farPlacements.length,
       geometryCount: ownedGeometries.length,
       materialCount: ownedMaterials.length,
       nearInstanceCount: nearPlacements.length,
@@ -94,12 +102,11 @@ export function applyCrowdAccentColors(
     resources.detailedArmRight,
     accentColors,
   );
-  applyFarInstanceColors(resources.farPlacements, resources.farBody, accentColors);
+  applyFarMosaicColors(resources.farPlacements, resources.farMosaic, accentColors);
 }
 
 function createSharedCrowdGeometries(): {
   arm: THREE.BufferGeometry;
-  farBody: THREE.BufferGeometry;
   head: THREE.BufferGeometry;
   torso: THREE.BufferGeometry;
 } {
@@ -109,23 +116,21 @@ function createSharedCrowdGeometries(): {
   head.name = 'spectator-head';
   const arm = new THREE.CylinderGeometry(0.045, 0.055, CROWD_PREVIEW_CONFIG.spectator.armLength, 5, 1);
   arm.name = 'spectator-arm';
-  const farBody = new THREE.BoxGeometry(
-    CROWD_PREVIEW_CONFIG.spectator.farWidth,
-    CROWD_PREVIEW_CONFIG.spectator.farHeight,
-    0.28,
-  );
-  farBody.name = 'spectator-far-body';
-
-  return { arm, farBody, head, torso };
+  return { arm, head, torso };
 }
 
 function createSharedCrowdMaterials(): {
-  farBody: THREE.Material;
+  farMosaic: THREE.PointsMaterial;
   skin: THREE.Material;
   uniform: THREE.Material;
 } {
   return {
-    farBody: new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }),
+    farMosaic: new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: Math.max(CROWD_PREVIEW_CONFIG.spectator.farWidth, CROWD_PREVIEW_CONFIG.spectator.farHeight),
+      sizeAttenuation: true,
+      vertexColors: true,
+    }),
     skin: new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }),
     uniform: new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }),
   };
@@ -178,6 +183,27 @@ export function applyFarInstances(
   });
 
   applyFarInstanceColors(placements, farBodyMesh, accentColors);
+}
+
+function createFarMosaic(
+  placements: readonly CrowdPreviewPlacement[],
+  material: THREE.PointsMaterial,
+  accentColors: readonly number[] = [],
+): THREE.Points {
+  const geometry = new THREE.BufferGeometry();
+  geometry.name = 'spectator-far-seat-mosaic';
+
+  const positions = new Float32Array(placements.length * 3);
+  placements.forEach((placement, index) => {
+    positions[index * 3] = placement.x;
+    positions[index * 3 + 1] = placement.y + 0.42 * placement.scale;
+    positions[index * 3 + 2] = placement.z;
+  });
+
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const points = new THREE.Points(geometry, material);
+  applyFarMosaicColors(placements, points, accentColors);
+  return points;
 }
 
 export function setPartMatrix(
@@ -250,6 +276,26 @@ function applyFarInstanceColors(
   });
 
   markInstanceAttributesDirty(farBodyMesh);
+}
+
+function applyFarMosaicColors(
+  placements: readonly CrowdPreviewPlacement[],
+  farMosaic: THREE.Points,
+  accentColors: readonly number[],
+): void {
+  const colors = new Float32Array(placements.length * 3);
+  const color = new THREE.Color();
+
+  placements.forEach((placement, index) => {
+    color.setHex(resolveUniformColor(placement.colorSeed, accentColors));
+    const dimmer = 0.72 + ((placement.colorSeed >>> 4) % 19) / 100;
+    colors[index * 3] = color.r * dimmer;
+    colors[index * 3 + 1] = color.g * dimmer;
+    colors[index * 3 + 2] = color.b * dimmer;
+  });
+
+  farMosaic.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  farMosaic.geometry.getAttribute('color').needsUpdate = true;
 }
 
 export function resolveUniformColor(seed: number, accentColors: readonly number[] = []): number {
