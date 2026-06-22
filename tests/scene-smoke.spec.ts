@@ -690,8 +690,10 @@ interface ElevenAuditSnapshot {
 
 interface SevenAuditResetCycleResult {
   after: SevenAuditResetCycleResourceSnapshot;
+  availablePlayIds: string[];
   before: SevenAuditResetCycleResourceSnapshot;
   cycles: number;
+  exercisedPlayIds: string[];
 }
 
 interface SevenAuditResetCycleResourceSnapshot {
@@ -711,8 +713,10 @@ interface SevenAuditResetCycleResourceSnapshot {
 
 interface ElevenAuditResetCycleResult {
   after: ElevenAuditResetCycleResourceSnapshot;
+  availablePlayIds: string[];
   before: ElevenAuditResetCycleResourceSnapshot;
   cycles: number;
+  exercisedPlayIds: string[];
 }
 
 interface ElevenAuditResetCycleResourceSnapshot extends SevenAuditResetCycleResourceSnapshot {
@@ -1868,6 +1872,15 @@ test('runs seven-on-seven audit and reset-cycle resource stability checks', asyn
 });
 
 test('runs eleven-on-eleven audit matrix and reset-cycle resource stability checks', async ({ page }) => {
+  const expectedElevenPlayIds = [
+    'inside-zone-11',
+    'spread-quick-11',
+    'outside-zone-11',
+    'off-tackle-11',
+    'twin-slants-11',
+    'curl-flat-11',
+  ];
+
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=7v7&sevenAudit=1&audio=0&crowdVisuals=0&cinematics=off');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   const sevenBaseline = await getSevenAuditSnapshot(page);
@@ -1907,6 +1920,8 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
 
   const resetCycles = await runElevenAuditResetCycles(page, 100);
   expect(resetCycles.cycles).toBe(100);
+  expect(resetCycles.availablePlayIds).toEqual(expectedElevenPlayIds);
+  expect(resetCycles.exercisedPlayIds).toEqual(expectedElevenPlayIds);
   expect(resetCycles.after.activePlayerRootCount).toBe(22);
   expect(resetCycles.after.visualRootCount).toBe(22);
   expect(resetCycles.after.helmetInstanceCount).toBe(22);
@@ -1936,6 +1951,8 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   expect(crowdAudit.resourceCounts.triangles).toBeGreaterThan(noCrowdAudit.resourceCounts.triangles);
   const integratedResetCycles = await runElevenAuditResetCycles(page, 100);
   expect(integratedResetCycles.cycles).toBe(100);
+  expect(integratedResetCycles.availablePlayIds).toEqual(expectedElevenPlayIds);
+  expect(integratedResetCycles.exercisedPlayIds).toEqual(expectedElevenPlayIds);
   expect(integratedResetCycles.after.activePlayerRootCount).toBe(22);
   expect(integratedResetCycles.after.visualRootCount).toBe(22);
   expect(integratedResetCycles.after.helmetInstanceCount).toBe(22);

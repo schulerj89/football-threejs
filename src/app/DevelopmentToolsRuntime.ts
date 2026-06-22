@@ -155,8 +155,10 @@ export interface SevenAuditResetCycleResourceSnapshot {
 
 export interface SevenAuditResetCycleResult {
   after: SevenAuditResetCycleResourceSnapshot;
+  availablePlayIds: string[];
   before: SevenAuditResetCycleResourceSnapshot;
   cycles: number;
+  exercisedPlayIds: string[];
 }
 
 export interface ElevenAuditResetCycleResourceSnapshot extends SevenAuditResetCycleResourceSnapshot {
@@ -170,8 +172,10 @@ export interface ElevenAuditResetCycleResourceSnapshot extends SevenAuditResetCy
 
 export interface ElevenAuditResetCycleResult {
   after: ElevenAuditResetCycleResourceSnapshot;
+  availablePlayIds: string[];
   before: ElevenAuditResetCycleResourceSnapshot;
   cycles: number;
+  exercisedPlayIds: string[];
 }
 
 export interface FootballDebugApi {

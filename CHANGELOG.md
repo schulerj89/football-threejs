@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.1] - 2026-06-22
+
+### Changed
+
+- Hardened the 11v11 resource-stability audit so reset cycling now exercises every active 11v11 play instead of repeatedly testing only the currently selected play.
+- Added debug-only playbook presentation warm-up before reset-cycle baselines so first-use route-art/card material allocation is separated from true resource leaks.
+
+### Tests
+
+- Added browser smoke assertions that the 11v11 audit loop covers all six normal plays: `Inside Zone 11`, `Spread Quick 11`, `Outside Zone 11`, `Off Tackle 11`, `Twin Slants 11`, and `Curl Flat 11`.
+- Verified `npx vitest run tests/playbook.test.ts tests/playState.test.ts tests/elevenOnElevenAudit.test.ts`, `npm run test:unit`, `npm run build`, `npx playwright test tests/scene-smoke.spec.ts --grep "shows the title screen|runs eleven-on-eleven audit"`, and `npm run test:smoke`.
+
 ## [1.21.0] - 2026-06-22
 
 ### Added

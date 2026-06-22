@@ -7,6 +7,7 @@ import type { ResolvedGameExperienceSettings } from '../config/GameExperienceSet
 import type { MatchSnapshot } from '../match/MatchTypes';
 import {
   resetPlay,
+  selectPlay,
   snapshotGameplayModel,
   startPlay,
 } from '../playState';
@@ -409,10 +410,18 @@ export class ApplicationDiagnostics {
       return null;
     }
     const cycleCount = Math.max(0, Math.min(500, Math.floor(cycles)));
+    const availablePlayIds = gameplay.gameplayModel.availablePlays.map((play) => play.id);
+    const exercisedPlayIds = new Set<string>();
+    this.prepareResetCyclePlaybookAudit(availablePlayIds);
     const before = this.createElevenAuditResetCycleResourceSnapshot();
     for (let cycle = 0; cycle < cycleCount; cycle += 1) {
       if (gameplay.gameplayModel.playState !== 'preSnap') {
         resetPlay(gameplay.gameplayModel);
+      }
+      const playId = availablePlayIds[cycle % availablePlayIds.length];
+      if (playId) {
+        selectPlay(gameplay.gameplayModel, playId);
+        exercisedPlayIds.add(playId);
       }
       startPlay(gameplay.gameplayModel);
       resetPlay(gameplay.gameplayModel);
@@ -425,7 +434,13 @@ export class ApplicationDiagnostics {
       this.options.presentation.skipPresentationHold();
       this.options.presentation.skipPresentation();
     }
-    return { after: this.createElevenAuditResetCycleResourceSnapshot(), before, cycles: cycleCount };
+    return {
+      after: this.createElevenAuditResetCycleResourceSnapshot(),
+      availablePlayIds,
+      before,
+      cycles: cycleCount,
+      exercisedPlayIds: [...exercisedPlayIds],
+    };
   }
 
   private runSevenAuditResetCycles(cycles: number): SevenAuditResetCycleResult | null {
@@ -434,10 +449,18 @@ export class ApplicationDiagnostics {
       return null;
     }
     const cycleCount = Math.max(0, Math.min(500, Math.floor(cycles)));
+    const availablePlayIds = gameplay.gameplayModel.availablePlays.map((play) => play.id);
+    const exercisedPlayIds = new Set<string>();
+    this.prepareResetCyclePlaybookAudit(availablePlayIds);
     const before = this.createSevenAuditResetCycleResourceSnapshot();
     for (let cycle = 0; cycle < cycleCount; cycle += 1) {
       if (gameplay.gameplayModel.playState !== 'preSnap') {
         resetPlay(gameplay.gameplayModel);
+      }
+      const playId = availablePlayIds[cycle % availablePlayIds.length];
+      if (playId) {
+        selectPlay(gameplay.gameplayModel, playId);
+        exercisedPlayIds.add(playId);
       }
       startPlay(gameplay.gameplayModel);
       resetPlay(gameplay.gameplayModel);
@@ -449,7 +472,13 @@ export class ApplicationDiagnostics {
       );
       this.options.presentation.skipPresentation();
     }
-    return { after: this.createSevenAuditResetCycleResourceSnapshot(), before, cycles: cycleCount };
+    return {
+      after: this.createSevenAuditResetCycleResourceSnapshot(),
+      availablePlayIds,
+      before,
+      cycles: cycleCount,
+      exercisedPlayIds: [...exercisedPlayIds],
+    };
   }
 
   private createElevenAuditResetCycleResourceSnapshot() {
@@ -509,6 +538,34 @@ export class ApplicationDiagnostics {
     return this.options.gameplay.getActivePlayers(
       !!this.options.presentation.crowdPreviewController,
     );
+  }
+
+  private prepareResetCyclePlaybookAudit(playIds: readonly string[]): void {
+    const gameplay = this.options.gameplay.gameplayModel;
+    if (gameplay.playState !== 'preSnap') {
+      resetPlay(gameplay);
+    }
+    const originalPlayId = gameplay.selectedPlay.id;
+    for (const playId of playIds) {
+      if (!selectPlay(gameplay, playId)) {
+        continue;
+      }
+      this.syncResetCyclePresentationState();
+    }
+    selectPlay(gameplay, originalPlayId);
+    this.syncResetCyclePresentationState();
+  }
+
+  private syncResetCyclePresentationState(): void {
+    const gameplay = this.options.gameplay.gameplayModel;
+    this.options.playerVisuals.reconcile(this.getActivePlayers());
+    this.options.presentation.syncBall(gameplay.ball);
+    this.options.presentation.runRouteArtUpdate(
+      snapshotGameplayModel(gameplay),
+      gameplay.selectedPlay,
+    );
+    this.options.presentation.skipPresentationHold();
+    this.options.presentation.skipPresentation();
   }
 }
 
