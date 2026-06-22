@@ -359,6 +359,12 @@ export class PresentationRuntime {
     this.cameraController.resetPresentation();
   }
 
+  resetPregamePresentationIdentity(): void {
+    this.pregamePresentationDirector.resetPresentationIdentity();
+    this.broadcastCaptions.hidden = true;
+    this.broadcastCaptions.textContent = '';
+  }
+
   skipPresentation(): void {
     this.cameraController.skipPresentationShot();
     this.gamePresentationRuntime.skipPresentation();

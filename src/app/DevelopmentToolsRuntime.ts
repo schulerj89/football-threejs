@@ -402,7 +402,11 @@ export class DevelopmentToolsRuntime {
       syncPassAuditOverlay(this.passAuditOverlay, frame.gameplaySnapshot.passAudit);
     }
     if (this.pregameDebugOverlay) {
-      syncPregameDebugOverlay(this.pregameDebugOverlay, frame.pregamePresentationSnapshot);
+      syncPregameDebugOverlay(
+        this.pregameDebugOverlay,
+        frame.pregamePresentationSnapshot,
+        frame.renderMetrics,
+      );
     }
     if (this.memoryDebugPanel && frame.memoryDebugSnapshot) {
       this.memoryDebugPanel.sync(frame.memoryDebugSnapshot);

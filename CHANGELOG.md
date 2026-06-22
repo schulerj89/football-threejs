@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.1] - 2026-06-22
+
+### Fixed
+
+- Reset pregame presentation identity when returning to the title screen so a new match can replay the opening quarterback spotlight while same-match duplicate suppression remains intact.
+- Cleared active pregame captions during title return to avoid stale presentation text carrying into the next launch.
+
+### Changed
+
+- Expanded the Pregame F1/debug readback with active team, active subject, title-music state, crowd loop/ducking state, sideline/tunnel counts, presentation clone count, and frame metrics.
+- Added pregame presentation snapshot fields for coordinated opening-flow diagnostics without giving presentation systems gameplay authority.
+
+### Tests
+
+- Added unit coverage for pregame identity reset after returning to title.
+- Extended browser smoke readback coverage for title-to-pregame diagnostics, and reran full unit, build, and smoke validation.
+
 ## [1.7.0] - 2026-06-22
 
 ### Added

@@ -198,13 +198,18 @@ export class PregameAudioCoordinator {
   getSnapshot(): PregameAudioCoordinatorSnapshot {
     this.finishExpiredSpeech();
     const mixerSnapshot = this.mixer.getSnapshot();
+    const titleMusicSnapshot = this.titleMusic.getSnapshot();
     return {
       activeLine: this.activeLine ? serializeActiveLine(this.activeLine, this.mixer.getCurrentTime()) : null,
       completedLineIds: [...this.completedLineIds].sort(),
+      crowdActiveLoopIds: mixerSnapshot.activeLoops.filter((assetId) => assetId.startsWith('crowd_')),
+      crowdDuckingGain: mixerSnapshot.crowdDuckingGain,
       crowdGain: mixerSnapshot.busGains.crowd,
       failedLineIds: [...this.failedLineIds].sort(),
       history: this.history.map((entry) => ({ ...entry })),
-      musicGain: this.titleMusic.getSnapshot().loopGain,
+      musicGain: titleMusicSnapshot.loopGain,
+      musicLoopActive: titleMusicSnapshot.loopActive,
+      musicState: titleMusicSnapshot.state,
     };
   }
 

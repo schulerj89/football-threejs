@@ -67,16 +67,33 @@ export interface PregameLowerThirdState {
 
 export interface PregamePresentationSnapshot {
   activeCommentary: string | null;
+  activeSubject: string | null;
+  activeTeam: 'opponent' | 'user' | null;
   completed: boolean;
+  crowdState: {
+    activeLoops: readonly string[];
+    duckingGain: number;
+    gain: number;
+  };
   currentShot: PregameShotId | null;
   elapsedSeconds: number;
   holdReason: string | null;
   lowerThird: PregameLowerThirdState;
+  musicState: {
+    gain: number;
+    loopActive: boolean;
+    state: string;
+  };
   musicGain: number;
   phase: PregamePresentationPhase;
+  presentationCloneCount: number;
   progress: number;
   sequence: PregameShotId[];
   shotElapsedSeconds: number;
+  sidelineCounts: {
+    sideline: number;
+    tunnel: number;
+  };
   skipState: 'available' | 'completed' | 'idle' | 'skipped';
   spotlight: PlayerSpotlightStageSnapshot;
   subjectBounds: PregameSubjectBounds | null;
@@ -98,6 +115,8 @@ export interface PregameAudioCoordinatorSnapshot {
   activeLine: PregameAudioLineSnapshot | null;
   completedLineIds: PregameCommentaryLineId[];
   crowdGain: number;
+  crowdActiveLoopIds: string[];
+  crowdDuckingGain: number;
   failedLineIds: PregameCommentaryLineId[];
   history: {
     assetId: string | null;
@@ -105,5 +124,7 @@ export interface PregameAudioCoordinatorSnapshot {
     reason: string | null;
     status: 'completed' | 'played' | 'skipped' | 'started' | 'suppressed';
   }[];
+  musicLoopActive: boolean;
   musicGain: number;
+  musicState: string;
 }

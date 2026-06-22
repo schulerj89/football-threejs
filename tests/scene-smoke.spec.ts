@@ -452,14 +452,32 @@ interface PregamePresentationSnapshot {
   currentShot:
     | 'matchupCombined'
     | 'opponentTeamPan'
+    | 'quarterbackSpotlight'
     | 'stadiumEstablish'
     | 'transitionToGameplay'
     | 'userTeamTunnelOrSideline'
     | 'weatherAndField'
     | null;
+  activeSubject?: string | null;
+  activeTeam?: 'opponent' | 'user' | null;
+  crowdState?: {
+    activeLoops: readonly string[];
+    duckingGain: number;
+    gain: number;
+  };
+  musicState?: {
+    gain: number;
+    loopActive: boolean;
+    state: string;
+  };
   phase: 'completed' | 'idle' | 'running' | 'skipped';
+  presentationCloneCount?: number;
   progress: number;
   skipState: 'available' | 'completed' | 'idle' | 'skipped';
+  sidelineCounts?: {
+    sideline: number;
+    tunnel: number;
+  };
   targetGameplayCamera: CameraSnapshot['mode'];
 }
 
@@ -968,6 +986,19 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
     phase: 'running',
     skipState: 'available',
   });
+  const pregamePresentation = await getPregamePresentationSnapshot(page);
+  expect(pregamePresentation.musicState).toMatchObject({
+    loopActive: expect.any(Boolean),
+    state: expect.any(String),
+  });
+  expect(pregamePresentation.crowdState).toMatchObject({
+    activeLoops: expect.any(Array),
+    duckingGain: expect.any(Number),
+    gain: expect.any(Number),
+  });
+  expect(pregamePresentation.sidelineCounts?.sideline).toBeGreaterThanOrEqual(0);
+  expect(pregamePresentation.sidelineCounts?.tunnel).toBeGreaterThanOrEqual(0);
+  expect(pregamePresentation.presentationCloneCount).toEqual(expect.any(Number));
 
   const started = await getGameplaySnapshot(page);
   const experience = await getGameExperienceSnapshot(page);

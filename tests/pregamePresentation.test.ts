@@ -189,6 +189,31 @@ describe('pregame presentation sequence', () => {
     ]);
   });
 
+  it('allows the quarterback spotlight again after presentation identity reset', () => {
+    const audio = createFakePregameAudioCoordinator();
+    const director = new PregamePresentationDirector({
+      audioCoordinator: audio as unknown as PregameAudioCoordinator,
+      lowerThird: createFakeLowerThird() as unknown as PregameLowerThird,
+      settings: { cinematics: 'brief' },
+    });
+    const context = createContext();
+
+    director.start(context);
+    advancePregameFrames(director, context, 30);
+    audio.completedLineIds.add('welcome');
+    director.update(0, context);
+    advancePregameFrames(director, context, 34);
+    audio.completedLineIds.add('matchup');
+    director.update(0, context);
+    director.update(0.1, context);
+    expect(director.getSnapshot().currentShot).toBe('quarterbackSpotlight');
+
+    director.resetPresentationIdentity();
+    director.start(context);
+
+    expect(director.getSnapshot().sequence).toContain('quarterbackSpotlight');
+  });
+
   it('falls back safely when quarterback roster data is unavailable', () => {
     const context = createContext();
     const brokenContext: PregamePresentationContext = {
@@ -312,10 +337,14 @@ function createFakePregameAudioCoordinator() {
     getSnapshot: () => ({
       activeLine: null,
       completedLineIds: [...completedLineIds],
+      crowdActiveLoopIds: [],
+      crowdDuckingGain: 1,
       crowdGain: 1,
       failedLineIds: [],
       history: [],
       musicGain: 0.72,
+      musicLoopActive: false,
+      musicState: 'idle',
     }),
     isLineComplete: (lineId: PregameCommentaryLineId) => completedLineIds.has(lineId),
     reset: () => {

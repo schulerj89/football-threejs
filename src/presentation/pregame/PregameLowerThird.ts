@@ -3,6 +3,7 @@ import type {
   PregameLowerThirdState,
   PregamePresentationSnapshot,
 } from './PregamePresentationTypes';
+import type { RenderMetricsSnapshot } from '../../debugOverlay';
 
 export class PregameLowerThird {
   readonly root: HTMLDivElement;
@@ -86,6 +87,7 @@ export function createPregameDebugOverlay(): HTMLDivElement {
 export function syncPregameDebugOverlay(
   overlay: HTMLDivElement,
   snapshot: PregamePresentationSnapshot | null,
+  renderMetrics: RenderMetricsSnapshot | null = null,
 ): void {
   if (!snapshot) {
     overlay.textContent = 'Pregame: inactive';
@@ -100,7 +102,12 @@ export function syncPregameDebugOverlay(
     `elapsed: ${snapshot.elapsedSeconds.toFixed(2)}s`,
     `shotElapsed: ${snapshot.shotElapsedSeconds.toFixed(2)}s`,
     `commentary: ${snapshot.activeCommentary ?? 'none'}`,
-    `musicGain: ${snapshot.musicGain.toFixed(2)}`,
+    `activeTeam: ${snapshot.activeTeam ?? 'none'}`,
+    `activeSubject: ${snapshot.activeSubject ?? 'none'}`,
+    `music: ${snapshot.musicState.state} loop ${snapshot.musicState.loopActive ? 'yes' : 'no'} gain ${snapshot.musicState.gain.toFixed(2)}`,
+    `crowd: loops ${snapshot.crowdState.activeLoops.join(',') || 'none'} gain ${snapshot.crowdState.gain.toFixed(2)} duck ${snapshot.crowdState.duckingGain.toFixed(2)}`,
+    `sideline: ${snapshot.sidelineCounts.sideline} tunnel ${snapshot.sidelineCounts.tunnel}`,
+    `presentationClones: ${snapshot.presentationCloneCount}`,
     `hold: ${snapshot.holdReason ?? 'none'}`,
     `skip: ${snapshot.skipState}`,
     `targetCamera: ${snapshot.targetGameplayCamera}`,
@@ -121,5 +128,8 @@ export function syncPregameDebugOverlay(
           `blockers: ${snapshot.spotlight.completionBlockers.join(',') || 'none'}`,
         ].join('\n')
       : 'spotlight: inactive',
+    renderMetrics
+      ? `frame: ${renderMetrics.frameTimeMs.toFixed(2)}ms calls ${renderMetrics.calls} tris ${renderMetrics.triangles}`
+      : 'frame: unavailable',
   ].join('\n');
 }

@@ -632,6 +632,7 @@ export class FootballApplication {
     this.matchScorebug.sync(null, null, false);
     this.opponentDriveSummary.sync(null, false);
     this.quarterTransitionPanel.sync(null, false);
+    this.presentation.resetPregamePresentationIdentity();
     this.lifecycle.returnToTitleScreen();
   }
 

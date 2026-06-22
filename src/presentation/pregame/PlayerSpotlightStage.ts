@@ -53,6 +53,11 @@ export class PlayerSpotlightStage {
     this.activeSelection = null;
   }
 
+  resetPresentationIdentity(): void {
+    this.clearActive();
+    this.shownMatchKeys.clear();
+  }
+
   getSnapshot(options: PlayerSpotlightStageSnapshotOptions): PlayerSpotlightStageSnapshot {
     return {
       active: options.active,
