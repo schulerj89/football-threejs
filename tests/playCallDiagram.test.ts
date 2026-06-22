@@ -202,6 +202,32 @@ describe('play call diagrams', () => {
     expect(indexAssignments(passDiagram.blockerAssignments)).toEqual(passPlay.protectionAssignments);
   });
 
+  it('draws the added 11v11 rushing plays from real blocking data with mirrored field-side arrows', () => {
+    for (const playId of ['outside-zone-11', 'off-tackle-11'] as const) {
+      const play = getPlay(playId);
+      const leftHash = createPlayCallDiagramModel(play, createSnapPlacement('leftHash'));
+      const rightHash = createPlayCallDiagramModel(play, createSnapPlacement('rightHash'));
+      const middle = createPlayCallDiagramModel(play, createSnapPlacement('middle'));
+
+      expect(leftHash.receiverRoutes).toHaveLength(0);
+      expect(leftHash.runDirection).not.toBeNull();
+      expect(rightHash.runDirection).not.toBeNull();
+      expect(middle.runDirection).not.toBeNull();
+      expect(leftHash.blockerAssignments.every((assignment) => assignment.kind === 'runBlock')).toBe(true);
+      expect(indexAssignments(leftHash.blockerAssignments)).toEqual(play.protectionAssignments);
+      expect(indexAssignments(rightHash.blockerAssignments)).toEqual(play.protectionAssignments);
+      expect(getFootballRouteEnd(leftHash.runDirection)!.x).toBeGreaterThan(
+        getFootballRouteStart(leftHash.runDirection)!.x,
+      );
+      expect(getFootballRouteEnd(middle.runDirection)!.x).toBeGreaterThan(
+        getFootballRouteStart(middle.runDirection)!.x,
+      );
+      expect(getFootballRouteEnd(rightHash.runDirection)!.x).toBeLessThan(
+        getFootballRouteStart(rightHash.runDirection)!.x,
+      );
+    }
+  });
+
   it('uses desktop 3 by 2 layout metadata for six cards and horizontal scroll on small screens', () => {
     expect(resolvePlayCallTrayLayout(1280, 6)).toEqual({
       cardCount: 6,
@@ -293,6 +319,14 @@ function getRouteStart(route: { points: ReadonlyArray<{ x: number; y: number }> 
 
 function getRouteEnd(route: { points: ReadonlyArray<{ x: number; y: number }> } | null): { x: number; y: number } | null {
   return route?.points[route.points.length - 1] ?? null;
+}
+
+function getFootballRouteStart(route: { footballPoints: ReadonlyArray<{ x: number; z: number }> } | null): { x: number; z: number } | null {
+  return route?.footballPoints[0] ?? null;
+}
+
+function getFootballRouteEnd(route: { footballPoints: ReadonlyArray<{ x: number; z: number }> } | null): { x: number; z: number } | null {
+  return route?.footballPoints[route.footballPoints.length - 1] ?? null;
 }
 
 function indexAssignments(

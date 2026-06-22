@@ -108,7 +108,9 @@ interface GameplaySnapshot {
       | 'inside-run'
       | 'inside-zone-11'
       | 'inside-zone-7'
+      | 'off-tackle-11'
       | 'outside-run'
+      | 'outside-zone-11'
       | 'outside-zone-7'
       | 'quick-pass'
       | 'quick-pass-7'
@@ -2755,12 +2757,21 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
     currentState: 'idle',
     role: 'quarterback',
   });
-  await expect(page.locator('.play-card')).toHaveCount(2);
-  await expect(page.locator('.play-card-title')).toHaveText(['Inside Zone 11', 'Spread Quick 11']);
+  await expect(page.locator('.play-card')).toHaveCount(4);
+  await expect(page.locator('.play-card-title')).toHaveText([
+    'Inside Zone 11',
+    'Spread Quick 11',
+    'Outside Zone 11',
+    'Off Tackle 11',
+  ]);
   await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-run-direction')).toHaveCount(1);
   await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-blocker-assignment')).toHaveCount(9);
   await expect(page.locator('.play-card[data-play-id="spread-quick-11"] .play-card-receiver-route')).toHaveCount(5);
   await expect(page.locator('.play-card[data-play-id="spread-quick-11"] .play-card-blocker-assignment')).toHaveCount(5);
+  await expect(page.locator('.play-card[data-play-id="outside-zone-11"] .play-card-run-direction')).toHaveCount(1);
+  await expect(page.locator('.play-card[data-play-id="outside-zone-11"] .play-card-blocker-assignment')).toHaveCount(9);
+  await expect(page.locator('.play-card[data-play-id="off-tackle-11"] .play-card-run-direction')).toHaveCount(1);
+  await expect(page.locator('.play-card[data-play-id="off-tackle-11"] .play-card-blocker-assignment')).toHaveCount(9);
   await expectNonBlankCanvas(page);
 
   await page.locator('.play-card[data-play-id="spread-quick-11"]').click();

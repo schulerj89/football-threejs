@@ -351,7 +351,7 @@ describe('playbook', () => {
     }
   });
 
-  it('defines 11v11 as the default two-play normal playbook', () => {
+  it('defines 11v11 as the default four-play normal playbook with preserved shortcuts', () => {
     const plays = getAvailablePlays('11v11');
     const play = getPlay('inside-zone-11');
 
@@ -359,10 +359,14 @@ describe('playbook', () => {
     expect(getAvailablePlays().map((candidate) => candidate.id)).toEqual([
       'inside-zone-11',
       'spread-quick-11',
+      'outside-zone-11',
+      'off-tackle-11',
     ]);
     expect(plays.map((candidate) => candidate.id)).toEqual([
       'inside-zone-11',
       'spread-quick-11',
+      'outside-zone-11',
+      'off-tackle-11',
     ]);
     expect(play).toMatchObject({
       ballCarrierRole: 'runner',
@@ -372,6 +376,81 @@ describe('playbook', () => {
       playbookId: '11v11',
       roster: { id: '11v11' },
     });
+  });
+
+  it('defines Outside Zone 11 and Off Tackle 11 with deterministic field-side run assignments', () => {
+    for (const playId of ['outside-zone-11', 'off-tackle-11'] as const) {
+      const play = getPlay(playId);
+      const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+      const assignments = play.protectionAssignments ?? {};
+      const assignedDefenders = Object.values(assignments);
+
+      expect(play).toMatchObject({
+        ballCarrierRole: 'runner',
+        kind: 'run',
+        playbookId: '11v11',
+        roster: { id: '11v11' },
+      });
+      expect(players).toHaveLength(22);
+      expect(players.filter((player) => player.team === 'offense')).toHaveLength(11);
+      expect(players.filter((player) => player.team === 'defense')).toHaveLength(11);
+      expect(getPlayer(players, 'offense-rb')).toMatchObject({
+        role: 'runner',
+        team: 'offense',
+      });
+      expect(getPlayer(players, 'offense-qb')).toMatchObject({
+        role: 'quarterback',
+        team: 'offense',
+      });
+      expect(new Set(Object.keys(assignments)).size).toBe(Object.keys(assignments).length);
+      expect(new Set(assignedDefenders).size).toBe(assignedDefenders.length);
+      expect(assignedDefenders).not.toContain('defense-safety');
+    }
+
+    expect(Object.values(getPlay('outside-zone-11').protectionAssignments ?? {}))
+      .not.toContain('defense-safety-strong');
+    expect(Object.values(getPlay('off-tackle-11').protectionAssignments ?? {}))
+      .not.toContain('defense-linebacker');
+  });
+
+  it('mirrors the new 11v11 run plays toward the field side at every snap lane', () => {
+    for (const playId of ['outside-zone-11', 'off-tackle-11'] as const) {
+      const play = getPlay(playId);
+
+      for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+        const snapPlacement = createSnapPlacementForLane(lane);
+        const snapSpot = { x: snapPlacement.spot.x, z: INITIAL_BALL_SPOT.z };
+        const fieldDirection = lane === 'rightHash' ? -1 : 1;
+        const formation = resolveFormation(play, snapPlacement);
+        const players = createFormationPlayers(snapSpot, play);
+        const runningBack = getPlayer(players, 'offense-rb');
+        const fieldTackle = getPlayer(players, 'offense-tackle-right');
+        const tightEnd = getPlayer(players, 'offense-tight-end');
+        const fieldReceiver = getPlayer(players, 'offense-wr-right');
+        const fieldTackleTarget = getBlockingLaneTarget(fieldTackle, snapSpot, play);
+        const tightEndTarget = getBlockingLaneTarget(tightEnd, snapSpot, play);
+
+        expect(formation.issues).toEqual([]);
+        expect(Math.sign(runningBack.position.x - snapSpot.x)).toBe(fieldDirection);
+        expect(Math.sign(fieldTackle.position.x - snapSpot.x)).toBe(fieldDirection);
+        expect(Math.sign(tightEnd.position.x - snapSpot.x)).toBe(fieldDirection);
+        expect(Math.sign(fieldReceiver.position.x - snapSpot.x)).toBe(fieldDirection);
+        expect(Math.sign(fieldTackleTarget.x - snapSpot.x)).toBe(fieldDirection);
+        expect(Math.sign(tightEndTarget.x - snapSpot.x)).toBe(fieldDirection);
+
+        for (const [blockerId, defenderId] of Object.entries(play.protectionAssignments ?? {})) {
+          const blocker = getPlayer(players, blockerId);
+          const defender = getPlayer(players, defenderId);
+          const laneTarget = getBlockingLaneTarget(blocker, snapSpot, play);
+
+          expect(blocker.team).toBe('offense');
+          expect(defender.team).toBe('defense');
+          expect(laneTarget.x).toBeGreaterThanOrEqual(PLAYABLE_FIELD_BOUNDS.minX);
+          expect(laneTarget.x).toBeLessThanOrEqual(PLAYABLE_FIELD_BOUNDS.maxX);
+          expect(laneTarget.z).toBeGreaterThan(INITIAL_BALL_SPOT.z);
+        }
+      }
+    }
   });
 
   it('defines Spread Quick 11 with five ordered receivers, protection, and coverage', () => {

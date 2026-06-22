@@ -50,9 +50,9 @@ describe('eleven-on-eleven hardening matrix', () => {
   it('covers every requested play, formation, presentation, resource, and update-rate dimension', () => {
     const matrix = createElevenOnElevenScenarioMatrix();
 
-    expect(matrix).toHaveLength(2 * 3 * 2 * 3 * 3 * 2 * 2 * 2);
+    expect(matrix).toHaveLength(4 * 3 * 2 * 3 * 3 * 2 * 2 * 2);
     expect(new Set(matrix.map((scenario) => scenario.playId))).toEqual(
-      new Set(['inside-zone-11', 'spread-quick-11']),
+      new Set(['inside-zone-11', 'spread-quick-11', 'outside-zone-11', 'off-tackle-11']),
     );
     expect(new Set(matrix.map((scenario) => scenario.snapLane))).toEqual(new Set(SNAP_LANES));
     expect(new Set(matrix.map((scenario) => scenario.formationSide))).toEqual(new Set(FORMATION_SIDES));
@@ -116,25 +116,29 @@ describe('eleven-on-eleven hardening matrix', () => {
   });
 
   it('keeps run-play assignments unique and blocks only assigned defenders', () => {
-    const play = getPlay('inside-zone-11');
-    const gameplay = createGameplayModel({ playbookId: '11v11' });
-    selectPlay(gameplay, 'inside-zone-11');
+    for (const play of getAvailablePlays('11v11').filter((candidate) => candidate.kind === 'run')) {
+      const gameplay = createGameplayModel({ playbookId: '11v11' });
+      selectPlay(gameplay, play.id);
 
-    const assignmentEntries = Object.entries(play.protectionAssignments ?? {});
-    expect(new Set(assignmentEntries.map(([blockerId]) => blockerId)).size).toBe(assignmentEntries.length);
-    expect(new Set(assignmentEntries.map(([, defenderId]) => defenderId)).size).toBe(assignmentEntries.length);
+      const assignmentEntries = Object.entries(play.protectionAssignments ?? {});
+      expect(new Set(assignmentEntries.map(([blockerId]) => blockerId)).size).toBe(assignmentEntries.length);
+      expect(new Set(assignmentEntries.map(([, defenderId]) => defenderId)).size).toBe(assignmentEntries.length);
 
-    startPlay(gameplay);
-    updateGameplayModel(gameplay, 1 / 60);
+      startPlay(gameplay);
+      updateGameplayModel(gameplay, 1 / 60);
 
-    for (const engagement of gameplay.blocking.engagements) {
-      expect(getProtectionAssignmentDefenderId(play, engagement.blockerId)).toBe(engagement.defenderId);
+      for (const engagement of gameplay.blocking.engagements) {
+        expect(getProtectionAssignmentDefenderId(play, engagement.blockerId)).toBe(engagement.defenderId);
+      }
+
+      if (play.id !== 'off-tackle-11') {
+        expect(getPlayer(gameplay, 'defense-safety').currentState).toBe('pursuing');
+        expect(getPlayer(gameplay, 'defense-safety-strong').currentState).toBe('pursuing');
+      }
+
+      resetPlay(gameplay);
+      expect(gameplay.blocking.engagements).toEqual([]);
     }
-    expect(getPlayer(gameplay, 'defense-safety').currentState).toBe('pursuing');
-    expect(getPlayer(gameplay, 'defense-safety-strong').currentState).toBe('pursuing');
-
-    resetPlay(gameplay);
-    expect(gameplay.blocking.engagements).toEqual([]);
   });
 
   it('keeps carrier separation deterministic during 11v11 run congestion', () => {

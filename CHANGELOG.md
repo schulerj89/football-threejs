@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.20.0] - 2026-06-22
+
+### Added
+
+- Added `Outside Zone 11` and `Off Tackle 11` to the normal 11v11 playbook as shortcuts `3` and `4`, preserving `1` for `Inside Zone 11` and `2` for `Spread Quick 11`.
+- Added a field-side semantic 11v11 run formation variant for the new rushing plays so running back alignment, field-side tackle, tight end, field-side receiver, lane targets, and play-card run arrows mirror correctly at left hash, middle, and right hash.
+
+### Changed
+
+- Kept the new rushing plays data-defined with explicit one-to-one assignments, no duplicate initial blockers, no pulling blockers, no double teams, safeties initially unblocked for Outside Zone 11, and one second-level defender unblocked for Off Tackle 11.
+- Updated 11v11 play-card expectations and audit coverage so all four normal play cards are generated from real formation, lane-target, and assignment data.
+
+### Tests
+
+- Added focused playbook, play-state, play-card, and 11v11 audit coverage for 22-player creation, running-back possession, snap-lane mirroring, unique assignments, reset stability, and blocker diagram references.
+- Verified `npx vitest run tests/playbook.test.ts tests/playState.test.ts tests/playCallDiagram.test.ts tests/elevenOnElevenAudit.test.ts`, `npm run test:unit`, `npm run build`, and `npm run test:smoke`.
+
 ## [1.19.0] - 2026-06-22
 
 ### Added

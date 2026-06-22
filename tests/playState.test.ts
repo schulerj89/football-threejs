@@ -43,6 +43,8 @@ describe('play state transitions', () => {
     expect(gameplay.availablePlays.map((play) => play.id)).toEqual([
       'inside-zone-11',
       'spread-quick-11',
+      'outside-zone-11',
+      'off-tackle-11',
     ]);
     expect(gameplay.players).toHaveLength(22);
     expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(11);
@@ -60,6 +62,8 @@ describe('play state transitions', () => {
     expect(gameplay.availablePlays.map((play) => play.id)).toEqual([
       'inside-zone-11',
       'spread-quick-11',
+      'outside-zone-11',
+      'off-tackle-11',
     ]);
     expect(gameplay.selectedPlay).toMatchObject({
       displayName: 'Inside Zone 11',
