@@ -46,16 +46,18 @@ export interface PlayCallPlayerMarker {
 }
 
 export interface PlayCallRoute {
-  end: SvgPoint;
+  breakPoints: readonly SvgPoint[];
+  footballBreakPoints: readonly FootballSpot[];
   footballPoints: FootballSpot[];
   points: SvgPoint[];
   receiverId: string;
-  start: SvgPoint;
 }
 
 export interface PlayCallBlockerAssignment {
   blockerId: string;
+  defenderId: string | null;
   end: SvgPoint;
+  kind: 'passProtection' | 'runBlock';
   start: SvgPoint;
 }
 
@@ -82,9 +84,14 @@ export const PLAY_CALL_DIAGRAM_SIZE: DiagramSize = {
 } as const;
 
 const DIAGRAM_PADDING = 10;
-const DIAGRAM_EDGE_MARGIN_YARDS = 4;
-const MIN_BACKFIELD_YARDS = 12;
-const MIN_FORWARD_YARDS = 20;
+export const PLAY_CALL_MARKER_PADDING = 8;
+const DIAGRAM_EDGE_MARGIN_YARDS = 0;
+const SNAP_RELATIVE_DIAGRAM_BOUNDS = {
+  maxForward: 26,
+  maxLateral: 38,
+  minForward: -18,
+  minLateral: -38,
+} as const;
 const RUN_ARROW_YARDS = 14;
 
 export function createPlayCallDiagramModel(
@@ -95,6 +102,11 @@ export function createPlayCallDiagramModel(
   const formation = resolveFormation(play, snapPlacement);
   const ballCarrier = getBallCarrierSlot(play, formation.slots);
   const blockerTargets = resolveBlockerTargets(play, snapPlacement);
+  const blockerAssignments = createPlayCallBlockerAssignments(
+    play,
+    formation.slots,
+    blockerTargets,
+  );
   const receiverRoutes = resolveEligibleReceiverRoutes(play, snapPlacement);
   const runTarget = play.kind === 'run'
     ? resolveRunTarget(play, ballCarrier.position, blockerTargets)
@@ -103,6 +115,7 @@ export function createPlayCallDiagramModel(
     snapPlacement.spot,
     ...formation.slots.map((slot) => slot.position),
     ...Object.values(blockerTargets),
+    ...blockerAssignments.map((assignment) => assignment.footballEnd),
     ...receiverRoutes.flatMap((route) => route.points),
   ];
 
@@ -122,21 +135,13 @@ export function createPlayCallDiagramModel(
 
   return {
     ball: normalizeFootballSpotToSvg(snapPlacement.spot, transform),
-    blockerAssignments: Object.entries(blockerTargets)
-      .map(([blockerId, target]) => {
-        const blocker = formation.slots.find((slot) => slot.id === blockerId);
-
-        if (!blocker) {
-          return null;
-        }
-
-        return {
-          blockerId,
-          end: normalizeFootballSpotToSvg(target, transform),
-          start: normalizeFootballSpotToSvg(blocker.position, transform),
-        };
-      })
-      .filter((assignment): assignment is PlayCallBlockerAssignment => assignment !== null),
+    blockerAssignments: blockerAssignments.map((assignment) => ({
+      blockerId: assignment.blockerId,
+      defenderId: assignment.defenderId,
+      end: normalizeFootballSpotToSvg(assignment.footballEnd, transform),
+      kind: assignment.kind,
+      start: normalizeFootballSpotToSvg(assignment.footballStart, transform),
+    })),
     fieldSide: formation.fieldSide,
     lineOfScrimmage: {
       end: normalizeFootballSpotToSvg(lineEnd, transform),
@@ -155,17 +160,17 @@ export function createPlayCallDiagramModel(
     receiverRoutes: receiverRoutes.map((route) => createPlayCallRoute(route, transform)),
     runDirection: runTarget
       ? {
-          end: normalizeFootballSpotToSvg(runTarget, transform),
           footballPoints: [
             { ...ballCarrier.position },
             { ...runTarget },
           ],
+          footballBreakPoints: [],
+          breakPoints: [],
           points: [
             normalizeFootballSpotToSvg(ballCarrier.position, transform),
             normalizeFootballSpotToSvg(runTarget, transform),
           ],
           receiverId: ballCarrier.id,
-          start: normalizeFootballSpotToSvg(ballCarrier.position, transform),
         }
       : null,
     transform,
@@ -178,13 +183,22 @@ export function createFootballToSvgTransform(
   size: DiagramSize = PLAY_CALL_DIAGRAM_SIZE,
 ): FootballToSvgTransform {
   const localPoints = footballPoints.map((point) => toLocalFootballPoint(point, snapPlacement));
-  const minLateral = Math.min(...localPoints.map((point) => point.lateral), -DIAGRAM_EDGE_MARGIN_YARDS);
-  const maxLateral = Math.max(...localPoints.map((point) => point.lateral), DIAGRAM_EDGE_MARGIN_YARDS);
-  const minForward = Math.min(
-    ...localPoints.map((point) => point.forward),
-    -MIN_BACKFIELD_YARDS,
+  const minLateral = Math.min(
+    SNAP_RELATIVE_DIAGRAM_BOUNDS.minLateral,
+    ...localPoints.map((point) => point.lateral),
   );
-  const maxForward = Math.max(...localPoints.map((point) => point.forward), MIN_FORWARD_YARDS);
+  const maxLateral = Math.max(
+    SNAP_RELATIVE_DIAGRAM_BOUNDS.maxLateral,
+    ...localPoints.map((point) => point.lateral),
+  );
+  const minForward = Math.min(
+    SNAP_RELATIVE_DIAGRAM_BOUNDS.minForward,
+    ...localPoints.map((point) => point.forward),
+  );
+  const maxForward = Math.max(
+    SNAP_RELATIVE_DIAGRAM_BOUNDS.maxForward,
+    ...localPoints.map((point) => point.forward),
+  );
   const bounds = {
     maxForward: maxForward + DIAGRAM_EDGE_MARGIN_YARDS,
     maxLateral: maxLateral + DIAGRAM_EDGE_MARGIN_YARDS,
@@ -248,6 +262,51 @@ function resolveBlockerTargets(
   );
 }
 
+interface ResolvedPlayCallBlockerAssignment {
+  blockerId: string;
+  defenderId: string | null;
+  footballEnd: FootballSpot;
+  footballStart: FootballSpot;
+  kind: PlayCallBlockerAssignment['kind'];
+}
+
+function createPlayCallBlockerAssignments(
+  play: PlayDefinition,
+  slots: ResolvedFormationSlot[],
+  laneTargets: Record<string, FootballSpot>,
+): ResolvedPlayCallBlockerAssignment[] {
+  const assignmentEntries = new Set([
+    ...Object.keys(laneTargets),
+    ...Object.keys(play.protectionAssignments ?? {}),
+  ]);
+  const slotsById = new Map(slots.map((slot) => [slot.id, slot]));
+
+  return [...assignmentEntries].flatMap((blockerId) => {
+    const blocker = slotsById.get(blockerId);
+
+    if (!blocker) {
+      return [];
+    }
+
+    const defenderId = play.protectionAssignments?.[blockerId] ?? null;
+    const defender = defenderId ? slotsById.get(defenderId) : null;
+    const laneTarget = laneTargets[blockerId];
+    const footballEnd = defender?.position ?? laneTarget;
+
+    if (!footballEnd) {
+      return [];
+    }
+
+    return [{
+      blockerId,
+      defenderId,
+      footballEnd: { ...footballEnd },
+      footballStart: { ...blocker.position },
+      kind: play.kind === 'pass' ? 'passProtection' : 'runBlock',
+    }];
+  });
+}
+
 function resolveRunTarget(
   play: PlayDefinition,
   carrierPosition: FootballSpot,
@@ -273,13 +332,15 @@ function createPlayCallRoute(
   transform: FootballToSvgTransform,
 ): PlayCallRoute {
   const points = route.points.map((point) => normalizeFootballSpotToSvg(point, transform));
+  const breakPoints = points.slice(1, -1);
+  const footballBreakPoints = route.points.slice(1, -1).map((point) => ({ ...point }));
 
   return {
-    end: points[points.length - 1],
+    breakPoints,
+    footballBreakPoints,
     footballPoints: route.points.map((point) => ({ ...point })),
     points,
     receiverId: route.receiverId,
-    start: points[0],
   };
 }
 

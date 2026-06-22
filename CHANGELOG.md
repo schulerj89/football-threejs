@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.19.0] - 2026-06-22
+
+### Added
+
+- Added play-call diagram route models with ordered SVG route points and visible route-break points sourced from the same `ResolvedReceiverRoute` data used by receiver simulation and on-field route art.
+- Added clearer pre-snap play-call tray presentation with a `Choose a Play` heading, run/pass badges, keyboard shortcut labels, selected-card scrolling, desktop 3 by 2 layout support for six plays, and horizontal small-screen card scrolling.
+
+### Changed
+
+- Updated play-card SVGs to draw every receiver route segment with one endpoint arrowhead, rounded joins/caps, marker padding, distinct run arrows, distinct run-blocking and pass-protection styling, assignment target IDs, and a fixed snap-relative scale across current plays and hash lanes.
+- Kept pointer play-card selection on the existing request path while preserving number-key selection and live-play selection locking.
+
+### Tests
+
+- Expanded play-call diagram tests for exact resolved route points, route break ordering, SVG bounds, fixed snap-relative scale, left/right hash mirroring, assignment references, run/pass style metadata, six-card layout metadata, and accessible play-card labels.
+- Verified `npx vitest run tests/playCallDiagram.test.ts`, `npm run test:unit`, `npx tsc --noEmit`, `npm run build`, and `npm run test:smoke`.
+
 ## [1.18.0] - 2026-06-22
 
 ### Added

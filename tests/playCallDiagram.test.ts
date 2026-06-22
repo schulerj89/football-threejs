@@ -1,12 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { createCenterSnapPlacement } from '../src/ballSpotting';
+import { SNAP_LANE_X, createCenterSnapPlacement, type SnapPlacement } from '../src/ballSpotting';
 import { INITIAL_BALL_SPOT } from '../src/field';
 import {
+  PLAY_CALL_DIAGRAM_SIZE,
+  PLAY_CALL_MARKER_PADDING,
   createFootballToSvgTransform,
   createPlayCallDiagramModel,
   normalizeFootballSpotToSvg,
 } from '../src/playCallDiagram';
-import { getEligibleReceiverIds, getPlay, PLAYS } from '../src/playbook';
+import {
+  ALL_PLAYS,
+  getEligibleReceiverIds,
+  getPlay,
+  PLAYS,
+} from '../src/playbook';
+import {
+  createPlayCardAccessibilityLabel,
+  resolvePlayCallTrayLayout,
+} from '../src/playCallUi';
 import { resolveEligibleReceiverRoutes } from '../src/receiverRoutes';
 
 describe('play call diagrams', () => {
@@ -29,7 +40,10 @@ describe('play call diagrams', () => {
     expect(outsideRun.runDirection).not.toBeNull();
     expect(insideRun.receiverRoutes).toHaveLength(0);
     expect(outsideRun.blockerAssignments.length).toBeGreaterThanOrEqual(2);
-    expect(outsideRun.runDirection?.end.x).toBeLessThan(insideRun.runDirection?.end.x ?? 0);
+    expect(outsideRun.blockerAssignments.every((assignment) => assignment.kind === 'runBlock')).toBe(true);
+    expect(getRouteEnd(outsideRun.runDirection)?.x).toBeLessThan(
+      getRouteEnd(insideRun.runDirection)?.x ?? 0,
+    );
   });
 
   it('renders passing plays with one route per eligible receiver', () => {
@@ -73,9 +87,15 @@ describe('play call diagrams', () => {
     const quickPass = createPlayCallDiagramModel(getPlay('quick-pass'), snapPlacement);
     const slantFlat = createPlayCallDiagramModel(getPlay('slant-flat'), snapPlacement);
 
-    expect(quickPass.receiverRoutes[0].end.x).toBeGreaterThan(quickPass.receiverRoutes[0].start.x);
-    expect(slantFlat.receiverRoutes[0].end.x).toBeGreaterThan(slantFlat.receiverRoutes[0].start.x);
-    expect(slantFlat.receiverRoutes[1].end.x).toBeGreaterThan(slantFlat.receiverRoutes[1].start.x);
+    expect(getRouteEnd(quickPass.receiverRoutes[0])?.x).toBeGreaterThan(
+      getRouteStart(quickPass.receiverRoutes[0])?.x ?? 0,
+    );
+    expect(getRouteEnd(slantFlat.receiverRoutes[0])?.x).toBeGreaterThan(
+      getRouteStart(slantFlat.receiverRoutes[0])?.x ?? 0,
+    );
+    expect(getRouteEnd(slantFlat.receiverRoutes[1])?.x).toBeGreaterThan(
+      getRouteStart(slantFlat.receiverRoutes[1])?.x ?? 0,
+    );
   });
 
   it('normalizes every resolved route point into the play-card route geometry', () => {
@@ -89,10 +109,119 @@ describe('play call diagrams', () => {
 
       expect(cardRoute).toBeDefined();
       expect(cardRoute?.footballPoints).toEqual(resolvedRoute.points);
+      expect(cardRoute?.footballBreakPoints).toEqual(
+        resolvedRoute.points.slice(1, -1),
+      );
       expect(cardRoute?.points).toEqual(
         resolvedRoute.points.map((point) => normalizeFootballSpotToSvg(point, diagram.transform)),
       );
+      expect(cardRoute?.breakPoints).toEqual(
+        resolvedRoute.points
+          .slice(1, -1)
+          .map((point) => normalizeFootballSpotToSvg(point, diagram.transform)),
+      );
     }
+  });
+
+  it('preserves route break order for multi-segment 11v11 pass routes', () => {
+    const snapPlacement = createCenterSnapPlacement(INITIAL_BALL_SPOT);
+    const play = getPlay('spread-quick-11');
+    const diagram = createPlayCallDiagramModel(play, snapPlacement);
+
+    for (const route of diagram.receiverRoutes) {
+      const resolvedRoute = resolveEligibleReceiverRoutes(play, snapPlacement)
+        .find((candidate) => candidate.receiverId === route.receiverId);
+
+      expect(route.breakPoints).toEqual(route.points.slice(1, -1));
+      expect(route.breakPoints).toEqual(
+        resolvedRoute?.points
+          .slice(1, -1)
+          .map((point) => normalizeFootballSpotToSvg(point, diagram.transform)),
+      );
+    }
+  });
+
+  it('keeps every play-card SVG point inside the viewBox marker padding', () => {
+    for (const play of ALL_PLAYS) {
+      for (const snapPlacement of createSnapPlacements()) {
+        const diagram = createPlayCallDiagramModel(play, snapPlacement);
+        const points = collectDiagramPoints(diagram);
+
+        for (const point of points) {
+          expect(point.x).toBeGreaterThanOrEqual(PLAY_CALL_MARKER_PADDING);
+          expect(point.x).toBeLessThanOrEqual(PLAY_CALL_DIAGRAM_SIZE.width - PLAY_CALL_MARKER_PADDING);
+          expect(point.y).toBeGreaterThanOrEqual(PLAY_CALL_MARKER_PADDING);
+          expect(point.y).toBeLessThanOrEqual(PLAY_CALL_DIAGRAM_SIZE.height - PLAY_CALL_MARKER_PADDING);
+        }
+      }
+    }
+  });
+
+  it('uses a consistent snap-relative scale across current plays and snap lanes', () => {
+    const scales = ALL_PLAYS.flatMap((play) =>
+      createSnapPlacements().map((snapPlacement) =>
+        createPlayCallDiagramModel(play, snapPlacement).transform.scale,
+      ),
+    );
+
+    expect(new Set(scales.map((scale) => scale.toFixed(6))).size).toBe(1);
+  });
+
+  it('mirrors left- and right-hash diagrams from the same snap-relative route data', () => {
+    const play = getPlay('slant-flat');
+    const left = createPlayCallDiagramModel(play, createSnapPlacement('leftHash'));
+    const right = createPlayCallDiagramModel(play, createSnapPlacement('rightHash'));
+
+    expect(left.receiverRoutes.map((route) => route.receiverId)).toEqual(
+      right.receiverRoutes.map((route) => route.receiverId),
+    );
+
+    for (const leftRoute of left.receiverRoutes) {
+      const rightRoute = right.receiverRoutes.find((route) => route.receiverId === leftRoute.receiverId);
+      expect(rightRoute).toBeDefined();
+      expect(rightRoute?.points).toHaveLength(leftRoute.points.length);
+
+      leftRoute.points.forEach((leftPoint, index) => {
+        const rightPoint = rightRoute!.points[index];
+        expect(leftPoint.x + rightPoint.x).toBeCloseTo(PLAY_CALL_DIAGRAM_SIZE.width, 4);
+        expect(leftPoint.y).toBeCloseTo(rightPoint.y, 4);
+      });
+    }
+  });
+
+  it('distinguishes run blocking from pass protection and keeps assignment references', () => {
+    const snapPlacement = createCenterSnapPlacement(INITIAL_BALL_SPOT);
+    const runPlay = getPlay('inside-zone-11');
+    const passPlay = getPlay('spread-quick-11');
+    const runDiagram = createPlayCallDiagramModel(runPlay, snapPlacement);
+    const passDiagram = createPlayCallDiagramModel(passPlay, snapPlacement);
+
+    expect(runDiagram.blockerAssignments.every((assignment) => assignment.kind === 'runBlock')).toBe(true);
+    expect(passDiagram.blockerAssignments.every((assignment) => assignment.kind === 'passProtection')).toBe(true);
+    expect(indexAssignments(runDiagram.blockerAssignments)).toEqual(runPlay.protectionAssignments);
+    expect(indexAssignments(passDiagram.blockerAssignments)).toEqual(passPlay.protectionAssignments);
+  });
+
+  it('uses desktop 3 by 2 layout metadata for six cards and horizontal scroll on small screens', () => {
+    expect(resolvePlayCallTrayLayout(1280, 6)).toEqual({
+      cardCount: 6,
+      columns: 3,
+      mode: 'desktopGrid',
+      rows: 2,
+    });
+    expect(resolvePlayCallTrayLayout(390, 6)).toEqual({
+      cardCount: 6,
+      columns: 6,
+      mode: 'horizontalScroll',
+      rows: 1,
+    });
+  });
+
+  it('creates accessible play-card labels with shortcut and run/pass context', () => {
+    expect(createPlayCardAccessibilityLabel(getPlay('spread-quick-11'), 2))
+      .toBe('Spread Quick 11, pass play, shortcut 2');
+    expect(createPlayCardAccessibilityLabel(getPlay('inside-zone-11'), 1))
+      .toBe('Inside Zone 11, run play, shortcut 1');
   });
 
   it('normalizes football coordinates into SVG coordinates with the defense above the line', () => {
@@ -122,3 +251,57 @@ describe('play call diagrams', () => {
     expect(backfieldPoint.y).toBeGreaterThan(linePoint.y);
   });
 });
+
+type Diagram = ReturnType<typeof createPlayCallDiagramModel>;
+
+function createSnapPlacements(): SnapPlacement[] {
+  return [
+    createSnapPlacement('leftHash'),
+    createSnapPlacement('middle'),
+    createSnapPlacement('rightHash'),
+  ];
+}
+
+function createSnapPlacement(lane: SnapPlacement['lane']): SnapPlacement {
+  return {
+    lane,
+    spot: {
+      x: SNAP_LANE_X[lane],
+      z: INITIAL_BALL_SPOT.z,
+    },
+  };
+}
+
+function collectDiagramPoints(diagram: Diagram): Array<{ x: number; y: number }> {
+  return [
+    diagram.ball,
+    diagram.lineOfScrimmage.start,
+    diagram.lineOfScrimmage.end,
+    ...diagram.players.map((player) => player.point),
+    ...diagram.blockerAssignments.flatMap((assignment) => [assignment.start, assignment.end]),
+    ...(diagram.runDirection?.points ?? []),
+    ...diagram.receiverRoutes.flatMap((route) => [
+      ...route.points,
+      ...route.breakPoints,
+    ]),
+  ];
+}
+
+function getRouteStart(route: { points: ReadonlyArray<{ x: number; y: number }> } | null): { x: number; y: number } | null {
+  return route?.points[0] ?? null;
+}
+
+function getRouteEnd(route: { points: ReadonlyArray<{ x: number; y: number }> } | null): { x: number; y: number } | null {
+  return route?.points[route.points.length - 1] ?? null;
+}
+
+function indexAssignments(
+  assignments: ReadonlyArray<{ blockerId: string; defenderId: string | null }>,
+): Record<string, string> {
+  return Object.fromEntries(
+    assignments
+      .filter((assignment): assignment is { blockerId: string; defenderId: string } =>
+        !!assignment.defenderId)
+      .map((assignment) => [assignment.blockerId, assignment.defenderId]),
+  );
+}

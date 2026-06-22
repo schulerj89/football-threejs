@@ -9,7 +9,10 @@ import {
 } from './playCallDiagram';
 import type { GameplaySnapshot } from './playState';
 import { PLAYS, type PlayDefinition, type PlayId } from './playbook';
-import type { TeamPresentationTheme } from './teams/TeamThemeApplier';
+import {
+  getReadableTextColor,
+  type TeamPresentationTheme,
+} from './teams/TeamThemeApplier';
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
@@ -27,6 +30,15 @@ export class PlayCallUi {
     this.root = document.createElement('div');
     this.root.className = 'play-call-ui';
     this.root.hidden = true;
+
+    const header = document.createElement('div');
+    header.className = 'play-call-tray-header';
+    const heading = document.createElement('h2');
+    heading.textContent = 'Choose a Play';
+    const hint = document.createElement('span');
+    hint.textContent = 'Click or press 1-6';
+    header.append(heading, hint);
+    this.root.appendChild(header);
 
     this.grid = document.createElement('div');
     this.grid.className = 'play-call-grid';
@@ -93,6 +105,7 @@ export class PlayCallUi {
 
     this.lastRenderKey = renderKey;
     this.renderCards(gameplay);
+    this.scrollSelectedCardIntoView();
   }
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
@@ -116,10 +129,38 @@ export class PlayCallUi {
       spot: gameplay.drive.lineOfScrimmage,
     };
     const cards = this.plays.map((play) =>
-      createPlayCard(play, snapPlacement, gameplay.selectedPlay.id, this.teamTheme),
+      createPlayCard(
+        play,
+        snapPlacement,
+        gameplay.selectedPlay.id,
+        this.teamTheme,
+        this.plays.indexOf(play) + 1,
+      ),
     );
 
     this.grid.replaceChildren(...cards);
+  }
+
+  private scrollSelectedCardIntoView(): void {
+    const selectedCard = this.grid.querySelector<HTMLElement>('.play-card[data-selected="true"]');
+
+    if (!selectedCard) {
+      return;
+    }
+
+    const scroll = (): void => {
+      selectedCard.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    };
+
+    if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+      window.requestAnimationFrame(scroll);
+    } else {
+      scroll();
+    }
   }
 
   private readonly handlePointerUp = (event: PointerEvent): void => {
@@ -161,6 +202,7 @@ function createPlayCard(
   snapPlacement: SnapPlacement,
   selectedPlayId: PlayId,
   teamTheme: TeamPresentationTheme | null,
+  shortcutNumber: number,
 ): HTMLButtonElement {
   const selected = play.id === selectedPlayId;
   const model = createPlayCallDiagramModel(play, snapPlacement);
@@ -169,17 +211,65 @@ function createPlayCard(
   card.dataset.kind = play.kind;
   card.dataset.playId = play.id;
   card.dataset.selected = selected ? 'true' : 'false';
+  card.dataset.shortcut = shortcutNumber.toString();
   card.type = 'button';
-  card.setAttribute('aria-label', play.displayName);
+  card.setAttribute('aria-label', createPlayCardAccessibilityLabel(play, shortcutNumber));
   card.setAttribute('aria-pressed', selected ? 'true' : 'false');
+  applyCardTheme(card, teamTheme);
 
+  const cardHeader = document.createElement('div');
+  cardHeader.className = 'play-card-header';
   const title = document.createElement('div');
   title.className = 'play-card-title';
   title.textContent = play.displayName;
-  card.appendChild(title);
+  const badge = document.createElement('span');
+  badge.className = 'play-card-kind-badge';
+  badge.textContent = play.kind === 'pass' ? 'Pass' : 'Run';
+  const shortcut = document.createElement('span');
+  shortcut.className = 'play-card-shortcut';
+  shortcut.textContent = shortcutNumber.toString();
+  cardHeader.append(title, badge, shortcut);
+  card.appendChild(cardHeader);
   card.appendChild(createDiagramSvg(model, teamTheme));
 
   return card;
+}
+
+export interface PlayCallTrayLayout {
+  cardCount: number;
+  columns: number;
+  mode: 'desktopGrid' | 'horizontalScroll';
+  rows: number;
+}
+
+export function resolvePlayCallTrayLayout(
+  viewportWidth: number,
+  cardCount: number,
+): PlayCallTrayLayout {
+  if (viewportWidth < 760) {
+    return {
+      cardCount,
+      columns: Math.max(1, cardCount),
+      mode: 'horizontalScroll',
+      rows: 1,
+    };
+  }
+
+  const columns = Math.min(3, Math.max(1, cardCount));
+
+  return {
+    cardCount,
+    columns,
+    mode: 'desktopGrid',
+    rows: Math.ceil(cardCount / columns),
+  };
+}
+
+export function createPlayCardAccessibilityLabel(
+  play: PlayDefinition,
+  shortcutNumber: number,
+): string {
+  return `${play.displayName}, ${play.kind === 'pass' ? 'pass' : 'run'} play, shortcut ${shortcutNumber}`;
 }
 
 function createDiagramSvg(
@@ -225,6 +315,13 @@ function createDiagramSvg(
       routePath.style.stroke = teamTheme.offense.uniform.number;
     }
     svg.appendChild(routePath);
+    for (const point of route.breakPoints) {
+      const marker = createBreakMarker(point);
+      if (teamTheme) {
+        marker.style.fill = teamTheme.offense.uniform.number;
+      }
+      svg.appendChild(marker);
+    }
   }
 
   for (const player of model.players) {
@@ -338,13 +435,22 @@ function createBallMarker(point: SvgPoint): SVGCircleElement {
 function createBlockerAssignment(assignment: PlayCallBlockerAssignment): SVGGElement {
   const group = createSvgElement('g');
   group.classList.add('play-card-blocker-assignment');
-  group.appendChild(createLine(assignment.start, assignment.end, 'play-card-blocker-line'));
-  group.appendChild(createAssignmentBar(assignment.start, assignment.end));
+  group.dataset.kind = assignment.kind;
+  group.dataset.defenderId = assignment.defenderId ?? '';
+  const lineClass = assignment.kind === 'passProtection'
+    ? 'play-card-pass-protection-line'
+    : 'play-card-blocker-line';
+  group.appendChild(createLine(assignment.start, assignment.end, lineClass));
+  group.appendChild(createAssignmentBar(assignment.start, assignment.end, assignment.kind));
 
   return group;
 }
 
-function createAssignmentBar(start: SvgPoint, end: SvgPoint): SVGLineElement {
+function createAssignmentBar(
+  start: SvgPoint,
+  end: SvgPoint,
+  kind: PlayCallBlockerAssignment['kind'],
+): SVGLineElement {
   const deltaX = end.x - start.x;
   const deltaY = end.y - start.y;
   const length = Math.hypot(deltaX, deltaY);
@@ -357,7 +463,7 @@ function createAssignmentBar(start: SvgPoint, end: SvgPoint): SVGLineElement {
     : { x: -deltaY / length, y: deltaX / length };
   const halfLength = 4;
 
-  return createLine(
+  const bar = createLine(
     {
       x: center.x - normal.x * halfLength,
       y: center.y - normal.y * halfLength,
@@ -366,8 +472,12 @@ function createAssignmentBar(start: SvgPoint, end: SvgPoint): SVGLineElement {
       x: center.x + normal.x * halfLength,
       y: center.y + normal.y * halfLength,
     },
-    'play-card-blocker-bar',
+    kind === 'passProtection'
+      ? 'play-card-pass-protection-bar'
+      : 'play-card-blocker-bar',
   );
+
+  return bar;
 }
 
 function createArrowPath(
@@ -377,12 +487,15 @@ function createArrowPath(
 ): SVGPolylineElement {
   const line = createSvgElement('polyline');
   line.classList.add(className);
+  const visiblePoints = insetArrowEndpoint(points);
   line.setAttribute(
     'points',
-    points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' '),
+    visiblePoints.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' '),
   );
   line.setAttribute('fill', 'none');
   line.setAttribute('marker-end', `url(#${markerId})`);
+  line.setAttribute('stroke-linecap', 'round');
+  line.setAttribute('stroke-linejoin', 'round');
 
   return line;
 }
@@ -394,8 +507,59 @@ function createLine(start: SvgPoint, end: SvgPoint, className: string): SVGLineE
   line.setAttribute('y1', start.y.toFixed(2));
   line.setAttribute('x2', end.x.toFixed(2));
   line.setAttribute('y2', end.y.toFixed(2));
+  line.setAttribute('stroke-linecap', 'round');
 
   return line;
+}
+
+function createBreakMarker(point: SvgPoint): SVGCircleElement {
+  const circle = createSvgElement('circle');
+  circle.classList.add('play-card-route-break');
+  circle.setAttribute('cx', point.x.toFixed(2));
+  circle.setAttribute('cy', point.y.toFixed(2));
+  circle.setAttribute('r', '2.15');
+
+  return circle;
+}
+
+function insetArrowEndpoint(points: readonly SvgPoint[]): SvgPoint[] {
+  if (points.length < 2) {
+    return [...points];
+  }
+
+  const visiblePoints = points.map((point) => ({ ...point }));
+  const end = visiblePoints[visiblePoints.length - 1];
+  const previous = visiblePoints[visiblePoints.length - 2];
+  const deltaX = end.x - previous.x;
+  const deltaY = end.y - previous.y;
+  const length = Math.hypot(deltaX, deltaY);
+
+  if (length <= 0.001) {
+    return visiblePoints;
+  }
+
+  const inset = Math.min(5.25, length * 0.42);
+  visiblePoints[visiblePoints.length - 1] = {
+    x: end.x - (deltaX / length) * inset,
+    y: end.y - (deltaY / length) * inset,
+  };
+
+  return visiblePoints;
+}
+
+function applyCardTheme(
+  card: HTMLButtonElement,
+  teamTheme: TeamPresentationTheme | null,
+): void {
+  if (!teamTheme) {
+    return;
+  }
+
+  const jersey = teamTheme.offense.uniform.jersey;
+  card.style.setProperty('--play-card-team', jersey);
+  card.style.setProperty('--play-card-team-text', getReadableTextColor(jersey));
+  card.style.setProperty('--play-card-accent', teamTheme.offense.uniform.stripe);
+  card.style.setProperty('--play-card-route', teamTheme.offense.uniform.number);
 }
 
 function createSvgElement<K extends keyof SVGElementTagNameMap>(

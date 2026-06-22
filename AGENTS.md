@@ -108,6 +108,8 @@ Stop after the current milestone unless the user explicitly asks for the next fe
 - Play definitions belong in data and must stay independent from Three.js scene objects.
 - Play-call card diagrams must be generated from `PlayDefinition`, resolved formation, resolved receiver routes, and blocker targets; do not maintain separate diagram coordinates.
 - SVG play-card coordinate mapping belongs in pure transformation code and should not mutate gameplay state.
+- Play-call SVGs must consume resolved formation slots, `ResolvedReceiverRoute.points`, blocking/protection assignments, snap placement, and field/boundary side directly. Do not draw pass routes from only start and final target points or keep separate manual diagram coordinates.
+- Keep play-call cards readable for six visible plays: desktop should support a clear 3 by 2 tray, smaller screens should use horizontal card navigation, and shortcut labels must match the active playbook order.
 - Pointer/tap play-card selection must feed into the same request path as keyboard play selection; DOM event handlers must not directly mutate the gameplay model.
 - Play selection is allowed during pre-snap only; resetting preserves the selected play.
 - The gameplay model owns player position, velocity, facing, and blocking engagement state; Three.js meshes only display that state.
