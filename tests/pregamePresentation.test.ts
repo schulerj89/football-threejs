@@ -373,6 +373,73 @@ describe('pregame audio coordinator', () => {
     expect(coordinator.isLineComplete('welcome')).toBe(true);
   });
 
+  it('uses decoded playback duration for safety timing when generated audio exceeds catalog duration', async () => {
+    const mixer = new FakePregameMixer({
+      handleDurations: new Map([['pregame_welcome_test', 0.72]]),
+    });
+    const coordinator = new PregameAudioCoordinator(
+      mixer,
+      createFakeTitleMusicController() as unknown as TitleMusicController,
+      createFakeGameAudioDirector() as unknown as GameAudioDirector,
+      {
+        quietGapSeconds: 0.2,
+        safetyTimeoutPaddingSeconds: 0.1,
+      },
+    );
+
+    coordinator.startLine('welcome', createSelection('pregame_welcome_test', 0.1));
+    await waitForMicrotasks();
+    mixer.advance(0.25);
+    coordinator.getSnapshot();
+
+    expect(coordinator.isLineComplete('welcome')).toBe(false);
+    expect(mixer.stoppedAssetIds).toEqual([]);
+
+    mixer.advance(0.47);
+    mixer.finish('pregame_welcome_test');
+    await waitForMicrotasks();
+    mixer.advance(0.19);
+    coordinator.getSnapshot();
+
+    expect(coordinator.isLineComplete('welcome')).toBe(false);
+
+    mixer.advance(0.02);
+    coordinator.getSnapshot();
+
+    expect(coordinator.isLineComplete('welcome')).toBe(true);
+  });
+
+  it('uses a wider default quiet gap before starting the next pregame line', async () => {
+    const mixer = new FakePregameMixer();
+    const coordinator = new PregameAudioCoordinator(
+      mixer,
+      createFakeTitleMusicController() as unknown as TitleMusicController,
+      createFakeGameAudioDirector() as unknown as GameAudioDirector,
+    );
+
+    coordinator.startLine('welcome', createSelection('pregame_welcome_test', 0.1));
+    await waitForMicrotasks();
+    coordinator.startLine('matchup', createSelection('pregame_matchup_test', 0.1));
+
+    mixer.finish('pregame_welcome_test');
+    await waitForMicrotasks();
+    mixer.advance(0.84);
+    coordinator.getSnapshot();
+
+    expect(coordinator.isLineComplete('welcome')).toBe(false);
+    expect(mixer.playedAssetIds).toEqual(['pregame_welcome_test']);
+
+    mixer.advance(0.02);
+    coordinator.getSnapshot();
+    await waitForMicrotasks();
+
+    expect(coordinator.isLineComplete('welcome')).toBe(true);
+    expect(mixer.playedAssetIds).toEqual([
+      'pregame_welcome_test',
+      'pregame_matchup_test',
+    ]);
+  });
+
   it('releases a failed pregame clip without hanging the sequence', async () => {
     const mixer = new FakePregameMixer({ failAssets: new Set(['pregame_welcome_test']) });
     const coordinator = new PregameAudioCoordinator(
@@ -590,25 +657,31 @@ async function waitForMicrotasks(): Promise<void> {
 
 class FakePregameMixer implements PregameAudioPort {
   readonly playedAssetIds: string[] = [];
+  readonly stoppedAssetIds: string[] = [];
   readonly stoppedCategories: string[] = [];
   private readonly failAssets: ReadonlySet<string>;
+  private readonly handleDurations: ReadonlyMap<string, number>;
   private readonly handles = new Map<string, FakePlaybackHandle>();
   private timeSeconds = 0;
 
-  constructor(options: { failAssets?: ReadonlySet<string> } = {}) {
+  constructor(options: {
+    failAssets?: ReadonlySet<string>;
+    handleDurations?: ReadonlyMap<string, number>;
+  } = {}) {
     this.failAssets = options.failAssets ?? new Set();
+    this.handleDurations = options.handleDurations ?? new Map();
   }
 
   advance(seconds: number): void {
     this.timeSeconds += seconds;
   }
 
-  finish(assetId: string): void {
+  finish(assetId: string, endedAt = this.timeSeconds): void {
     const handle = this.handles.get(assetId);
     if (!handle) {
       throw new Error(`No fake handle for ${assetId}`);
     }
-    handle.finish(this.timeSeconds);
+    handle.finish(endedAt);
   }
 
   getCurrentTime(): number {
@@ -658,7 +731,12 @@ class FakePregameMixer implements PregameAudioPort {
       return Promise.resolve(null);
     }
     this.playedAssetIds.push(assetId);
-    const handle = new FakePlaybackHandle(assetId, this.timeSeconds);
+    const handle = new FakePlaybackHandle(
+      assetId,
+      this.timeSeconds,
+      this.handleDurations.get(assetId),
+      (stoppedAssetId) => this.stoppedAssetIds.push(stoppedAssetId),
+    );
     this.handles.set(assetId, handle);
     handle.ended.then(() => {
       this.handles.delete(assetId);
@@ -693,6 +771,8 @@ class FakePlaybackHandle implements AudioPlaybackHandle {
   constructor(
     readonly assetId: string,
     readonly startedAt: number,
+    readonly durationSeconds: number | undefined,
+    private readonly onStop: (assetId: string) => void = () => undefined,
   ) {
     this.ended = new Promise((resolve) => {
       this.resolveEnded = resolve;
@@ -704,6 +784,7 @@ class FakePlaybackHandle implements AudioPlaybackHandle {
   }
 
   stop(): void {
+    this.onStop(this.assetId);
     this.resolve('stopped', this.startedAt);
   }
 

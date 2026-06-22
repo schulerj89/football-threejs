@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.5] - 2026-06-22
+
+### Fixed
+
+- Prevented generated pregame announcer clips from being cut short when their decoded MP3 duration is longer than the script catalog estimate.
+- Increased the default quiet gap between serialized pregame announcer lines so the intro has clearer separation before the matchup/team call.
+
+### Tests
+
+- Added pregame audio coverage for stale catalog durations, decoded playback-duration safety timing, and the wider default quiet gap before queued lines start.
+
 ## [1.7.4] - 2026-06-22
 
 ### Changed

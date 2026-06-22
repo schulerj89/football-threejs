@@ -58,6 +58,7 @@ export interface AudioPlaybackCompletion {
 export interface AudioPlaybackHandle {
   assetId: string;
   category: AudioPlaybackCategory;
+  durationSeconds?: number;
   ended: Promise<AudioPlaybackCompletion>;
   startedAt: number;
   stop(fadeSeconds?: number): void;
@@ -268,6 +269,7 @@ export class AudioMixer {
     return {
       assetId: asset.assetId,
       category: asset.category,
+      durationSeconds: decodedAsset.buffer.duration,
       ended,
       startedAt,
       stop: (fadeSeconds = ONE_SHOT_ATTACK_SECONDS): void => {

@@ -55,8 +55,8 @@ interface QueuedPregameLine {
 
 const DEFAULT_PREGAME_AUDIO_CONFIG = {
   crowdDuckGain: 0.78,
-  quietGapSeconds: 0.32,
-  safetyTimeoutPaddingSeconds: 1.6,
+  quietGapSeconds: 0.85,
+  safetyTimeoutPaddingSeconds: 3,
   titleMusicDuckGain: 0.34,
 } as const;
 
@@ -223,11 +223,15 @@ export class PregameAudioCoordinator {
         }
 
         this.activeLine.handle = handle;
+        const expectedPlaybackSeconds = Math.max(
+          clip.durationSeconds,
+          handle.durationSeconds ?? clip.durationSeconds,
+        );
         this.activeLine.startedAtSeconds = handle.startedAt;
         this.activeLine.safetyEndsAtSeconds =
-          handle.startedAt + clip.durationSeconds + this.safetyTimeoutPaddingSeconds;
+          handle.startedAt + expectedPlaybackSeconds + this.safetyTimeoutPaddingSeconds;
         this.activeLine.endsAtSeconds =
-          handle.startedAt + clip.durationSeconds + this.quietGapSeconds;
+          handle.startedAt + expectedPlaybackSeconds + this.quietGapSeconds;
         this.activeLine.playbackState = 'playing';
         this.recordHistory(lineId, selection.assetId, 'played', null, {
           actualStartedAtSeconds: handle.startedAt,
