@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createGameplayModel, snapshotGameplayModel } from '../src/playState';
 import { BROADCAST_EXPERIENCE_SETTINGS } from '../src/config/GameExperienceSettings';
 import { resolveTeamPresentationTheme } from '../src/teams/TeamThemeApplier';
+import { createGameplayRosterBinding } from '../src/roster/GameplayRosterBinding';
 import type { PregameAudioCoordinator } from '../src/presentation/pregame/PregameAudioCoordinator';
 import {
   PregamePresentationDirector,
@@ -14,6 +15,9 @@ import {
   createPregameCameraShot,
   createPregameSequence,
 } from '../src/presentation/pregame/PregameShotDefinitions';
+import {
+  resolveQuarterbackSpotlightSubject,
+} from '../src/presentation/pregame/SpotlightSubjectResolver';
 import type {
   PregameCommentaryLineId,
   PregamePresentationContext,
@@ -90,6 +94,121 @@ describe('pregame presentation sequence', () => {
     expect(shot.phase).toBe('preSnapEstablish');
     expect(shot.position.y).toBeGreaterThan(4);
   });
+
+  it('includes the quarterback spotlight in brief and full sequences but not off', () => {
+    expect(createPregameSequence('brief').map((step) => step.shotId)).toEqual([
+      'stadiumEstablish',
+      'matchupCombined',
+      'quarterbackSpotlight',
+      'transitionToGameplay',
+    ]);
+    expect(createPregameSequence('full').map((step) => step.shotId)).toEqual([
+      'stadiumEstablish',
+      'userTeamTunnelOrSideline',
+      'opponentTeamPan',
+      'weatherAndField',
+      'quarterbackSpotlight',
+      'transitionToGameplay',
+    ]);
+    expect(createPregameSequence('off').some((step) => step.shotId === 'quarterbackSpotlight')).toBe(false);
+  });
+
+  it('resolves the user-team starting quarterback through the active lineup', () => {
+    const context = createContext();
+    const subject = resolveQuarterbackSpotlightSubject(context);
+
+    expect(subject.gameplayPlayerId).toBe('offense-qb');
+    expect(subject.rosterPlayerId).toBe('metro-meteors-qb-12');
+    expect(subject.formattedName).toBe('J. CARTER');
+    expect(subject.jerseyNumber).toBe(12);
+    expect(subject.fallbackReason).toBeNull();
+  });
+
+  it('plays the quarterback line and lower third from resolved roster data', () => {
+    const audio = createFakePregameAudioCoordinator();
+    const lowerThird = createFakeLowerThird();
+    const director = new PregamePresentationDirector({
+      audioCoordinator: audio as unknown as PregameAudioCoordinator,
+      lowerThird: lowerThird as unknown as PregameLowerThird,
+      settings: { cinematics: 'brief' },
+    });
+    const context = createContext();
+
+    director.start(context);
+    advancePregameFrames(director, context, 30);
+    audio.completedLineIds.add('welcome');
+    director.update(0, context);
+    advancePregameFrames(director, context, 34);
+    audio.completedLineIds.add('matchup');
+    director.update(0, context);
+    director.update(0.1, context);
+
+    expect(director.getSnapshot()).toMatchObject({
+      currentShot: 'quarterbackSpotlight',
+      spotlight: {
+        cloneStatus: 'usingFormationPlayer',
+        gameplayPlayerId: 'offense-qb',
+        rosterPlayerId: 'metro-meteors-qb-12',
+        selectedCommentaryId: 'pregame_qb_test',
+      },
+    });
+    expect(audio.startedLines).toContain('quarterback');
+    expect(lowerThird.getSnapshot()).toMatchObject({
+      abbreviation: '12',
+      detail: 'QB - MET',
+      displayName: 'J. CARTER',
+      visible: true,
+    });
+  });
+
+  it('does not replay the quarterback spotlight later in the same match', () => {
+    const audio = createFakePregameAudioCoordinator();
+    const director = new PregamePresentationDirector({
+      audioCoordinator: audio as unknown as PregameAudioCoordinator,
+      lowerThird: createFakeLowerThird() as unknown as PregameLowerThird,
+      settings: { cinematics: 'brief' },
+    });
+    const context = createContext();
+
+    director.start(context);
+    advancePregameFrames(director, context, 30);
+    audio.completedLineIds.add('welcome');
+    director.update(0, context);
+    advancePregameFrames(director, context, 34);
+    audio.completedLineIds.add('matchup');
+    director.update(0, context);
+    director.update(0.1, context);
+    expect(director.getSnapshot().currentShot).toBe('quarterbackSpotlight');
+
+    director.start(context);
+
+    expect(director.getSnapshot().sequence).toEqual([
+      'stadiumEstablish',
+      'matchupCombined',
+      'transitionToGameplay',
+    ]);
+  });
+
+  it('falls back safely when quarterback roster data is unavailable', () => {
+    const context = createContext();
+    const brokenContext: PregamePresentationContext = {
+      ...context,
+      rosterBinding: {
+        ...context.rosterBinding,
+        activeLineup: {
+          ...context.rosterBinding.activeLineup,
+          bindings: context.rosterBinding.activeLineup.bindings.filter(
+            (binding) => binding.footballPosition !== 'QB',
+          ),
+        },
+      },
+    };
+    const subject = resolveQuarterbackSpotlightSubject(brokenContext);
+
+    expect(subject.formattedName).toBe('J. CARTER');
+    expect(subject.gameplayPlayerId).toBe('offense-qb');
+    expect(subject.fallbackReason).toBe('missingLineup');
+  });
 });
 
 function createContext(): PregamePresentationContext {
@@ -97,11 +216,13 @@ function createContext(): PregamePresentationContext {
     challengeMode: 'exhibition',
     playbookId: '11v11',
   });
+  const teamProfiles = BROADCAST_EXPERIENCE_SETTINGS.teamProfiles;
 
   return {
     aspectRatio: 16 / 9,
     gameplaySnapshot: snapshotGameplayModel(gameplay),
     matchSnapshot: null,
+    rosterBinding: createGameplayRosterBinding('11v11', teamProfiles),
     sidelineSnapshot: {
       density: 'low',
       drawCalls: 0,
@@ -146,9 +267,19 @@ function createContext(): PregamePresentationContext {
       upperTierEnabled: false,
     },
     targetGameplayCamera: 'offensePerspective',
-    teamTheme: resolveTeamPresentationTheme(BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+    teamTheme: resolveTeamPresentationTheme(teamProfiles),
     weatherCondition: 'clear',
   };
+}
+
+function advancePregameFrames(
+  director: PregamePresentationDirector,
+  context: PregamePresentationContext,
+  frames: number,
+): void {
+  for (let frame = 0; frame < frames; frame += 1) {
+    director.update(0.1, context);
+  }
 }
 
 function createFakeLowerThird() {
@@ -173,6 +304,7 @@ function createFakePregameAudioCoordinator() {
     startedLines,
     createSelections: () => ({
       matchup: createSelection('pregame_matchup_test'),
+      quarterback: createSelection('pregame_qb_test'),
       weather: createSelection('pregame_weather_test'),
       welcome: createSelection('pregame_welcome_test'),
     }),

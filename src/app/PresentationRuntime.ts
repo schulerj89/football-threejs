@@ -812,6 +812,7 @@ export class PresentationRuntime {
       aspectRatio: Math.max(0.1, window.innerWidth / Math.max(1, window.innerHeight)),
       gameplaySnapshot,
       matchSnapshot,
+      rosterBinding: this.rosterBinding,
       sidelineSnapshot: this.sidelineTeamController.getSnapshot(),
       stadiumSnapshot: this.stadiumController.getSnapshot(),
       targetGameplayCamera: this.cameraController.getMode(),

@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0] - 2026-06-22
+
+### Added
+
+- Added a user-team starting quarterback spotlight shot to brief and full Exhibition pregame sequences before playable pre-snap.
+- Added lineup-based QB spotlight subject resolution from active team profile, roster, active lineup binding, gameplay player ID, jersey number, appearance ID, and team colors.
+- Added QB-specific pregame lower-third presentation, spotlight debug readback, and deterministic pregame quarterback commentary selection from the existing generated catalog.
+
+### Changed
+
+- Kept the spotlight presentation anchored to the existing formation quarterback so no gameplay player is moved, cloned into gameplay, or given presentation authority.
+- Prevented the quarterback spotlight from replaying later in the same match while keeping rematch selection deterministic.
+
+### Tests
+
+- Added pregame sequence, QB subject resolution, lower-third identity, missing-roster fallback, and same-match no-replay coverage.
+
 ## [1.6.0] - 2026-06-22
 
 ### Added

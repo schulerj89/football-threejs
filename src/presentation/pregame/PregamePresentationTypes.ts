@@ -2,21 +2,24 @@ import type { PregameCommentarySelection, PregameWeatherCondition } from '../../
 import type { CinematicsSetting, GameplayCameraMode } from '../../camera/CameraTypes';
 import type { GameplaySnapshot } from '../../playState';
 import type { MatchSnapshot } from '../../match/MatchTypes';
+import type { GameplayRosterBinding } from '../../roster/GameplayRosterBinding';
 import type { SidelineTeamControllerSnapshot, SidelineTeamSide, SidelineZone } from '../teams/SidelineTeamTypes';
 import type { StadiumControllerSnapshot } from '../../stadium/StadiumController';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
+import type { PlayerSpotlightStageSnapshot } from './PlayerSpotlightStage';
 
 export type PregamePresentationPhase = 'completed' | 'idle' | 'running' | 'skipped';
 
 export type PregameShotId =
   | 'matchupCombined'
   | 'opponentTeamPan'
+  | 'quarterbackSpotlight'
   | 'stadiumEstablish'
   | 'transitionToGameplay'
   | 'userTeamTunnelOrSideline'
   | 'weatherAndField';
 
-export type PregameCommentaryLineId = 'matchup' | 'weather' | 'welcome';
+export type PregameCommentaryLineId = 'matchup' | 'quarterback' | 'weather' | 'welcome';
 
 export interface PregameSequenceStep {
   commentaryLineId?: PregameCommentaryLineId;
@@ -30,6 +33,7 @@ export interface PregamePresentationContext {
   aspectRatio: number;
   gameplaySnapshot: GameplaySnapshot;
   matchSnapshot: MatchSnapshot | null;
+  rosterBinding: GameplayRosterBinding;
   sidelineSnapshot: SidelineTeamControllerSnapshot;
   stadiumSnapshot: StadiumControllerSnapshot;
   targetGameplayCamera: GameplayCameraMode;
@@ -39,6 +43,7 @@ export interface PregamePresentationContext {
 
 export interface PregameCommentarySelections {
   matchup: PregameCommentarySelection;
+  quarterback: PregameCommentarySelection;
   weather: PregameCommentarySelection;
   welcome: PregameCommentarySelection;
 }
@@ -56,6 +61,7 @@ export interface PregameLowerThirdState {
   accentColor: string;
   caption: string | null;
   displayName: string | null;
+  detail: string | null;
   visible: boolean;
 }
 
@@ -72,6 +78,7 @@ export interface PregamePresentationSnapshot {
   sequence: PregameShotId[];
   shotElapsedSeconds: number;
   skipState: 'available' | 'completed' | 'idle' | 'skipped';
+  spotlight: PlayerSpotlightStageSnapshot;
   subjectBounds: PregameSubjectBounds | null;
   targetGameplayCamera: GameplayCameraMode;
   weatherCondition: PregameWeatherCondition;

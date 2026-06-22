@@ -10,6 +10,7 @@ export class PregameLowerThird {
   private readonly nameElement: HTMLDivElement;
   private readonly abbreviationElement: HTMLDivElement;
   private readonly captionElement: HTMLDivElement;
+  private readonly detailElement: HTMLDivElement;
   private state: PregameLowerThirdState = createHiddenLowerThirdState();
 
   constructor() {
@@ -23,10 +24,18 @@ export class PregameLowerThird {
     this.nameElement = document.createElement('div');
     this.nameElement.className = 'pregame-lower-third-name';
 
+    this.detailElement = document.createElement('div');
+    this.detailElement.className = 'pregame-lower-third-detail';
+
     this.captionElement = document.createElement('div');
     this.captionElement.className = 'pregame-lower-third-caption';
 
-    this.root.append(this.abbreviationElement, this.nameElement, this.captionElement);
+    this.root.append(
+      this.abbreviationElement,
+      this.nameElement,
+      this.detailElement,
+      this.captionElement,
+    );
     document.body.append(this.root);
   }
 
@@ -39,6 +48,8 @@ export class PregameLowerThird {
     this.root.style.setProperty('--pregame-text', getReadableTextColor(state.accentColor));
     this.abbreviationElement.textContent = state.abbreviation ?? '';
     this.nameElement.textContent = state.displayName ?? '';
+    this.detailElement.textContent = state.detail ?? '';
+    this.detailElement.hidden = !state.detail;
     this.captionElement.textContent = state.caption ?? '';
   }
 
@@ -60,6 +71,7 @@ export function createHiddenLowerThirdState(): PregameLowerThirdState {
     abbreviation: null,
     accentColor: '#f2d94b',
     caption: null,
+    detail: null,
     displayName: null,
     visible: false,
   };
@@ -97,7 +109,17 @@ export function syncPregameDebugOverlay(
       ? `subject: ${bounds.source} center ${bounds.center.x.toFixed(1)},${bounds.center.z.toFixed(1)} size ${bounds.size.x.toFixed(1)}x${bounds.size.z.toFixed(1)}`
       : 'subject: none',
     snapshot.lowerThird.visible
-      ? `lower: ${snapshot.lowerThird.displayName ?? 'none'}`
+      ? `lower: ${snapshot.lowerThird.displayName ?? 'none'} ${snapshot.lowerThird.detail ?? ''}`
       : 'lower: hidden',
+    snapshot.spotlight.active
+      ? [
+          `spotlight roster: ${snapshot.spotlight.rosterPlayerId ?? 'none'}`,
+          `gameplay: ${snapshot.spotlight.gameplayPlayerId ?? 'none'}`,
+          `commentary: ${snapshot.spotlight.selectedCommentaryId ?? 'none'}`,
+          `clone: ${snapshot.spotlight.cloneStatus}`,
+          `speechRemaining: ${snapshot.spotlight.speechRemainingSeconds?.toFixed(2) ?? 'none'}`,
+          `blockers: ${snapshot.spotlight.completionBlockers.join(',') || 'none'}`,
+        ].join('\n')
+      : 'spotlight: inactive',
   ].join('\n');
 }

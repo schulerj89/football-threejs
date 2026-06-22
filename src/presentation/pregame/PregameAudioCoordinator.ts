@@ -4,6 +4,7 @@ import type { GameAudioDirector } from '../../audio/GameAudioDirector';
 import {
   resolveMatchupLine,
   resolvePregameWelcome,
+  resolveQuarterbackSpotlight,
   resolveWeatherLine,
   type PregameCommentarySelection,
   type PregameWeatherCondition,
@@ -71,6 +72,8 @@ export class PregameAudioCoordinator {
   createSelections(options: {
     matchSnapshot: MatchSnapshot | null;
     previousScriptIds?: Partial<Record<PregameCommentaryLineId, string | null>>;
+    quarterbackRosterPlayerId?: string | null;
+    quarterbackTeamId?: string | null;
     weatherCondition: PregameWeatherCondition;
   }): PregameCommentarySelections {
     const matchSeed = options.matchSnapshot?.deterministicSeed ?? 'pregame';
@@ -83,6 +86,12 @@ export class PregameAudioCoordinator {
         homeTeamId: userTeamId,
         matchSeed,
         previousScriptId: options.previousScriptIds?.matchup ?? null,
+      }),
+      quarterback: resolveQuarterbackSpotlight({
+        matchSeed,
+        previousScriptId: options.previousScriptIds?.quarterback ?? null,
+        rosterPlayerId: options.quarterbackRosterPlayerId ?? null,
+        teamId: options.quarterbackTeamId ?? userTeamId,
       }),
       weather: resolveWeatherLine({
         condition: options.weatherCondition,

@@ -836,7 +836,7 @@ body[data-game-mode="exhibition"] .score-counter {
   min-width: 54px;
   min-height: 44px;
   place-items: center;
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
   padding: 8px;
   border-radius: 6px;
   background: var(--pregame-accent, #f2d94b);
@@ -852,6 +852,19 @@ body[data-game-mode="exhibition"] .score-counter {
   color: #fffdf1;
   font-size: clamp(20px, 3vw, 30px);
   font-weight: 950;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pregame-lower-third-detail {
+  min-width: 0;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--pregame-accent, #f2d94b) 78%, #ffffff);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
   line-height: 1;
   text-overflow: ellipsis;
   text-transform: uppercase;

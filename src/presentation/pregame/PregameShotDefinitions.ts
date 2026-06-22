@@ -8,10 +8,16 @@ import type {
   PregameShotId,
   PregameSubjectBounds,
 } from './PregamePresentationTypes';
+import {
+  QUARTERBACK_SPOTLIGHT_CONFIG,
+  createQuarterbackSpotlightShotVectors,
+  resolveQuarterbackSpotlightBounds,
+} from './QuarterbackSpotlightShot';
 
 export const PREGAME_SHOT_DURATIONS = {
   matchupCombined: 3.4,
   opponentTeamPan: 5,
+  quarterbackSpotlight: QUARTERBACK_SPOTLIGHT_CONFIG.minimumSeconds,
   stadiumEstablish: 2.5,
   transitionToGameplay: 2,
   userTeamTunnelOrSideline: 5,
@@ -39,6 +45,12 @@ export function createPregameSequence(cinematics: CinematicsSetting): PregameSeq
         minimumSeconds: PREGAME_SHOT_DURATIONS.matchupCombined,
         shotId: 'matchupCombined',
         waitForCommentaryLineId: 'matchup',
+      },
+      {
+        commentaryLineId: 'quarterback',
+        minimumSeconds: PREGAME_SHOT_DURATIONS.quarterbackSpotlight,
+        shotId: 'quarterbackSpotlight',
+        waitForCommentaryLineId: 'quarterback',
       },
       {
         minimumSeconds: PREGAME_SHOT_DURATIONS.transitionToGameplay,
@@ -71,6 +83,12 @@ export function createPregameSequence(cinematics: CinematicsSetting): PregameSeq
       minimumSeconds: PREGAME_SHOT_DURATIONS.weatherAndField,
       shotId: 'weatherAndField',
       waitForCommentaryLineId: 'weather',
+    },
+    {
+      commentaryLineId: 'quarterback',
+      minimumSeconds: PREGAME_SHOT_DURATIONS.quarterbackSpotlight,
+      shotId: 'quarterbackSpotlight',
+      waitForCommentaryLineId: 'quarterback',
     },
     {
       minimumSeconds: PREGAME_SHOT_DURATIONS.transitionToGameplay,
@@ -158,6 +176,10 @@ export function resolvePregameSubjectBounds(
     };
   }
 
+  if (shotId === 'quarterbackSpotlight') {
+    return resolveQuarterbackSpotlightBounds(context);
+  }
+
   const snap = context.gameplaySnapshot.nextSnapSpot ?? context.gameplaySnapshot.currentBallSpot;
   const centerZ = shotId === 'transitionToGameplay' ? snap.z : 0;
   return {
@@ -210,6 +232,10 @@ function createShotVectors(
       lookTarget: new THREE.Vector3(0, 7, FIELD_BOUNDS.maxZ - 10),
       position: new THREE.Vector3(-34 * aspectScale, 24, FIELD_BOUNDS.maxZ + 26),
     };
+  }
+
+  if (shotId === 'quarterbackSpotlight') {
+    return createQuarterbackSpotlightShotVectors(context, subject, progress);
   }
 
   const sideSign = focus.x < 0 ? -1 : 1;
