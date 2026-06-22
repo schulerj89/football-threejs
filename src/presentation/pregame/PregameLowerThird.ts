@@ -114,6 +114,7 @@ export function syncPregameDebugOverlay(
     `music: ${snapshot.musicState.state} loop ${snapshot.musicState.loopActive ? 'yes' : 'no'} gain ${snapshot.musicState.gain.toFixed(2)}`,
     `crowd: loops ${snapshot.crowdState.activeLoops.join(',') || 'none'} gain ${snapshot.crowdState.gain.toFixed(2)} duck ${snapshot.crowdState.duckingGain.toFixed(2)}`,
     `sideline: ${snapshot.sidelineCounts.sideline} tunnel ${snapshot.sidelineCounts.tunnel}`,
+    `warmup: ${snapshot.warmup.enabled ? 'on' : 'off'} players ${snapshot.warmup.playerCount} props ${snapshot.warmup.propCount} ready ${snapshot.warmup.ready ? 'yes' : 'no'}`,
     `presentationClones: ${snapshot.presentationCloneCount}`,
     `hold: ${snapshot.holdReason ?? 'none'}`,
     `skip: ${snapshot.skipState}`,

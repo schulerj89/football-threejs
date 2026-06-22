@@ -14,10 +14,16 @@ import type {
 } from '../../roster/GameplayRosterBinding';
 import type { TeamProfile } from '../../teams/TeamProfile';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
+import type { PregameWarmupSnapshot } from './PregameWarmupTypes';
 
 export interface QuarterbackSpotlightSubject {
   appearanceId: string;
-  fallbackReason: 'missingGameplayPlayer' | 'missingLineup' | 'missingRosterPlayer' | null;
+  fallbackReason:
+    | 'missingGameplayPlayer'
+    | 'missingLineup'
+    | 'missingRosterPlayer'
+    | 'missingWarmupSubject'
+    | null;
   footballPosition: FootballPosition;
   formattedName: string;
   fullName: string;
@@ -36,6 +42,7 @@ export interface QuarterbackSpotlightResolutionContext {
   matchSnapshot: MatchSnapshot | null;
   rosterBinding: GameplayRosterBinding;
   teamTheme: TeamPresentationTheme;
+  warmupSnapshot: PregameWarmupSnapshot;
 }
 
 const FALLBACK_QB_NUMBER = 0;
@@ -49,8 +56,15 @@ export function resolveQuarterbackSpotlightSubject(
   const lineupBinding = resolveStartingQuarterbackLineupBinding(context.rosterBinding);
   const rosterPlayer = resolveStartingQuarterbackRosterPlayer(context.rosterBinding, lineupBinding);
   const gameplayPlayer = resolveGameplayQuarterback(context.gameplaySnapshot, lineupBinding);
-  const fallbackReason = resolveFallbackReason(lineupBinding, rosterPlayer, gameplayPlayer);
-  const position = gameplayPlayer?.position ??
+  const warmupQuarterback = context.warmupSnapshot.quarterback;
+  const fallbackReason = resolveFallbackReason(
+    lineupBinding,
+    rosterPlayer,
+    gameplayPlayer,
+    warmupQuarterback,
+  );
+  const position = warmupQuarterback?.bounds.center ??
+    gameplayPlayer?.position ??
     context.gameplaySnapshot.nextSnapSpot ??
     context.gameplaySnapshot.currentBallSpot;
 
@@ -129,12 +143,16 @@ function resolveFallbackReason(
   lineupBinding: ActiveLineupBinding | null,
   rosterPlayer: RosterPlayer | null,
   gameplayPlayer: PlayerSnapshot | null,
+  warmupQuarterback: QuarterbackSpotlightResolutionContext['warmupSnapshot']['quarterback'],
 ): QuarterbackSpotlightSubject['fallbackReason'] {
   if (!lineupBinding) {
     return 'missingLineup';
   }
   if (!rosterPlayer) {
     return 'missingRosterPlayer';
+  }
+  if (!warmupQuarterback) {
+    return 'missingWarmupSubject';
   }
   if (!gameplayPlayer) {
     return 'missingGameplayPlayer';

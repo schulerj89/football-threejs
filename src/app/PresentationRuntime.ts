@@ -113,6 +113,13 @@ import {
   PregamePresentationDirector,
   type PregamePresentationUpdateResult,
 } from '../presentation/pregame/PregamePresentationDirector';
+import {
+  PregameWarmupController,
+} from '../presentation/pregame/PregameWarmupController';
+import {
+  QBShowcaseCard,
+  type QBShowcaseCardSnapshot,
+} from '../presentation/pregame/QBShowcaseCard';
 import type {
   PregamePresentationContext,
   PregamePresentationSnapshot,
@@ -162,6 +169,8 @@ export class PresentationRuntime {
   readonly gameplayHud = createGameplayHud();
   readonly playerPoseController: PlayerPoseController;
   readonly pregameLowerThird: PregameLowerThird;
+  readonly pregameWarmupController: PregameWarmupController;
+  readonly qbShowcaseCard: QBShowcaseCard;
   readonly routeArtRenderer: RouteArtRenderer;
   readonly stadiumController: StadiumController;
   readonly sidelineTeamController: SidelineTeamController;
@@ -263,6 +272,15 @@ export class PresentationRuntime {
       this.scene.add(this.sidelineTeamController.group);
     }
 
+    this.pregameWarmupController = new PregameWarmupController({
+      enabled: !this.crowdPreviewController,
+      rosterBinding: this.rosterBinding,
+      teamTheme: this.teamTheme,
+    });
+    if (!this.crowdPreviewController) {
+      this.scene.add(this.pregameWarmupController.group);
+    }
+
     this.crowdPresentationController =
       !this.crowdPreviewController && this.crowdPresentationSettings.crowdVisualsEnabled
         ? new CrowdPresentationController({
@@ -314,6 +332,7 @@ export class PresentationRuntime {
       this.gameAudioDirector,
     );
     this.pregamePresentationDirector = this.createPregamePresentationDirector();
+    this.qbShowcaseCard = new QBShowcaseCard();
     this.presentationHoldDirector = new PresentationHoldDirector(
       gameExperience.settings.cinematics,
     );
@@ -361,6 +380,8 @@ export class PresentationRuntime {
 
   resetPregamePresentationIdentity(): void {
     this.pregamePresentationDirector.resetPresentationIdentity();
+    this.pregameWarmupController.setActive(false);
+    this.qbShowcaseCard.hide('resetPresentationIdentity');
     this.broadcastCaptions.hidden = true;
     this.broadcastCaptions.textContent = '';
   }
@@ -369,6 +390,8 @@ export class PresentationRuntime {
     this.cameraController.skipPresentationShot();
     this.gamePresentationRuntime.skipPresentation();
     this.pregamePresentationDirector.skip();
+    this.pregameWarmupController.setActive(false);
+    this.qbShowcaseCard.hide('skipped');
   }
 
   skipPresentationHold(): void {
@@ -502,12 +525,21 @@ export class PresentationRuntime {
   ): boolean {
     if (this.crowdPreviewController || this.gameExperience.settings.cinematics === 'off') {
       this.pregamePresentationDirector.reset();
+      this.pregameWarmupController.setActive(false);
+      this.qbShowcaseCard.hide('cinematicsOff');
       return false;
     }
 
-    return this.pregamePresentationDirector.start(
+    this.pregameWarmupController.setActive(true);
+    this.pregameWarmupController.update();
+    const started = this.pregamePresentationDirector.start(
       this.createPregameContext(gameplaySnapshot, matchSnapshot),
     );
+    if (!started) {
+      this.pregameWarmupController.setActive(false);
+      this.qbShowcaseCard.hide('pregameNotStarted');
+    }
+    return started;
   }
 
   updatePregameFrame({
@@ -518,8 +550,6 @@ export class PresentationRuntime {
     playerVisuals,
     profiler,
   }: PregamePresentationFrameOptions): PregamePresentationUpdateResult {
-    const context = this.createPregameContext(gameplaySnapshot, matchSnapshot);
-
     if (profiler?.enabled) {
       profiler.measure('footballVisualUpdate', () => syncBallVisual(this.ballVisual, ball));
       profiler.measure('proceduralPlayerPosing', () => {
@@ -531,17 +561,28 @@ export class PresentationRuntime {
       profiler.measure('sidelineTeamsUpdate', () => {
         this.sidelineTeamController.update();
       });
+      this.pregameWarmupController.update();
     } else {
       syncBallVisual(this.ballVisual, ball);
       this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
       this.officialsController.update(gameplaySnapshot, deltaSeconds, false);
       this.sidelineTeamController.update();
+      this.pregameWarmupController.update();
     }
 
+    const context = this.createPregameContext(gameplaySnapshot, matchSnapshot);
     const result = this.pregamePresentationDirector.update(deltaSeconds, context);
     if (result.shot) {
       this.cameraController.updatePregamePresentation(result.shot, deltaSeconds);
     }
+    this.qbShowcaseCard.update({
+      camera: this.cameraController.camera,
+      pregameSnapshot: this.pregamePresentationDirector.getSnapshot(),
+      teamTheme: this.teamTheme,
+      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth,
+      warmupSnapshot: this.pregameWarmupController.getSnapshot(),
+    });
     this.syncPregameCaptions();
     return result;
   }
@@ -556,6 +597,8 @@ export class PresentationRuntime {
       this.pregamePresentationDirector.complete();
     }
     this.cameraController.finishPregamePresentation(gameplaySnapshot);
+    this.pregameWarmupController.setActive(false);
+    this.qbShowcaseCard.hide('pregameFinished');
     this.broadcastCaptions.hidden = true;
     this.broadcastCaptions.textContent = '';
   }
@@ -577,6 +620,7 @@ export class PresentationRuntime {
       if (appPhase !== 'pregamePresentation') {
         this.broadcastCaptions.hidden = true;
         this.broadcastCaptions.textContent = '';
+        this.qbShowcaseCard.hide('appPhase');
       }
     }
   }
@@ -617,6 +661,11 @@ export class PresentationRuntime {
       rosterBinding: this.rosterBinding,
       teamTheme: this.teamTheme,
       tunnelTableauEnabled: gameExperience.settings.tunnelTableauEnabled,
+    });
+    this.pregameWarmupController.applySettings({
+      enabled: !this.crowdPreviewController,
+      rosterBinding: this.rosterBinding,
+      teamTheme: this.teamTheme,
     });
     this.applyStadiumSettings();
     this.broadcastCommentaryDirector.setAnnouncerEnabled(
@@ -720,6 +769,10 @@ export class PresentationRuntime {
     return this.pregamePresentationDirector.getSnapshot();
   }
 
+  getQBShowcaseCardSnapshot(): QBShowcaseCardSnapshot {
+    return this.qbShowcaseCard.getSnapshot();
+  }
+
   getPlayerPoseSnapshots(): PlayerPoseSnapshot[] {
     return this.playerPoseController.getPoseSnapshots();
   }
@@ -747,6 +800,7 @@ export class PresentationRuntime {
     this.routeArtRenderer.dispose();
     this.controlledPlayerLabels.dispose();
     this.pregameLowerThird.dispose();
+    this.qbShowcaseCard.dispose();
     if (this.crowdPreviewController) {
       this.scene.remove(this.crowdPreviewController.group);
       this.crowdPreviewController.dispose();
@@ -761,6 +815,8 @@ export class PresentationRuntime {
     this.officialsController.dispose();
     this.scene.remove(this.sidelineTeamController.group);
     this.sidelineTeamController.dispose();
+    this.scene.remove(this.pregameWarmupController.group);
+    this.pregameWarmupController.dispose();
     this.playCallUi?.dispose();
     this.gameplayHud.root.remove();
     this.broadcastCaptions.remove();
@@ -823,6 +879,7 @@ export class PresentationRuntime {
       stadiumSnapshot: this.stadiumController.getSnapshot(),
       targetGameplayCamera: this.cameraController.getMode(),
       teamTheme: this.teamTheme,
+      warmupSnapshot: this.pregameWarmupController.getSnapshot(),
       weatherCondition: resolvePregameWeatherCondition(this.searchParams.get('pregameWeather')),
     };
   }

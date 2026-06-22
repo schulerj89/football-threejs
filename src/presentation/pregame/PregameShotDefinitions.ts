@@ -18,10 +18,12 @@ export const PREGAME_SHOT_DURATIONS = {
   matchupCombined: 3.4,
   matchupWide: 4.2,
   opponentTeamPan: 5,
+  opponentWarmupPan: 4.8,
   quarterbackSpotlight: QUARTERBACK_SPOTLIGHT_CONFIG.minimumSeconds,
   stadiumEstablish: 2.5,
   transitionToGameplay: 2,
   userTeamTunnelOrSideline: 5,
+  userWarmupPan: 4.8,
   weatherAndField: 3.5,
 } as const;
 
@@ -72,6 +74,16 @@ export function createPregameSequence(cinematics: CinematicsSetting): PregameSeq
       minimumSeconds: PREGAME_SHOT_DURATIONS.matchupWide,
       shotId: 'matchupWide',
       waitForCommentaryLineId: 'matchup',
+    },
+    {
+      lowerThirdTeamSide: 'user',
+      minimumSeconds: PREGAME_SHOT_DURATIONS.userWarmupPan,
+      shotId: 'userWarmupPan',
+    },
+    {
+      lowerThirdTeamSide: 'opponent',
+      minimumSeconds: PREGAME_SHOT_DURATIONS.opponentWarmupPan,
+      shotId: 'opponentWarmupPan',
     },
     {
       commentaryLineId: 'weather',
@@ -138,7 +150,20 @@ export function resolvePregameSubjectBounds(
     );
   }
 
+  if (shotId === 'userWarmupPan') {
+    return resolveWarmupTeamBounds(context, 'user') ?? fieldSubjectBounds(shotId);
+  }
+
+  if (shotId === 'opponentWarmupPan') {
+    return resolveWarmupTeamBounds(context, 'opponent') ?? fieldSubjectBounds(shotId);
+  }
+
   if (shotId === 'matchupCombined' || shotId === 'matchupWide') {
+    const warmup = resolveCombinedWarmupBounds(context);
+    if (warmup) {
+      return warmup;
+    }
+
     const user = findPreferredTeamZone(context, 'user-sideline', 'user-tunnel');
     const opponent = findPreferredTeamZone(context, 'opponent-sideline', 'opponent-tunnel');
     if (user && opponent) {
@@ -205,10 +230,15 @@ function createShotVectors(
 
   if (shotId === 'matchupCombined' || shotId === 'matchupWide') {
     const lateral = Math.sin((progress - 0.5) * Math.PI) * 6;
+    const targetZ = subject.center.z + (progress - 0.5) * 4;
     return {
       fieldOfView: 46,
-      lookTarget: new THREE.Vector3(0, 2.4, 0),
-      position: new THREE.Vector3(lateral, 32, -88 * aspectScale),
+      lookTarget: new THREE.Vector3(subject.center.x, 2.4, targetZ),
+      position: new THREE.Vector3(
+        subject.center.x + lateral,
+        32,
+        subject.center.z - 88 * aspectScale,
+      ),
     };
   }
 
@@ -233,6 +263,23 @@ function createShotVectors(
     return createQuarterbackSpotlightShotVectors(context, subject, progress);
   }
 
+  if (shotId === 'userWarmupPan' || shotId === 'opponentWarmupPan') {
+    const sideSign = subject.center.x < 0 ? -1 : 1;
+    const startZ = subject.min.z + subject.size.z * 0.22;
+    const endZ = subject.max.z - subject.size.z * 0.18;
+    const panZ = lerp(startZ, endZ, progress);
+    const sideOffset = shotId === 'userWarmupPan' ? -10 : 10;
+    return {
+      fieldOfView: 34,
+      lookTarget: new THREE.Vector3(subject.center.x, 1.7, panZ),
+      position: new THREE.Vector3(
+        subject.center.x + sideSign * (15 * aspectScale),
+        7.8,
+        panZ - 13 + sideOffset * 0.08,
+      ),
+    };
+  }
+
   const sideSign = focus.x < 0 ? -1 : 1;
   const panZ = subject.min.z + (subject.max.z - subject.min.z) * progress;
   const panFocus = new THREE.Vector3(focus.x, 1.8, Number.isFinite(panZ) ? panZ : focus.z);
@@ -244,6 +291,97 @@ function createShotVectors(
       8.5,
       panFocus.z - PLAY_DIRECTION.z * 12,
     ),
+  };
+}
+
+function resolveCombinedWarmupBounds(
+  context: PregamePresentationContext,
+): PregameSubjectBounds | null {
+  if (!context.warmupSnapshot.ready) {
+    return null;
+  }
+
+  const bounds = combineWarmupGroups(context.warmupSnapshot.groups);
+  if (!bounds) {
+    return null;
+  }
+
+  return {
+    ...bounds,
+    source: 'warmupCombined',
+  };
+}
+
+function resolveWarmupTeamBounds(
+  context: PregamePresentationContext,
+  teamSide: 'opponent' | 'user',
+): PregameSubjectBounds | null {
+  if (!context.warmupSnapshot.enabled) {
+    return null;
+  }
+
+  const bounds = combineWarmupGroups(
+    context.warmupSnapshot.groups.filter((group) => group.teamSide === teamSide),
+  );
+  if (!bounds) {
+    return null;
+  }
+
+  return {
+    ...bounds,
+    source: teamSide === 'user' ? 'user-warmup' : 'opponent-warmup',
+  };
+}
+
+function combineWarmupGroups(
+  groups: PregamePresentationContext['warmupSnapshot']['groups'],
+): Omit<PregameSubjectBounds, 'source'> | null {
+  if (groups.length === 0) {
+    return null;
+  }
+
+  const bounds = groups.reduce(
+    (accumulator, group) => ({
+      maxX: Math.max(accumulator.maxX, group.bounds.maxX),
+      maxZ: Math.max(accumulator.maxZ, group.bounds.maxZ),
+      minX: Math.min(accumulator.minX, group.bounds.minX),
+      minZ: Math.min(accumulator.minZ, group.bounds.minZ),
+    }),
+    {
+      maxX: Number.NEGATIVE_INFINITY,
+      maxZ: Number.NEGATIVE_INFINITY,
+      minX: Number.POSITIVE_INFINITY,
+      minZ: Number.POSITIVE_INFINITY,
+    },
+  );
+
+  if (
+    !Number.isFinite(bounds.minX) ||
+    !Number.isFinite(bounds.maxX) ||
+    !Number.isFinite(bounds.minZ) ||
+    !Number.isFinite(bounds.maxZ)
+  ) {
+    return null;
+  }
+
+  return {
+    center: {
+      x: (bounds.minX + bounds.maxX) / 2,
+      y: 1.6,
+      z: (bounds.minZ + bounds.maxZ) / 2,
+    },
+    max: {
+      x: bounds.maxX,
+      z: bounds.maxZ,
+    },
+    min: {
+      x: bounds.minX,
+      z: bounds.minZ,
+    },
+    size: {
+      x: bounds.maxX - bounds.minX,
+      z: bounds.maxZ - bounds.minZ,
+    },
   };
 }
 
@@ -283,6 +421,16 @@ function zoneToSubjectBounds(
   };
 }
 
+function fieldSubjectBounds(source: PregameShotId): PregameSubjectBounds {
+  return {
+    center: { x: 0, y: 1.6, z: 0 },
+    max: { x: FIELD_BOUNDS.maxX, z: FIELD_BOUNDS.maxZ },
+    min: { x: FIELD_BOUNDS.minX, z: FIELD_BOUNDS.minZ },
+    size: { x: FIELD_DIMENSIONS.fieldWidth, z: FIELD_DIMENSIONS.fieldLength },
+    source,
+  };
+}
+
 function preventCameraClipping(position: THREE.Vector3): THREE.Vector3 {
   const padding = 82;
   return new THREE.Vector3(
@@ -296,6 +444,10 @@ function easeInOut(value: number): number {
   return value < 0.5
     ? 4 * value * value * value
     : 1 - Math.pow(-2 * value + 2, 3) / 2;
+}
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
 }
 
 function clamp(value: number, min: number, max: number): number {

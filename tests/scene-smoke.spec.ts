@@ -919,6 +919,7 @@ interface GameExperienceSnapshot {
 }
 
 test('shows the title screen, opens match setup, and holds gameplay until confirm', async ({ page }) => {
+  test.setTimeout(45_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();

@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.0] - 2026-06-22
+
+### Added
+
+- Added presentation-only pregame warmup staging with mirrored user/opponent practice zones, quarterback throwing groups, running-back footwork groups, offensive-line stance groups, receiver warmups, football props, and cone props.
+- Added a presentation-only starting quarterback spotlight subject and screen-space QB showcase card driven by roster identity, jersey number, scouting archetype, and quarterback ratings.
+- Added presentation-only quarterback ratings and scouting profile helpers for throw power, accuracy, mobility, archetype, and strengths.
+
+### Changed
+
+- Updated pregame matchup and full-cinematics team shots to prefer warmup subjects instead of frozen gameplay formations or empty sideline/tunnel pans.
+- Updated the quarterback spotlight resolver to use the warmup QB clone as its visual subject while preserving gameplay QB IDs and roster identity as read-only references.
+- Expanded pregame debug snapshots with warmup readiness and presentation-clone counts.
+
+### Tests
+
+- Added pregame warmup unit coverage for mirrored layouts, protected-field separation, roster QB identity, ratings fallback, visual resource bounds, and repeated disposal.
+- Updated pregame presentation coverage for warmup-based spotlight subjects, full-sequence warmup pans, and no-gameplay-authority clone reporting.
+- Increased the broad title/setup smoke-test timeout to cover the longer normal-player flow under concurrent browser-suite load.
+
 ## [1.8.0] - 2026-06-22
 
 ### Added

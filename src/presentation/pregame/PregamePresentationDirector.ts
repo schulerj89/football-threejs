@@ -53,6 +53,14 @@ export class PregamePresentationDirector {
   private sequence: PregameSequenceStep[];
   private lastStepTransitionSeconds: number | null = null;
   private latestSidelineCounts = { sideline: 0, tunnel: 0 };
+  private latestWarmupCounts = {
+    enabled: false,
+    opponentReady: false,
+    playerCount: 0,
+    propCount: 0,
+    ready: false,
+    userReady: false,
+  };
   private selections: PregameCommentarySelections | null = null;
   private shotElapsedSeconds = 0;
   private startedLineIds = new Set<PregameCommentaryLineId>();
@@ -85,8 +93,7 @@ export class PregamePresentationDirector {
       this.quarterbackSubject,
     );
     this.sequence = this.baseSequence.filter((step) =>
-      step.shotId !== 'quarterbackSpotlight' ||
-      (this.quarterbackMatchKey ? this.playerSpotlightStage.canShow(this.quarterbackMatchKey) : true));
+      this.canUseSequenceStep(step, context));
     this.selections = this.options.audioCoordinator.createSelections({
       matchSnapshot: context.matchSnapshot,
       quarterbackRosterPlayerId: this.quarterbackSubject.rosterPlayerId,
@@ -96,6 +103,7 @@ export class PregamePresentationDirector {
     this.targetGameplayCamera = context.targetGameplayCamera;
     this.weatherCondition = context.weatherCondition;
     this.updateLatestSidelineCounts(context);
+    this.updateLatestWarmupCounts(context);
 
     if (this.sequence.length === 0) {
       this.complete();
@@ -130,6 +138,7 @@ export class PregamePresentationDirector {
     this.elapsedSeconds += delta;
     this.shotElapsedSeconds += delta;
     this.updateLatestSidelineCounts(context);
+    this.updateLatestWarmupCounts(context);
     this.options.audioCoordinator.updateAmbience(context.gameplaySnapshot, delta);
     this.syncStepStart(step, context);
 
@@ -180,6 +189,14 @@ export class PregamePresentationDirector {
     this.phase = 'idle';
     this.sequence = this.baseSequence;
     this.latestSidelineCounts = { sideline: 0, tunnel: 0 };
+    this.latestWarmupCounts = {
+      enabled: false,
+      opponentReady: false,
+      playerCount: 0,
+      propCount: 0,
+      ready: false,
+      userReady: false,
+    };
     this.selections = null;
     this.shotElapsedSeconds = 0;
     this.startedLineIds = new Set();
@@ -233,13 +250,14 @@ export class PregamePresentationDirector {
       },
       musicGain: audioSnapshot.musicGain,
       phase: this.phase,
-      presentationCloneCount: 0,
+      presentationCloneCount: this.latestWarmupCounts.playerCount + this.latestWarmupCounts.propCount,
       progress: minimumSeconds > 0
         ? clamp(this.shotElapsedSeconds / minimumSeconds, 0, 1)
         : this.completed ? 1 : 0,
       sequence: this.sequence.map((sequenceStep) => sequenceStep.shotId),
       shotElapsedSeconds: this.shotElapsedSeconds,
       sidelineCounts: { ...this.latestSidelineCounts },
+      warmup: { ...this.latestWarmupCounts },
       skipState: this.phase === 'running'
         ? 'available'
         : this.phase === 'skipped'
@@ -331,6 +349,40 @@ export class PregamePresentationDirector {
       sideline: context.sidelineSnapshot.sidelinePlayerCount,
       tunnel: context.sidelineSnapshot.tunnelPlayerCount,
     };
+  }
+
+  private updateLatestWarmupCounts(context: PregamePresentationContext): void {
+    this.latestWarmupCounts = {
+      enabled: context.warmupSnapshot.enabled,
+      opponentReady: context.warmupSnapshot.opponentReady,
+      playerCount: context.warmupSnapshot.playerCount,
+      propCount: context.warmupSnapshot.propCount,
+      ready: context.warmupSnapshot.ready,
+      userReady: context.warmupSnapshot.userReady,
+    };
+  }
+
+  private canUseSequenceStep(
+    step: PregameSequenceStep,
+    context: PregamePresentationContext,
+  ): boolean {
+    if (
+      step.shotId === 'quarterbackSpotlight' &&
+      this.quarterbackMatchKey &&
+      !this.playerSpotlightStage.canShow(this.quarterbackMatchKey)
+    ) {
+      return false;
+    }
+
+    if (step.shotId === 'userWarmupPan') {
+      return context.warmupSnapshot.userReady;
+    }
+
+    if (step.shotId === 'opponentWarmupPan') {
+      return context.warmupSnapshot.opponentReady;
+    }
+
+    return true;
   }
 
   private resolveCompletionBlockers(
@@ -449,6 +501,10 @@ function isSubjectReady(
   }
 
   if (step.shotId === 'matchupWide') {
+    return bounds.source !== 'field';
+  }
+
+  if (step.shotId === 'userWarmupPan' || step.shotId === 'opponentWarmupPan') {
     return bounds.source !== 'field';
   }
 

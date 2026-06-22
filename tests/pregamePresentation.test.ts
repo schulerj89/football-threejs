@@ -26,8 +26,18 @@ import {
   createPregameSequence,
 } from '../src/presentation/pregame/PregameShotDefinitions';
 import {
+  createPregameWarmupLayout,
+} from '../src/presentation/pregame/PregameWarmupLayout';
+import type {
+  PregameWarmupPlacement,
+  PregameWarmupSnapshot,
+} from '../src/presentation/pregame/PregameWarmupTypes';
+import {
   resolveQuarterbackSpotlightSubject,
 } from '../src/presentation/pregame/SpotlightSubjectResolver';
+import {
+  createQuarterbackScoutingProfile,
+} from '../src/roster/QuarterbackScoutingProfile';
 import type {
   PregameCommentaryLineId,
   PregamePresentationContext,
@@ -115,6 +125,8 @@ describe('pregame presentation sequence', () => {
     expect(createPregameSequence('full').map((step) => step.shotId)).toEqual([
       'stadiumEstablish',
       'matchupWide',
+      'userWarmupPan',
+      'opponentWarmupPan',
       'weatherAndField',
       'quarterbackSpotlight',
       'transitionToGameplay',
@@ -130,6 +142,8 @@ describe('pregame presentation sequence', () => {
     expect(subject.rosterPlayerId).toBe('metro-meteors-qb-12');
     expect(subject.formattedName).toBe('J. CARTER');
     expect(subject.jerseyNumber).toBe(12);
+    expect(subject.playerPosition.x).toBeCloseTo(context.warmupSnapshot.quarterback!.bounds.center.x, 6);
+    expect(subject.playerPosition.z).toBeCloseTo(context.warmupSnapshot.quarterback!.bounds.center.z, 6);
     expect(subject.fallbackReason).toBeNull();
   });
 
@@ -155,7 +169,7 @@ describe('pregame presentation sequence', () => {
     expect(director.getSnapshot()).toMatchObject({
       currentShot: 'quarterbackSpotlight',
       spotlight: {
-        cloneStatus: 'usingFormationPlayer',
+        cloneStatus: 'usingWarmupClone',
         gameplayPlayerId: 'offense-qb',
         rosterPlayerId: 'metro-meteors-qb-12',
         selectedCommentaryId: 'pregame_qb_test',
@@ -262,7 +276,7 @@ describe('pregame presentation sequence', () => {
       activeSubject: 'matchupWide',
       activeTeam: null,
       currentShot: 'matchupWide',
-      nextShot: 'weatherAndField',
+      nextShot: 'userWarmupPan',
       subjectReady: true,
     });
 
@@ -284,6 +298,7 @@ describe('pregame presentation sequence', () => {
         ...createContext().sidelineSnapshot,
         zones: [],
       },
+      warmupSnapshot: createEmptyWarmupSnapshot(),
     };
 
     director.start(context);
@@ -488,12 +503,14 @@ function createContext(): PregamePresentationContext {
     playbookId: '11v11',
   });
   const teamProfiles = BROADCAST_EXPERIENCE_SETTINGS.teamProfiles;
+  const rosterBinding = createGameplayRosterBinding('11v11', teamProfiles);
+  const teamTheme = resolveTeamPresentationTheme(teamProfiles);
 
   return {
     aspectRatio: 16 / 9,
     gameplaySnapshot: snapshotGameplayModel(gameplay),
     matchSnapshot: null,
-    rosterBinding: createGameplayRosterBinding('11v11', teamProfiles),
+    rosterBinding,
     sidelineSnapshot: {
       density: 'low',
       drawCalls: 0,
@@ -538,8 +555,101 @@ function createContext(): PregamePresentationContext {
       upperTierEnabled: false,
     },
     targetGameplayCamera: 'offensePerspective',
-    teamTheme: resolveTeamPresentationTheme(teamProfiles),
+    teamTheme,
+    warmupSnapshot: createWarmupSnapshot(rosterBinding, teamTheme.teamKey),
     weatherCondition: 'clear',
+  };
+}
+
+function createWarmupSnapshot(
+  rosterBinding: ReturnType<typeof createGameplayRosterBinding>,
+  teamKey: string,
+): PregameWarmupSnapshot {
+  const layout = createPregameWarmupLayout(rosterBinding);
+  const quarterback = layout.userQuarterback;
+  const profile = createQuarterbackScoutingProfile(quarterback?.player ?? null);
+
+  return {
+    cloneCount: layout.placements.length,
+    drawCalls: 0,
+    enabled: true,
+    geometryCount: 0,
+    groupCount: layout.groups.length,
+    groups: layout.groups,
+    instanceBufferBytes: 0,
+    materialCount: 0,
+    meshCount: 0,
+    noGameplayAuthority: true,
+    opponentReady: Boolean(layout.opponentQuarterback),
+    playerCount: layout.placements.length,
+    propCount: layout.props.length,
+    quarterback: quarterback
+      ? {
+          archetype: profile.archetype,
+          bounds: warmupPlacementToBounds(quarterback),
+          formattedName: profile.formattedName,
+          jerseyNumber: profile.jerseyNumber,
+          ratings: profile.ratings,
+          rosterPlayerId: profile.rosterPlayerId,
+          strengths: profile.strengths,
+        }
+      : null,
+    ready: Boolean(layout.userQuarterback && layout.opponentQuarterback),
+    teamKey,
+    textureCount: 0,
+    triangleCount: 0,
+    updateFrequencyHz: 10,
+    userReady: Boolean(layout.userQuarterback),
+    zones: layout.zones,
+  };
+}
+
+function createEmptyWarmupSnapshot(): PregameWarmupSnapshot {
+  return {
+    cloneCount: 0,
+    drawCalls: 0,
+    enabled: false,
+    geometryCount: 0,
+    groupCount: 0,
+    groups: [],
+    instanceBufferBytes: 0,
+    materialCount: 0,
+    meshCount: 0,
+    noGameplayAuthority: true,
+    opponentReady: false,
+    playerCount: 0,
+    propCount: 0,
+    quarterback: null,
+    ready: false,
+    teamKey: 'empty',
+    textureCount: 0,
+    triangleCount: 0,
+    updateFrequencyHz: 0,
+    userReady: false,
+    zones: [],
+  };
+}
+
+function warmupPlacementToBounds(placement: PregameWarmupPlacement) {
+  return {
+    center: {
+      x: placement.position.x,
+      y: 1.28,
+      z: placement.position.z,
+    },
+    max: {
+      x: placement.position.x + 1.05,
+      z: placement.position.z + 1.25,
+    },
+    min: {
+      x: placement.position.x - 1.05,
+      z: placement.position.z - 1.25,
+    },
+    size: {
+      x: 2.1,
+      z: 2.5,
+    },
+    source: 'user-quarterback-warmup',
   };
 }
 

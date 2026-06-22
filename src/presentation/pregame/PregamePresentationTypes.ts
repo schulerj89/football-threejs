@@ -7,6 +7,10 @@ import type { SidelineTeamControllerSnapshot, SidelineTeamSide, SidelineZone } f
 import type { StadiumControllerSnapshot } from '../../stadium/StadiumController';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
 import type { PlayerSpotlightStageSnapshot } from './PlayerSpotlightStage';
+import type {
+  PregameWarmupSnapshot,
+  PregameWarmupZoneId,
+} from './PregameWarmupTypes';
 
 export type PregamePresentationPhase = 'completed' | 'idle' | 'running' | 'skipped';
 
@@ -14,10 +18,12 @@ export type PregameShotId =
   | 'matchupCombined'
   | 'matchupWide'
   | 'opponentTeamPan'
+  | 'opponentWarmupPan'
   | 'quarterbackSpotlight'
   | 'stadiumEstablish'
   | 'transitionToGameplay'
   | 'userTeamTunnelOrSideline'
+  | 'userWarmupPan'
   | 'weatherAndField';
 
 export type PregameCommentaryLineId = 'matchup' | 'quarterback' | 'weather' | 'welcome';
@@ -39,6 +45,7 @@ export interface PregamePresentationContext {
   stadiumSnapshot: StadiumControllerSnapshot;
   targetGameplayCamera: GameplayCameraMode;
   teamTheme: TeamPresentationTheme;
+  warmupSnapshot: PregameWarmupSnapshot;
   weatherCondition: PregameWeatherCondition;
 }
 
@@ -54,7 +61,7 @@ export interface PregameSubjectBounds {
   max: { x: number; z: number };
   min: { x: number; z: number };
   size: { x: number; z: number };
-  source: PregameShotId | SidelineZone['id'] | 'field';
+  source: PregameShotId | PregameWarmupZoneId | SidelineZone['id'] | 'field' | 'warmupCombined';
 }
 
 export interface PregameLowerThirdState {
@@ -96,6 +103,14 @@ export interface PregamePresentationSnapshot {
   sidelineCounts: {
     sideline: number;
     tunnel: number;
+  };
+  warmup: {
+    enabled: boolean;
+    opponentReady: boolean;
+    playerCount: number;
+    propCount: number;
+    ready: boolean;
+    userReady: boolean;
   };
   skipState: 'available' | 'completed' | 'idle' | 'skipped';
   spotlight: PlayerSpotlightStageSnapshot;

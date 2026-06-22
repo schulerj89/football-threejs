@@ -7,7 +7,7 @@ export interface PlayerSpotlightStageSnapshot {
     center: { x: number; y: number; z: number };
     size: { x: number; z: number };
   } | null;
-  cloneStatus: 'none' | 'usingFormationPlayer';
+  cloneStatus: 'none' | 'usingWarmupClone';
   completionBlockers: readonly string[];
   gameplayPlayerId: string | null;
   lowerThirdVisible: boolean;
@@ -62,7 +62,7 @@ export class PlayerSpotlightStage {
     return {
       active: options.active,
       cameraSubjectBounds: options.cameraSubjectBounds,
-      cloneStatus: this.activeSubject ? 'usingFormationPlayer' : 'none',
+      cloneStatus: this.activeSubject ? 'usingWarmupClone' : 'none',
       completionBlockers: [...options.completionBlockers],
       gameplayPlayerId: this.activeSubject?.gameplayPlayerId ?? null,
       lowerThirdVisible: options.lowerThirdVisible,
