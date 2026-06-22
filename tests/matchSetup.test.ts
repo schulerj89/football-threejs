@@ -15,6 +15,7 @@ import {
   updateMatchSetupUniform,
   validateMatchSetupSelection,
 } from '../src/ui/MatchSetupModel';
+import { resolveHelmetPreviewRotationY } from '../src/ui/MatchSetupHelmetPreview';
 
 describe('match setup model', () => {
   it('validates the default fictional matchup', () => {
@@ -81,5 +82,11 @@ describe('match setup model', () => {
 
     expect(withUniform.teamProfiles.userTeamId).toBe(teamId);
     expect(withUniform.teamProfiles.userUniform).toBe('away');
+  });
+
+  it('turns match setup helmet previews toward each other', () => {
+    expect(resolveHelmetPreviewRotationY('user')).toBeLessThan(0);
+    expect(resolveHelmetPreviewRotationY('opponent')).toBeGreaterThan(0);
+    expect(resolveHelmetPreviewRotationY('user')).toBe(-resolveHelmetPreviewRotationY('opponent'));
   });
 });

@@ -1081,10 +1081,11 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-preview')).toBeVisible();
   await expect(page.locator('.match-team-card[data-side="opponent"] .team-helmet-preview')).toBeVisible();
   await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(1);
-  await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-badge')).toBeVisible();
+  await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-badge')).toHaveCount(1);
   await expect.poll(async () =>
     page.locator('.match-team-card[data-side="user"] .team-helmet-preview').getAttribute('data-preview'),
   { timeout: 5000 }).toBe('glb');
+  await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-badge')).toHaveAttribute('aria-hidden', 'true');
   const registeredTeamNames = listTeamProfiles().map((profile) => profile.displayName);
   await expect(page.locator('.match-team-card[data-side="user"] select').first().locator('option'))
     .toHaveText(registeredTeamNames);

@@ -1711,6 +1711,7 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .team-helmet-preview[data-preview="glb"] .team-helmet-badge {
   opacity: 0;
+  visibility: hidden;
 }
 
 .match-helmet-preview-canvas {

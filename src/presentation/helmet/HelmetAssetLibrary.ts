@@ -129,18 +129,6 @@ export function findHelmetPartMeshes(root: THREE.Object3D): HelmetPartMeshes {
   };
 }
 
-export function ensureHelmetFaceguard(root: THREE.Object3D): HelmetPartMeshes {
-  const parts = findHelmetPartMeshes(root);
-
-  if (parts.faceguardMeshes.length > 0) {
-    return parts;
-  }
-
-  const fallbackFaceguard = createFallbackFaceguard();
-  root.add(fallbackFaceguard);
-  return findHelmetPartMeshes(root);
-}
-
 export function applyHelmetUniformMaterials(
   parts: HelmetPartMeshes,
   uniform: UniformPalette,
@@ -246,48 +234,6 @@ function resolveHelmetPartColor(part: HelmetPart, uniform: UniformPalette): numb
   }
 
   return getUniformColorNumber(uniform.helmetShell);
-}
-
-function createFallbackFaceguard(): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'helmet-faceguard-fallback';
-  group.userData.helmetPart = 'faceguard';
-  applyHelmetOffset(group, HELMET_ASSET_CONFIG.faceguardOffset);
-
-  const verticalBarGeometry = new THREE.BoxGeometry(0.08, 0.56, 0.08);
-  const horizontalBarGeometry = new THREE.BoxGeometry(0.62, 0.08, 0.08);
-  const material = new THREE.MeshStandardMaterial({
-    color: HELMET_ASSET_CONFIG.teamColors.offense.faceguard,
-    metalness: 0.1,
-    roughness: 0.55,
-  });
-
-  const centerBar = new THREE.Mesh(verticalBarGeometry, material);
-  centerBar.name = 'helmet-faceguard-center';
-  centerBar.position.set(0, -0.02, 0);
-  group.add(centerBar);
-
-  const leftBar = new THREE.Mesh(verticalBarGeometry.clone(), material);
-  leftBar.name = 'helmet-faceguard-left';
-  leftBar.position.set(-0.28, -0.02, 0);
-  group.add(leftBar);
-
-  const rightBar = new THREE.Mesh(verticalBarGeometry.clone(), material);
-  rightBar.name = 'helmet-faceguard-right';
-  rightBar.position.set(0.28, -0.02, 0);
-  group.add(rightBar);
-
-  const topBar = new THREE.Mesh(horizontalBarGeometry, material);
-  topBar.name = 'helmet-faceguard-top';
-  topBar.position.set(0, 0.18, 0);
-  group.add(topBar);
-
-  const bottomBar = new THREE.Mesh(horizontalBarGeometry.clone(), material);
-  bottomBar.name = 'helmet-faceguard-bottom';
-  bottomBar.position.set(0, -0.18, 0);
-  group.add(bottomBar);
-
-  return group;
 }
 
 function findMeshes(root: THREE.Object3D): THREE.Mesh[] {

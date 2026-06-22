@@ -50,6 +50,21 @@ describe('helmet visual integration', () => {
     expect(parts.faceguardMeshes).toEqual([faceguard]);
   });
 
+  it('does not invent a faceguard part when the GLB exposes a single shell mesh', () => {
+    const root = new THREE.Group();
+    const helmet = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0xffffff }),
+    );
+    helmet.name = 'Mesh10';
+    root.add(helmet);
+
+    const parts = findHelmetPartMeshes(root);
+
+    expect(parts.shellMeshes).toEqual([helmet]);
+    expect(parts.faceguardMeshes).toEqual([]);
+  });
+
   it('clones and tints shell and faceguard materials independently per team', () => {
     const shellMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
     const faceguardMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });

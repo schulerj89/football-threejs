@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {
   applyHelmetUniformMaterials,
   cloneHelmetAsset,
-  ensureHelmetFaceguard,
+  findHelmetPartMeshes,
   measureHelmetBounds,
   type HelmetPartMeshes,
 } from '../presentation/helmet/HelmetAssetLibrary';
@@ -35,6 +35,18 @@ const HELMET_PREVIEW_CONFIG = {
   maximumPixelRatio: 1.5,
   previewRotationY: -0.18,
 } as const;
+
+export function resolveHelmetPreviewRotationY(id: string): number {
+  if (id === 'user') {
+    return -0.42;
+  }
+
+  if (id === 'opponent') {
+    return 0.42;
+  }
+
+  return HELMET_PREVIEW_CONFIG.previewRotationY;
+}
 
 export function calculateHelmetPreviewFit(bounds: THREE.Box3): HelmetPreviewFit {
   const size = bounds.getSize(new THREE.Vector3());
@@ -215,14 +227,14 @@ export class MatchSetupHelmetPreviewRenderer {
           return;
         }
 
-        const parts = ensureHelmetFaceguard(helmet);
+        const parts = findHelmetPartMeshes(helmet);
         applyHelmetUniformMaterials(parts, entry.uniform, entry.materialScope);
 
         const fit = calculateHelmetPreviewFit(measureHelmetBounds(helmet));
         const normalizer = new THREE.Group();
         normalizer.name = `match-setup-helmet-preview-${entry.id}`;
         normalizer.scale.setScalar(fit.scale);
-        normalizer.rotation.y = HELMET_PREVIEW_CONFIG.previewRotationY;
+        normalizer.rotation.y = resolveHelmetPreviewRotationY(entry.id);
         helmet.position.copy(fit.centerOffset);
         normalizer.add(helmet);
         entry.scene.add(normalizer);

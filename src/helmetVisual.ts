@@ -7,7 +7,6 @@ import {
   applyHelmetTeamMaterialsForUniforms,
   cloneHelmetAsset,
   createHelmetMaterialScope,
-  ensureHelmetFaceguard,
   findHelmetPartMeshes,
   getHelmetAssetLoadSnapshot,
   type HelmetAssetStatus,
@@ -88,7 +87,7 @@ export async function attachHelmetToPlayerVisual(
   helmet.userData.assetId = HELMET_ASSET_ID;
   applyHelmetOffset(helmet, HELMET_VISUAL_CONFIG.helmetOffset);
 
-  const helmetParts = ensureHelmetFaceguard(helmet);
+  const helmetParts = findHelmetPartMeshes(helmet);
 
   applyHelmetTeamMaterials(helmetParts, player.team, teamUniforms);
   cacheAttachedHelmetReferences(
