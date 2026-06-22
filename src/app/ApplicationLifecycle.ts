@@ -5,7 +5,7 @@ import { SettingsPanel } from '../ui/SettingsPanel';
 import type { TitleLoadingState } from '../ui/TitleScreen';
 import { TitleScreenController } from '../ui/TitleScreenController';
 
-export type AppPhase = 'gameplay' | 'pregamePresentation' | 'title';
+export type AppPhase = 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title';
 
 export interface ApplicationLifecycleOptions {
   crowdPreviewEnabled: boolean;
@@ -40,6 +40,8 @@ export class ApplicationLifecycle {
       ? new TitleScreenController({
           initialSettings: options.initialSettings,
           onFirstGesture: options.onTitleFirstGesture,
+          onMatchSetupBack: () => this.returnToTitleFromMatchSetup(),
+          onMatchSetupOpen: () => this.startMatchSetup(),
           onStart: options.onStart,
           onSettingsChange: options.onTitleSettingsChange,
         })
@@ -104,6 +106,26 @@ export class ApplicationLifecycle {
     this.setPauseSettingsVisible(false, false);
     this.titleController.setSettings(this.currentSettings);
     this.titleController.setVisible(true);
+    this.syncChrome();
+  }
+
+  returnToTitleFromMatchSetup(): void {
+    if (!this.titleController) {
+      return;
+    }
+
+    this.phaseValue = 'title';
+    this.setPauseSettingsVisible(false, false);
+    this.syncChrome();
+  }
+
+  startMatchSetup(): void {
+    if (!this.titleController) {
+      return;
+    }
+
+    this.phaseValue = 'matchSetup';
+    this.setPauseSettingsVisible(false, false);
     this.syncChrome();
   }
 

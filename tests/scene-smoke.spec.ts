@@ -918,7 +918,7 @@ interface GameExperienceSnapshot {
   queryOverrides: Partial<GameExperienceSettingsSnapshot>;
 }
 
-test('shows the title screen on normal launch and holds gameplay until Start Game', async ({ page }) => {
+test('shows the title screen, opens match setup, and holds gameplay until confirm', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -933,6 +933,12 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.locator('.title-settings-overlay')).toBeVisible();
   await expect(page.getByLabel('Settings').getByText('Music volume')).toBeVisible();
+  await expect(page.locator('.title-screen').getByLabel('Quarter length')).toBeVisible();
+  await expect(page.locator('.title-screen').getByLabel('Difficulty')).toBeVisible();
+  await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveCount(0);
+  await expect(page.locator('.title-screen').getByLabel('Regression playbook')).toHaveCount(0);
+  await expect(page.locator('.title-screen .team-customization-panel')).toHaveCount(0);
+  await expect(page.locator('.title-screen .roster-preview-panel')).toHaveCount(0);
   await expect(page.getByText('Officials debug labels')).toHaveCount(0);
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
   await expect.poll(() =>
@@ -973,6 +979,38 @@ test('shows the title screen on normal launch and holds gameplay until Start Gam
   await page.getByRole('button', { name: 'Start Game' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('.title-screen')).toBeHidden();
+  await expect(page.locator('.match-setup-screen')).toBeVisible();
+  await expect(page.locator('body[data-app-phase="matchSetup"]')).toBeAttached();
+  await expect(page.locator('.gameplay-hud')).toBeHidden();
+  await expect(page.locator('.play-call-ui')).toBeHidden();
+  await expect(page.locator('.match-team-card')).toHaveCount(2);
+  await expect(page.getByRole('heading', { name: 'Your Team' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Opponent' })).toBeVisible();
+  await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-badge')).toBeVisible();
+  expect(await page.locator('.match-team-card[data-side="user"] select').first().locator('option').count()).toBeGreaterThanOrEqual(4);
+  await expect(page.locator('.match-team-card[data-side="user"] .match-team-quarterback')).toContainText(/^QB .+ #\d+$/);
+  const userHelmetShell = await page.locator('.match-team-card[data-side="user"] .team-helmet-badge').evaluate((element) =>
+    getComputedStyle(element).getPropertyValue('--helmet-shell').trim(),
+  );
+  await expect(page.locator('.match-team-card[data-side="user"] .match-team-swatch[aria-label^="Helmet"]')).toHaveAttribute(
+    'aria-label',
+    new RegExp(userHelmetShell.replace('#', '#')),
+  );
+  const userTeamSelect = page.locator('.match-team-card[data-side="user"] select').first();
+  const opponentTeamSelect = page.locator('.match-team-card[data-side="opponent"] select').first();
+  const originalOpponentTeam = await opponentTeamSelect.inputValue();
+  await opponentTeamSelect.selectOption(await userTeamSelect.inputValue());
+  await expect(page.getByRole('button', { name: 'Confirm Match' })).toBeDisabled();
+  await expect(page.locator('.matchup-summary-warning')).toContainText('Choose two different teams.');
+  await opponentTeamSelect.selectOption(originalOpponentTeam);
+  await expect(page.getByRole('button', { name: 'Confirm Match' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.locator('.match-setup-screen')).toBeHidden();
+  await expect(page.locator('.title-screen')).toBeVisible();
+  await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.locator('.match-setup-screen')).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm Match' }).click();
+  await expect(page.locator('.match-setup-screen')).toBeHidden();
   await expect(page.locator('body[data-app-phase="pregamePresentation"]')).toBeAttached();
   await expect(page.locator('.gameplay-hud')).toBeHidden();
   await expect(page.locator('.play-call-ui')).toBeHidden();
@@ -1122,6 +1160,8 @@ test('starts the performance preset without visual crowd or cinematics', async (
   await page.keyboard.press('Escape');
   await expect(page.locator('.title-settings-overlay')).toBeHidden();
   await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.locator('.match-setup-screen')).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm Match' }).click();
 
   await expect(page.locator('.title-screen')).toBeHidden();
   const experience = await getGameExperienceSnapshot(page);
@@ -1156,15 +1196,9 @@ test('exposes adaptive quality debug state without gameplay mutation', async ({ 
   expect(after.selectedPlay.id).toBe(before.selectedPlay.id);
 });
 
-test('selects the 5v5 legacy development mode from the title screen', async ({ page }) => {
-  await page.goto('/');
+test('keeps the 5v5 legacy development mode available through query overrides', async ({ page }) => {
+  await page.goto('/?debug=1&readback=1&experience=performance&camera=tactical&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.locator('.title-screen').getByLabel('Game mode').selectOption('scoreAttack');
-  await page.locator('.title-screen').getByLabel('Regression playbook').selectOption('5v5');
-  await page.keyboard.press('Escape');
-  await expect(page.locator('.title-settings-overlay')).toBeHidden();
-  await page.getByRole('button', { name: 'Start Game' }).click();
 
   await expect(page.locator('.title-screen')).toBeHidden();
   const gameplay = await getGameplaySnapshot(page);
@@ -1181,16 +1215,18 @@ test('persists title-screen settings across reloads', async ({ page }) => {
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.locator('.title-screen').getByLabel('Presentation preset').selectOption('performance');
-  await page.locator('.title-screen').getByLabel('Game mode').selectOption('scoreAttack');
-  await page.locator('.title-screen').getByLabel('Regression playbook').selectOption('5v5');
+  await page.locator('.title-screen').getByLabel('Quarter length').selectOption('300');
+  await page.locator('.title-screen').getByLabel('Difficulty').selectOption('rookie');
 
   await page.reload();
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.title-screen')).toBeVisible();
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.locator('.title-screen').getByLabel('Presentation preset')).toHaveValue('performance');
-  await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveValue('scoreAttack');
-  await expect(page.locator('.title-screen').getByLabel('Regression playbook')).toHaveValue('5v5');
+  await expect(page.locator('.title-screen').getByLabel('Quarter length')).toHaveValue('300');
+  await expect(page.locator('.title-screen').getByLabel('Difficulty')).toHaveValue('rookie');
+  await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveCount(0);
+  await expect(page.locator('.title-screen').getByLabel('Regression playbook')).toHaveCount(0);
 });
 
 test('toggles runtime debug tools with F1 and persists the title-screen debug setting', async ({ page }) => {

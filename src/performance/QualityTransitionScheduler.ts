@@ -6,7 +6,7 @@ import {
 } from './QualityProfile';
 
 export interface QualityTransitionContext {
-  appPhase: 'gameplay' | 'pregamePresentation' | 'title';
+  appPhase: 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title';
   playState: PlayState;
 }
 
@@ -110,6 +110,7 @@ export class QualityTransitionScheduler {
 
 export function isSafeResourceBoundary(context: QualityTransitionContext): boolean {
   return context.appPhase === 'title' ||
+    context.appPhase === 'matchSetup' ||
     context.playState === 'preSnap' ||
     context.playState === 'dead' ||
     context.playState === 'gameOver';

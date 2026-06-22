@@ -73,7 +73,7 @@ export class SettingsPanel {
     this.settings = normalizeGameExperienceSettings(options.initialSettings);
     this.onSettingsChange = options.onSettingsChange;
     this.showGameMode = options.showGameMode ?? true;
-    this.showTeamCustomization = options.showTeamCustomization ?? true;
+    this.showTeamCustomization = options.showTeamCustomization ?? false;
     this.teamCustomizationPanel = this.showTeamCustomization
       ? new TeamCustomizationPanel({
           initialSettings: this.settings.teamProfiles,
@@ -128,29 +128,26 @@ export class SettingsPanel {
           ['exhibition', 'Exhibition - Offense Only'],
           ['scoreAttack', 'Development Score Attack'],
         ]),
-        this.createSelectRow('Quarter length', this.quarterLengthSelect, [
-          ['60', '1 minute'],
-          ['180', '3 minutes'],
-          ['300', '5 minutes'],
-          ['600', '10 minutes'],
-        ]),
-        this.createSelectRow('Difficulty', this.difficultySelect, [
-          ['rookie', 'Rookie'],
-          ['pro', 'Pro'],
-          ['allPro', 'All-Pro'],
-        ]),
         this.createSelectRow(
           'Regression playbook',
           this.playbookSelect,
           getPlaybookOptions().map((option) => [option.id, option.displayName]),
         ),
       );
-    } else {
-      const lockedMode = document.createElement('p');
-      lockedMode.className = 'settings-note';
-      lockedMode.textContent = 'Game mode changes require returning to the title screen.';
-      primary.append(lockedMode);
     }
+    primary.append(
+      this.createSelectRow('Quarter length', this.quarterLengthSelect, [
+        ['60', '1 minute'],
+        ['180', '3 minutes'],
+        ['300', '5 minutes'],
+        ['600', '10 minutes'],
+      ]),
+      this.createSelectRow('Difficulty', this.difficultySelect, [
+        ['rookie', 'Rookie'],
+        ['pro', 'Pro'],
+        ['allPro', 'All-Pro'],
+      ]),
+    );
 
     const custom = document.createElement('div');
     custom.className = 'game-setup-custom';

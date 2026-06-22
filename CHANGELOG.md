@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0] - 2026-06-22
+
+### Added
+
+- Added a dedicated Match Setup flow between the title screen and pregame presentation with user/opponent team cards, generic SVG helmet badges, uniform selection, starting quarterback readouts, matchup summary, and optional team customization.
+- Added a pure match-setup selection model with same-team validation, deterministic visual-uniform conflict detection, and one-click uniform correction.
+
+### Changed
+
+- Updated Start Game so it opens Match Setup first; Confirm Match now validates the matchup, applies the selected team profiles, and enters the existing pregame sequence without starting the match clock or snapping the ball.
+- Scoped the player-facing Settings panel to general presentation/game configuration by moving active team and roster controls out of Settings and hiding regression playbook controls from the normal title flow.
+
+### Tests
+
+- Added match-setup unit coverage for default validation, same-team blocking, deterministic uniform conflict correction, and independent team/uniform updates.
+- Updated browser smoke coverage for title -> Match Setup -> pregame, Back navigation, hidden team controls in Settings, visible registered teams, helmet badge coloring, starting quarterback display, and legacy playbook query overrides.
+
 ## [1.7.5] - 2026-06-22
 
 ### Fixed
