@@ -13,11 +13,12 @@ All notable changes to this project will be documented in this file.
 
 - Expanded the Pregame F1/debug readback with active team, active subject, title-music state, crowd loop/ducking state, sideline/tunnel counts, presentation clone count, and frame metrics.
 - Added pregame presentation snapshot fields for coordinated opening-flow diagnostics without giving presentation systems gameplay authority.
+- Aligned the production reference benchmark stadium draw-call budget with the runtime performance profile and added a guard against future budget drift.
 
 ### Tests
 
 - Added unit coverage for pregame identity reset after returning to title.
-- Extended browser smoke readback coverage for title-to-pregame diagnostics, and reran full unit, build, and smoke validation.
+- Extended browser smoke readback coverage for title-to-pregame diagnostics, and reran full unit, build, smoke, and reference benchmark validation.
 
 ## [1.7.0] - 2026-06-22
 

@@ -47,7 +47,7 @@ export const REFERENCE_STRUCTURAL_BUDGETS = {
   maxGeometries: 180,
   maxMaterials: 90,
   maxShadowCasters: 0,
-  maxStadiumDrawCalls: 4,
+  maxStadiumDrawCalls: 20,
   maxTextures: 32,
   maxTriangles: 250_000,
   maxVisiblePlayerMeshes: 390,

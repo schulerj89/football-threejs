@@ -4,9 +4,11 @@ import {
   classifyRenderer,
   passesReferenceTiming,
   passesSmokeTimingTolerance,
+  REFERENCE_STRUCTURAL_BUDGETS,
   summarizeFrameSample,
   type FrameSample,
 } from '../tools/performance/referenceBenchmark';
+import { PERFORMANCE_STRUCTURAL_BUDGETS } from '../src/performance/PerformanceBudget';
 
 describe('reference performance benchmark helpers', () => {
   it('summarizes frame timing percentiles and rolling FPS', () => {
@@ -53,6 +55,10 @@ describe('reference performance benchmark helpers', () => {
   it('classifies SwiftShader and hardware renderer descriptions', () => {
     expect(classifyRenderer('Google SwiftShader').softwareRendering).toBe(true);
     expect(classifyRenderer('ANGLE (NVIDIA GeForce RTX 4070 Direct3D11)').softwareRendering).toBe(false);
+  });
+
+  it('keeps reference structural budgets aligned with the runtime performance profile', () => {
+    expect(REFERENCE_STRUCTURAL_BUDGETS).toEqual(PERFORMANCE_STRUCTURAL_BUDGETS);
   });
 });
 
