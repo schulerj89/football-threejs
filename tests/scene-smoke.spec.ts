@@ -4168,18 +4168,42 @@ async function getPregamePresentationSnapshot(page: Page): Promise<PregamePresen
 }
 
 async function expectNoDebugHelpers(page: Page): Promise<void> {
-  await expect(page.locator('.debug-panel')).toBeHidden();
-  await expect(page.locator('.debug-overlay')).toBeHidden();
-  await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
-  await expect(page.locator('.field-audit-overlay')).toHaveCount(0);
-  await expect(page.locator('.formation-audit-overlay')).toHaveCount(0);
-  await expect(page.locator('.route-audit-overlay')).toHaveCount(0);
-  await expect(page.locator('.pass-audit-overlay')).toHaveCount(0);
-  await expect(page.locator('.memory-debug-panel')).toBeHidden();
-  await expect(page.locator('.presentation-audit-overlay')).toHaveCount(0);
-  await expect(page.locator('.presentation-hardening-audit-overlay')).toHaveCount(0);
-  await expect(page.locator('.pregame-debug-overlay')).toHaveCount(0);
-  await expect(page.locator('.camera-debug-overlay')).toHaveCount(0);
+  const visibleDebugHelpers = await page.evaluate(() => {
+    const selectors = [
+      '.debug-panel',
+      '.debug-overlay',
+      '.officials-debug-overlay',
+      '.field-audit-overlay',
+      '.formation-audit-overlay',
+      '.route-audit-overlay',
+      '.pass-audit-overlay',
+      '.memory-debug-panel',
+      '.presentation-audit-overlay',
+      '.presentation-hardening-audit-overlay',
+      '.pregame-debug-overlay',
+      '.camera-debug-overlay',
+    ];
+
+    return selectors.flatMap((selector) =>
+      Array.from(document.querySelectorAll<HTMLElement>(selector))
+        .filter((element) => {
+          const style = window.getComputedStyle(element);
+          return (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            style.opacity !== '0' &&
+            element.getClientRects().length > 0
+          );
+        })
+        .map((element) => ({
+          className: element.className,
+          selector,
+          text: element.textContent?.trim().slice(0, 80) ?? '',
+        })),
+    );
+  });
+
+  expect(visibleDebugHelpers).toEqual([]);
 }
 
 async function getSevenAuditSnapshot(page: Page): Promise<SevenAuditSnapshot> {
