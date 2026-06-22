@@ -20,6 +20,7 @@ import {
 } from '../src/playbook';
 import { createSnapPlacementForLane } from '../src/formationPreview';
 import { resolveFormation } from '../src/formationLayout';
+import { resolveEligibleReceiverRoutes } from '../src/receiverRoutes';
 import {
   ELEVEN_ON_ELEVEN_PLAYER_IDS,
   SEVEN_ON_SEVEN_PLAYER_IDS,
@@ -351,7 +352,7 @@ describe('playbook', () => {
     }
   });
 
-  it('defines 11v11 as the default four-play normal playbook with preserved shortcuts', () => {
+  it('defines 11v11 as the default six-play normal playbook with preserved shortcuts', () => {
     const plays = getAvailablePlays('11v11');
     const play = getPlay('inside-zone-11');
 
@@ -361,12 +362,16 @@ describe('playbook', () => {
       'spread-quick-11',
       'outside-zone-11',
       'off-tackle-11',
+      'twin-slants-11',
+      'curl-flat-11',
     ]);
     expect(plays.map((candidate) => candidate.id)).toEqual([
       'inside-zone-11',
       'spread-quick-11',
       'outside-zone-11',
       'off-tackle-11',
+      'twin-slants-11',
+      'curl-flat-11',
     ]);
     expect(play).toMatchObject({
       ballCarrierRole: 'runner',
@@ -506,6 +511,133 @@ describe('playbook', () => {
       'offense-rb',
     ]);
     expect(getReceiverDisplayName(play, 'offense-tight-end')).toBe('Tight End');
+  });
+
+  it('defines added 11v11 passing plays with five ordered receivers, protection, and coverage', () => {
+    for (const playId of ['twin-slants-11', 'curl-flat-11'] as const) {
+      const play = getPlay(playId);
+      const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+      const assignedRushers = Object.values(play.protectionAssignments ?? {});
+
+      expect(play).toMatchObject({
+        ballCarrierRole: 'quarterback',
+        kind: 'pass',
+        playbookId: '11v11',
+        roster: { id: '11v11' },
+      });
+      expect(players).toHaveLength(22);
+      expect(players.filter((player) => player.team === 'offense')).toHaveLength(11);
+      expect(players.filter((player) => player.team === 'defense')).toHaveLength(11);
+      expect(getEligibleReceiverIds(play)).toEqual([
+        'offense-wr-left',
+        'offense-wr-right',
+        'offense-slot',
+        'offense-tight-end',
+        'offense-rb',
+      ]);
+      expect(getNextEligibleReceiverId(play, 'offense-wr-left')).toBe('offense-wr-right');
+      expect(getNextEligibleReceiverId(play, 'offense-wr-right')).toBe('offense-slot');
+      expect(getNextEligibleReceiverId(play, 'offense-slot')).toBe('offense-tight-end');
+      expect(getNextEligibleReceiverId(play, 'offense-tight-end')).toBe('offense-rb');
+      expect(getNextEligibleReceiverId(play, 'offense-rb')).toBe('offense-wr-left');
+      expect(Object.keys(play.protectionAssignments ?? {}).sort()).toEqual([
+        'offense-center',
+        'offense-line-left',
+        'offense-line-right',
+        'offense-tackle-left',
+        'offense-tackle-right',
+      ]);
+      expect(assignedRushers).toHaveLength(5);
+      expect(new Set(assignedRushers).size).toBe(5);
+      expect(getProtectionAssignmentDefenderId(play, 'offense-center')).toBe('defense-line-middle');
+      expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-left')).toBe('defense-linebacker-left');
+      expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-right')).toBe('defense-linebacker-right');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-corner-left')).toBe('offense-wr-left');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-corner-right')).toBe('offense-wr-right');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-rb');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-inside')).toBe('offense-tight-end');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-safety-strong')).toBe('offense-slot');
+      expect(getDeepHelpReceiverIds(play, 'defense-safety')).toEqual([
+        'offense-wr-left',
+        'offense-wr-right',
+        'offense-slot',
+        'offense-tight-end',
+        'offense-rb',
+      ]);
+      expect(getReceiverDisplayName(play, 'offense-rb')).toBe('Running Back');
+    }
+  });
+
+  it('resolves added 11v11 pass routes with ordered break points at every snap lane', () => {
+    for (const playId of ['twin-slants-11', 'curl-flat-11'] as const) {
+      const play = getPlay(playId);
+
+      for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+        const snapPlacement = createSnapPlacementForLane(lane);
+        const formation = resolveFormation(play, snapPlacement);
+        const routes = resolveEligibleReceiverRoutes(play, snapPlacement);
+
+        expect(formation.issues).toEqual([]);
+        expect(routes.map((route) => route.receiverId)).toEqual(getEligibleReceiverIds(play));
+        for (const resolvedRoute of routes) {
+          const definition = play.receiverRoutes?.[resolvedRoute.receiverId];
+          expect(definition).toBeDefined();
+          expect(resolvedRoute.points).toHaveLength((definition?.waypoints.length ?? 0) + 1);
+          expect(resolvedRoute.segmentLengths.every((length) => length > 0)).toBe(true);
+          expect(resolvedRoute.points.every((point) =>
+            point.x >= PLAYABLE_FIELD_BOUNDS.minX &&
+            point.x <= PLAYABLE_FIELD_BOUNDS.maxX &&
+            point.z >= PLAYABLE_FIELD_BOUNDS.minZ &&
+            point.z <= PLAYABLE_FIELD_BOUNDS.maxZ,
+          )).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('keeps Twin Slants 11 receiver breaks ordered and mirrored inward', () => {
+    const play = getPlay('twin-slants-11');
+
+    for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+      const snapPlacement = createSnapPlacementForLane(lane);
+      const routes = resolveEligibleReceiverRoutes(play, snapPlacement);
+      const leftSlant = routes.find((route) => route.receiverId === 'offense-wr-left');
+      const rightSlant = routes.find((route) => route.receiverId === 'offense-wr-right');
+
+      expect(leftSlant?.points).toHaveLength(3);
+      expect(rightSlant?.points).toHaveLength(3);
+      expect(leftSlant!.points[1].z).toBeGreaterThan(leftSlant!.points[0].z);
+      expect(leftSlant!.points[2].z).toBeGreaterThan(leftSlant!.points[1].z);
+      expect(rightSlant!.points[1].z).toBeGreaterThan(rightSlant!.points[0].z);
+      expect(rightSlant!.points[2].z).toBeGreaterThan(rightSlant!.points[1].z);
+      expect(Math.abs(leftSlant!.points[2].x - snapPlacement.spot.x)).toBeLessThan(
+        Math.abs(leftSlant!.points[0].x - snapPlacement.spot.x),
+      );
+      expect(Math.abs(rightSlant!.points[2].x - snapPlacement.spot.x)).toBeLessThan(
+        Math.abs(rightSlant!.points[0].x - snapPlacement.spot.x),
+      );
+    }
+  });
+
+  it('keeps Curl Flat 11 curl and flat as distinct high-low routes', () => {
+    const play = getPlay('curl-flat-11');
+
+    for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+      const snapPlacement = createSnapPlacementForLane(lane);
+      const routes = resolveEligibleReceiverRoutes(play, snapPlacement);
+      const curl = routes.find((route) => route.receiverId === 'offense-wr-right');
+      const flat = routes.find((route) => route.receiverId === 'offense-tight-end');
+      const fieldDirection = lane === 'rightHash' ? -1 : 1;
+
+      expect(curl?.points).toHaveLength(3);
+      expect(flat?.points).toHaveLength(3);
+      expect(curl!.points[1].z).toBeGreaterThan(curl!.points[0].z);
+      expect(curl!.points[2].z).toBeLessThan(curl!.points[1].z);
+      expect(flat!.points[2].z).toBeLessThan(curl!.points[2].z);
+      expect(Math.sign(curl!.points[0].x - snapPlacement.spot.x)).toBe(fieldDirection);
+      expect(Math.sign(flat!.points[2].x - snapPlacement.spot.x)).toBe(fieldDirection);
+      expect(curl!.totalLength).not.toBeCloseTo(flat!.totalLength);
+    }
   });
 
   it('resolves Spread Quick 11 routes semantically at every snap lane', () => {

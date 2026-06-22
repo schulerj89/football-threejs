@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.0] - 2026-06-22
+
+### Added
+
+- Added `Twin Slants 11` and `Curl Flat 11` to the normal 11v11 playbook as shortcuts `5` and `6`, preserving the existing shortcut order for `Inside Zone 11`, `Spread Quick 11`, `Outside Zone 11`, and `Off Tackle 11`.
+- Added data-defined ordered routes, one-to-one pass protection, explicit coverage assignments, deep safety help, and play-card route/protection diagrams for both new passing plays.
+
+### Changed
+
+- Expanded the 11v11 hardening matrix and play-card expectations from four plays to six plays while keeping 7v7 and 5v5 regression modes unchanged.
+
+### Tests
+
+- Added focused coverage for new pass-route resolution across snap lanes, slant break ordering, curl/flat high-low distinction, receiver cycling, deterministic sack/incompletion/reset behavior, and numeric shortcuts `5` and `6`.
+- Verified `npx vitest run tests/playbook.test.ts tests/playState.test.ts tests/playCallDiagram.test.ts tests/elevenOnElevenAudit.test.ts`, `npm run test:unit`, `npm run build`, and `npm run test:smoke`.
+
 ## [1.20.0] - 2026-06-22
 
 ### Added

@@ -53,10 +53,12 @@ export type PlayId =
   | 'outside-run'
   | 'outside-zone-11'
   | 'outside-zone-7'
+  | 'curl-flat-11'
   | 'quick-pass'
   | 'quick-pass-7'
   | 'slant-flat'
   | 'spread-quick-11'
+  | 'twin-slants-11'
   | 'twin-slants-flat';
 export type PlayKind = 'run' | 'pass';
 export type FormationPlayer = FormationSlot;
@@ -124,6 +126,27 @@ const SPREAD_QUICK_ELEVEN_RECEIVER_IDS = [
   'offense-tight-end',
   'offense-rb',
 ] as const;
+const ELEVEN_ON_ELEVEN_PASS_PROTECTION_ASSIGNMENTS = {
+  'offense-center': 'defense-line-middle',
+  'offense-line-left': 'defense-line-left',
+  'offense-line-right': 'defense-line-right',
+  'offense-tackle-left': 'defense-linebacker-left',
+  'offense-tackle-right': 'defense-linebacker-right',
+} as const;
+const ELEVEN_ON_ELEVEN_PASS_COVERAGE_ASSIGNMENTS = {
+  'defense-corner-left': 'offense-wr-left',
+  'defense-corner-right': 'offense-wr-right',
+  'defense-linebacker': 'offense-rb',
+  'defense-linebacker-inside': 'offense-tight-end',
+  'defense-safety-strong': 'offense-slot',
+} as const;
+const ELEVEN_ON_ELEVEN_RECEIVER_DISPLAY_NAMES = {
+  'offense-rb': 'Running Back',
+  'offense-slot': 'Slot',
+  'offense-tight-end': 'Tight End',
+  'offense-wr-left': 'Receiver Left',
+  'offense-wr-right': 'Receiver Right',
+} as const;
 
 export const FIVE_ON_FIVE_PLAYS: PlayDefinition[] = [
   {
@@ -542,34 +565,16 @@ export const ELEVEN_ON_ELEVEN_PLAYS: PlayDefinition[] = [
     initialMovementDirection: { x: 0, z: 1 },
     kind: 'pass',
     pass: {
-      coverageAssignments: {
-        'defense-corner-left': 'offense-wr-left',
-        'defense-corner-right': 'offense-wr-right',
-        'defense-linebacker': 'offense-rb',
-        'defense-linebacker-inside': 'offense-tight-end',
-        'defense-safety-strong': 'offense-slot',
-      },
+      coverageAssignments: ELEVEN_ON_ELEVEN_PASS_COVERAGE_ASSIGNMENTS,
       deepHelpAssignments: {
         'defense-safety': [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
       },
       eligibleReceiverIds: [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
-      receiverDisplayNames: {
-        'offense-rb': 'Running Back',
-        'offense-slot': 'Slot',
-        'offense-tight-end': 'Tight End',
-        'offense-wr-left': 'Receiver Left',
-        'offense-wr-right': 'Receiver Right',
-      },
+      receiverDisplayNames: ELEVEN_ON_ELEVEN_RECEIVER_DISPLAY_NAMES,
     },
     playbookId: '11v11',
     preferredSide: PLAY_SIDE,
-    protectionAssignments: {
-      'offense-center': 'defense-line-middle',
-      'offense-line-left': 'defense-line-left',
-      'offense-line-right': 'defense-line-right',
-      'offense-tackle-left': 'defense-linebacker-left',
-      'offense-tackle-right': 'defense-linebacker-right',
-    },
+    protectionAssignments: ELEVEN_ON_ELEVEN_PASS_PROTECTION_ASSIGNMENTS,
     receiverRoutes: {
       'offense-rb': route('spread-quick-11-rb-check-flat', 8, [
         waypoint('check-release', point(snapSide('boundary', 3.5), offenseDepth(1.5))),
@@ -627,7 +632,7 @@ export const ELEVEN_ON_ELEVEN_PLAYS: PlayDefinition[] = [
       'offense-wr-right': 'defense-corner-right',
     },
     roster: ELEVEN_ON_ELEVEN_ROSTER,
-    validation: elevenOnElevenFieldRunValidation(),
+    validation: elevenOnElevenFieldSideValidation(),
   },
   {
     ballCarrierRole: 'runner',
@@ -661,7 +666,107 @@ export const ELEVEN_ON_ELEVEN_PLAYS: PlayDefinition[] = [
       'offense-wr-right': 'defense-corner-right',
     },
     roster: ELEVEN_ON_ELEVEN_ROSTER,
-    validation: elevenOnElevenFieldRunValidation(),
+    validation: elevenOnElevenFieldSideValidation(),
+  },
+  {
+    ballCarrierRole: 'quarterback',
+    blockerLaneTargets: {
+      'offense-center': point(alignedTo('defense-line-middle'), defenseDepth(passProtectDepth)),
+      'offense-line-left': point(alignedTo('defense-line-left'), defenseDepth(passProtectDepth)),
+      'offense-line-right': point(alignedTo('defense-line-right'), defenseDepth(passProtectDepth)),
+      'offense-tackle-left': point(alignedTo('defense-linebacker-left'), defenseDepth(ELEVEN.linebackerDepth)),
+      'offense-tackle-right': point(alignedTo('defense-linebacker-right'), defenseDepth(ELEVEN.linebackerDepth)),
+    },
+    displayName: 'Twin Slants 11',
+    formation: createElevenOnElevenPassFormation(),
+    id: 'twin-slants-11',
+    initialMovementDirection: { x: 0, z: 1 },
+    kind: 'pass',
+    pass: {
+      coverageAssignments: ELEVEN_ON_ELEVEN_PASS_COVERAGE_ASSIGNMENTS,
+      deepHelpAssignments: {
+        'defense-safety': [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
+      },
+      eligibleReceiverIds: [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
+      receiverDisplayNames: ELEVEN_ON_ELEVEN_RECEIVER_DISPLAY_NAMES,
+    },
+    playbookId: '11v11',
+    preferredSide: PLAY_SIDE,
+    protectionAssignments: ELEVEN_ON_ELEVEN_PASS_PROTECTION_ASSIGNMENTS,
+    receiverRoutes: {
+      'offense-rb': route('twin-slants-11-rb-opposite-checkdown', 8, [
+        waypoint('check-release', point(snapSide('boundary', 3.5), offenseDepth(1.5))),
+        waypoint('opposite-flat', point(sidelineInset('boundary', ELEVEN.receiverSidelineInset + 6), defenseDepth(3.8))),
+      ]),
+      'offense-slot': route('twin-slants-11-slot-seam-settle', 9.25, [
+        waypoint('seam', point(alignedTo('offense-slot'), defenseDepth(6.5))),
+        waypoint('settle', point(snapSide('field', ELEVEN.slotAlignment - 3), defenseDepth(9.5))),
+      ]),
+      'offense-tight-end': route('twin-slants-11-tight-end-flat', 8.5, [
+        waypoint('flat-release', point(snapSide('field', ELEVEN.tightEndSpacing + 2), defenseDepth(2.5))),
+        waypoint('field-flat', point(sidelineInset('field', ELEVEN.receiverSidelineInset + 7), defenseDepth(4.5))),
+      ]),
+      'offense-wr-left': route('twin-slants-11-left-slant', 9.5, [
+        waypoint('stem', point(alignedTo('offense-wr-left'), defenseDepth(4.5))),
+        waypoint('slant', point(snapSide('left', 4), defenseDepth(10.5))),
+      ]),
+      'offense-wr-right': route('twin-slants-11-right-slant', 9.5, [
+        waypoint('stem', point(alignedTo('offense-wr-right'), defenseDepth(4.5))),
+        waypoint('slant', point(snapSide('right', 4), defenseDepth(10.5))),
+      ]),
+    },
+    roster: ELEVEN_ON_ELEVEN_ROSTER,
+    validation: elevenOnElevenValidation(),
+  },
+  {
+    ballCarrierRole: 'quarterback',
+    blockerLaneTargets: {
+      'offense-center': point(alignedTo('defense-line-middle'), defenseDepth(passProtectDepth)),
+      'offense-line-left': point(alignedTo('defense-line-left'), defenseDepth(passProtectDepth)),
+      'offense-line-right': point(alignedTo('defense-line-right'), defenseDepth(passProtectDepth)),
+      'offense-tackle-left': point(alignedTo('defense-linebacker-left'), defenseDepth(ELEVEN.linebackerDepth)),
+      'offense-tackle-right': point(alignedTo('defense-linebacker-right'), defenseDepth(ELEVEN.linebackerDepth)),
+    },
+    displayName: 'Curl Flat 11',
+    formation: createElevenOnElevenFieldPassFormation(),
+    id: 'curl-flat-11',
+    initialMovementDirection: { x: 0, z: 1 },
+    kind: 'pass',
+    pass: {
+      coverageAssignments: ELEVEN_ON_ELEVEN_PASS_COVERAGE_ASSIGNMENTS,
+      deepHelpAssignments: {
+        'defense-safety': [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
+      },
+      eligibleReceiverIds: [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
+      receiverDisplayNames: ELEVEN_ON_ELEVEN_RECEIVER_DISPLAY_NAMES,
+    },
+    playbookId: '11v11',
+    preferredSide: PLAY_SIDE,
+    protectionAssignments: ELEVEN_ON_ELEVEN_PASS_PROTECTION_ASSIGNMENTS,
+    receiverRoutes: {
+      'offense-rb': route('curl-flat-11-rb-check-release', 7.75, [
+        waypoint('check-release', point(snapSide('boundary', 3.2), offenseDepth(1.5))),
+        waypoint('checkdown', point(snapSide('boundary', 8), defenseDepth(3.4))),
+      ]),
+      'offense-slot': route('curl-flat-11-slot-short-settle', 8.75, [
+        waypoint('seam', point(alignedTo('offense-slot'), defenseDepth(5.5))),
+        waypoint('settle', point(snapSide('field', ELEVEN.slotAlignment - 2), defenseDepth(7.5))),
+      ]),
+      'offense-tight-end': route('curl-flat-11-tight-end-flat', 8.25, [
+        waypoint('flat-release', point(snapSide('field', ELEVEN.tightEndSpacing + 2), defenseDepth(2.2))),
+        waypoint('flat', point(sidelineInset('field', ELEVEN.receiverSidelineInset + 7), defenseDepth(4.2))),
+      ]),
+      'offense-wr-left': route('curl-flat-11-boundary-clear-dig', 9.25, [
+        waypoint('stem', point(alignedTo('offense-wr-left'), defenseDepth(5.5))),
+        waypoint('dig', point(snapSide('boundary', 4), defenseDepth(11))),
+      ]),
+      'offense-wr-right': route('curl-flat-11-field-curl', 8.5, [
+        waypoint('stem', point(alignedTo('offense-wr-right'), defenseDepth(9.5))),
+        waypoint('curl', point(sidelineInset('field', ELEVEN.receiverSidelineInset + 2), defenseDepth(7.2))),
+      ]),
+    },
+    roster: ELEVEN_ON_ELEVEN_ROSTER,
+    validation: elevenOnElevenFieldSideValidation(),
   },
 ];
 
@@ -738,14 +843,22 @@ export function createElevenOnElevenPlayForPreferredSide(
   }
 
   const usesFieldSideRunFormation = play.id === 'outside-zone-11' || play.id === 'off-tackle-11';
+  const usesFieldSidePassFormation = play.id === 'curl-flat-11';
+  let formation: FormationSlot[];
+
+  if (usesFieldSideRunFormation) {
+    formation = createElevenOnElevenFieldRunFormation();
+  } else if (usesFieldSidePassFormation) {
+    formation = createElevenOnElevenFieldPassFormation();
+  } else if (play.kind === 'pass') {
+    formation = createElevenOnElevenPassFormation(preferredSide);
+  } else {
+    formation = createElevenOnElevenRunFormation(preferredSide);
+  }
 
   return {
     ...play,
-    formation: usesFieldSideRunFormation
-      ? createElevenOnElevenFieldRunFormation()
-      : play.id === 'spread-quick-11'
-        ? createElevenOnElevenPassFormation(preferredSide)
-        : createElevenOnElevenRunFormation(preferredSide),
+    formation,
     preferredSide,
   };
 }
@@ -1036,14 +1149,14 @@ function elevenOnElevenValidation(): PlayDefinition['validation'] {
   };
 }
 
-function elevenOnElevenFieldRunValidation(): PlayDefinition['validation'] {
+function elevenOnElevenFieldSideValidation(): PlayDefinition['validation'] {
   const validation = elevenOnElevenValidation();
   if (!validation) {
     return validation;
   }
 
-  const { defensiveGapOffsets: _defensiveGapOffsets, ...fieldRunValidation } = validation;
-  return fieldRunValidation;
+  const { defensiveGapOffsets: _defensiveGapOffsets, ...fieldSideValidation } = validation;
+  return fieldSideValidation;
 }
 
 function createElevenOnElevenRunFormation(
@@ -1104,6 +1217,33 @@ function createElevenOnElevenFieldRunFormation(): FormationSlot[] {
     defenseSlot('defense-corner-right', 'defender', point(alignedTo('offense-wr-right'), defenseDepth(ELEVEN.cornerCushion))),
     defenseSlot('defense-safety', 'defender', point(midpointOf(['offense-wr-left', 'offense-wr-right']), defenseDepth(ELEVEN.safetyDepth))),
     defenseSlot('defense-safety-strong', 'defender', point(snapSide('field', ELEVEN.slotAlignment * 0.55), defenseDepth(ELEVEN.strongSafetyDepth))),
+  ];
+}
+
+function createElevenOnElevenFieldPassFormation(): FormationSlot[] {
+  return [
+    offenseSlot('offense-wr-left', 'receiver', point(sidelineInset('boundary', ELEVEN.receiverSidelineInset), offenseDepth(ELEVEN.offensiveLineSetback))),
+    offenseSlot('offense-tackle-left', 'blocker', point(snapSide('boundary', ELEVEN.tackleSpacing), offenseDepth(ELEVEN.offensiveLineSetback))),
+    offenseSlot('offense-line-left', 'blocker', point(snapSide('boundary', ELEVEN.guardSpacing), offenseDepth(ELEVEN.offensiveLineSetback))),
+    offenseSlot('offense-center', 'blocker', point(snap(), offenseDepth(ELEVEN.offensiveLineSetback))),
+    offenseSlot('offense-line-right', 'blocker', point(snapSide('field', ELEVEN.guardSpacing), offenseDepth(ELEVEN.offensiveLineSetback))),
+    offenseSlot('offense-tackle-right', 'blocker', point(snapSide('field', ELEVEN.tackleSpacing), offenseDepth(ELEVEN.offensiveLineSetback))),
+    offenseSlot('offense-tight-end', 'receiver', point(snapSide('field', ELEVEN.tightEndSpacing), offenseDepth(ELEVEN.offensiveLineSetback))),
+    offenseSlot('offense-qb', 'quarterback', point(snap(), offenseDepth(ELEVEN.quarterbackDepth))),
+    offenseSlot('offense-rb', 'receiver', point(snapSide('field', ELEVEN.runningBackFieldOffset), offenseDepth(ELEVEN.runningBackDepth))),
+    offenseSlot('offense-slot', 'receiver', point(snapSide('field', ELEVEN.slotAlignment), offenseDepth(ELEVEN.slotDepth))),
+    offenseSlot('offense-wr-right', 'receiver', point(sidelineInset('field', ELEVEN.receiverSidelineInset), offenseDepth(ELEVEN.receiverBackfieldDepth))),
+    defenseSlot('defense-line-left', 'defender', point(snapSide('boundary', ELEVEN.defensiveLineGap), defenseDepth(ELEVEN.defensiveLineDepth))),
+    defenseSlot('defense-line-middle', 'defender', point(snap(), defenseDepth(ELEVEN.defensiveLineDepth))),
+    defenseSlot('defense-line-right', 'defender', point(snapSide('field', ELEVEN.defensiveLineGap), defenseDepth(ELEVEN.defensiveLineDepth))),
+    defenseSlot('defense-linebacker-left', 'defender', point(snapSide('boundary', ELEVEN.outsideLinebackerOffset), defenseDepth(ELEVEN.linebackerDepth))),
+    defenseSlot('defense-linebacker', 'coverageDefender', point(alignedTo('offense-rb'), defenseDepth(ELEVEN.linebackerDepth))),
+    defenseSlot('defense-linebacker-inside', 'coverageDefender', point(alignedTo('offense-tight-end'), defenseDepth(ELEVEN.linebackerDepth))),
+    defenseSlot('defense-linebacker-right', 'defender', point(snapSide('field', ELEVEN.outsideLinebackerOffset), defenseDepth(ELEVEN.linebackerDepth))),
+    defenseSlot('defense-corner-left', 'coverageDefender', point(alignedTo('offense-wr-left'), defenseDepth(ELEVEN.cornerCushion))),
+    defenseSlot('defense-corner-right', 'coverageDefender', point(alignedTo('offense-wr-right'), defenseDepth(ELEVEN.cornerCushion))),
+    defenseSlot('defense-safety', 'coverageDefender', point(midpointOf([...SPREAD_QUICK_ELEVEN_RECEIVER_IDS]), defenseDepth(ELEVEN.safetyDepth))),
+    defenseSlot('defense-safety-strong', 'coverageDefender', point(alignedTo('offense-slot'), defenseDepth(ELEVEN.strongSafetyDepth))),
   ];
 }
 

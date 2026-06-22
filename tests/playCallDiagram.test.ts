@@ -125,19 +125,21 @@ describe('play call diagrams', () => {
 
   it('preserves route break order for multi-segment 11v11 pass routes', () => {
     const snapPlacement = createCenterSnapPlacement(INITIAL_BALL_SPOT);
-    const play = getPlay('spread-quick-11');
-    const diagram = createPlayCallDiagramModel(play, snapPlacement);
+    for (const playId of ['spread-quick-11', 'twin-slants-11', 'curl-flat-11'] as const) {
+      const play = getPlay(playId);
+      const diagram = createPlayCallDiagramModel(play, snapPlacement);
 
-    for (const route of diagram.receiverRoutes) {
-      const resolvedRoute = resolveEligibleReceiverRoutes(play, snapPlacement)
-        .find((candidate) => candidate.receiverId === route.receiverId);
+      for (const route of diagram.receiverRoutes) {
+        const resolvedRoute = resolveEligibleReceiverRoutes(play, snapPlacement)
+          .find((candidate) => candidate.receiverId === route.receiverId);
 
-      expect(route.breakPoints).toEqual(route.points.slice(1, -1));
-      expect(route.breakPoints).toEqual(
-        resolvedRoute?.points
-          .slice(1, -1)
-          .map((point) => normalizeFootballSpotToSvg(point, diagram.transform)),
-      );
+        expect(route.breakPoints).toEqual(route.points.slice(1, -1));
+        expect(route.breakPoints).toEqual(
+          resolvedRoute?.points
+            .slice(1, -1)
+            .map((point) => normalizeFootballSpotToSvg(point, diagram.transform)),
+        );
+      }
     }
   });
 
@@ -202,6 +204,34 @@ describe('play call diagrams', () => {
     expect(indexAssignments(passDiagram.blockerAssignments)).toEqual(passPlay.protectionAssignments);
   });
 
+  it('draws added 11v11 passing plays from real route and protection data', () => {
+    for (const playId of ['twin-slants-11', 'curl-flat-11'] as const) {
+      const play = getPlay(playId);
+
+      for (const snapPlacement of createSnapPlacements()) {
+        const diagram = createPlayCallDiagramModel(play, snapPlacement);
+        const resolvedRoutes = resolveEligibleReceiverRoutes(play, snapPlacement);
+
+        expect(diagram.runDirection).toBeNull();
+        expect(diagram.receiverRoutes).toHaveLength(5);
+        expect(diagram.receiverRoutes.map((route) => route.receiverId)).toEqual(getEligibleReceiverIds(play));
+        expect(diagram.blockerAssignments).toHaveLength(5);
+        expect(diagram.blockerAssignments.every((assignment) => assignment.kind === 'passProtection')).toBe(true);
+        expect(indexAssignments(diagram.blockerAssignments)).toEqual(play.protectionAssignments);
+
+        for (const resolvedRoute of resolvedRoutes) {
+          const cardRoute = diagram.receiverRoutes.find((route) => route.receiverId === resolvedRoute.receiverId);
+
+          expect(cardRoute).toBeDefined();
+          expect(cardRoute?.footballPoints).toEqual(resolvedRoute.points);
+          expect(cardRoute?.points).toEqual(
+            resolvedRoute.points.map((point) => normalizeFootballSpotToSvg(point, diagram.transform)),
+          );
+        }
+      }
+    }
+  });
+
   it('draws the added 11v11 rushing plays from real blocking data with mirrored field-side arrows', () => {
     for (const playId of ['outside-zone-11', 'off-tackle-11'] as const) {
       const play = getPlay(playId);
@@ -246,6 +276,10 @@ describe('play call diagrams', () => {
   it('creates accessible play-card labels with shortcut and run/pass context', () => {
     expect(createPlayCardAccessibilityLabel(getPlay('spread-quick-11'), 2))
       .toBe('Spread Quick 11, pass play, shortcut 2');
+    expect(createPlayCardAccessibilityLabel(getPlay('twin-slants-11'), 5))
+      .toBe('Twin Slants 11, pass play, shortcut 5');
+    expect(createPlayCardAccessibilityLabel(getPlay('curl-flat-11'), 6))
+      .toBe('Curl Flat 11, pass play, shortcut 6');
     expect(createPlayCardAccessibilityLabel(getPlay('inside-zone-11'), 1))
       .toBe('Inside Zone 11, run play, shortcut 1');
   });

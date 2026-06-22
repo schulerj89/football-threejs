@@ -50,9 +50,16 @@ describe('eleven-on-eleven hardening matrix', () => {
   it('covers every requested play, formation, presentation, resource, and update-rate dimension', () => {
     const matrix = createElevenOnElevenScenarioMatrix();
 
-    expect(matrix).toHaveLength(4 * 3 * 2 * 3 * 3 * 2 * 2 * 2);
+    expect(matrix).toHaveLength(6 * 3 * 2 * 3 * 3 * 2 * 2 * 2);
     expect(new Set(matrix.map((scenario) => scenario.playId))).toEqual(
-      new Set(['inside-zone-11', 'spread-quick-11', 'outside-zone-11', 'off-tackle-11']),
+      new Set([
+        'inside-zone-11',
+        'spread-quick-11',
+        'outside-zone-11',
+        'off-tackle-11',
+        'twin-slants-11',
+        'curl-flat-11',
+      ]),
     );
     expect(new Set(matrix.map((scenario) => scenario.snapLane))).toEqual(new Set(SNAP_LANES));
     expect(new Set(matrix.map((scenario) => scenario.formationSide))).toEqual(new Set(FORMATION_SIDES));
@@ -151,37 +158,43 @@ describe('eleven-on-eleven hardening matrix', () => {
     expect(first.carrierZ).toBeGreaterThan(INITIAL_BALL_SPOT.z - 9);
   });
 
-  it('validates Spread Quick pass protection, coverage, routes, and update-rate consistency', () => {
-    const play = getPlay('spread-quick-11');
-    const protectionDefenders = Object.keys(play.protectionAssignments ?? {})
-      .map((blockerId) => getProtectionAssignmentDefenderId(play, blockerId));
+  it('validates 11v11 pass protection, coverage, routes, and update-rate consistency', () => {
+    for (const play of getAvailablePlays('11v11').filter((candidate) => candidate.kind === 'pass')) {
+      const protectionDefenders = Object.keys(play.protectionAssignments ?? {})
+        .map((blockerId) => getProtectionAssignmentDefenderId(play, blockerId));
 
-    expect(protectionDefenders).toHaveLength(5);
-    expect(new Set(protectionDefenders).size).toBe(5);
-    expect(getCoverageAssignmentReceiverId(play, 'defense-corner-left')).toBe('offense-wr-left');
-    expect(getCoverageAssignmentReceiverId(play, 'defense-corner-right')).toBe('offense-wr-right');
-    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-rb');
-    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-inside')).toBe('offense-tight-end');
-    expect(getCoverageAssignmentReceiverId(play, 'defense-safety-strong')).toBe('offense-slot');
+      expect(protectionDefenders).toHaveLength(5);
+      expect(new Set(protectionDefenders).size).toBe(5);
+      expect(getCoverageAssignmentReceiverId(play, 'defense-corner-left')).toBe('offense-wr-left');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-corner-right')).toBe('offense-wr-right');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-rb');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-inside')).toBe('offense-tight-end');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-safety-strong')).toBe('offense-slot');
 
-    for (const snapLane of SNAP_LANES) {
-      const routes = resolveEligibleReceiverRoutes(play, {
-        lane: snapLane,
-        spot: getElevenAuditSnapSpot(snapLane),
-      });
-      expect(routes.map((route) => route.receiverId)).toEqual(getEligibleReceiverIds(play));
-      for (const route of routes) {
-        expect(route.points).toHaveLength((play.receiverRoutes?.[route.receiverId]?.waypoints.length ?? 0) + 1);
-        expect(route.segmentLengths.every((length) => length > 0)).toBe(true);
-        expect(route.points.every((point) => point.x >= PLAYABLE_FIELD_BOUNDS.minX && point.x <= PLAYABLE_FIELD_BOUNDS.maxX)).toBe(true);
+      for (const snapLane of SNAP_LANES) {
+        const routes = resolveEligibleReceiverRoutes(play, {
+          lane: snapLane,
+          spot: getElevenAuditSnapSpot(snapLane),
+        });
+        expect(routes.map((route) => route.receiverId)).toEqual(getEligibleReceiverIds(play));
+        for (const route of routes) {
+          expect(route.points).toHaveLength((play.receiverRoutes?.[route.receiverId]?.waypoints.length ?? 0) + 1);
+          expect(route.segmentLengths.every((length) => length > 0)).toBe(true);
+          expect(route.points.every((point) =>
+            point.x >= PLAYABLE_FIELD_BOUNDS.minX &&
+            point.x <= PLAYABLE_FIELD_BOUNDS.maxX &&
+            point.z >= PLAYABLE_FIELD_BOUNDS.minZ &&
+            point.z <= PLAYABLE_FIELD_BOUNDS.maxZ,
+          )).toBe(true);
+        }
       }
-    }
 
-    const outcomes = UPDATE_RATES.map((updateRate) =>
-      runPassingScenario(updateRate, 'offense-slot'),
-    );
-    expect(new Set(outcomes.map((outcome) => outcome.resultType)).size).toBe(1);
-    expect(new Set(outcomes.map((outcome) => outcome.possessionPlayerId ?? 'none')).size).toBe(1);
+      const outcomes = UPDATE_RATES.map((updateRate) =>
+        runPassingScenario(updateRate, play.id, 'offense-slot'),
+      );
+      expect(new Set(outcomes.map((outcome) => outcome.resultType)).size).toBe(1);
+      expect(new Set(outcomes.map((outcome) => outcome.possessionPlayerId ?? 'none')).size).toBe(1);
+    }
   });
 
   it('transfers control exactly once after a completion and sends defenders to pursuit', () => {
@@ -285,9 +298,9 @@ function runInsideZoneCongestionScenario() {
   };
 }
 
-function runPassingScenario(updateRateHz: 30 | 60 | 120, receiverId: string) {
+function runPassingScenario(updateRateHz: 30 | 60 | 120, playId: string, receiverId: string) {
   const gameplay = createGameplayModel({ playbookId: '11v11' });
-  selectPlay(gameplay, 'spread-quick-11');
+  selectPlay(gameplay, playId);
   selectReceiver(gameplay, receiverId);
   startPlay(gameplay);
 

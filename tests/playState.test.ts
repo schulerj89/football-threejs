@@ -45,6 +45,8 @@ describe('play state transitions', () => {
       'spread-quick-11',
       'outside-zone-11',
       'off-tackle-11',
+      'twin-slants-11',
+      'curl-flat-11',
     ]);
     expect(gameplay.players).toHaveLength(22);
     expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(11);
@@ -64,6 +66,8 @@ describe('play state transitions', () => {
       'spread-quick-11',
       'outside-zone-11',
       'off-tackle-11',
+      'twin-slants-11',
+      'curl-flat-11',
     ]);
     expect(gameplay.selectedPlay).toMatchObject({
       displayName: 'Inside Zone 11',
@@ -252,6 +256,113 @@ describe('play state transitions', () => {
       }
 
       expect(gameplay.ball.state.kind).not.toBe('inFlight');
+    }
+  });
+
+  it('starts the added 11v11 passing plays with stable receiver order and valid throw outcomes', () => {
+    const targetIds = [
+      'offense-wr-left',
+      'offense-wr-right',
+      'offense-slot',
+      'offense-tight-end',
+      'offense-rb',
+    ];
+
+    for (const playId of ['twin-slants-11', 'curl-flat-11'] as const) {
+      const gameplay = createGameplayModel({ playbookId: '11v11' });
+
+      expect(selectPlay(gameplay, playId)).toBe(true);
+      expect(gameplay.selectedPlay).toMatchObject({
+        id: playId,
+        kind: 'pass',
+      });
+      expect(gameplay.players).toHaveLength(22);
+      expect(gameplay.player).toMatchObject({ id: 'offense-qb', role: 'quarterback' });
+      expect(gameplay.selectedReceiverId).toBe('offense-wr-left');
+
+      for (const receiverId of targetIds.slice(1)) {
+        expect(cycleSelectedReceiver(gameplay)).toBe(true);
+        expect(gameplay.selectedReceiverId).toBe(receiverId);
+      }
+      expect(cycleSelectedReceiver(gameplay)).toBe(true);
+      expect(gameplay.selectedReceiverId).toBe('offense-wr-left');
+
+      for (const receiverId of targetIds) {
+        const receiverGameplay = createGameplayModel({ playbookId: '11v11' });
+        selectPlay(receiverGameplay, playId);
+        selectReceiver(receiverGameplay, receiverId);
+        const receiver = getPlayer(receiverGameplay.players, receiverId);
+        const receiverStart = { ...receiver.position };
+
+        updateGameplayModel(receiverGameplay, 0.25);
+        expect(receiver.position).toEqual(receiverStart);
+
+        startPlay(receiverGameplay);
+        updateGameplayModel(receiverGameplay, 0.15);
+
+        expect(receiver.position).not.toEqual(receiverStart);
+        expect(attemptPass(receiverGameplay)).toBe(true);
+        expect(receiverGameplay.passAudit).toMatchObject({
+          selectedReceiverId: receiverId,
+          resultReason: 'inFlight',
+        });
+
+        for (let step = 0; step < 120 && receiverGameplay.ball.state.kind === 'inFlight'; step += 1) {
+          updateGameplayModel(receiverGameplay, 1 / 60);
+        }
+
+        expect(receiverGameplay.ball.state.kind).not.toBe('inFlight');
+      }
+    }
+  });
+
+  it('keeps added 11v11 passing play sacks, incompletions, and resets deterministic', () => {
+    for (const playId of ['twin-slants-11', 'curl-flat-11'] as const) {
+      const sack = createGameplayModel({ playbookId: '11v11' });
+      selectPlay(sack, playId);
+      startPlay(sack);
+      getPlayer(sack.players, 'defense-line-middle').position = { ...sack.player.position };
+      updateGameplayModel(sack, 0);
+      expect(sack.lastPlayResult?.type).toBe('sack');
+
+      const incomplete = createGameplayModel({ playbookId: '11v11' });
+      selectPlay(incomplete, playId);
+      startPlay(incomplete);
+      expect(attemptPass(incomplete)).toBe(true);
+      if (incomplete.ball.state.kind === 'inFlight') {
+        incomplete.ball.state.target.x = PLAYABLE_FIELD_BOUNDS.maxX + 5;
+        incomplete.ball.state.durationSeconds = 0.45;
+      }
+      updateGameplayModel(incomplete, 0.45);
+      expect(incomplete.lastPlayResult).toMatchObject({
+        type: 'incomplete',
+        yardsGained: 0,
+      });
+      expect(incomplete.drive.lineOfScrimmage).toEqual(INITIAL_BALL_SPOT);
+
+      const reset = createGameplayModel({ playbookId: '11v11' });
+      selectPlay(reset, playId);
+      selectReceiver(reset, 'offense-rb');
+      startPlay(reset);
+      updateGameplayModel(reset, 0.2);
+      reset.blocking.engagements.push({
+        blockerId: 'offense-center',
+        defenderId: 'defense-line-middle',
+      });
+      expect(attemptPass(reset)).toBe(true);
+
+      resetPlay(reset);
+
+      expect(reset.playState).toBe('preSnap');
+      expect(reset.selectedPlay.id).toBe(playId);
+      expect(reset.selectedReceiverId).toBe('offense-wr-left');
+      expect(reset.blocking.engagements).toEqual([]);
+      expect(reset.passAttempted).toBe(false);
+      expect(reset.passAudit).toBeNull();
+      expect(reset.forwardPassEligible).toBe(true);
+      expect(reset.ball.state).toEqual({ kind: 'dead' });
+      expect(Object.values(reset.receiverRouteStates).every((state) => state.distanceAlongRoute === 0)).toBe(true);
+      expect(reset.players).toHaveLength(22);
     }
   });
 
