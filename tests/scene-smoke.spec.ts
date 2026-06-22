@@ -1091,6 +1091,10 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
     .toHaveText(registeredTeamNames);
   await expect(page.locator('.match-team-card[data-side="opponent"] select').first().locator('option'))
     .toHaveText(registeredTeamNames);
+  const userTeamSelectWidth = await page.locator('.match-team-card[data-side="user"] select').first().evaluate(
+    (element) => element.getBoundingClientRect().width,
+  );
+  expect(userTeamSelectWidth).toBeGreaterThanOrEqual(200);
   await expect(page.locator('.match-team-card[data-side="user"] .match-team-quarterback')).toContainText(/^QB .+ #\d+$/);
   const userHelmetShell = await page.locator('.match-team-card[data-side="user"] .team-helmet-badge').evaluate((element) =>
     getComputedStyle(element).getPropertyValue('--helmet-shell').trim(),

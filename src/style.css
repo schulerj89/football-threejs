@@ -1749,8 +1749,8 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .match-team-controls {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
 }
 
 .match-setup-control {
@@ -1762,23 +1762,31 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .match-setup-control select {
   min-width: 0;
-  padding: 8px;
+  padding: 9px 11px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 6px;
   background: #101817;
   color: #f7fbf8;
   font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+}
+
+.match-setup-control select option {
+  background: #101817;
+  color: #f7fbf8;
 }
 
 .match-setup-stepper {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 34px;
-  gap: 5px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 8px;
 }
 
 .match-setup-stepper-button {
   min-width: 0;
-  min-height: 38px;
+  min-height: 42px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.08);

@@ -105,7 +105,7 @@ export class TeamSelectionCard {
     this.previewHost.append(this.badge);
 
     const teamLabel = document.createElement('label');
-    teamLabel.className = 'match-setup-control';
+    teamLabel.className = 'match-setup-control match-setup-control-team';
     const teamLabelText = document.createElement('span');
     teamLabelText.textContent = 'Team';
     for (const profile of this.teamOptions) {
@@ -126,7 +126,7 @@ export class TeamSelectionCard {
     teamLabel.append(teamLabelText, teamStepper);
 
     const uniformLabel = document.createElement('label');
-    uniformLabel.className = 'match-setup-control';
+    uniformLabel.className = 'match-setup-control match-setup-control-uniform';
     const uniformLabelText = document.createElement('span');
     uniformLabelText.textContent = 'Uniform';
     for (const [value, label] of [
