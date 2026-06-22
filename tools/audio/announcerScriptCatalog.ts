@@ -33,8 +33,8 @@ export interface AnnouncerScript {
 }
 
 export const ANNOUNCER_IDENTITY: AnnouncerIdentity = {
-  id: 'gridiron-local-prototype',
-  displayName: 'Gridiron Local Prototype Announcer',
+  id: 'grant-mercer',
+  displayName: 'Grant Mercer',
   description:
     'Original fictional football broadcaster for the low-poly prototype. Warm, authoritative, modern, and energetic without imitating a named person.',
   voiceDirection:

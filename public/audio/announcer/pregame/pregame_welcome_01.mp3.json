@@ -1,15 +1,15 @@
 {
   "assetId": "pregame_welcome_01",
-  "caption": "Gridiron Local Prototype Announcer welcomes you to Football JS. The lights are up, and the opening possession is next.",
+  "caption": "Grant Mercer welcomes you to Football JS. The lights are up, and the opening possession is next.",
   "category": "announcer",
-  "compressedBytes": 103279,
-  "contentHash": "aedcc8f63f35b48fc3a8086027c6f20baa3e839b374764112906a8c784169e4d",
-  "durationSeconds": 6.4,
+  "compressedBytes": 91995,
+  "contentHash": "14aae67e1323933e829b0e28d402ed542ad63028381f771e268364aafcb7d5fb",
+  "durationSeconds": 5.68,
   "eventCategory": "pregame:welcome",
-  "generatedAt": "2026-06-22T00:06:18.022Z",
+  "generatedAt": "2026-06-22T03:32:14.081Z",
   "kind": "speech",
   "metadata": {
-    "announcerName": "Gridiron Local Prototype Announcer",
+    "announcerName": "Grant Mercer",
     "awayTeamId": null,
     "homeTeamId": null,
     "jerseyNumber": null,
@@ -24,7 +24,7 @@
   "outputFormat": "mp3_44100_128",
   "requestedDurationSeconds": 4,
   "runtimeLoadingStrategy": "buffer",
-  "script": "Gridiron Local Prototype Announcer welcomes you to Football JS. The lights are up, and the opening possession is next.",
+  "script": "Grant Mercer welcomes you to Football JS. The lights are up, and the opening possession is next.",
   "scriptId": "pregame_welcome_01",
   "voiceId": "KKOOCEM13w1s47p4Qrw3"
 }

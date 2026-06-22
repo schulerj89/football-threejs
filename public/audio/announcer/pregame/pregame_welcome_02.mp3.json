@@ -1,15 +1,15 @@
 {
   "assetId": "pregame_welcome_02",
-  "caption": "This is Football JS, with Gridiron Local Prototype Announcer on the call. The offense is moments from the first snap.",
+  "caption": "This is Football JS, with Grant Mercer on the call. The offense is moments from the first snap.",
   "category": "announcer",
-  "compressedBytes": 118744,
-  "contentHash": "341609835781cddb7627043f4ca7573530d07bced54ca43fcacd65b80ec28c47",
-  "durationSeconds": 7.36,
+  "compressedBytes": 85725,
+  "contentHash": "cb458b1659b3ce5e38da1f1025039a3b9d7afd62366c387cb21e12313b031738",
+  "durationSeconds": 5.28,
   "eventCategory": "pregame:welcome",
-  "generatedAt": "2026-06-22T00:06:20.020Z",
+  "generatedAt": "2026-06-22T03:32:29.988Z",
   "kind": "speech",
   "metadata": {
-    "announcerName": "Gridiron Local Prototype Announcer",
+    "announcerName": "Grant Mercer",
     "awayTeamId": null,
     "homeTeamId": null,
     "jerseyNumber": null,
@@ -24,7 +24,7 @@
   "outputFormat": "mp3_44100_128",
   "requestedDurationSeconds": 4.2,
   "runtimeLoadingStrategy": "buffer",
-  "script": "This is Football JS, with Gridiron Local Prototype Announcer on the call. The offense is moments from the first snap.",
+  "script": "This is Football JS, with Grant Mercer on the call. The offense is moments from the first snap.",
   "scriptId": "pregame_welcome_02",
   "voiceId": "KKOOCEM13w1s47p4Qrw3"
 }

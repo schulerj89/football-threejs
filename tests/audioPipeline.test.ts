@@ -149,7 +149,7 @@ describe('audio production pipeline', () => {
       expect(captions.scripts).toHaveLength(27);
       expect(captions.scripts.every((entry) => entry.caption === entry.script)).toBe(true);
       expect(captions.scripts.every((entry) => entry.voiceId === 'voice-test')).toBe(true);
-      expect(readFileSync(join(cwd, ANNOUNCER_AUDITION_PAGE_PATH), 'utf8')).toContain('Announcer');
+      expect(readFileSync(join(cwd, ANNOUNCER_AUDITION_PAGE_PATH), 'utf8')).toContain('Grant Mercer');
     });
   });
 

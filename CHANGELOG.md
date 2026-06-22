@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.4] - 2026-06-22
+
+### Changed
+
+- Renamed the prototype broadcaster identity to the fictional announcer `Grant Mercer` across the central brand config, audio-production identity, caption manifests, and audition pages.
+- Regenerated the three pregame welcome intro MP3 clips so the spoken opening lines introduce Grant Mercer instead of the placeholder announcer label.
+
+### Tests
+
+- Updated brand and audio pipeline coverage for the named announcer identity.
+
 ## [1.7.3] - 2026-06-22
 
 ### Fixed

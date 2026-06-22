@@ -56,7 +56,7 @@ afterEach(() => {
 describe('Football JS brand asset pipeline', () => {
   it('defines the official in-game brand through a central config', () => {
     expect(GAME_BRAND).toMatchObject({
-      announcerName: 'Gridiron Local Prototype Announcer',
+      announcerName: 'Grant Mercer',
       emblemImageUrl: '/branding/football-js-emblem.webp',
       heroImageUrl: '/branding/football-js-title.webp',
       shortTitle: 'Football JS',

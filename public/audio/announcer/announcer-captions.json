@@ -1,11 +1,11 @@
 {
   "announcer": {
-    "id": "gridiron-local-prototype",
-    "displayName": "Gridiron Local Prototype Announcer",
+    "id": "grant-mercer",
+    "displayName": "Grant Mercer",
     "description": "Original fictional football broadcaster for the low-poly prototype. Warm, authoritative, modern, and energetic without imitating a named person.",
     "voiceDirection": "Clear modern football broadcast delivery, controlled energy, warm authority, able to rise for big plays without shouting every line."
   },
-  "generatedAt": "2026-06-21T12:57:13.229Z",
+  "generatedAt": "2026-06-22T03:33:35.027Z",
   "scripts": [
     {
       "assetId": "ann_game_opening_01",

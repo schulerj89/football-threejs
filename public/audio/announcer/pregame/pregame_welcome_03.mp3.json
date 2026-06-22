@@ -1,15 +1,15 @@
 {
   "assetId": "pregame_welcome_03",
-  "caption": "Gridiron Local Prototype Announcer is set for pregame energy in Football JS. The stadium is ready, and so are we.",
+  "caption": "Grant Mercer is set for pregame energy in Football JS. The stadium is ready, and so are we.",
   "category": "announcer",
-  "compressedBytes": 112475,
-  "contentHash": "e468d3b8d01a5f42bc8c5cdff74275c12d1688184966722ae4d8f9b8e9b5dad5",
-  "durationSeconds": 6.96,
+  "compressedBytes": 94502,
+  "contentHash": "262d73a22b5e5c5dafaf62ba5a07956be9a8f8b533379bca4854c79b08a06e30",
+  "durationSeconds": 5.84,
   "eventCategory": "pregame:welcome",
-  "generatedAt": "2026-06-22T00:08:52.231Z",
+  "generatedAt": "2026-06-22T03:32:42.709Z",
   "kind": "speech",
   "metadata": {
-    "announcerName": "Gridiron Local Prototype Announcer",
+    "announcerName": "Grant Mercer",
     "awayTeamId": null,
     "homeTeamId": null,
     "jerseyNumber": null,
@@ -24,7 +24,7 @@
   "outputFormat": "mp3_44100_128",
   "requestedDurationSeconds": 4.1,
   "runtimeLoadingStrategy": "buffer",
-  "script": "Gridiron Local Prototype Announcer is set for pregame energy in Football JS. The stadium is ready, and so are we.",
+  "script": "Grant Mercer is set for pregame energy in Football JS. The stadium is ready, and so are we.",
   "scriptId": "pregame_welcome_03",
   "voiceId": "KKOOCEM13w1s47p4Qrw3"
 }

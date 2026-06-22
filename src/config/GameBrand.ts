@@ -9,7 +9,7 @@ export interface GameBrand {
 }
 
 export const GAME_BRAND: GameBrand = {
-  announcerName: 'Gridiron Local Prototype Announcer',
+  announcerName: 'Grant Mercer',
   emblemImageUrl: '/branding/football-js-emblem.webp',
   heroImageUrl: '/branding/football-js-title.webp',
   shortTitle: 'Football JS',
