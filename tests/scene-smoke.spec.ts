@@ -1,4 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { listTeamProfiles } from '../src/teams/TeamRegistry';
 
 interface PlayerSnapshot {
   collisionRadius: number;
@@ -975,7 +976,7 @@ interface GameExperienceSnapshot {
   queryOverrides: Partial<GameExperienceSettingsSnapshot>;
 }
 
-test('shows the title screen, opens match setup, and holds gameplay until confirm', async ({ page }) => {
+test('shows the title screen, opens match setup, and holds gameplay until Play Game', async ({ page }) => {
   test.setTimeout(75_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
@@ -996,7 +997,8 @@ test('shows the title screen, opens match setup, and holds gameplay until confir
   await expect(page.locator('.title-screen').getByLabel('Difficulty')).toBeVisible();
   await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveCount(0);
   await expect(page.locator('.title-screen').getByLabel('Regression playbook')).toHaveCount(0);
-  await expect(page.locator('.title-screen .team-customization-panel')).toHaveCount(0);
+  await expect(page.locator('.title-screen .team-customization-panel')).toHaveCount(1);
+  await expect(page.locator('.title-screen .team-customization-panel .team-selector-grid')).toHaveCount(0);
   await expect(page.locator('.title-screen .roster-preview-panel')).toHaveCount(0);
   await expect(page.getByText('Officials debug labels')).toHaveCount(0);
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
@@ -1043,10 +1045,15 @@ test('shows the title screen, opens match setup, and holds gameplay until confir
   await expect(page.locator('.gameplay-hud')).toBeHidden();
   await expect(page.locator('.play-call-ui')).toBeHidden();
   await expect(page.locator('.match-team-card')).toHaveCount(2);
+  await expect(page.locator('.match-setup-customize')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Your Team' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Opponent' })).toBeVisible();
   await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-badge')).toBeVisible();
-  expect(await page.locator('.match-team-card[data-side="user"] select').first().locator('option').count()).toBeGreaterThanOrEqual(4);
+  const registeredTeamNames = listTeamProfiles().map((profile) => profile.displayName);
+  await expect(page.locator('.match-team-card[data-side="user"] select').first().locator('option'))
+    .toHaveText(registeredTeamNames);
+  await expect(page.locator('.match-team-card[data-side="opponent"] select').first().locator('option'))
+    .toHaveText(registeredTeamNames);
   await expect(page.locator('.match-team-card[data-side="user"] .match-team-quarterback')).toContainText(/^QB .+ #\d+$/);
   const userHelmetShell = await page.locator('.match-team-card[data-side="user"] .team-helmet-badge').evaluate((element) =>
     getComputedStyle(element).getPropertyValue('--helmet-shell').trim(),
@@ -1057,18 +1064,35 @@ test('shows the title screen, opens match setup, and holds gameplay until confir
   );
   const userTeamSelect = page.locator('.match-team-card[data-side="user"] select').first();
   const opponentTeamSelect = page.locator('.match-team-card[data-side="opponent"] select').first();
+  const originalUserTeam = await userTeamSelect.inputValue();
+  await page.getByRole('button', { name: 'Next Your Team team' }).click();
+  await expect(userTeamSelect).not.toHaveValue(originalUserTeam);
+  await page.getByRole('button', { name: 'Previous Your Team team' }).click();
+  await expect(userTeamSelect).toHaveValue(originalUserTeam);
+  const userUniformSelect = page.locator('.match-team-card[data-side="user"] select').nth(1);
+  await page.getByRole('button', { name: 'Next Your Team uniform' }).click();
+  await expect(userUniformSelect).toHaveValue('away');
+  const awayHelmetShell = await page.locator('.match-team-card[data-side="user"] .team-helmet-badge').evaluate((element) =>
+    getComputedStyle(element).getPropertyValue('--helmet-shell').trim(),
+  );
+  await expect(page.locator('.match-team-card[data-side="user"] .match-team-swatch[aria-label^="Helmet"]')).toHaveAttribute(
+    'aria-label',
+    new RegExp(awayHelmetShell.replace('#', '#')),
+  );
+  await page.getByRole('button', { name: 'Previous Your Team uniform' }).click();
+  await expect(userUniformSelect).toHaveValue('home');
   const originalOpponentTeam = await opponentTeamSelect.inputValue();
   await opponentTeamSelect.selectOption(await userTeamSelect.inputValue());
-  await expect(page.getByRole('button', { name: 'Confirm Match' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Play Game' })).toBeDisabled();
   await expect(page.locator('.matchup-summary-warning')).toContainText('Choose two different teams.');
   await opponentTeamSelect.selectOption(originalOpponentTeam);
-  await expect(page.getByRole('button', { name: 'Confirm Match' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Play Game' })).toBeEnabled();
   await page.getByRole('button', { name: 'Back' }).click();
   await expect(page.locator('.match-setup-screen')).toBeHidden();
   await expect(page.locator('.title-screen')).toBeVisible();
   await page.getByRole('button', { name: 'Start Game' }).click();
   await expect(page.locator('.match-setup-screen')).toBeVisible();
-  await page.getByRole('button', { name: 'Confirm Match' }).click();
+  await page.getByRole('button', { name: 'Play Game' }).click();
   await expect(page.locator('.match-setup-screen')).toBeHidden();
   await expect(page.locator('body[data-app-phase="pregamePresentation"]')).toBeAttached();
   await expect(page.locator('.gameplay-hud')).toBeHidden();
@@ -1315,7 +1339,7 @@ test('starts the performance preset without visual crowd or cinematics', async (
   await expect(page.locator('.title-settings-overlay')).toBeHidden();
   await page.getByRole('button', { name: 'Start Game' }).click();
   await expect(page.locator('.match-setup-screen')).toBeVisible();
-  await page.getByRole('button', { name: 'Confirm Match' }).click();
+  await page.getByRole('button', { name: 'Play Game' }).click();
 
   await expect(page.locator('.title-screen')).toBeHidden();
   const experience = await getGameExperienceSnapshot(page);

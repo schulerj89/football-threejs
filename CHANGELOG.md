@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.14.0] - 2026-06-22
+
+### Added
+
+- Added a player-facing Match Setup step between the Football JS title and pregame presentation, with registry-backed user/opponent team selection, home/away uniform selection, reusable tinted SVG helmet badges, team abbreviations, color swatches, and starting-quarterback identity.
+- Added explicit previous/next controls for team and uniform selection while preserving pointer, keyboard, and select-based navigation.
+
+### Changed
+
+- Updated the title Start Game action to open Match Setup and renamed the matchup confirmation action to `Play Game`.
+- Moved color customization out of Match Setup and into title Settings as profile editing without a second active matchup selector.
+
+### Tests
+
+- Updated browser smoke coverage for Start Game -> Match Setup -> Play Game -> pregame, registry-backed team options, helmet color updates, same-team validation, back navigation, and title/setup cycling.
+
 ## [1.13.1] - 2026-06-22
 
 ### Changed

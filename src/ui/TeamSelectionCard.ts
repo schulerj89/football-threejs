@@ -20,6 +20,7 @@ export class TeamSelectionCard {
   readonly root = document.createElement('section');
 
   private readonly badge: SVGSVGElement;
+  private readonly teamOptions = listTeamProfiles();
   private readonly teamSelect = document.createElement('select');
   private readonly uniformSelect = document.createElement('select');
   private readonly abbreviation = document.createElement('span');
@@ -74,7 +75,7 @@ export class TeamSelectionCard {
     teamLabel.className = 'match-setup-control';
     const teamLabelText = document.createElement('span');
     teamLabelText.textContent = 'Team';
-    for (const profile of listTeamProfiles()) {
+    for (const profile of this.teamOptions) {
       const option = document.createElement('option');
       option.value = profile.id;
       option.textContent = profile.displayName;
@@ -83,7 +84,13 @@ export class TeamSelectionCard {
     this.teamSelect.addEventListener('change', () => {
       this.options.onTeamChange(this.teamSelect.value);
     });
-    teamLabel.append(teamLabelText, this.teamSelect);
+    const teamStepper = this.createStepperControl(
+      `${titleText} team`,
+      () => this.cycleTeam(-1),
+      this.teamSelect,
+      () => this.cycleTeam(1),
+    );
+    teamLabel.append(teamLabelText, teamStepper);
 
     const uniformLabel = document.createElement('label');
     uniformLabel.className = 'match-setup-control';
@@ -101,7 +108,13 @@ export class TeamSelectionCard {
     this.uniformSelect.addEventListener('change', () => {
       this.options.onUniformChange(this.uniformSelect.value as UniformVariant);
     });
-    uniformLabel.append(uniformLabelText, this.uniformSelect);
+    const uniformStepper = this.createStepperControl(
+      `${titleText} uniform`,
+      () => this.cycleUniform(-1),
+      this.uniformSelect,
+      () => this.cycleUniform(1),
+    );
+    uniformLabel.append(uniformLabelText, uniformStepper);
 
     const controls = document.createElement('div');
     controls.className = 'match-team-controls';
@@ -127,6 +140,53 @@ export class TeamSelectionCard {
       ? this.settings.userUniform
       : this.settings.opponentUniform;
   }
+
+  private createStepperControl(
+    label: string,
+    onPrevious: () => void,
+    control: HTMLSelectElement,
+    onNext: () => void,
+  ): HTMLElement {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'match-setup-stepper';
+    const previous = document.createElement('button');
+    previous.type = 'button';
+    previous.className = 'match-setup-stepper-button';
+    previous.textContent = '<';
+    previous.setAttribute('aria-label', `Previous ${label}`);
+    previous.addEventListener('click', onPrevious);
+
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.className = 'match-setup-stepper-button';
+    next.textContent = '>';
+    next.setAttribute('aria-label', `Next ${label}`);
+    next.addEventListener('click', onNext);
+
+    wrapper.append(previous, control, next);
+    return wrapper;
+  }
+
+  private cycleTeam(delta: -1 | 1): void {
+    const currentIndex = this.teamOptions.findIndex((profile) => profile.id === this.teamSelect.value);
+    const nextIndex = wrapIndex(currentIndex + delta, this.teamOptions.length);
+    const nextTeam = this.teamOptions[nextIndex];
+    if (!nextTeam) {
+      return;
+    }
+
+    this.options.onTeamChange(nextTeam.id);
+  }
+
+  private cycleUniform(delta: -1 | 1): void {
+    const uniforms: UniformVariant[] = ['home', 'away'];
+    const currentIndex = uniforms.indexOf(this.uniformSelect.value as UniformVariant);
+    this.options.onUniformChange(uniforms[wrapIndex(currentIndex + delta, uniforms.length)]);
+  }
+}
+
+function wrapIndex(index: number, length: number): number {
+  return ((index % length) + length) % length;
 }
 
 function createSwatch(label: string, color: string): HTMLElement {

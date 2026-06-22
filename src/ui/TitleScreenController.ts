@@ -22,8 +22,9 @@ export class TitleScreenController {
     this.settingsPanel = new SettingsPanel({
       initialSettings: options.initialSettings,
       onSettingsChange: options.onSettingsChange,
+      showRosterPreview: false,
       showGameMode: false,
-      showTeamCustomization: false,
+      showTeamCustomization: true,
     });
     this.matchSetupScreen = new MatchSetupScreen({
       initialSettings: options.initialSettings,

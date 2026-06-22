@@ -18,6 +18,7 @@ import type { UniformVariant } from '../teams/UniformPalette';
 export interface TeamCustomizationPanelOptions {
   initialSettings: TeamProfileSettings;
   onSettingsChange?: (settings: TeamProfileSettings) => void;
+  showTeamSelectors?: boolean;
 }
 
 type CustomColorKey = keyof TeamColorOverrides;
@@ -46,10 +47,12 @@ export class TeamCustomizationPanel {
 
   private settings: TeamProfileSettings;
   private readonly onSettingsChange?: (settings: TeamProfileSettings) => void;
+  private readonly showTeamSelectors: boolean;
 
   constructor(options: TeamCustomizationPanelOptions) {
     this.settings = normalizeTeamProfileSettings(options.initialSettings);
     this.onSettingsChange = options.onSettingsChange;
+    this.showTeamSelectors = options.showTeamSelectors ?? true;
     this.root.className = 'team-customization-panel';
     this.render();
   }
@@ -126,13 +129,6 @@ export class TeamCustomizationPanel {
       });
     });
 
-    const selectors = document.createElement('div');
-    selectors.className = 'team-selector-grid';
-    selectors.append(
-      this.createLabeledControl('Team', teamSelect),
-      this.createLabeledControl('Uniform', uniformSelect),
-    );
-
     const profile = resolveCustomizedTeamProfile(this.getTeamId(side), this.settings);
     const activeUniform = this.getUniformVariant(side) === 'away'
       ? profile.awayUniform
@@ -158,7 +154,21 @@ export class TeamCustomizationPanel {
       this.updateSettings(resetTeamColorOverrides(this.settings, this.getTeamId(side)));
     });
 
-    section.append(title, selectors, colorGrid, resetButton);
+    if (this.showTeamSelectors) {
+      const selectors = document.createElement('div');
+      selectors.className = 'team-selector-grid';
+      selectors.append(
+        this.createLabeledControl('Team', teamSelect),
+        this.createLabeledControl('Uniform', uniformSelect),
+      );
+      section.append(title, selectors, colorGrid, resetButton);
+    } else {
+      const teamSummary = document.createElement('p');
+      teamSummary.className = 'team-customization-summary';
+      teamSummary.textContent = `${profile.displayName} ${this.getUniformVariant(side)} uniform`;
+      section.append(title, teamSummary, colorGrid, resetButton);
+    }
+
     return section;
   }
 

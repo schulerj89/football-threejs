@@ -1,5 +1,4 @@
 import type { GameExperienceSettings } from '../config/GameExperienceSettings';
-import { TeamCustomizationPanel } from './TeamCustomizationPanel';
 import { TeamSelectionCard } from './TeamSelectionCard';
 import { MatchupSummary } from './MatchupSummary';
 import {
@@ -25,7 +24,6 @@ export class MatchSetupScreen {
   private readonly userCard: TeamSelectionCard;
   private readonly opponentCard: TeamSelectionCard;
   private readonly summary = new MatchupSummary();
-  private readonly customizePanel: TeamCustomizationPanel;
   private readonly confirmButton = document.createElement('button');
   private readonly correctionButton = document.createElement('button');
   private settings: GameExperienceSettings;
@@ -36,13 +34,6 @@ export class MatchSetupScreen {
   constructor(private readonly options: MatchSetupScreenOptions) {
     this.settings = options.initialSettings;
     this.selection = createMatchSetupSelection(options.initialSettings.teamProfiles);
-    this.customizePanel = new TeamCustomizationPanel({
-      initialSettings: this.selection.teamProfiles,
-      onSettingsChange: (teamProfiles) => {
-        this.selection = createMatchSetupSelection(teamProfiles);
-        this.sync();
-      },
-    });
     this.userCard = new TeamSelectionCard({
       onTeamChange: (teamId) => {
         this.selection = updateMatchSetupTeam(this.selection, 'user', teamId);
@@ -132,12 +123,6 @@ export class MatchSetupScreen {
     grid.className = 'match-setup-grid';
     grid.append(this.userCard.root, this.opponentCard.root, this.summary.root);
 
-    const customize = document.createElement('details');
-    customize.className = 'match-setup-customize';
-    const customizeSummary = document.createElement('summary');
-    customizeSummary.textContent = 'Customize Team';
-    customize.append(customizeSummary, this.customizePanel.root);
-
     const actions = document.createElement('footer');
     actions.className = 'match-setup-actions';
     const backButton = document.createElement('button');
@@ -157,7 +142,7 @@ export class MatchSetupScreen {
     });
     this.confirmButton.type = 'button';
     this.confirmButton.className = 'match-setup-confirm-button';
-    this.confirmButton.textContent = 'Confirm Match';
+    this.confirmButton.textContent = 'Play Game';
     this.confirmButton.addEventListener('click', () => {
       this.handleFirstGesture();
       if (!validateMatchSetupSelection(this.selection).canConfirm) {
@@ -170,7 +155,7 @@ export class MatchSetupScreen {
     });
     actions.append(backButton, this.correctionButton, this.confirmButton);
 
-    panel.append(header, grid, customize, actions);
+    panel.append(header, grid, actions);
     return panel;
   }
 
@@ -178,7 +163,6 @@ export class MatchSetupScreen {
     const validation = validateMatchSetupSelection(this.selection);
     this.userCard.sync(this.selection.teamProfiles);
     this.opponentCard.sync(this.selection.teamProfiles);
-    this.customizePanel.setSettings(this.selection.teamProfiles);
     this.summary.sync(this.selection.teamProfiles, validation);
     this.correctionButton.hidden = !validation.uniformConflict;
     this.confirmButton.disabled = !validation.canConfirm;

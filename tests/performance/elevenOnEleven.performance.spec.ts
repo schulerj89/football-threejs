@@ -337,7 +337,7 @@ async function startGameIfTitleScreenIsVisible(page: Page): Promise<void> {
     await page.getByRole('button', { name: 'Start Game' }).click();
     const matchSetup = page.locator('.match-setup-screen');
     if (await matchSetup.isVisible()) {
-      await page.getByRole('button', { name: 'Confirm Match' }).click();
+      await page.getByRole('button', { name: 'Play Game' }).click();
       await expect(matchSetup).toBeHidden();
     }
     await expect(titleScreen).toBeHidden();

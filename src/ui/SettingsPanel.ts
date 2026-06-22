@@ -23,6 +23,7 @@ export interface SettingsPanelOptions {
   initialSettings: GameExperienceSettings;
   onSettingsChange?: (settings: GameExperienceSettings) => void;
   showGameMode?: boolean;
+  showRosterPreview?: boolean;
   showTeamCustomization?: boolean;
 }
 
@@ -32,6 +33,7 @@ export class SettingsPanel {
   private settings: GameExperienceSettings;
   private readonly onSettingsChange?: (settings: GameExperienceSettings) => void;
   private readonly showGameMode: boolean;
+  private readonly showRosterPreview: boolean;
   private readonly showTeamCustomization: boolean;
   private readonly teamCustomizationPanel: TeamCustomizationPanel | null;
   private readonly rosterPreviewPanel: RosterPreviewPanel | null;
@@ -74,6 +76,7 @@ export class SettingsPanel {
     this.onSettingsChange = options.onSettingsChange;
     this.showGameMode = options.showGameMode ?? true;
     this.showTeamCustomization = options.showTeamCustomization ?? false;
+    this.showRosterPreview = options.showRosterPreview ?? this.showTeamCustomization;
     this.teamCustomizationPanel = this.showTeamCustomization
       ? new TeamCustomizationPanel({
           initialSettings: this.settings.teamProfiles,
@@ -83,9 +86,10 @@ export class SettingsPanel {
               teamProfiles,
             });
           },
+          showTeamSelectors: false,
         })
       : null;
-    this.rosterPreviewPanel = this.showTeamCustomization
+    this.rosterPreviewPanel = this.showRosterPreview
       ? new RosterPreviewPanel(this.settings)
       : null;
     this.root.className = 'game-setup-screen settings-panel';

@@ -1413,8 +1413,7 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .match-team-card,
-.matchup-summary,
-.match-setup-customize {
+.matchup-summary {
   min-width: 0;
   padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -1503,6 +1502,31 @@ body[data-game-mode="exhibition"] .score-counter {
   font: inherit;
 }
 
+.match-setup-stepper {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  gap: 5px;
+}
+
+.match-setup-stepper-button {
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7fbf8;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+}
+
+.match-setup-stepper-button:hover,
+.match-setup-stepper-button:focus-visible {
+  border-color: rgba(242, 217, 75, 0.82);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(242, 217, 75, 0.28);
+}
+
 .match-team-swatches {
   display: flex;
   flex-wrap: wrap;
@@ -1531,23 +1555,6 @@ body[data-game-mode="exhibition"] .score-counter {
 .matchup-summary-warning[hidden],
 .match-setup-secondary-button[hidden] {
   display: none;
-}
-
-.match-setup-customize {
-  margin-top: 12px;
-}
-
-.match-setup-customize summary {
-  cursor: pointer;
-  color: #f2d94b;
-  font-weight: 850;
-}
-
-.match-setup-customize .team-customization-panel {
-  margin-top: 12px;
-  padding: 0;
-  border: 0;
-  background: transparent;
 }
 
 .match-setup-actions {
