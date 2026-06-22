@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 10;
+export const GAME_SETTINGS_SCHEMA_VERSION = 11;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -42,6 +42,7 @@ function migrateOfficialSettings(value: unknown): unknown {
   if (preset === 'broadcast') {
     return {
       ...value,
+      coachesEnabled: value.coachesEnabled ?? true,
       controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
       crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
       gameMode: value.gameMode ?? 'exhibition',
@@ -61,6 +62,7 @@ function migrateOfficialSettings(value: unknown): unknown {
   if (preset === 'performance') {
     return {
       ...value,
+      coachesEnabled: value.coachesEnabled ?? false,
       controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
       crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
       gameMode: value.gameMode ?? 'exhibition',
@@ -79,6 +81,7 @@ function migrateOfficialSettings(value: unknown): unknown {
 
   return {
     ...value,
+    coachesEnabled: value.coachesEnabled ?? true,
     controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
     crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
     gameMode: value.gameMode ?? 'exhibition',

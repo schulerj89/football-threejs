@@ -61,6 +61,7 @@ export interface GameExperienceSettings {
   audioEnabled: boolean;
   captionsEnabled: boolean;
   cinematics: CinematicsSetting;
+  coachesEnabled: boolean;
   controlledPlayerLabelEnabled: boolean;
   crowdAudioEnabled: boolean;
   crowdDensity: CrowdDensity;
@@ -104,6 +105,7 @@ export interface GameExperienceQueryOverrides {
   audioEnabled?: boolean;
   captionsEnabled?: boolean;
   cinematics?: CinematicsSetting;
+  coachesEnabled?: boolean;
   controlledPlayerLabelEnabled?: boolean;
   crowdAudioEnabled?: boolean;
   crowdDensity?: CrowdDensity;
@@ -190,6 +192,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   audioEnabled: true,
   captionsEnabled: false,
   cinematics: 'brief',
+  coachesEnabled: true,
   controlledPlayerLabelEnabled: true,
   crowdAudioEnabled: true,
   crowdDensity: 'low',
@@ -223,6 +226,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
 export const PERFORMANCE_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   ...BROADCAST_EXPERIENCE_SETTINGS,
   cinematics: 'off',
+  coachesEnabled: false,
   crowdReactionsEnabled: false,
   crowdVisualsEnabled: false,
   officialsEnabled: false,
@@ -346,6 +350,7 @@ export function normalizeGameExperienceSettings(
     cinematics: isCinematicsSetting(settings.cinematics)
       ? settings.cinematics
       : presetDefaults.cinematics,
+    coachesEnabled: settings.coachesEnabled ?? presetDefaults.coachesEnabled,
     controlledPlayerLabelEnabled:
       settings.controlledPlayerLabelEnabled ?? presetDefaults.controlledPlayerLabelEnabled,
     crowdAudioEnabled: settings.crowdAudioEnabled ?? presetDefaults.crowdAudioEnabled,
@@ -490,6 +495,7 @@ export function resolveGameExperienceQueryOverrides(
   applyBooleanOverride(overrides, 'crowdReactionsEnabled', searchParams, 'crowdReactions');
   applyBooleanOverride(overrides, 'audioEnabled', searchParams, 'audio');
   applyBooleanOverride(overrides, 'crowdAudioEnabled', searchParams, 'crowdAudio');
+  applyBooleanOverride(overrides, 'coachesEnabled', searchParams, 'coaches');
   applyBooleanOverride(
     overrides,
     'controlledPlayerLabelEnabled',
@@ -674,6 +680,7 @@ function applyBooleanOverride(
     | 'announcerEnabled'
     | 'audioEnabled'
     | 'captionsEnabled'
+    | 'coachesEnabled'
     | 'controlledPlayerLabelEnabled'
     | 'crowdAudioEnabled'
     | 'crowdReactionsEnabled'

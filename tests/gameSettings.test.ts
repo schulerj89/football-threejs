@@ -22,6 +22,7 @@ describe('game settings facade', () => {
     expect(resolved.settings).toMatchObject({
       audioEnabled: true,
       cinematics: 'brief',
+      coachesEnabled: true,
       crowdDensity: 'low',
       crowdFullness: 'full',
       crowdVisualsEnabled: true,

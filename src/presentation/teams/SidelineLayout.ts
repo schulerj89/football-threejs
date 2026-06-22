@@ -5,6 +5,7 @@ import {
 import type { PlayerTeam } from '../../playerModel';
 import type {
   SidelineDensity,
+  SidelineCoachPlacement,
   SidelineLayout,
   SidelineLayoutOptions,
   SidelinePlayerPlacement,
@@ -18,6 +19,7 @@ import { resolveTunnelAnchor } from './TunnelTableauLayout';
 
 const SIDELINE_LAYOUT_CONFIG = {
   cameraSafeEndMargin: 14,
+  coachFieldSetback: 3.2,
   rowSpacing: 1.28,
   sidelineInset: 1.9,
   sidelineZoneDepth: 72,
@@ -26,25 +28,33 @@ const SIDELINE_LAYOUT_CONFIG = {
 } as const;
 
 export const SIDELINE_DENSITY_COUNTS: Record<SidelineDensity, number> = {
-  high: 12,
-  low: 4,
-  medium: 8,
+  high: 15,
+  low: 5,
+  medium: 10,
 } as const;
 
 const POSES: readonly SidelinePoseId[] = [
-  'neutral',
+  'standing',
   'handsOnHips',
   'armsLow',
-  'slightLean',
   'crouched',
+  'slightLean',
 ] as const;
 
 export function createSidelineLayout(options: SidelineLayoutOptions): SidelineLayout {
   const zones = createSidelineZones();
-  const sidelinePlacements = [
-    ...createSidelineTeamPlacements('user', options.density),
-    ...createSidelineTeamPlacements('opponent', options.density),
-  ];
+  const sidelinePlacements = options.sidelinePlayersEnabled === false
+    ? []
+    : [
+        ...createSidelineTeamPlacements('user', options.density),
+        ...createSidelineTeamPlacements('opponent', options.density),
+      ];
+  const coachPlacements = options.coachesEnabled
+    ? [
+        createSidelineCoachPlacement('user'),
+        createSidelineCoachPlacement('opponent'),
+      ]
+    : [];
   const tunnelPlacements = options.tunnelTableauEnabled
     ? createTunnelTableauPlacements({
         appearanceIds: options.rosterAppearanceIds?.[options.featuredTunnelTeamSide ?? 'user'],
@@ -54,10 +64,39 @@ export function createSidelineLayout(options: SidelineLayoutOptions): SidelineLa
 
   return {
     allPlacements: [...sidelinePlacements, ...tunnelPlacements],
+    coachPlacements,
     protectedFieldBounds: FIELD_BOUNDS,
     sidelinePlacements,
     tunnelPlacements,
     zones,
+  };
+}
+
+function createSidelineCoachPlacement(teamSide: SidelineTeamSide): SidelineCoachPlacement {
+  const zoneId = teamSide === 'user' ? 'user-sideline' : 'opponent-sideline';
+  const zone = createSidelineZones().find((candidate) => candidate.id === zoneId);
+  const team = resolveGameplayTeam(teamSide);
+  const inward = teamSide === 'user' ? 1 : -1;
+  const position = zone
+    ? {
+        x: teamSide === 'user'
+          ? zone.bounds.maxX - SIDELINE_LAYOUT_CONFIG.coachFieldSetback
+          : zone.bounds.minX + SIDELINE_LAYOUT_CONFIG.coachFieldSetback,
+        y: 0,
+        z: zone.center.z,
+      }
+    : { x: 0, y: 0, z: 0 };
+
+  return {
+    appearanceId: `head-coach-${teamSide}`,
+    facingRadians: Math.atan2(inward, 0),
+    id: `head-coach-${teamSide}`,
+    position,
+    scale: 0.92,
+    state: 'neutral',
+    team,
+    teamSide,
+    zoneId,
   };
 }
 

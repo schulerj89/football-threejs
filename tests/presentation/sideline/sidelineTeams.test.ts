@@ -24,11 +24,13 @@ describe('sideline team layout', () => {
   it('resolves density counts outside the protected field bounds', () => {
     for (const density of ['low', 'medium', 'high'] as const) {
       const layout = createSidelineLayout({
+        coachesEnabled: true,
         density,
         tunnelTableauEnabled: false,
       });
 
       expect(layout.sidelinePlacements).toHaveLength(SIDELINE_DENSITY_COUNTS[density] * 2);
+      expect(layout.coachPlacements).toHaveLength(2);
       expect(layout.tunnelPlacements).toHaveLength(0);
       for (const placement of layout.sidelinePlacements) {
         const zone = layout.zones.find((candidate) => candidate.id === placement.zoneId);
@@ -36,11 +38,17 @@ describe('sideline team layout', () => {
         expect(isSidelinePlacementInsideZone(placement, zone!)).toBe(true);
         expect(isOutsideProtectedFieldBounds(placement.position, FIELD_BOUNDS)).toBe(true);
       }
+      for (const coach of layout.coachPlacements) {
+        const zone = layout.zones.find((candidate) => candidate.id === coach.zoneId);
+        expect(zone).toBeDefined();
+        expect(isOutsideProtectedFieldBounds(coach.position, FIELD_BOUNDS)).toBe(true);
+      }
     }
   });
 
   it('keeps opposite sideline placements mathematically symmetrical', () => {
     const layout = createSidelineLayout({
+      coachesEnabled: true,
       density: 'medium',
       tunnelTableauEnabled: false,
     });
@@ -53,6 +61,11 @@ describe('sideline team layout', () => {
       expect(user[index].position.z).toBeCloseTo(opponent[index].position.z, 6);
       expect(user[index].facingRadians).toBeCloseTo(-opponent[index].facingRadians, 6);
     }
+
+    const userCoach = layout.coachPlacements.find((coach) => coach.teamSide === 'user');
+    const opponentCoach = layout.coachPlacements.find((coach) => coach.teamSide === 'opponent');
+    expect(userCoach?.position.x).toBeCloseTo(-(opponentCoach?.position.x ?? 0), 6);
+    expect(userCoach?.position.z).toBeCloseTo(opponentCoach?.position.z ?? 1, 6);
   });
 
   it('aligns tunnel zones to declared stadium tunnel anchors', () => {
@@ -72,6 +85,7 @@ describe('sideline team layout', () => {
 
   it('creates one active tunnel tableau with eleven starter representations', () => {
     const layout = createSidelineLayout({
+      coachesEnabled: false,
       density: 'low',
       rosterAppearanceIds: {
         user: Array.from({ length: 11 }, (_, index) => `starter-${index}`),
@@ -90,18 +104,25 @@ describe('sideline team layout', () => {
 describe('sideline team visuals', () => {
   it('renders sideline subjects with bounded instanced resources and varied skin colors', () => {
     const theme = resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS);
-    const layout = createSidelineLayout({ density: 'low', tunnelTableauEnabled: true });
-    const resources = createSidelineVisualResources(layout.allPlacements, theme);
+    const layout = createSidelineLayout({
+      coachesEnabled: true,
+      density: 'low',
+      tunnelTableauEnabled: true,
+    });
+    const resources = createSidelineVisualResources(layout.allPlacements, theme, {
+      coachPlacements: layout.coachPlacements,
+    });
 
-    expect(resources.metrics.meshCount).toBe(9);
+    expect(resources.metrics.meshCount).toBe(18);
     expect(resources.metrics.materialCount).toBe(2);
-    expect(resources.metrics.geometryCount).toBe(9);
+    expect(resources.metrics.geometryCount).toBe(16);
     expect(resources.metrics.textureCount).toBe(0);
-    expect(resources.metrics.drawCalls).toBe(9);
+    expect(resources.metrics.drawCalls).toBe(18);
     expect(resources.metrics.instanceBufferBytes).toBeGreaterThan(0);
     expect(resources.metrics.triangleCount).toBeGreaterThan(0);
-    expect(countObjects(resources.group)).toBeLessThan(12);
+    expect(countObjects(resources.group)).toBeLessThan(22);
     expect(countUniqueInstanceColors(resources.meshes.head)).toBeGreaterThan(1);
+    expect(countUniqueInstanceColors(resources.coachMeshes.head)).toBeGreaterThan(0);
 
     resources.dispose();
     expect(resources.group.children).toHaveLength(0);
@@ -109,18 +130,22 @@ describe('sideline team visuals', () => {
 
   it('repeated enable and disable does not accumulate visual roots', () => {
     const controller = new SidelineTeamController({
+      coachesEnabled: true,
       density: 'low',
       enabled: true,
       rosterBinding: createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS),
+      sidelinePlayersEnabled: true,
       teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
       tunnelTableauEnabled: true,
     });
 
     for (let index = 0; index < 20; index += 1) {
       controller.applySettings({
+        coachesEnabled: true,
         density: index % 2 === 0 ? 'low' : 'medium',
         enabled: true,
         rosterBinding: createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS),
+        sidelinePlayersEnabled: true,
         teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
         tunnelTableauEnabled: true,
       });
@@ -129,9 +154,11 @@ describe('sideline team visuals', () => {
     }
 
     controller.applySettings({
+      coachesEnabled: false,
       density: 'low',
       enabled: false,
       rosterBinding: createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS),
+      sidelinePlayersEnabled: false,
       teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
       tunnelTableauEnabled: false,
     });
@@ -144,11 +171,60 @@ describe('sideline team visuals', () => {
   it('keeps sideline and tunnel entities out of gameplay rosters', () => {
     const gameplay = createGameplayModel({ playbookId: '11v11' });
     const snapshot = snapshotGameplayModel(gameplay);
-    const layout = createSidelineLayout({ density: 'high', tunnelTableauEnabled: true });
+    const layout = createSidelineLayout({
+      coachesEnabled: true,
+      density: 'high',
+      tunnelTableauEnabled: true,
+    });
     const sidelineIds = new Set(layout.allPlacements.map((placement) => placement.id));
+    const coachIds = new Set(layout.coachPlacements.map((placement) => placement.id));
 
     expect(snapshot.players).toHaveLength(22);
     expect(snapshot.players.some((player) => sidelineIds.has(player.id))).toBe(false);
+    expect(snapshot.players.some((player) => coachIds.has(player.id))).toBe(false);
+  });
+
+  it('updates coach and reserve reactions once from authoritative presentation events', () => {
+    const controller = new SidelineTeamController({
+      coachesEnabled: true,
+      density: 'low',
+      enabled: true,
+      rosterBinding: createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS),
+      sidelinePlayersEnabled: true,
+      teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
+      tunnelTableauEnabled: false,
+    });
+
+    const touchdownEvent = {
+      id: 'touchdown:result-1',
+      playState: 'dead',
+      score: 6,
+      type: 'touchdown',
+    } as const;
+    controller.update([touchdownEvent], 1 / 60);
+    const touchdownSnapshot = controller.getSnapshot();
+    expect(touchdownSnapshot.reactionState).toBe('touchdown');
+    expect(touchdownSnapshot.lastReactionEventId).toBe(touchdownEvent.id);
+    expect(touchdownSnapshot.coachStates.map((coach) => coach.state)).toEqual([
+      'touchdownCelebration',
+      'touchdownCelebration',
+    ]);
+
+    controller.update([touchdownEvent], 1 / 60);
+    expect(controller.getSnapshot().lastReactionEventId).toBe(touchdownEvent.id);
+
+    controller.update([
+      {
+        id: 'firstDown:result-2',
+        playState: 'dead',
+        score: 6,
+        type: 'firstDown',
+      },
+    ], 1 / 60);
+    expect(controller.getSnapshot().reactionState).toBe('firstDown');
+    expect(controller.getSnapshot().coachStates[0].state).toBe('firstDownApproval');
+
+    controller.dispose();
   });
 });
 

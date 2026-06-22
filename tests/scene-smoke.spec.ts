@@ -1,4 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { GAME_SETTINGS_SCHEMA_VERSION } from '../src/config/GameSettingsStore';
 import { listTeamProfiles } from '../src/teams/TeamRegistry';
 
 interface PlayerSnapshot {
@@ -1671,7 +1672,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     customSettings: null,
     preset: 'broadcast',
     settings: null,
-    version: 10,
+    version: GAME_SETTINGS_SCHEMA_VERSION,
   });
   expect(experience.queryOverrides).toEqual({});
   expect(experience.developmentModes).toEqual({
@@ -1697,6 +1698,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     gameMode: 'exhibition',
     officialsDebugLabels: false,
     officialsEnabled: true,
+    coachesEnabled: true,
     matchDifficulty: 'pro',
     playerMotionEnabled: true,
     playbookId: '11v11',

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { PresentationAudioEvent } from '../../audio/PresentationEventBridge';
 import type { GameplayRosterBinding } from '../../roster/GameplayRosterBinding';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
 import {
@@ -7,13 +8,17 @@ import {
 import {
   createSidelineDebugOverlay,
   createSidelineVisualResources,
+  syncSidelineVisualResources,
   syncSidelineDebugOverlay,
   type SidelineVisualResources,
 } from './SidelineVisualFactory';
 import type {
+  SidelineCoachPlacement,
+  SidelineCoachState,
   SidelineDensity,
   SidelineLayout,
   SidelinePresentationSettings,
+  SidelineReactionState,
   SidelineTeamControllerSnapshot,
   SidelineTeamSide,
 } from './SidelineTeamTypes';
@@ -21,12 +26,23 @@ import type {
 export type { SidelineTeamControllerSnapshot } from './SidelineTeamTypes';
 
 export interface SidelineTeamControllerOptions {
+  coachesEnabled: boolean;
   enabled: boolean;
   density: SidelineDensity;
   rosterBinding: GameplayRosterBinding;
+  sidelinePlayersEnabled: boolean;
   teamTheme: TeamPresentationTheme;
   tunnelTableauEnabled: boolean;
 }
+
+const SIDELINE_UPDATE_FREQUENCY_HZ = 12;
+const SIDELINE_REACTION_DURATIONS: Record<SidelineReactionState, number> = {
+  disappointed: 1.8,
+  firstDown: 1.45,
+  idle: 0,
+  touchdown: 3.0,
+  watching: 0,
+} as const;
 
 const EMPTY_METRICS = {
   drawCalls: 0,
@@ -41,18 +57,27 @@ const EMPTY_METRICS = {
 export class SidelineTeamController {
   readonly group = new THREE.Group();
 
+  private coachesEnabled: boolean;
   private enabled: boolean;
   private density: SidelineDensity;
+  private sidelinePlayersEnabled: boolean;
   private tunnelTableauEnabled: boolean;
   private rosterBinding: GameplayRosterBinding;
   private teamTheme: TeamPresentationTheme;
   private layout: SidelineLayout | null = null;
   private resources: SidelineVisualResources | null = null;
   private resourceKey: string | null = null;
+  private lastReactionEventId: string | null = null;
+  private reactionRemainingSeconds = 0;
+  private reactionState: SidelineReactionState = 'idle';
+  private readonly processedEventIds = new Set<string>();
+  private visualSyncDirty = false;
 
   constructor(options: SidelineTeamControllerOptions) {
+    this.coachesEnabled = options.coachesEnabled;
     this.enabled = options.enabled;
     this.density = options.density;
+    this.sidelinePlayersEnabled = options.sidelinePlayersEnabled;
     this.tunnelTableauEnabled = options.tunnelTableauEnabled;
     this.rosterBinding = options.rosterBinding;
     this.teamTheme = options.teamTheme;
@@ -63,8 +88,10 @@ export class SidelineTeamController {
   }
 
   applySettings(options: SidelineTeamControllerOptions): void {
+    this.coachesEnabled = options.coachesEnabled;
     this.enabled = options.enabled;
     this.density = options.density;
+    this.sidelinePlayersEnabled = options.sidelinePlayersEnabled;
     this.tunnelTableauEnabled = options.tunnelTableauEnabled;
     this.rosterBinding = options.rosterBinding;
     this.teamTheme = options.teamTheme;
@@ -78,33 +105,58 @@ export class SidelineTeamController {
     this.rebuildIfNeeded();
   }
 
-  update(): void {
+  update(
+    events: readonly PresentationAudioEvent[] = [],
+    deltaSeconds = 0,
+  ): void {
     if (!this.enabled) {
       return;
     }
     this.rebuildIfNeeded();
+    this.processPresentationEvents(events);
+    this.advanceReaction(deltaSeconds);
+    this.syncVisualsIfNeeded();
   }
 
   getSettings(): SidelinePresentationSettings {
     return {
+      coachesEnabled: this.coachesEnabled,
       density: this.density,
       enabled: this.enabled,
+      sidelinePlayersEnabled: this.sidelinePlayersEnabled,
       tunnelTableauEnabled: this.tunnelTableauEnabled,
     };
   }
 
   getSnapshot(): SidelineTeamControllerSnapshot {
     const metrics = this.resources?.metrics ?? EMPTY_METRICS;
+    const coachPlacements = this.createCoachPlacements();
     return {
       ...metrics,
+      coachCount: coachPlacements.length,
+      coachesEnabled: this.coachesEnabled,
+      coachStates: coachPlacements.map((coach) => ({
+        id: coach.id,
+        state: coach.state,
+        teamSide: coach.teamSide,
+      })),
       density: this.density,
       enabled: this.enabled,
+      lastReactionEventId: this.lastReactionEventId,
       noGameplayAuthority: true,
+      reactionState: this.reactionState,
+      semanticTargets: {
+        opponentCoach: cloneVec3(coachPlacements.find((coach) => coach.teamSide === 'opponent')?.position),
+        opponentSidelineGroup: cloneVec3(this.findZoneCenter('opponent-sideline')),
+        userCoach: cloneVec3(coachPlacements.find((coach) => coach.teamSide === 'user')?.position),
+        userSidelineGroup: cloneVec3(this.findZoneCenter('user-sideline')),
+      },
       sidelinePlayerCount: this.layout?.sidelinePlacements.length ?? 0,
+      sidelinePlayersEnabled: this.sidelinePlayersEnabled,
       teamKey: this.teamTheme.teamKey,
       tunnelPlayerCount: this.layout?.tunnelPlacements.length ?? 0,
       tunnelTableauEnabled: this.tunnelTableauEnabled,
-      updateFrequencyHz: 0,
+      updateFrequencyHz: SIDELINE_UPDATE_FREQUENCY_HZ,
       zones: this.layout?.zones.map((zone) => ({
         bounds: { ...zone.bounds },
         center: { ...zone.center },
@@ -132,12 +184,17 @@ export class SidelineTeamController {
     this.disposeResources();
     this.resourceKey = key;
     this.layout = createSidelineLayout({
+      coachesEnabled: this.coachesEnabled,
       density: this.density,
       featuredTunnelTeamSide: 'user',
       rosterAppearanceIds: createRosterAppearanceIds(this.rosterBinding),
+      sidelinePlayersEnabled: this.sidelinePlayersEnabled,
       tunnelTableauEnabled: this.tunnelTableauEnabled,
     });
-    this.resources = createSidelineVisualResources(this.layout.allPlacements, this.teamTheme);
+    this.resources = createSidelineVisualResources(this.layout.allPlacements, this.teamTheme, {
+      coachPlacements: this.createCoachPlacements(),
+      reactionState: this.reactionState,
+    });
     this.group.add(this.resources.group);
   }
 
@@ -157,11 +214,92 @@ export class SidelineTeamController {
       .join('|');
     return [
       this.enabled ? 'enabled' : 'disabled',
+      this.sidelinePlayersEnabled ? 'reserves' : 'no-reserves',
+      this.coachesEnabled ? 'coaches' : 'no-coaches',
       this.density,
       this.tunnelTableauEnabled ? 'tunnel' : 'no-tunnel',
       this.teamTheme.teamKey,
       lineupKey,
     ].join('::');
+  }
+
+  private processPresentationEvents(events: readonly PresentationAudioEvent[]): void {
+    for (const event of events) {
+      if (this.processedEventIds.has(event.id)) {
+        continue;
+      }
+      this.processedEventIds.add(event.id);
+      if (this.processedEventIds.size > 64) {
+        const oldestEventId = this.processedEventIds.values().next().value;
+        if (oldestEventId) {
+          this.processedEventIds.delete(oldestEventId);
+        }
+      }
+
+      const nextReaction = resolveReactionStateFromEvent(event.type);
+      if (!nextReaction) {
+        continue;
+      }
+
+      this.lastReactionEventId = event.id;
+      this.setReactionState(nextReaction);
+    }
+  }
+
+  private advanceReaction(deltaSeconds: number): void {
+    if (this.reactionRemainingSeconds <= 0) {
+      return;
+    }
+
+    this.reactionRemainingSeconds = Math.max(0, this.reactionRemainingSeconds - Math.max(0, deltaSeconds));
+    if (this.reactionRemainingSeconds === 0 && this.reactionState !== 'idle') {
+      this.setReactionState('idle');
+    }
+  }
+
+  private setReactionState(nextState: SidelineReactionState): void {
+    this.reactionState = nextState;
+    this.reactionRemainingSeconds = SIDELINE_REACTION_DURATIONS[nextState];
+    this.visualSyncDirty = true;
+  }
+
+  private syncVisualsIfNeeded(): void {
+    if (!this.visualSyncDirty || !this.resources || !this.layout) {
+      return;
+    }
+
+    syncSidelineVisualResources(this.resources, this.layout.allPlacements, this.teamTheme, {
+      coachPlacements: this.createCoachPlacements(),
+      reactionState: this.reactionState,
+    });
+    this.visualSyncDirty = false;
+  }
+
+  private createCoachPlacements(): readonly SidelineCoachPlacement[] {
+    return this.layout?.coachPlacements.map((coach) => ({
+      ...coach,
+      state: this.resolveCoachState(),
+    })) ?? [];
+  }
+
+  private resolveCoachState(): SidelineCoachState {
+    if (this.reactionState === 'touchdown') {
+      return 'touchdownCelebration';
+    }
+    if (this.reactionState === 'firstDown') {
+      return 'firstDownApproval';
+    }
+    if (this.reactionState === 'disappointed') {
+      return 'disappointedResult';
+    }
+    if (this.reactionState === 'watching') {
+      return 'watchingPlay';
+    }
+    return 'neutral';
+  }
+
+  private findZoneCenter(id: SidelineTeamControllerSnapshot['zones'][number]['id']) {
+    return this.layout?.zones.find((zone) => zone.id === id)?.center ?? null;
   }
 }
 
@@ -183,4 +321,40 @@ function createRosterAppearanceIds(
       .map((lineupBinding) => lineupBinding.rosterPlayerId)
       .slice(0, 11),
   };
+}
+
+function resolveReactionStateFromEvent(
+  eventType: PresentationAudioEvent['type'],
+): SidelineReactionState | null {
+  if (eventType === 'playPrepared' || eventType === 'playReset') {
+    return 'idle';
+  }
+
+  if (eventType === 'playStarted') {
+    return 'watching';
+  }
+
+  if (eventType === 'touchdown') {
+    return 'touchdown';
+  }
+
+  if (eventType === 'firstDown') {
+    return 'firstDown';
+  }
+
+  if (
+    eventType === 'incomplete' ||
+    eventType === 'outOfBounds' ||
+    eventType === 'sack' ||
+    eventType === 'tackle' ||
+    eventType === 'turnoverOnDowns'
+  ) {
+    return 'disappointed';
+  }
+
+  return null;
+}
+
+function cloneVec3(value: SidelineCoachPlacement['position'] | null | undefined) {
+  return value ? { ...value } : null;
 }

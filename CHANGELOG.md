@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.16.0] - 2026-06-22
+
+### Added
+
+- Added presentation-only head coaches for both teams, rendered through bounded instanced low-poly coach parts with team-colored jackets, caps, headset silhouettes, clipboards, deterministic skin tones, and no gameplay authority.
+- Added sideline coach/reaction state driven only by authoritative presentation events, plus semantic debug camera targets for user/opponent sideline groups and coaches.
+- Added a `coachesEnabled` experience setting, `?coaches=0|1` override, title Settings checkbox, and schema migration.
+
+### Changed
+
+- Updated sideline reserve densities to 5/10/15 players per team and kept reserve, coach, and tunnel subjects inside mathematical team-box zones outside the playable field.
+- Extended sideline debug/resource snapshots to report coach count, coach states, reaction state, last reaction event, semantic targets, and active reserve settings.
+
+### Tests
+
+- Added/updated sideline layout, visual-resource, no-gameplay-authority, reaction-deduplication, settings, and pregame fixture coverage for coaches and the new reserve counts.
+
 ## [1.15.0] - 2026-06-22
 
 ### Added

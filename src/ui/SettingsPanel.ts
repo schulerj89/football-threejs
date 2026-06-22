@@ -51,6 +51,7 @@ export class SettingsPanel {
   private readonly stadiumInput = document.createElement('input');
   private readonly crowdDensitySelect = document.createElement('select');
   private readonly crowdReactionsInput = document.createElement('input');
+  private readonly coachesInput = document.createElement('input');
   private readonly sidelinePlayersInput = document.createElement('input');
   private readonly sidelineDensitySelect = document.createElement('select');
   private readonly tunnelTableauInput = document.createElement('input');
@@ -181,6 +182,7 @@ export class SettingsPanel {
       ]),
       this.createCheckboxRow('Crowd reactions', this.crowdReactionsInput),
       this.createCheckboxRow('Sideline teams', this.sidelinePlayersInput),
+      this.createCheckboxRow('Head coaches', this.coachesInput),
       this.createSelectRow('Sideline density', this.sidelineDensitySelect, [
         ['low', 'Low'],
         ['medium', 'Medium'],
@@ -365,6 +367,9 @@ export class SettingsPanel {
     this.sidelinePlayersInput.addEventListener('change', () => {
       this.updateCustomSettings({ sidelinePlayersEnabled: this.sidelinePlayersInput.checked });
     });
+    this.coachesInput.addEventListener('change', () => {
+      this.updateCustomSettings({ coachesEnabled: this.coachesInput.checked });
+    });
     this.sidelineDensitySelect.addEventListener('change', () => {
       this.updateCustomSettings({ sidelineDensity: this.sidelineDensitySelect.value as SidelineDensity });
     });
@@ -449,6 +454,7 @@ export class SettingsPanel {
     this.crowdDensitySelect.value = this.settings.crowdFullness;
     this.crowdReactionsInput.checked = this.settings.crowdReactionsEnabled;
     this.sidelinePlayersInput.checked = this.settings.sidelinePlayersEnabled;
+    this.coachesInput.checked = this.settings.coachesEnabled;
     this.sidelineDensitySelect.value = this.settings.sidelineDensity;
     this.tunnelTableauInput.checked = this.settings.tunnelTableauEnabled;
     this.audioEnabledInput.checked = this.settings.audioEnabled;

@@ -30,6 +30,7 @@ describe('game experience settings', () => {
       crowdVisualsEnabled: true,
     });
     expect(resolved.settings.playbookId).toBe('11v11');
+    expect(resolved.settings.coachesEnabled).toBe(true);
     expect(resolved.settings.sidelinePlayersEnabled).toBe(true);
     expect(resolved.settings.sidelineDensity).toBe('medium');
     expect(resolved.settings.tunnelTableauEnabled).toBe(true);
@@ -47,6 +48,7 @@ describe('game experience settings', () => {
     expect(resolved.settings).toMatchObject({
       audioEnabled: true,
       cinematics: 'off',
+      coachesEnabled: false,
       crowdReactionsEnabled: false,
       crowdVisualsEnabled: false,
       gameplayCamera: 'offense',
@@ -120,13 +122,14 @@ describe('game experience settings', () => {
     const storedBefore = storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY);
 
     const resolved = resolveGameExperienceSettings({
-      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&sidelinePlayers=0&sidelineDensity=high&tunnelTableau=0&announcer=0&captions=1&playbook=5v5&stadium=0&musicVolume=0.33'),
+      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&sidelinePlayers=0&sidelineDensity=high&coaches=1&tunnelTableau=0&announcer=0&captions=1&playbook=5v5&stadium=0&musicVolume=0.33'),
       storage,
     });
 
     expect(resolved.settings).toMatchObject({
       announcerEnabled: false,
       captionsEnabled: true,
+      coachesEnabled: true,
       cinematics: 'full',
       crowdDensity: 'high',
       crowdFullness: 'full',
@@ -145,6 +148,7 @@ describe('game experience settings', () => {
     expect(resolved.queryOverrides).toMatchObject({
       announcerEnabled: false,
       captionsEnabled: true,
+      coachesEnabled: true,
       crowdDensity: 'high',
       crowdFullness: 'full',
       crowdVisualsEnabled: true,

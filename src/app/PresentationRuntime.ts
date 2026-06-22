@@ -295,9 +295,15 @@ export class PresentationRuntime {
     }
 
     this.sidelineTeamController = new SidelineTeamController({
+      coachesEnabled: gameExperience.settings.coachesEnabled,
       density: gameExperience.settings.sidelineDensity,
-      enabled: !this.crowdPreviewController && gameExperience.settings.sidelinePlayersEnabled,
+      enabled: !this.crowdPreviewController && (
+        gameExperience.settings.sidelinePlayersEnabled ||
+        gameExperience.settings.coachesEnabled ||
+        gameExperience.settings.tunnelTableauEnabled
+      ),
       rosterBinding: this.rosterBinding,
+      sidelinePlayersEnabled: gameExperience.settings.sidelinePlayersEnabled,
       teamTheme: this.teamTheme,
       tunnelTableauEnabled: gameExperience.settings.tunnelTableauEnabled,
     });
@@ -530,7 +536,7 @@ export class PresentationRuntime {
         this.officialsController.update(gameplaySnapshot, deltaSeconds, active);
       });
       profiler.measure('sidelineTeamsUpdate', () => {
-        this.sidelineTeamController.update();
+        this.sidelineTeamController.update(presentationEvents, deltaSeconds);
       });
       profiler.measure('cameraUpdate', () => {
         this.cameraController.update(gameplaySnapshot, deltaSeconds, {
@@ -541,7 +547,7 @@ export class PresentationRuntime {
     } else {
       this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
       this.officialsController.update(gameplaySnapshot, deltaSeconds, active);
-      this.sidelineTeamController.update();
+      this.sidelineTeamController.update(presentationEvents, deltaSeconds);
       this.cameraController.update(gameplaySnapshot, deltaSeconds, {
         crowdCutawaysEnabled,
         presentationEvents,
@@ -797,9 +803,15 @@ export class PresentationRuntime {
       enabled: !this.crowdPreviewController && gameExperience.settings.officialsEnabled,
     });
     this.sidelineTeamController.applySettings({
+      coachesEnabled: gameExperience.settings.coachesEnabled,
       density: gameExperience.settings.sidelineDensity,
-      enabled: !this.crowdPreviewController && gameExperience.settings.sidelinePlayersEnabled,
+      enabled: !this.crowdPreviewController && (
+        gameExperience.settings.sidelinePlayersEnabled ||
+        gameExperience.settings.coachesEnabled ||
+        gameExperience.settings.tunnelTableauEnabled
+      ),
       rosterBinding: this.rosterBinding,
+      sidelinePlayersEnabled: gameExperience.settings.sidelinePlayersEnabled,
       teamTheme: this.teamTheme,
       tunnelTableauEnabled: gameExperience.settings.tunnelTableauEnabled,
     });

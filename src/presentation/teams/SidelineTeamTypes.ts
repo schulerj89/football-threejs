@@ -3,6 +3,18 @@ import type { PlayerTeam } from '../../playerModel';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
 
 export type SidelineDensity = 'high' | 'low' | 'medium';
+export type SidelineCoachState =
+  | 'disappointedResult'
+  | 'firstDownApproval'
+  | 'neutral'
+  | 'touchdownCelebration'
+  | 'watchingPlay';
+export type SidelineReactionState =
+  | 'disappointed'
+  | 'firstDown'
+  | 'idle'
+  | 'touchdown'
+  | 'watching';
 export type SidelineTeamSide = 'opponent' | 'user';
 export type SidelineZoneId =
   | 'opponent-sideline'
@@ -11,14 +23,19 @@ export type SidelineZoneId =
   | 'user-tunnel';
 export type SidelinePoseId =
   | 'armsLow'
+  | 'celebrating'
   | 'crouched'
+  | 'disappointed'
   | 'handsOnHips'
   | 'neutral'
-  | 'slightLean';
+  | 'slightLean'
+  | 'standing';
 
 export interface SidelinePresentationSettings {
+  coachesEnabled: boolean;
   density: SidelineDensity;
   enabled: boolean;
+  sidelinePlayersEnabled: boolean;
   tunnelTableauEnabled: boolean;
 }
 
@@ -47,8 +64,21 @@ export interface SidelinePlayerPlacement {
   zoneId: SidelineZoneId;
 }
 
+export interface SidelineCoachPlacement {
+  appearanceId: string;
+  facingRadians: number;
+  id: string;
+  position: SidelineVec3;
+  scale: number;
+  state: SidelineCoachState;
+  team: PlayerTeam;
+  teamSide: SidelineTeamSide;
+  zoneId: SidelineZoneId;
+}
+
 export interface SidelineLayout {
   allPlacements: readonly SidelinePlayerPlacement[];
+  coachPlacements: readonly SidelineCoachPlacement[];
   protectedFieldBounds: FieldBounds;
   sidelinePlacements: readonly SidelinePlayerPlacement[];
   tunnelPlacements: readonly SidelinePlayerPlacement[];
@@ -56,9 +86,11 @@ export interface SidelineLayout {
 }
 
 export interface SidelineLayoutOptions {
+  coachesEnabled?: boolean;
   density: SidelineDensity;
   featuredTunnelTeamSide?: SidelineTeamSide;
   rosterAppearanceIds?: Partial<Record<SidelineTeamSide, readonly string[]>>;
+  sidelinePlayersEnabled?: boolean;
   tunnelTableauEnabled: boolean;
 }
 
@@ -73,10 +105,26 @@ export interface SidelineVisualMetrics {
 }
 
 export interface SidelineTeamControllerSnapshot extends SidelineVisualMetrics {
+  coachCount: number;
+  coachesEnabled: boolean;
+  coachStates: readonly {
+    id: string;
+    state: SidelineCoachState;
+    teamSide: SidelineTeamSide;
+  }[];
   density: SidelineDensity;
   enabled: boolean;
+  lastReactionEventId: string | null;
   noGameplayAuthority: boolean;
+  reactionState: SidelineReactionState;
+  semanticTargets: {
+    opponentCoach: SidelineVec3 | null;
+    opponentSidelineGroup: SidelineVec3 | null;
+    userCoach: SidelineVec3 | null;
+    userSidelineGroup: SidelineVec3 | null;
+  };
   sidelinePlayerCount: number;
+  sidelinePlayersEnabled: boolean;
   teamKey: string;
   tunnelPlayerCount: number;
   tunnelTableauEnabled: boolean;
