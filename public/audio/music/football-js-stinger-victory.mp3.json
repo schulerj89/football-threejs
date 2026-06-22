@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-stinger-victory",
+  "category": "music",
+  "compressedBytes": 337005,
+  "contentHash": "282d411f56ade2d4dca84ac975c7993dbf7cb49057e4decef3439284ff779822",
+  "durationSeconds": 14.04,
+  "generatedAt": "2026-06-22T08:47:09.677Z",
+  "kind": "oneShot",
+  "metadata": {
+    "catalogCategory": "stinger",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Victory",
+    "energyLevel": "peak",
+    "transitionPurpose": "victory"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create an original short instrumental Football JS transition stinger. Use the same fictional stadium-sports musical identity as the title theme: brass, marching percussion, cinematic low-end support, cymbal lift, and a clear musical ending. No vocals, no spoken words, no crowd chant, no announcer, no real fight-song melody, no real team reference, no artist reference, no copyrighted motif. Purpose: victory. Fourteen seconds, triumphant original brass fanfare, rolling snare and bass drum, cymbal lift, heroic final chord.",
+  "requestedDurationSeconds": 14,
+  "runtimeLoadingStrategy": "buffer",
+  "songId": "MC6jm0EgExPeXSZtAkDk"
+}

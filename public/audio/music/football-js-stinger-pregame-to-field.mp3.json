@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-stinger-pregame-to-field",
+  "category": "music",
+  "compressedBytes": 276525,
+  "contentHash": "bca3b38b63d7d0efce93cc659c58f674d0d52c270ef545e68771c82396dcc4a2",
+  "durationSeconds": 11.52,
+  "generatedAt": "2026-06-22T08:46:51.605Z",
+  "kind": "oneShot",
+  "metadata": {
+    "catalogCategory": "stinger",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Pregame to Field",
+    "energyLevel": "high",
+    "transitionPurpose": "pregame-to-field"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create an original short instrumental Football JS transition stinger. Use the same fictional stadium-sports musical identity as the title theme: brass, marching percussion, cinematic low-end support, cymbal lift, and a clear musical ending. No vocals, no spoken words, no crowd chant, no announcer, no real fight-song melody, no real team reference, no artist reference, no copyrighted motif. Purpose: pregame to field. Ten seconds, building drums into a bright brass cadence, decisive ending.",
+  "requestedDurationSeconds": 10,
+  "runtimeLoadingStrategy": "buffer",
+  "songId": "VahcJAukaQ20GbME9blZ"
+}

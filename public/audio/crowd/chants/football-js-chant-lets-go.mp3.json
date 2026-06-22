@@ -1,0 +1,21 @@
+{
+  "assetId": "football-js-chant-lets-go",
+  "category": "crowd",
+  "compressedBytes": 145075,
+  "contentHash": "fe422bf68ae94e2dfcfa7a0b998d4bf2fb0c2deb4052e909752f10f622fd06be",
+  "durationSeconds": 9,
+  "generatedAt": "2026-06-22T08:47:20.277Z",
+  "kind": "oneShot",
+  "metadata": {
+    "catalogCategory": "chant",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Lets Go Call and Response",
+    "energyLevel": "high",
+    "transitionPurpose": "stadium-layer"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Generate a generic American-football stadium crowd chant asset suitable for layering over crowd ambience. Natural stadium perspective, no team name, no announcer, no band melody copied from existing sports programs, no copyrighted recording, no real stadium imitation. Short crowd call-and-response saying lets go with natural claps, six to ten seconds, no team name, no melody copied from real sports chants.",
+  "requestedDurationSeconds": 9,
+  "runtimeLoadingStrategy": "buffer"
+}

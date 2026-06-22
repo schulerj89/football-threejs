@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-stinger-defeat",
+  "category": "music",
+  "compressedBytes": 216621,
+  "contentHash": "e99ee170f90ebdce80e412cf6a19b2b0fbb7552510e3db35849a1599c0f86844",
+  "durationSeconds": 9.024,
+  "generatedAt": "2026-06-22T08:47:14.550Z",
+  "kind": "oneShot",
+  "metadata": {
+    "catalogCategory": "stinger",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Defeat",
+    "energyLevel": "medium",
+    "transitionPurpose": "defeat"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create an original short instrumental Football JS transition stinger. Use the same fictional stadium-sports musical identity as the title theme: brass, marching percussion, cinematic low-end support, cymbal lift, and a clear musical ending. No vocals, no spoken words, no crowd chant, no announcer, no real fight-song melody, no real team reference, no artist reference, no copyrighted motif. Purpose: defeat. Nine seconds, restrained low brass, slow cadence drum, resolved but subdued ending, not comic or melodramatic.",
+  "requestedDurationSeconds": 9,
+  "runtimeLoadingStrategy": "buffer",
+  "songId": "LTx6f0T9EaaNHWzzHo0d"
+}

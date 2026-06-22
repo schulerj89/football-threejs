@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-saturday-lights",
+  "category": "music",
+  "compressedBytes": 1872621,
+  "contentHash": "f8bd0aac060ca542db5a62ab84418bbb79a5eb412107b673768632accaba9b43",
+  "durationSeconds": 78.024,
+  "generatedAt": "2026-06-22T08:46:20.541Z",
+  "kind": "music",
+  "metadata": {
+    "catalogCategory": "menu",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Saturday Lights",
+    "energyLevel": "high",
+    "transitionPurpose": "menu-playlist"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. The track should share a cohesive stadium-sports identity with the main Football JS title theme while being a distinct composition. Use marching percussion, snare cadence, bass drum, brass or cinematic orchestra, bold low brass, cymbal swells, tom fills, heroic competitive energy, and polished modern game-menu production. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no crowd chants, no announcers, no real fight-song melodies, no real team references, no artist references, no song-title references, no copyrighted motifs. Track identity: Saturday Lights. Brass-forward stadium sports theme, crisp marching snare, strong bass drum, bright horn calls, confident game-night lift, memorable original motif, approximately 78 seconds.",
+  "requestedDurationSeconds": 78,
+  "runtimeLoadingStrategy": "stream",
+  "songId": "8CajERTtCB8W8OcG6mMQ"
+}

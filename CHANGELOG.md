@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.17.0] - 2026-06-22
+
+### Added
+
+- Generated an expanded Football JS audio-production pack with three new `music_v2` menu playlist tracks, six `music_v2` transition stingers, and three `eleven_text_to_sound_v2` stadium chant layers, all with provenance sidecars.
+- Added `public/audio/music/music-catalog.json` and regenerated the grouped music audition/report artifacts for menu tracks, stingers, and chants.
+
+### Changed
+
+- Extended the Node-only music generation pipeline so per-asset durations drive `music_v2` requests and chant assets route through the sound-effects generation path while preserving dry-run defaults, `--execute`, `--force`, retry, and skip-existing behavior.
+- Updated audio documentation and ignore rules for the expanded offline music/stinger/chant workflow.
+
+### Tests
+
+- Added music-pipeline coverage for expanded pack validation, sound-effect routed chant generation, and grouped catalog/audition output.
+- Verified `npx vitest run tests/musicPipeline.test.ts tests/audioPipeline.test.ts`, `npx tsc --noEmit`, `npm run build`, and `npm run test:smoke`.
+
 ## [1.16.0] - 2026-06-22
 
 ### Added

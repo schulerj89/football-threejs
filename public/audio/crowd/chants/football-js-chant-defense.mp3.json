@@ -1,0 +1,21 @@
+{
+  "assetId": "football-js-chant-defense",
+  "category": "crowd",
+  "compressedBytes": 129193,
+  "contentHash": "91910a308c2cce21edee07c8f07de5ca6ffedb5fa7c9c3395b22e2b402e22011",
+  "durationSeconds": 8,
+  "generatedAt": "2026-06-22T08:47:17.301Z",
+  "kind": "oneShot",
+  "metadata": {
+    "catalogCategory": "chant",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Rhythmic Defense Chant",
+    "energyLevel": "high",
+    "transitionPurpose": "stadium-layer"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Generate a generic American-football stadium crowd chant asset suitable for layering over crowd ambience. Natural stadium perspective, no team name, no announcer, no band melody copied from existing sports programs, no copyrighted recording, no real stadium imitation. Rhythmic crowd chanting the word defense with claps and stomps, six to eight seconds, no music bed, no team name.",
+  "requestedDurationSeconds": 8,
+  "runtimeLoadingStrategy": "buffer"
+}

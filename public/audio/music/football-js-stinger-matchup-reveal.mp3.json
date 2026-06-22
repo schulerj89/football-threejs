@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-stinger-matchup-reveal",
+  "category": "music",
+  "compressedBytes": 168813,
+  "contentHash": "75f3c7d24bfa9b1439a36f7645c54a2ebbbba6a41554f712998adbd3609d287b",
+  "durationSeconds": 7.032,
+  "generatedAt": "2026-06-22T08:46:46.034Z",
+  "kind": "oneShot",
+  "metadata": {
+    "catalogCategory": "stinger",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Matchup Reveal",
+    "energyLevel": "high",
+    "transitionPurpose": "matchup-reveal"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create an original short instrumental Football JS transition stinger. Use the same fictional stadium-sports musical identity as the title theme: brass, marching percussion, cinematic low-end support, cymbal lift, and a clear musical ending. No vocals, no spoken words, no crowd chant, no announcer, no real fight-song melody, no real team reference, no artist reference, no copyrighted motif. Purpose: matchup reveal. Seven seconds, confident brass hit, snare pickup, clean final chord.",
+  "requestedDurationSeconds": 7,
+  "runtimeLoadingStrategy": "buffer",
+  "songId": "dbeCXr2WzBrRwU7XQmtT"
+}

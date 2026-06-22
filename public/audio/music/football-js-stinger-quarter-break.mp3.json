@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-stinger-quarter-break",
+  "category": "music",
+  "compressedBytes": 144621,
+  "contentHash": "528db7d9b1efa5af8e67a00d41f40e2ef6a3843bd69392d6fdfbd5db3677e2e0",
+  "durationSeconds": 6.024,
+  "generatedAt": "2026-06-22T08:46:56.145Z",
+  "kind": "oneShot",
+  "metadata": {
+    "catalogCategory": "stinger",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Quarter Break",
+    "energyLevel": "medium",
+    "transitionPurpose": "quarter-break"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create an original short instrumental Football JS transition stinger. Use the same fictional stadium-sports musical identity as the title theme: brass, marching percussion, cinematic low-end support, cymbal lift, and a clear musical ending. No vocals, no spoken words, no crowd chant, no announcer, no real fight-song melody, no real team reference, no artist reference, no copyrighted motif. Purpose: quarter break. Six seconds, balanced percussion and brass punctuation, clean broadcast bumper ending.",
+  "requestedDurationSeconds": 6,
+  "runtimeLoadingStrategy": "buffer",
+  "songId": "aRsmI9IWMx5ioQjl2fIS"
+}

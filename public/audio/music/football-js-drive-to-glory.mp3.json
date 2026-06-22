@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-drive-to-glory",
+  "category": "music",
+  "compressedBytes": 2065005,
+  "contentHash": "3a66b047920331e956928211d861f5059bdf3fceea80fe7a72605379a994716d",
+  "durationSeconds": 86.04,
+  "generatedAt": "2026-06-22T08:46:41.220Z",
+  "kind": "music",
+  "metadata": {
+    "catalogCategory": "menu",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Drive to Glory",
+    "energyLevel": "peak",
+    "transitionPurpose": "menu-playlist"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. The track should share a cohesive stadium-sports identity with the main Football JS title theme while being a distinct composition. Use marching percussion, snare cadence, bass drum, brass or cinematic orchestra, bold low brass, cymbal swells, tom fills, heroic competitive energy, and polished modern game-menu production. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no crowd chants, no announcers, no real fight-song melodies, no real team references, no artist references, no song-title references, no copyrighted motifs. Track identity: Drive to Glory. Brass fanfare, marching percussion, tom fills, restrained modern electric-guitar pulse, heroic competitive lift, no heavy distortion, approximately 86 seconds.",
+  "requestedDurationSeconds": 86,
+  "runtimeLoadingStrategy": "stream",
+  "songId": "900yESYu5LPrLGO8MuaL"
+}

@@ -1,0 +1,21 @@
+{
+  "assetId": "football-js-chant-stomp-clap",
+  "category": "crowd",
+  "compressedBytes": 160958,
+  "contentHash": "0fe1aee61f117746fa2931cdd002da6cb61834dca60abf6b7e8eebffa35835c1",
+  "durationSeconds": 10,
+  "generatedAt": "2026-06-22T08:47:23.722Z",
+  "kind": "oneShot",
+  "metadata": {
+    "catalogCategory": "chant",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Stomp and Clap Rhythm",
+    "energyLevel": "medium",
+    "transitionPurpose": "stadium-layer"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Generate a generic American-football stadium crowd chant asset suitable for layering over crowd ambience. Natural stadium perspective, no team name, no announcer, no band melody copied from existing sports programs, no copyrighted recording, no real stadium imitation. Nonverbal stomp-and-clap stadium rhythm with crowd energy, eight to twelve seconds, no lyrics, no identifiable song pattern, no band.",
+  "requestedDurationSeconds": 10,
+  "runtimeLoadingStrategy": "buffer"
+}

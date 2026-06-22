@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-stinger-halftime",
+  "category": "music",
+  "compressedBytes": 288621,
+  "contentHash": "e371a9a192a5d1ff781f00ccf13ac00379d08d472bd9fc7f317725d888c0deaa",
+  "durationSeconds": 12.024,
+  "generatedAt": "2026-06-22T08:47:03.792Z",
+  "kind": "oneShot",
+  "metadata": {
+    "catalogCategory": "stinger",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Halftime",
+    "energyLevel": "medium",
+    "transitionPurpose": "halftime"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create an original short instrumental Football JS transition stinger. Use the same fictional stadium-sports musical identity as the title theme: brass, marching percussion, cinematic low-end support, cymbal lift, and a clear musical ending. No vocals, no spoken words, no crowd chant, no announcer, no real fight-song melody, no real team reference, no artist reference, no copyrighted motif. Purpose: halftime. Twelve seconds, confident but less urgent, broad horns, cadence drums, clear resolved ending.",
+  "requestedDurationSeconds": 12,
+  "runtimeLoadingStrategy": "buffer",
+  "songId": "VHjp7Hvil8vREAgJri0J"
+}

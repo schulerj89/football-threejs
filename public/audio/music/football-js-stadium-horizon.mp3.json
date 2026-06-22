@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-stadium-horizon",
+  "category": "music",
+  "compressedBytes": 1968813,
+  "contentHash": "196971a960a26924d499685fdc8f20d0a879dad62e6dabcc15f39f2ed7ce3a98",
+  "durationSeconds": 82.032,
+  "generatedAt": "2026-06-22T08:46:31.155Z",
+  "kind": "music",
+  "metadata": {
+    "catalogCategory": "menu",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Stadium Horizon",
+    "energyLevel": "medium",
+    "transitionPurpose": "menu-playlist"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. The track should share a cohesive stadium-sports identity with the main Football JS title theme while being a distinct composition. Use marching percussion, snare cadence, bass drum, brass or cinematic orchestra, bold low brass, cymbal swells, tom fills, heroic competitive energy, and polished modern game-menu production. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no crowd chants, no announcers, no real fight-song melodies, no real team references, no artist references, no song-title references, no copyrighted motifs. Track identity: Stadium Horizon. Cinematic orchestra, warm horns, low strings, measured marching percussion, broad anticipatory sports-broadcast tone, uplifting but controlled, approximately 82 seconds.",
+  "requestedDurationSeconds": 82,
+  "runtimeLoadingStrategy": "stream",
+  "songId": "3K44TVmCIRBElcIyw5UB"
+}

@@ -18,6 +18,9 @@ npm run audio:plan
 npm run audio:report
 npm run audio:generate:sfx
 npm run audio:generate:speech
+npm run music:plan
+npm run music:generate
+npm run music:report
 ```
 
 Generation commands default to dry-run. Paid calls require:
@@ -25,6 +28,7 @@ Generation commands default to dry-run. Paid calls require:
 ```bash
 npx tsx tools/audio/generateSoundEffects.ts --execute --max-files=15
 npx tsx tools/audio/generateSpeech.ts --execute --max-files=27
+npx tsx tools/audio/generateMusic.ts --execute --max-files=15
 ```
 
 Use `--force` only when intentionally replacing an existing generated file and its sidecar. Use `--max-files=1` or `AUDIO_MAX_FILES=1` for smaller batches.
@@ -39,11 +43,15 @@ Announcer scripts live in `tools/audio/announcerScriptCatalog.ts`. Dry-run speec
 
 If no announcer voice is configured, execute mode prepares three voice-design previews under `public/audio/announcer/voice-previews`, writes metadata for each preview, and promotes the first acceptable preview to a temporary prototype voice. A selected voice can also be supplied through `FOOTBALL_ANNOUNCER_VOICE_ID` or the local generated voice config.
 
+Music generation uses `music_v2` for title/menu/stinger tracks and the sound-effects model for stadium chant layers. The expanded music report writes `public/audio/music/music-catalog.json`, `public/audio/music/music-report.json`, and the grouped audition page at `public/audio/music/music-audition.html`.
+
 Allowed output roots:
 
 - `public/audio/sfx`
 - `public/audio/crowd`
+- `public/audio/crowd/chants`
 - `public/audio/announcer`
+- `public/audio/music`
 
 ## Provenance
 
