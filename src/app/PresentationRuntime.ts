@@ -8,9 +8,15 @@ import {
 } from '../ballVisual';
 import { AudioMixer } from '../audio/AudioMixer';
 import {
-  TitleMusicController,
-  type TitleMusicControllerSnapshot,
-} from '../audio/TitleMusicController';
+  MenuMusicPlaylistController,
+  type MenuMusicPlaylistSnapshot,
+} from '../audio/MenuMusicPlaylistController';
+import {
+  GameMusicDirector,
+} from '../audio/GameMusicDirector';
+import {
+  StadiumChantDirector,
+} from '../audio/StadiumChantDirector';
 import {
   BroadcastCommentaryDirector,
 } from '../audio/BroadcastCommentaryDirector';
@@ -69,6 +75,7 @@ import {
   createBroadcastCaptions,
   syncBroadcastCaptions,
 } from '../ui/BroadcastCaptions';
+import { NowPlayingIndicator } from '../ui/NowPlayingIndicator';
 import type { PlayDefinition } from '../playbook';
 import type { BallModel } from '../ballModel';
 import type { RuntimeAudioDebugSnapshot } from '../audio/AudioDebugOverlay';
@@ -197,6 +204,7 @@ export class PresentationRuntime {
   readonly crowdPreviewCameraView: CrowdPreviewCameraView;
   readonly crowdPreviewController: CrowdPreviewController | null;
   readonly gameAudioDirector: GameAudioDirector;
+  readonly gameMusicDirector: GameMusicDirector;
   readonly gameplayHud = createGameplayHud();
   readonly playerPoseController: PlayerPoseController;
   readonly pregameLowerThird: PregameLowerThird;
@@ -205,7 +213,9 @@ export class PresentationRuntime {
   readonly routeArtRenderer: RouteArtRenderer;
   readonly stadiumController: StadiumController;
   readonly sidelineTeamController: SidelineTeamController;
-  readonly titleMusicController: TitleMusicController;
+  readonly titleMusicController: MenuMusicPlaylistController;
+  readonly stadiumChantDirector: StadiumChantDirector;
+  readonly nowPlayingIndicator: NowPlayingIndicator;
   readonly officialsController: OfficialsPresentationController;
   readonly controlledPlayerLabels: ControlledPlayerLabelRenderer;
   readonly coinTossController: CoinTossController;
@@ -359,8 +369,10 @@ export class PresentationRuntime {
       settings: gameExperience.audioSettings,
       warn,
     });
-    this.titleMusicController = new TitleMusicController(this.audioMixer);
+    this.titleMusicController = new MenuMusicPlaylistController(this.audioMixer);
     this.gameAudioDirector = new GameAudioDirector(this.audioMixer);
+    this.gameMusicDirector = new GameMusicDirector(this.audioMixer);
+    this.stadiumChantDirector = new StadiumChantDirector(this.audioMixer);
     this.broadcastCommentaryDirector = new BroadcastCommentaryDirector(this.audioMixer, {
       enabled: true,
     });
@@ -402,6 +414,14 @@ export class PresentationRuntime {
     this.setPageActive(!document.hidden && document.hasFocus());
 
     this.broadcastCaptions = createBroadcastCaptions();
+    this.nowPlayingIndicator = new NowPlayingIndicator({
+      onNext: () => {
+        void this.titleMusicController.nextTrack();
+      },
+      onPrevious: () => {
+        void this.titleMusicController.previousTrack();
+      },
+    });
     this.playCallUi = formationPreviewActive || this.crowdPreviewController
       ? null
       : createPlayCallUi(initialPlays, this.teamTheme);
@@ -520,6 +540,11 @@ export class PresentationRuntime {
       active,
       commentaryActive,
       profiler,
+    });
+    this.gameMusicDirector.processEvents(gameplaySnapshot, presentationEvents, deltaSeconds);
+    this.stadiumChantDirector.processEvents(gameplaySnapshot, presentationEvents, deltaSeconds, {
+      commentary: commentaryActive ? this.broadcastCommentaryDirector.getSnapshot() : null,
+      gameMusic: this.gameMusicDirector.getSnapshot(),
     });
 
     if (profiler?.enabled) {
@@ -772,6 +797,17 @@ export class PresentationRuntime {
     }
   }
 
+  updateMenuMusicChrome(
+    appPhase: AppPhase,
+    pauseSettingsVisible: boolean,
+    deltaSeconds: number,
+  ): void {
+    this.titleMusicController.update(deltaSeconds);
+    const visible = appPhase === 'title' || appPhase === 'matchSetup' || pauseSettingsVisible;
+    this.nowPlayingIndicator.setVisible(visible);
+    this.nowPlayingIndicator.sync(this.titleMusicController.getSnapshot());
+  }
+
   applyExperience(gameExperience: ResolvedGameExperienceSettings): void {
     const previousCameraSetting = this.gameExperience.settings.gameplayCamera;
     const previousCinematicsSetting = this.gameExperience.settings.cinematics;
@@ -873,12 +909,14 @@ export class PresentationRuntime {
     return {
       ...this.gameAudioDirector.getSnapshot(),
       commentary: this.broadcastCommentaryDirector.getSnapshot(),
+      gameMusic: this.gameMusicDirector.getSnapshot(),
       pregame: this.pregameAudioCoordinator.getSnapshot(),
+      stadiumChants: this.stadiumChantDirector.getSnapshot(),
       titleMusic: this.titleMusicController.getSnapshot(),
     };
   }
 
-  getTitleMusicSnapshot(): TitleMusicControllerSnapshot {
+  getTitleMusicSnapshot(): MenuMusicPlaylistSnapshot {
     return this.titleMusicController.getSnapshot();
   }
 
@@ -970,6 +1008,7 @@ export class PresentationRuntime {
     this.controlledPlayerLabels.dispose();
     this.pregameLowerThird.dispose();
     this.qbShowcaseCard.dispose();
+    this.nowPlayingIndicator.dispose();
     if (this.crowdPreviewController) {
       this.scene.remove(this.crowdPreviewController.group);
       this.crowdPreviewController.dispose();

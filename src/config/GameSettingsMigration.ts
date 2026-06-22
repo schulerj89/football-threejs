@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 11;
+export const GAME_SETTINGS_SCHEMA_VERSION = 12;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -47,6 +47,8 @@ function migrateOfficialSettings(value: unknown): unknown {
       crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
       gameMode: value.gameMode ?? 'exhibition',
       matchDifficulty: value.matchDifficulty ?? 'pro',
+      menuPlaylistOrder: normalizeMenuPlaylistOrder(value.menuPlaylistOrder),
+      musicEnabled: value.musicEnabled ?? true,
       musicVolume: value.musicVolume ?? 0.72,
       debugToolsEnabled: false,
       officialsDebugLabels: false,
@@ -67,6 +69,8 @@ function migrateOfficialSettings(value: unknown): unknown {
       crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
       gameMode: value.gameMode ?? 'exhibition',
       matchDifficulty: value.matchDifficulty ?? 'pro',
+      menuPlaylistOrder: normalizeMenuPlaylistOrder(value.menuPlaylistOrder),
+      musicEnabled: value.musicEnabled ?? true,
       musicVolume: value.musicVolume ?? 0.72,
       debugToolsEnabled: false,
       officialsDebugLabels: false,
@@ -86,6 +90,8 @@ function migrateOfficialSettings(value: unknown): unknown {
     crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
     gameMode: value.gameMode ?? 'exhibition',
     matchDifficulty: value.matchDifficulty ?? 'pro',
+    menuPlaylistOrder: normalizeMenuPlaylistOrder(value.menuPlaylistOrder),
+    musicEnabled: value.musicEnabled ?? true,
     musicVolume: value.musicVolume ?? 0.72,
     debugToolsEnabled: false,
     officialsDebugLabels: false,
@@ -107,4 +113,8 @@ function migrateCrowdDensityToFullness(value: unknown): 'full' | 'sparse' | 'sta
   }
 
   return 'sparse';
+}
+
+function normalizeMenuPlaylistOrder(value: unknown): 'sequential' | 'shuffle' {
+  return value === 'shuffle' ? 'shuffle' : 'sequential';
 }

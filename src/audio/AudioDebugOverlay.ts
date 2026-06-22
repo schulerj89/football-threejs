@@ -1,12 +1,16 @@
 import type { GameAudioDirectorSnapshot } from './GameAudioDirector';
 import type { BroadcastCommentarySnapshot } from './BroadcastCommentaryDirector';
-import type { TitleMusicControllerSnapshot } from './TitleMusicController';
+import type { GameMusicDirectorSnapshot } from './GameMusicDirector';
+import type { MenuMusicPlaylistSnapshot } from './MenuMusicPlaylistController';
+import type { StadiumChantDirectorSnapshot } from './StadiumChantDirector';
 import type { PregameAudioCoordinatorSnapshot } from '../presentation/pregame/PregamePresentationTypes';
 
 export type RuntimeAudioDebugSnapshot = GameAudioDirectorSnapshot & {
   commentary?: BroadcastCommentarySnapshot;
+  gameMusic?: GameMusicDirectorSnapshot;
+  stadiumChants?: StadiumChantDirectorSnapshot;
   pregame?: PregameAudioCoordinatorSnapshot;
-  titleMusic?: TitleMusicControllerSnapshot;
+  titleMusic?: MenuMusicPlaylistSnapshot;
 };
 
 export function createAudioDebugOverlay(): HTMLDivElement {
@@ -44,6 +48,8 @@ export function syncAudioDebugOverlay(
     `EVENTS ${snapshot.recentEvents.map((event) => event.type).join(',') || 'none'}`,
     `EVENT_HISTORY ${formatEventHistory(snapshot.eventHistory)}`,
     `COMMENTARY ${formatCommentary(snapshot.commentary)}`,
+    `GAME_MUSIC ${formatGameMusic(snapshot.gameMusic)}`,
+    `CHANTS ${formatStadiumChants(snapshot.stadiumChants)}`,
     `PREGAME ${formatPregame(snapshot.pregame)}`,
     `TITLE_MUSIC ${formatTitleMusic(snapshot.titleMusic)}`,
     `UNLOCK_ERROR ${snapshot.lastUnlockError ?? 'none'}`,
@@ -101,17 +107,43 @@ function formatCommentary(snapshot: BroadcastCommentarySnapshot | undefined): st
   ].join(' ');
 }
 
-function formatTitleMusic(snapshot: TitleMusicControllerSnapshot | undefined): string {
+function formatTitleMusic(snapshot: MenuMusicPlaylistSnapshot | undefined): string {
   if (!snapshot) {
     return 'none';
   }
 
   return [
     `asset:${snapshot.assetId || 'none'}`,
+    `title:${snapshot.trackTitle ?? 'none'}`,
     `state:${snapshot.state}`,
+    `order:${snapshot.playlistOrder}`,
     `loop:${snapshot.loopActive}`,
     `handoff:${snapshot.handoffRequested}`,
     `gain:${snapshot.loopGain.toFixed(2)}`,
+  ].join(' ');
+}
+
+function formatGameMusic(snapshot: GameMusicDirectorSnapshot | undefined): string {
+  if (!snapshot) {
+    return 'none';
+  }
+
+  return [
+    `stinger:${snapshot.activeStinger?.assetId ?? 'none'}`,
+    `purpose:${snapshot.activeStinger?.purpose ?? 'none'}`,
+    `reason:${snapshot.suppressionReason ?? 'none'}`,
+  ].join(' ');
+}
+
+function formatStadiumChants(snapshot: StadiumChantDirectorSnapshot | undefined): string {
+  if (!snapshot) {
+    return 'none';
+  }
+
+  return [
+    `active:${snapshot.activeChantAssetId ?? 'none'}`,
+    `cooldown:${snapshot.cooldownRemainingSeconds.toFixed(1)}`,
+    `reason:${snapshot.lastSuppressionReason ?? 'none'}`,
   ].join(' ');
 }
 

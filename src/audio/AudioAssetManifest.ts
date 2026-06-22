@@ -1,5 +1,6 @@
 import { COMMENTARY_CATALOG } from './CommentaryCatalog';
 import { PREGAME_COMMENTARY_CATALOG } from './PregameCommentaryCatalog';
+import { createMusicLocalAudioAssets } from './MusicCatalog';
 
 export type AudioBusName = 'announcer' | 'crowd' | 'gameplaySfx' | 'master' | 'music' | 'ui';
 export type AudioPlaybackCategory = 'announcer' | 'crowd' | 'gameplaySfx' | 'music' | 'ui';
@@ -39,16 +40,7 @@ const PREGAME_ANNOUNCER_AUDIO_ASSETS: readonly LocalAudioAsset[] = PREGAME_COMME
 }));
 
 export const LOCAL_AUDIO_ASSET_MANIFEST: readonly LocalAudioAsset[] = [
-  {
-    assetId: 'football-js-title',
-    category: 'music',
-    defaultGain: 0.72,
-    loadingStrategy: 'stream',
-    loop: true,
-    maxSimultaneousInstances: 1,
-    optional: true,
-    url: '/audio/music/football-js-title.mp3',
-  },
+  ...createMusicLocalAudioAssets(),
   {
     assetId: 'crowd_idle_loop_01',
     category: 'crowd',

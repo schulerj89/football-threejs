@@ -14,7 +14,7 @@ import {
   type PregameWeatherCondition,
 } from '../../audio/PregameCommentaryCatalog';
 import type { AudioSettings } from '../../audio/AudioSettings';
-import type { TitleMusicController } from '../../audio/TitleMusicController';
+import type { TitleMusicControllerSnapshot } from '../../audio/TitleMusicController';
 import type { GameplaySnapshot } from '../../playState';
 import type { MatchSnapshot } from '../../match/MatchTypes';
 import type {
@@ -32,6 +32,12 @@ export interface PregameAudioPort {
   setCrowdDuckingGain(gain: number): void;
   setSettings(patch: Partial<AudioSettings>): AudioSettings;
   stopOneShotsByCategory(category: AudioPlaybackCategory): number;
+}
+
+export interface PregameTitleMusicPort {
+  fadeOutForGameplay(rampSeconds?: number): void;
+  getSnapshot(): TitleMusicControllerSnapshot;
+  setPregameDucking(ducked: boolean, duckGain?: number, rampSeconds?: number): void;
 }
 
 export interface PregameAudioCoordinatorOptions {
@@ -76,7 +82,7 @@ export class PregameAudioCoordinator {
 
   constructor(
     private readonly mixer: PregameAudioPort,
-    private readonly titleMusic: TitleMusicController,
+    private readonly titleMusic: PregameTitleMusicPort,
     private readonly gameAudioDirector: GameAudioDirector,
     options: PregameAudioCoordinatorOptions = {},
   ) {

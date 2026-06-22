@@ -1279,6 +1279,129 @@ body[data-game-mode="exhibition"] .score-counter {
   margin: 0;
 }
 
+.now-playing-indicator {
+  position: fixed;
+  right: clamp(12px, 2.5vw, 28px);
+  bottom: clamp(12px, 2.5vw, 28px);
+  z-index: 66;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  max-width: min(420px, calc(100vw - 24px));
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 7px;
+  background: rgba(5, 9, 12, 0.74);
+  color: #f7fbf8;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.34);
+}
+
+.now-playing-indicator[hidden] {
+  display: none;
+}
+
+.now-playing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f2d94b;
+  box-shadow: 0 0 0 0 rgba(242, 217, 75, 0.48);
+}
+
+.now-playing-indicator[data-playing="true"] .now-playing-dot {
+  animation: now-playing-pulse 1.25s ease-in-out infinite;
+}
+
+.now-playing-text {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.now-playing-text strong {
+  overflow: hidden;
+  color: #fffdf1;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.now-playing-text span {
+  overflow: hidden;
+  color: #d6e0da;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.now-playing-controls {
+  display: flex;
+  gap: 5px;
+}
+
+.now-playing-button {
+  min-height: 28px;
+  padding: 5px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.09);
+  color: #f7fbf8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.now-playing-button:hover:not(:disabled),
+.now-playing-button:focus-visible {
+  border-color: rgba(242, 217, 75, 0.82);
+  outline: none;
+}
+
+.now-playing-button:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
+@keyframes now-playing-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(242, 217, 75, 0.42);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(242, 217, 75, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(242, 217, 75, 0);
+  }
+}
+
+@media (max-width: 640px) {
+  .now-playing-indicator {
+    left: 12px;
+    right: 12px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    bottom: 10px;
+  }
+
+  .now-playing-text span {
+    display: none;
+  }
+
+  .now-playing-button {
+    min-width: 42px;
+    padding-inline: 6px;
+  }
+}
+
 .title-panel h2,
 .title-panel h3,
 .pause-settings-card h2 {

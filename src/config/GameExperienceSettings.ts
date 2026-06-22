@@ -74,6 +74,8 @@ export interface GameExperienceSettings {
   gameMode: ExhibitionGameMode;
   masterVolume: number;
   matchDifficulty: MatchDifficulty;
+  menuPlaylistOrder: AudioSettings['menuPlaylistOrder'];
+  musicEnabled: boolean;
   musicVolume: number;
   muted: boolean;
   officialsDebugLabels: boolean;
@@ -118,6 +120,8 @@ export interface GameExperienceQueryOverrides {
   gameMode?: ExhibitionGameMode;
   masterVolume?: number;
   matchDifficulty?: MatchDifficulty;
+  menuPlaylistOrder?: AudioSettings['menuPlaylistOrder'];
+  musicEnabled?: boolean;
   musicVolume?: number;
   muted?: boolean;
   officialsDebugLabels?: boolean;
@@ -205,6 +209,8 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   gameMode: 'exhibition',
   masterVolume: DEFAULT_AUDIO_SETTINGS.masterVolume,
   matchDifficulty: 'pro',
+  menuPlaylistOrder: DEFAULT_AUDIO_SETTINGS.menuPlaylistOrder,
+  musicEnabled: DEFAULT_AUDIO_SETTINGS.musicEnabled,
   musicVolume: DEFAULT_AUDIO_SETTINGS.musicVolume,
   muted: DEFAULT_AUDIO_SETTINGS.muted,
   officialsDebugLabels: false,
@@ -267,6 +273,8 @@ export function resolveGameExperienceSettings({
     captionsEnabled: settings.captionsEnabled,
     crowdVolume: settings.crowdVolume,
     masterVolume: settings.masterVolume,
+    menuPlaylistOrder: settings.menuPlaylistOrder,
+    musicEnabled: settings.musicEnabled,
     musicVolume: settings.musicVolume,
     muted: settings.muted,
   });
@@ -376,6 +384,10 @@ export function normalizeGameExperienceSettings(
     matchDifficulty: isMatchDifficulty(settings.matchDifficulty)
       ? settings.matchDifficulty
       : presetDefaults.matchDifficulty,
+    menuPlaylistOrder: settings.menuPlaylistOrder === 'shuffle' || settings.menuPlaylistOrder === 'sequential'
+      ? settings.menuPlaylistOrder
+      : presetDefaults.menuPlaylistOrder,
+    musicEnabled: settings.musicEnabled ?? presetDefaults.musicEnabled,
     musicVolume: clampVolume(settings.musicVolume ?? presetDefaults.musicVolume),
     muted: settings.muted ?? presetDefaults.muted,
     officialsDebugLabels:
@@ -506,6 +518,7 @@ export function resolveGameExperienceQueryOverrides(
   applyBooleanOverride(overrides, 'captionsEnabled', searchParams, 'captions');
   applyBooleanOverride(overrides, 'debugToolsEnabled', searchParams, 'debugTools');
   applyBooleanOverride(overrides, 'muted', searchParams, 'muted');
+  applyBooleanOverride(overrides, 'musicEnabled', searchParams, 'music');
   applyBooleanOverride(overrides, 'officialsDebugLabels', searchParams, 'officialsDebug');
   applyBooleanOverride(
     overrides,
@@ -529,6 +542,10 @@ export function resolveGameExperienceQueryOverrides(
   applyVolumeOverride(overrides, 'crowdVolume', searchParams, 'crowdVolume');
   applyVolumeOverride(overrides, 'masterVolume', searchParams, 'masterVolume');
   applyVolumeOverride(overrides, 'musicVolume', searchParams, 'musicVolume');
+  const menuPlaylistValue = searchParams.get('menuPlaylist');
+  if (menuPlaylistValue === 'sequential' || menuPlaylistValue === 'shuffle') {
+    overrides.menuPlaylistOrder = menuPlaylistValue;
+  }
   applyTeamProfileOverrides(overrides, searchParams);
 
   return overrides;
@@ -636,6 +653,8 @@ function createCustomSettingsFromExisting(
     crowdVisualsEnabled: crowdPresentationSettings.crowdVisualsEnabled,
     crowdVolume: audioSettings.crowdVolume,
     masterVolume: audioSettings.masterVolume,
+    menuPlaylistOrder: audioSettings.menuPlaylistOrder,
+    musicEnabled: audioSettings.musicEnabled,
     musicVolume: audioSettings.musicVolume,
     muted: audioSettings.muted,
     preset: 'custom',
@@ -687,6 +706,7 @@ function applyBooleanOverride(
     | 'crowdVisualsEnabled'
     | 'debugToolsEnabled'
     | 'muted'
+    | 'musicEnabled'
     | 'officialsDebugLabels'
     | 'officialsEnabled'
     | 'playerMotionEnabled'

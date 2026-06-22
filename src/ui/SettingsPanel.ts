@@ -58,7 +58,9 @@ export class SettingsPanel {
   private readonly audioEnabledInput = document.createElement('input');
   private readonly mutedInput = document.createElement('input');
   private readonly masterVolumeInput = document.createElement('input');
+  private readonly musicEnabledInput = document.createElement('input');
   private readonly musicVolumeInput = document.createElement('input');
+  private readonly menuPlaylistOrderSelect = document.createElement('select');
   private readonly crowdAudioInput = document.createElement('input');
   private readonly crowdVolumeInput = document.createElement('input');
   private readonly announcerInput = document.createElement('input');
@@ -192,7 +194,12 @@ export class SettingsPanel {
       this.createCheckboxRow('Master audio', this.audioEnabledInput),
       this.createCheckboxRow('Muted', this.mutedInput),
       this.createRangeRow('Master volume', this.masterVolumeInput),
+      this.createCheckboxRow('Music', this.musicEnabledInput),
       this.createRangeRow('Music volume', this.musicVolumeInput),
+      this.createSelectRow('Menu playlist', this.menuPlaylistOrderSelect, [
+        ['sequential', 'Sequential'],
+        ['shuffle', 'Shuffle'],
+      ]),
       this.createCheckboxRow('Crowd audio', this.crowdAudioInput),
       this.createRangeRow('Crowd volume', this.crowdVolumeInput),
       this.createCheckboxRow('Announcer', this.announcerInput),
@@ -385,8 +392,16 @@ export class SettingsPanel {
     this.masterVolumeInput.addEventListener('input', () => {
       this.updateCustomSettings({ masterVolume: Number(this.masterVolumeInput.value) });
     });
+    this.musicEnabledInput.addEventListener('change', () => {
+      this.updateCustomSettings({ musicEnabled: this.musicEnabledInput.checked });
+    });
     this.musicVolumeInput.addEventListener('input', () => {
       this.updateCustomSettings({ musicVolume: Number(this.musicVolumeInput.value) });
+    });
+    this.menuPlaylistOrderSelect.addEventListener('change', () => {
+      this.updateCustomSettings({
+        menuPlaylistOrder: this.menuPlaylistOrderSelect.value as GameExperienceSettings['menuPlaylistOrder'],
+      });
     });
     this.crowdAudioInput.addEventListener('change', () => {
       this.updateCustomSettings({ crowdAudioEnabled: this.crowdAudioInput.checked });
@@ -460,7 +475,9 @@ export class SettingsPanel {
     this.audioEnabledInput.checked = this.settings.audioEnabled;
     this.mutedInput.checked = this.settings.muted;
     this.masterVolumeInput.value = String(this.settings.masterVolume);
+    this.musicEnabledInput.checked = this.settings.musicEnabled;
     this.musicVolumeInput.value = String(this.settings.musicVolume);
+    this.menuPlaylistOrderSelect.value = this.settings.menuPlaylistOrder;
     this.crowdAudioInput.checked = this.settings.crowdAudioEnabled;
     this.crowdVolumeInput.value = String(this.settings.crowdVolume);
     this.announcerInput.checked = this.settings.announcerEnabled;

@@ -314,6 +314,11 @@ export class FootballApplication {
       !pauseSettingsVisible &&
       (!matchActive || matchSnapshotBefore?.phase === 'userPossession');
     const presentationDelta = pauseSettingsVisible ? 0 : delta;
+    this.presentation.updateMenuMusicChrome(
+      this.lifecycle.phase,
+      pauseSettingsVisible,
+      delta,
+    );
     this.gameplay.update(delta, gameplayActive, this.performanceProfiler);
     if (gameplayActive) {
       this.performanceScenarioRunner?.update(delta);

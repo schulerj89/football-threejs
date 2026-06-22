@@ -1,3 +1,5 @@
+import { isMenuPlaylistOrder, type MenuPlaylistOrder } from './MusicCatalog';
+
 export interface AudioSettings {
   announcerEnabled: boolean;
   announcerVolume: number;
@@ -6,6 +8,8 @@ export interface AudioSettings {
   crowdVolume: number;
   effectsVolume: number;
   masterVolume: number;
+  menuPlaylistOrder: MenuPlaylistOrder;
+  musicEnabled: boolean;
   musicVolume: number;
   muted: boolean;
 }
@@ -32,6 +36,8 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   crowdVolume: 0.45,
   effectsVolume: 0.85,
   masterVolume: 0.85,
+  menuPlaylistOrder: 'sequential',
+  musicEnabled: true,
   musicVolume: 0.72,
   muted: false,
 };
@@ -73,6 +79,12 @@ export function applyAudioQuerySettings(
     captionsEnabled: searchParams.has('captions')
       ? searchParams.get('captions') !== '0'
       : settings.captionsEnabled,
+    menuPlaylistOrder: isMenuPlaylistOrder(searchParams.get('menuPlaylist'))
+      ? searchParams.get('menuPlaylist') as MenuPlaylistOrder
+      : settings.menuPlaylistOrder,
+    musicEnabled: searchParams.has('music')
+      ? searchParams.get('music') !== '0'
+      : settings.musicEnabled,
     musicVolume: searchParams.has('musicVolume')
       ? clampVolume(Number(searchParams.get('musicVolume')))
       : settings.musicVolume,
@@ -110,6 +122,10 @@ export function normalizeAudioSettings(settings: Partial<AudioSettings>): AudioS
     crowdVolume: clampVolume(settings.crowdVolume ?? DEFAULT_AUDIO_SETTINGS.crowdVolume),
     effectsVolume: clampVolume(settings.effectsVolume ?? DEFAULT_AUDIO_SETTINGS.effectsVolume),
     masterVolume: clampVolume(settings.masterVolume ?? DEFAULT_AUDIO_SETTINGS.masterVolume),
+    menuPlaylistOrder: isMenuPlaylistOrder(settings.menuPlaylistOrder)
+      ? settings.menuPlaylistOrder
+      : DEFAULT_AUDIO_SETTINGS.menuPlaylistOrder,
+    musicEnabled: settings.musicEnabled ?? DEFAULT_AUDIO_SETTINGS.musicEnabled,
     musicVolume: clampVolume(settings.musicVolume ?? DEFAULT_AUDIO_SETTINGS.musicVolume),
     muted: settings.muted ?? DEFAULT_AUDIO_SETTINGS.muted,
   };

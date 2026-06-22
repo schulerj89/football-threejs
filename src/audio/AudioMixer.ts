@@ -480,7 +480,7 @@ export class AudioMixer {
         : 0,
     );
     this.setBusGain('gameplaySfx', this.settings.effectsVolume);
-    this.setBusGain('music', this.settings.musicVolume);
+    this.setBusGain('music', this.settings.musicEnabled ? this.settings.musicVolume : 0);
     this.setBusGain('ui', this.settings.effectsVolume);
     saveAudioSettings(this.settings, this.storage);
   }
@@ -525,6 +525,10 @@ export class AudioMixer {
 
     if (category === 'announcer') {
       return this.flags.announcerEnabled && this.settings.announcerEnabled;
+    }
+
+    if (category === 'music') {
+      return this.settings.musicEnabled;
     }
 
     return true;

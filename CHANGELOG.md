@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.18.0] - 2026-06-22
+
+### Added
+
+- Added a runtime Football JS menu-music playlist controller that streams all generated menu tracks, auto-advances, supports sequential or deterministic shuffle order, preserves the active track across title, Match Setup, and Settings screens, and exposes previous/next controls through a compact now-playing indicator.
+- Added event-driven in-game transition audio foundations with short tracked stingers and crowd-bus stadium chants, including live-play suppression, announcer/stinger suppression for chants, one-chant-per-drive limiting, cooldowns, and F1/audio-debug readback.
+- Added player settings for music enabled/disabled and menu playlist order, with versioned migration and persisted settings support.
+
+### Changed
+
+- Registered the expanded generated music/stinger/chant pack in the runtime audio manifest while keeping menu tracks streamed and short stingers/chants as buffered one-shots.
+- Kept title/menu music on the existing music bus and preserved the existing pregame duck/fade handoff so continuous music stops before playable pre-snap.
+
+### Tests
+
+- Added focused runtime music tests for menu auto-advance, previous/next controls, stinger live-play suppression, stinger overlap suppression, chant drive limits, and announcer/stinger chant suppression.
+- Verified `npx vitest run tests/musicRuntime.test.ts`, `npm run test:unit`, `npx tsc --noEmit`, `npm run build`, and `npm run test:smoke`.
+
 ## [1.17.0] - 2026-06-22
 
 ### Added
