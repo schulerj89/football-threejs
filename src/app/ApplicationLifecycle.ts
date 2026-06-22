@@ -5,7 +5,7 @@ import { SettingsPanel } from '../ui/SettingsPanel';
 import type { TitleLoadingState } from '../ui/TitleScreen';
 import { TitleScreenController } from '../ui/TitleScreenController';
 
-export type AppPhase = 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title';
+export type AppPhase = 'coinToss' | 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title';
 
 export interface ApplicationLifecycleOptions {
   crowdPreviewEnabled: boolean;
@@ -131,6 +131,13 @@ export class ApplicationLifecycle {
 
   startGameplay(): void {
     this.phaseValue = 'gameplay';
+    this.titleController?.setVisible(false);
+    this.setPauseSettingsVisible(false, false);
+    this.syncChrome();
+  }
+
+  startCoinToss(): void {
+    this.phaseValue = 'coinToss';
     this.titleController?.setVisible(false);
     this.setPauseSettingsVisible(false, false);
     this.syncChrome();

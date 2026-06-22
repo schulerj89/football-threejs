@@ -817,6 +817,16 @@ interface MatchSnapshot {
     remainingSeconds: number;
     running: boolean;
   };
+  coinToss: {
+    completed: boolean;
+    firstHalfOpeningPossession: 'opponent' | 'user' | null;
+    phase: 'animating' | 'awaitingCall' | 'notStarted' | 'resolved';
+    resolvedFace: 'heads' | 'tails' | null;
+    secondHalfOpeningPossession: 'opponent' | 'user' | null;
+    tossIndex: number;
+    userCall: 'heads' | 'tails' | null;
+    winner: 'opponent' | 'user' | null;
+  };
   currentFieldPosition: FootballSpot;
   deterministicSeed: number;
   driveNumber: number;
@@ -824,6 +834,7 @@ interface MatchSnapshot {
   openingPossession: 'opponent' | 'user';
   opponentScore: number;
   phase:
+    | 'coinToss'
     | 'gameOver'
     | 'halftime'
     | 'opponentDriveSimulation'
@@ -1057,7 +1068,7 @@ test('shows the title screen, opens match setup, and holds gameplay until confir
       remainingSeconds: 180,
       running: false,
     },
-    phase: 'userPossession',
+    phase: 'pregame',
     possession: 'user',
     quarter: 1,
   });
@@ -1070,6 +1081,43 @@ test('shows the title screen, opens match setup, and holds gameplay until confir
     },
   });
   await page.keyboard.press('Space');
+  await expect(page.locator('body[data-app-phase="coinToss"]')).toBeAttached();
+  await expect(page.locator('.coin-toss-ui')).toBeVisible();
+  await expect.poll(() => getMatchSnapshot(page)).toMatchObject({
+    coinToss: {
+      completed: false,
+      phase: 'awaitingCall',
+      userCall: null,
+    },
+    phase: 'coinToss',
+  });
+  await page.keyboard.press('T');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => getMatchSnapshot(page)).toMatchObject({
+    coinToss: {
+      completed: true,
+      resolvedFace: 'tails',
+      userCall: 'tails',
+      winner: 'user',
+    },
+    phase: 'coinToss',
+  });
+  await expect(page.locator('.coin-toss-ui')).toContainText('will receive', { timeout: 10_000 });
+  await expect.poll(() => getMatchSnapshot(page), { timeout: 15_000 }).toMatchObject({
+    clock: {
+      remainingSeconds: 180,
+      running: false,
+    },
+    coinToss: {
+      completed: true,
+      firstHalfOpeningPossession: 'user',
+      secondHalfOpeningPossession: 'opponent',
+      winner: 'user',
+    },
+    phase: 'userPossession',
+    possession: 'user',
+    quarter: 1,
+  });
   await expect(page.locator('body[data-app-phase="gameplay"]')).toBeAttached();
   await expect(page.locator('.gameplay-hud')).toBeVisible();
   await expect(page.locator('.play-call-ui')).toBeVisible();

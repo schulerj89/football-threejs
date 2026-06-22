@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.12.0] - 2026-06-22
+
+### Added
+
+- Added an interactive opening coin-toss match phase between pregame presentation and playable pre-snap, with pointer/keyboard HEADS/TAILS selection, deterministic seeded results, opening/second-half possession state, and a stable midfield presentation shot.
+- Added presentation-only coin-toss captains, a referee, a textured low-poly 3D coin using the generated Football JS coin faces, serialized coin-toss announcer setup/result lines, captions, and F1 debug readback.
+
+### Changed
+
+- Updated the normal title -> Match Setup -> pregame flow so pregame now hands off to the one-time opening coin toss before gameplay begins.
+
+### Tests
+
+- Added deterministic coin-toss unit coverage for seeded fairness, required player selection, possession assignment, presentation authority separation, announcer serialization, reset behavior, and score-attack isolation.
+- Updated browser smoke coverage for the title/setup/pregame/coin-toss handoff and verified the unit suite, production build, and smoke suite.
+
 ## [1.11.0] - 2026-06-22
 
 ### Added

@@ -44,6 +44,7 @@ import { resolveTeamPresentationTheme } from '../teams/TeamThemeApplier';
 import type { GameplayModel, GameplaySnapshot } from '../playState';
 import { MatchFlowController } from '../match/MatchFlowController';
 import type { MatchSnapshot } from '../match/MatchTypes';
+import type { CoinFace } from '../match/CoinTossModel';
 import { MatchScorebug } from '../ui/MatchScorebug';
 import { OpponentDriveSummaryPanel } from '../ui/OpponentDriveSummary';
 import { QuarterTransitionPanel } from '../ui/QuarterTransition';
@@ -304,6 +305,10 @@ export class FootballApplication {
       this.lifecycle.phase === 'pregamePresentation' &&
       !pauseSettingsVisible &&
       matchActive;
+    const coinTossActive =
+      this.lifecycle.phase === 'coinToss' &&
+      !pauseSettingsVisible &&
+      matchActive;
     const gameplayActive =
       this.lifecycle.phase === 'gameplay' &&
       !pauseSettingsVisible &&
@@ -347,6 +352,20 @@ export class FootballApplication {
       });
       if (result.completed) {
         this.finishPregamePresentation(false);
+      }
+    } else if (coinTossActive) {
+      const result = this.presentation.updateCoinTossFrame({
+        deltaSeconds: presentationDelta,
+        gameplaySnapshot,
+        matchSnapshot,
+        playerVisuals: this.playerVisuals.visuals,
+        profiler: this.performanceProfiler,
+      });
+      if (result.requestedCall) {
+        this.resolveCoinTossCall(result.requestedCall);
+      }
+      if (result.completed) {
+        this.finishCoinTossAndStartGameplay();
       }
     } else {
       this.presentation.updateGameplayFrame({
@@ -444,6 +463,7 @@ export class FootballApplication {
     this.developmentTools.syncGameplayOverlays({
       activePrimaryPlayer,
       cameraSnapshot: this.presentation.cameraDebugSnapshot,
+      coinTossSnapshot: this.presentation.getCoinTossSnapshot(this.getMatchSnapshot()),
       controlledPlayerLabelSnapshot: this.presentation.getControlledPlayerLabelSnapshot(),
       crowdPresentationSnapshot: this.presentation.getCrowdPresentationSnapshot(),
       crowdPreviewSnapshot: this.presentation.getCrowdPreviewSnapshot(),
@@ -485,7 +505,7 @@ export class FootballApplication {
     );
     this.matchController = this.createMatchController();
     if (this.gameExperience.settings.gameMode === 'exhibition') {
-      this.matchController.start(this.gameplay.gameplayModel);
+      this.matchController.prepareForPregame(this.gameplay.gameplayModel);
     }
     this.syncAfterGameplayRebuild();
     void this.presentation.titleMusicController.startFromUserGesture();
@@ -502,7 +522,7 @@ export class FootballApplication {
       this.lifecycle.startPregamePresentation();
     } else {
       this.presentation.finishPregamePresentation(gameplaySnapshot);
-      this.lifecycle.startGameplay();
+      this.startCoinToss();
     }
   }
 
@@ -739,6 +759,37 @@ export class FootballApplication {
     this.gameplay.discardPendingPlayControls();
     const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
     this.presentation.finishPregamePresentation(gameplaySnapshot, { skipped });
+    this.startCoinToss();
+  }
+
+  private startCoinToss(): void {
+    if (!this.isExhibitionMatchActive()) {
+      this.lifecycle.startGameplay();
+      return;
+    }
+
+    this.matchController.enterCoinToss();
+    this.presentation.startCoinToss(this.matchController.getSnapshot());
+    this.lifecycle.startCoinToss();
+  }
+
+  private resolveCoinTossCall(call: CoinFace): void {
+    if (!this.isExhibitionMatchActive() || this.lifecycle.phase !== 'coinToss') {
+      return;
+    }
+
+    this.matchController.resolveOpeningCoinToss(call);
+  }
+
+  private finishCoinTossAndStartGameplay(): void {
+    if (!this.isExhibitionMatchActive() || this.lifecycle.phase !== 'coinToss') {
+      return;
+    }
+
+    const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
+    this.presentation.finishCoinToss(gameplaySnapshot);
+    this.matchController.beginAfterCoinToss(this.gameplay.gameplayModel);
+    this.syncAfterGameplayRebuild();
     this.lifecycle.startGameplay();
   }
 

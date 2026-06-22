@@ -6,7 +6,7 @@ import {
 } from './QualityProfile';
 
 export interface QualityTransitionContext {
-  appPhase: 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title';
+  appPhase: 'coinToss' | 'gameplay' | 'matchSetup' | 'pregamePresentation' | 'title';
   playState: PlayState;
 }
 

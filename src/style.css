@@ -902,6 +902,104 @@ body[data-game-mode="exhibition"] .score-counter {
   white-space: pre-wrap;
 }
 
+.coin-toss-ui {
+  position: fixed;
+  left: 50%;
+  bottom: clamp(24px, 7vh, 76px);
+  z-index: 46;
+  display: grid;
+  width: min(560px, calc(100vw - 28px));
+  transform: translateX(-50%);
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(5, 9, 12, 0.86);
+  color: #f7fbf8;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.46);
+}
+
+.coin-toss-ui[hidden] {
+  display: none;
+}
+
+.coin-toss-ui h2,
+.coin-toss-ui p {
+  margin: 0;
+  text-align: center;
+}
+
+.coin-toss-ui h2 {
+  color: #fffdf1;
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.coin-toss-status,
+.coin-toss-result {
+  color: #dce8df;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.coin-toss-result {
+  color: #f2d94b;
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.coin-toss-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.coin-toss-choice {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  justify-items: center;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7fbf8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.coin-toss-choice img {
+  width: min(108px, 28vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.coin-toss-choice[data-selected="true"] {
+  border-color: rgba(242, 217, 75, 0.86);
+  background: rgba(242, 217, 75, 0.14);
+  box-shadow: 0 0 0 2px rgba(242, 217, 75, 0.24);
+}
+
+.coin-toss-choice:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.coin-toss-choice:hover:not(:disabled),
+.coin-toss-choice:focus-visible {
+  border-color: rgba(242, 217, 75, 0.82);
+  outline: none;
+}
+
 .qb-showcase-card {
   position: fixed;
   z-index: 33;

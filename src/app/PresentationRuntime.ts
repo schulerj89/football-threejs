@@ -125,6 +125,13 @@ import type {
   PregamePresentationSnapshot,
 } from '../presentation/pregame/PregamePresentationTypes';
 import type { PregameWeatherCondition } from '../audio/PregameCommentaryCatalog';
+import {
+  CoinTossController,
+} from '../presentation/coinToss/CoinTossController';
+import type {
+  CoinTossDebugSnapshot,
+  CoinTossFrameResult,
+} from '../presentation/coinToss/CoinTossTypes';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -158,6 +165,14 @@ export interface PregamePresentationFrameOptions {
   profiler?: FramePerformanceProfiler;
 }
 
+export interface CoinTossPresentationFrameOptions {
+  deltaSeconds: number;
+  gameplaySnapshot: GameplaySnapshot;
+  matchSnapshot: MatchSnapshot | null;
+  playerVisuals: Map<string, THREE.Group>;
+  profiler?: FramePerformanceProfiler;
+}
+
 export class PresentationRuntime {
   readonly audioMixer: AudioMixer;
   readonly ballVisual: THREE.Group;
@@ -177,6 +192,7 @@ export class PresentationRuntime {
   readonly titleMusicController: TitleMusicController;
   readonly officialsController: OfficialsPresentationController;
   readonly controlledPlayerLabels: ControlledPlayerLabelRenderer;
+  readonly coinTossController: CoinTossController;
 
   private readonly scene: THREE.Scene;
   private cameraController: GameplayCameraController;
@@ -331,6 +347,15 @@ export class PresentationRuntime {
       this.titleMusicController,
       this.gameAudioDirector,
     );
+    this.coinTossController = new CoinTossController({
+      audioCoordinator: this.pregameAudioCoordinator,
+      rosterBinding: this.rosterBinding,
+      teamTheme: this.teamTheme,
+      warn,
+    });
+    if (!this.crowdPreviewController) {
+      this.scene.add(this.coinTossController.group);
+    }
     this.pregamePresentationDirector = this.createPregamePresentationDirector();
     this.qbShowcaseCard = new QBShowcaseCard();
     this.presentationHoldDirector = new PresentationHoldDirector(
@@ -381,6 +406,7 @@ export class PresentationRuntime {
   resetPregamePresentationIdentity(): void {
     this.pregamePresentationDirector.resetPresentationIdentity();
     this.pregameWarmupController.setActive(false);
+    this.coinTossController.reset();
     this.qbShowcaseCard.hide('resetPresentationIdentity');
     this.broadcastCaptions.hidden = true;
     this.broadcastCaptions.textContent = '';
@@ -391,6 +417,7 @@ export class PresentationRuntime {
     this.gamePresentationRuntime.skipPresentation();
     this.pregamePresentationDirector.skip();
     this.pregameWarmupController.setActive(false);
+    this.coinTossController.reset();
     this.qbShowcaseCard.hide('skipped');
   }
 
@@ -603,6 +630,48 @@ export class PresentationRuntime {
     this.broadcastCaptions.textContent = '';
   }
 
+  startCoinToss(matchSnapshot: MatchSnapshot | null): void {
+    this.pregameWarmupController.setActive(false);
+    this.qbShowcaseCard.hide('coinToss');
+    this.coinTossController.start(matchSnapshot);
+  }
+
+  updateCoinTossFrame({
+    deltaSeconds,
+    gameplaySnapshot,
+    matchSnapshot,
+    playerVisuals,
+    profiler,
+  }: CoinTossPresentationFrameOptions): CoinTossFrameResult {
+    if (profiler?.enabled) {
+      profiler.measure('proceduralPlayerPosing', () => {
+        this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+      });
+    } else {
+      this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+    }
+    this.officialsController.update(gameplaySnapshot, deltaSeconds, false);
+    this.sidelineTeamController.update();
+    const result = this.coinTossController.update({
+      deltaSeconds,
+      gameplaySnapshot,
+      matchSnapshot,
+    });
+    this.cameraController.updatePregamePresentation(
+      this.coinTossController.createCameraShot(),
+      deltaSeconds,
+    );
+    this.syncPregameCaptions();
+    return result;
+  }
+
+  finishCoinToss(gameplaySnapshot: GameplaySnapshot): void {
+    this.coinTossController.finish();
+    this.broadcastCaptions.hidden = true;
+    this.broadcastCaptions.textContent = '';
+    this.cameraController.finishPregamePresentation(gameplaySnapshot);
+  }
+
   syncPlayCallUi(gameplaySnapshot: GameplaySnapshot, visible: boolean): void {
     if (this.playCallUi && visible) {
       syncPlayCallUi(this.playCallUi, gameplaySnapshot);
@@ -617,7 +686,7 @@ export class PresentationRuntime {
     this.controlledPlayerLabels.setApplicationPhase(appPhase);
     if (appPhase !== 'gameplay') {
       this.playCallUi?.hide();
-      if (appPhase !== 'pregamePresentation') {
+      if (appPhase !== 'pregamePresentation' && appPhase !== 'coinToss') {
         this.broadcastCaptions.hidden = true;
         this.broadcastCaptions.textContent = '';
         this.qbShowcaseCard.hide('appPhase');
@@ -664,6 +733,10 @@ export class PresentationRuntime {
     });
     this.pregameWarmupController.applySettings({
       enabled: !this.crowdPreviewController,
+      rosterBinding: this.rosterBinding,
+      teamTheme: this.teamTheme,
+    });
+    this.coinTossController.applySettings({
       rosterBinding: this.rosterBinding,
       teamTheme: this.teamTheme,
     });
@@ -769,6 +842,10 @@ export class PresentationRuntime {
     return this.pregamePresentationDirector.getSnapshot();
   }
 
+  getCoinTossSnapshot(matchSnapshot: MatchSnapshot | null = null): CoinTossDebugSnapshot {
+    return this.coinTossController.getSnapshot(matchSnapshot);
+  }
+
   getQBShowcaseCardSnapshot(): QBShowcaseCardSnapshot {
     return this.qbShowcaseCard.getSnapshot();
   }
@@ -817,6 +894,8 @@ export class PresentationRuntime {
     this.sidelineTeamController.dispose();
     this.scene.remove(this.pregameWarmupController.group);
     this.pregameWarmupController.dispose();
+    this.scene.remove(this.coinTossController.group);
+    this.coinTossController.dispose();
     this.playCallUi?.dispose();
     this.gameplayHud.root.remove();
     this.broadcastCaptions.remove();

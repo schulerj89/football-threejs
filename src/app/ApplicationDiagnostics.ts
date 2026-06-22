@@ -271,6 +271,8 @@ export class ApplicationDiagnostics {
         createAppearanceAuditSnapshot(this.options.playerVisuals.visuals),
       getBallVisualSnapshot: () => this.options.presentation.getBallVisualSnapshot(),
       getCameraSnapshot: () => this.options.presentation.cameraDebugSnapshot,
+      getCoinTossSnapshot: () =>
+        this.options.presentation.getCoinTossSnapshot(this.options.getMatchSnapshot()),
       getControlledPlayerLabelSnapshot: () =>
         this.options.presentation.getControlledPlayerLabelSnapshot(),
       getCameraFramingSnapshot: () => this.getCameraFramingSnapshot(),

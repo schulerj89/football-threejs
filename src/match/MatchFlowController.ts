@@ -10,11 +10,13 @@ import {
   advanceToNextQuarter,
   beginMatch,
   createMatchModel,
+  enterCoinToss,
   enterGameOver,
   enterOpponentPossession,
   enterQuarterTransition,
   enterUserPossession,
   resetMatchModel,
+  resolveMatchCoinToss,
   snapshotMatchModel,
   startUserPlayClock,
   stopUserPlayClock,
@@ -31,6 +33,7 @@ import type {
   MatchSnapshot,
 } from './MatchTypes';
 import { DEFAULT_MATCH_RULES } from './MatchTypes';
+import type { CoinFace, CoinTossState } from './CoinTossModel';
 
 export interface MatchFlowControllerOptions {
   difficulty?: MatchDifficulty;
@@ -64,6 +67,37 @@ export class MatchFlowController {
 
   start(gameplay: GameplayModel): void {
     resetMatchModel(this.model);
+    beginMatch(this.model);
+    this.lastProcessedPlayResultId = null;
+    this.lastOpponentSimulationDriveNumber = null;
+    this.previousPlayState = null;
+    resetOffensePossession(gameplay, this.model.rules.touchbackSpot);
+    if (this.model.phase === 'opponentDriveSimulation') {
+      this.simulateOpponentPossessionOnce();
+    }
+  }
+
+  prepareForPregame(gameplay: GameplayModel): void {
+    resetMatchModel(this.model);
+    this.lastProcessedPlayResultId = null;
+    this.lastOpponentSimulationDriveNumber = null;
+    this.previousPlayState = null;
+    resetOffensePossession(gameplay, this.model.rules.touchbackSpot);
+  }
+
+  enterCoinToss(): CoinTossState {
+    return enterCoinToss(this.model);
+  }
+
+  resolveOpeningCoinToss(userCall: CoinFace): CoinTossState {
+    return resolveMatchCoinToss(this.model, userCall);
+  }
+
+  beginAfterCoinToss(gameplay: GameplayModel): void {
+    if (!this.model.coinToss.completed) {
+      return;
+    }
+
     beginMatch(this.model);
     this.lastProcessedPlayResultId = null;
     this.lastOpponentSimulationDriveNumber = null;

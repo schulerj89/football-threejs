@@ -5,6 +5,7 @@ import type {
 } from './PregamePresentationTypes';
 import type { RenderMetricsSnapshot } from '../../debugOverlay';
 import type { GameplayCameraDebugSnapshot } from '../../camera/GameplayCameraController';
+import type { CoinTossDebugSnapshot } from '../coinToss/CoinTossTypes';
 
 export class PregameLowerThird {
   readonly root: HTMLDivElement;
@@ -90,6 +91,7 @@ export function syncPregameDebugOverlay(
   snapshot: PregamePresentationSnapshot | null,
   renderMetrics: RenderMetricsSnapshot | null = null,
   cameraSnapshot: GameplayCameraDebugSnapshot | null = null,
+  coinTossSnapshot: CoinTossDebugSnapshot | null = null,
 ): void {
   if (!snapshot) {
     overlay.textContent = 'Pregame: inactive';
@@ -142,5 +144,19 @@ export function syncPregameDebugOverlay(
     cameraSnapshot
       ? `camera: displacement ${cameraSnapshot.stability.perFrameDisplacement.toFixed(2)} angular ${cameraSnapshot.stability.perFrameAngularChange.toFixed(3)}`
       : 'camera: unavailable',
+    coinTossSnapshot
+      ? [
+          `coinToss: ${coinTossSnapshot.phase}`,
+          `seed: ${coinTossSnapshot.matchSeed ?? 'none'}`,
+          `call: ${coinTossSnapshot.userCall ?? coinTossSnapshot.selectedCall}`,
+          `face: ${coinTossSnapshot.resolvedFace ?? 'none'}`,
+          `winner: ${coinTossSnapshot.winner ?? 'none'}`,
+          `opening: ${coinTossSnapshot.openingPossession ?? 'none'}`,
+          `secondHalf: ${coinTossSnapshot.secondHalfPossession ?? 'none'}`,
+          `coinProgress: ${(coinTossSnapshot.animation.progress * 100).toFixed(0)}%`,
+          `coinCommentary: ${coinTossSnapshot.activeCommentary ?? 'none'}`,
+          `coinBlockers: ${coinTossSnapshot.completionBlockers.join(',') || 'none'}`,
+        ].join('\n')
+      : 'coinToss: unavailable',
   ].join('\n');
 }

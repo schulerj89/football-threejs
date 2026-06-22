@@ -1,7 +1,9 @@
 import type { FootballSpot } from '../fieldScale';
 import type { TeamProfile } from '../teams/TeamProfile';
+import type { CoinTossState } from './CoinTossModel';
 
 export type MatchPhase =
+  | 'coinToss'
   | 'pregame'
   | 'userPossession'
   | 'opponentDriveSimulation'
@@ -57,6 +59,7 @@ export interface MatchClockSnapshot {
 
 export interface MatchModel {
   clock: MatchClockSnapshot;
+  coinToss: CoinTossState;
   currentFieldPosition: FootballSpot;
   deterministicSeed: number;
   driveNumber: number;

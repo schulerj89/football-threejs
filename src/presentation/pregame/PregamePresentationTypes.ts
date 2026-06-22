@@ -26,14 +26,23 @@ export type PregameShotId =
   | 'userWarmupPan'
   | 'weatherAndField';
 
-export type PregameCommentaryLineId = 'matchup' | 'quarterback' | 'weather' | 'welcome';
+export type PregamePresentationCommentaryLineId =
+  | 'matchup'
+  | 'quarterback'
+  | 'weather'
+  | 'welcome';
+
+export type PregameCommentaryLineId =
+  | PregamePresentationCommentaryLineId
+  | 'coinTossResult'
+  | 'coinTossSetup';
 
 export interface PregameSequenceStep {
-  commentaryLineId?: PregameCommentaryLineId;
+  commentaryLineId?: PregamePresentationCommentaryLineId;
   lowerThirdTeamSide?: SidelineTeamSide;
   minimumSeconds: number;
   shotId: PregameShotId;
-  waitForCommentaryLineId?: PregameCommentaryLineId;
+  waitForCommentaryLineId?: PregamePresentationCommentaryLineId;
 }
 
 export interface PregamePresentationContext {

@@ -13,6 +13,14 @@ import {
   type MatchClock,
 } from './GameClock';
 import {
+  cloneCoinTossState,
+  createCoinTossState,
+  enterOpeningCoinToss,
+  resolveOpeningCoinToss,
+  type CoinFace,
+  type CoinTossState,
+} from './CoinTossModel';
+import {
   otherPossession,
   resolveOpeningPossession,
   resolveSecondHalfPossession,
@@ -53,6 +61,7 @@ export function createMatchModel({
 
   return {
     clock: createMatchClock(resolvedRules.quarterDurationSeconds),
+    coinToss: createCoinTossState(),
     currentFieldPosition: { ...resolvedRules.touchbackSpot },
     deterministicSeed: resolvedRules.seed,
     driveNumber: 1,
@@ -72,6 +81,36 @@ export function createMatchModel({
   };
 }
 
+export function enterCoinToss(match: MutableMatchModel): CoinTossState {
+  match.phase = 'coinToss';
+  match.coinToss = enterOpeningCoinToss(match.coinToss);
+  stopMatchClock(match.clock);
+  return cloneCoinTossState(match.coinToss);
+}
+
+export function resolveMatchCoinToss(
+  match: MutableMatchModel,
+  userCall: CoinFace,
+): CoinTossState {
+  match.coinToss = resolveOpeningCoinToss(
+    match.coinToss,
+    match.deterministicSeed,
+    userCall,
+  );
+
+  if (
+    match.coinToss.completed &&
+    match.coinToss.firstHalfOpeningPossession &&
+    match.coinToss.secondHalfOpeningPossession
+  ) {
+    match.openingPossession = match.coinToss.firstHalfOpeningPossession;
+    match.secondHalfPossession = match.coinToss.secondHalfOpeningPossession;
+    match.possession = match.openingPossession;
+  }
+
+  return cloneCoinTossState(match.coinToss);
+}
+
 export function beginMatch(match: MutableMatchModel): void {
   match.phase = match.openingPossession === 'user'
     ? 'userPossession'
@@ -89,6 +128,7 @@ export function resetMatchModel(match: MutableMatchModel): void {
   });
 
   match.clock = reset.clock;
+  match.coinToss = reset.coinToss;
   match.currentFieldPosition = reset.currentFieldPosition;
   match.deterministicSeed = reset.deterministicSeed;
   match.driveNumber = reset.driveNumber;
@@ -196,6 +236,7 @@ export function enterGameOver(match: MutableMatchModel): void {
 export function snapshotMatchModel(match: MutableMatchModel): MatchSnapshot {
   return {
     clock: snapshotMatchClock(match.clock),
+    coinToss: cloneCoinTossState(match.coinToss),
     currentFieldPosition: { ...match.currentFieldPosition },
     deterministicSeed: match.deterministicSeed,
     driveNumber: match.driveNumber,
