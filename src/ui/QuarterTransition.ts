@@ -1,7 +1,9 @@
 import type { MatchSnapshot } from '../match/MatchTypes';
-import { createHalftimeStatsViewModel } from '../presentation/halftime/HalftimeStatsOverlay';
+import {
+  createHalftimeStatsViewModel,
+  createHalftimeTeamPanel,
+} from '../presentation/halftime/HalftimeStatsOverlay';
 import { resolvePostgameStory } from '../presentation/postgame/PostgameStoryResolver';
-import { getReadableTextColor } from '../teams/TeamThemeApplier';
 import { formatMatchClock } from './MatchScorebug';
 
 export interface QuarterTransitionOptions {
@@ -112,8 +114,8 @@ function createFinalTeamRow(
   const row = document.createElement('div');
   row.className = 'halftime-stats-teams';
   row.append(
-    createFinalTeamPanel(viewModel.teams[0], match.userTeam.colors.secondary),
-    createFinalTeamPanel(viewModel.teams[1], match.opponentTeam.colors.secondary),
+    createHalftimeTeamPanel(viewModel.teams[0], match.userTeam.colors.secondary),
+    createHalftimeTeamPanel(viewModel.teams[1], match.opponentTeam.colors.secondary),
   );
   return row;
 }
@@ -160,26 +162,6 @@ function createFinalLeaders(
     }),
   );
   return leaders;
-}
-
-function createFinalTeamPanel(
-  team: ReturnType<typeof createHalftimeStatsViewModel>['teams'][number],
-  secondaryColor: string,
-): HTMLDivElement {
-  const panel = document.createElement('div');
-  const swatch = document.createElement('span');
-  const name = document.createElement('strong');
-  const score = document.createElement('span');
-  panel.className = `halftime-team-panel halftime-team-panel-${team.team}`;
-  panel.style.setProperty('--halftime-team-color', team.primaryColor);
-  panel.style.setProperty('--halftime-team-secondary', secondaryColor);
-  panel.style.setProperty('--halftime-team-text', getReadableTextColor(team.primaryColor));
-  swatch.className = 'halftime-team-color-chip';
-  swatch.setAttribute('aria-hidden', 'true');
-  name.textContent = team.name;
-  score.textContent = String(team.score);
-  panel.append(swatch, name, score);
-  return panel;
 }
 
 function getTransitionTitle(match: MatchSnapshot): string {

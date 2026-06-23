@@ -50,15 +50,15 @@ describe('halftime presentation', () => {
     });
   });
 
-  it('keeps halftime team identity color-only without logo payloads', () => {
+  it('includes small team logo payloads for report team headers', () => {
     const match = createMatchSnapshot({
       opponentPoints: 10,
       userPoints: 17,
     });
     const view = createHalftimeStatsViewModel(match);
 
-    expect(Object.hasOwn(view.teams[0], 'logoUrl')).toBe(false);
-    expect(Object.hasOwn(view.teams[1], 'logoUrl')).toBe(false);
+    expect(view.teams[0].logoUrl).toBe(match.userTeam.logoUrl);
+    expect(view.teams[1].logoUrl).toBe(match.opponentTeam.logoUrl);
     expect(view.teams[0].primaryColor).toBe(match.userTeam.colors.primary);
     expect(view.teams[1].primaryColor).toBe(match.opponentTeam.colors.primary);
   });

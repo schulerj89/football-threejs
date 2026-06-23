@@ -17,6 +17,7 @@ export interface HalftimeStory {
 
 export interface HalftimeTeamStatsView {
   readonly firstDowns: number;
+  readonly logoUrl: string;
   readonly name: string;
   readonly possessionSeconds: number;
   readonly primaryColor: string;

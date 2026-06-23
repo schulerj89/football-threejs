@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.7] - 2026-06-23
+
+### Changed
+
+- Replaced the halftime and end-of-game stats report team color ovals with small circular team logo badges next to each team name.
+- Refreshed the game screen artifacts for the updated halftime and final report presentation.
+
+### Tests
+
+- Verified `npx vitest run tests/halftimePresentation.test.ts tests/postgamePresentation.test.ts`, `npm run build`, and `npm run artifacts:game-screens`.
+
 ## [1.22.6] - 2026-06-23
 
 ### Added

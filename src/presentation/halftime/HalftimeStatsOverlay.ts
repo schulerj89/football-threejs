@@ -133,6 +133,7 @@ function createTeamStatsView(
   const stats = match.stats.teams[team];
   return {
     firstDowns: stats.firstDowns,
+    logoUrl: profile.logoUrl,
     name: profile.displayName,
     passingYards: stats.passingYards,
     possessionSeconds: match.stats.possessionSeconds[team],
@@ -189,22 +190,43 @@ function createLeader(
   };
 }
 
-function createTeamPanel(team: HalftimeTeamStatsView, secondaryColor: string): HTMLDivElement {
+export function createHalftimeTeamPanel(team: HalftimeTeamStatsView, secondaryColor: string): HTMLDivElement {
   const panel = document.createElement('div');
-  const swatch = document.createElement('span');
+  const logo = document.createElement('span');
+  const image = document.createElement('img');
+  const fallback = document.createElement('span');
   const name = document.createElement('strong');
   const score = document.createElement('span');
   panel.className = `halftime-team-panel halftime-team-panel-${team.team}`;
   panel.style.setProperty('--halftime-team-color', team.primaryColor);
   panel.style.setProperty('--halftime-team-secondary', secondaryColor);
   panel.style.setProperty('--halftime-team-text', getReadableTextColor(team.primaryColor));
-  swatch.className = 'halftime-team-color-chip';
-  swatch.setAttribute('aria-hidden', 'true');
+  logo.className = 'halftime-team-logo';
+  logo.setAttribute('aria-label', `${team.name} logo`);
+  image.alt = '';
+  image.decoding = 'async';
+  fallback.className = 'team-logo-badge-fallback';
+  fallback.textContent = team.shortName;
+  image.addEventListener('error', () => {
+    image.hidden = true;
+  });
+  image.addEventListener('load', () => {
+    image.hidden = false;
+  });
+  if (team.logoUrl) {
+    image.src = team.logoUrl;
+  } else {
+    image.hidden = true;
+  }
+  logo.append(image, fallback);
   name.textContent = team.name;
+  score.className = 'halftime-team-score';
   score.textContent = String(team.score);
-  panel.append(swatch, name, score);
+  panel.append(logo, name, score);
   return panel;
 }
+
+const createTeamPanel = createHalftimeTeamPanel;
 
 function formatStoryText(story: HalftimeStory | null, match: MatchSnapshot): string {
   if (!story) {
