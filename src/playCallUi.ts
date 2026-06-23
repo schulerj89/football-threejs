@@ -20,6 +20,7 @@ export class PlayCallUi {
   readonly root: HTMLDivElement;
   private enabled = false;
   private readonly grid: HTMLDivElement;
+  private readonly hint: HTMLSpanElement;
   private lastRenderKey = '';
   private pendingSelectedPlayId: string | null = null;
   private selectionLocked = false;
@@ -38,9 +39,9 @@ export class PlayCallUi {
     header.className = 'play-call-tray-header';
     const heading = document.createElement('h2');
     heading.textContent = 'Choose a Play';
-    const hint = document.createElement('span');
-    hint.textContent = 'Click or press 1-6';
-    header.append(heading, hint);
+    this.hint = document.createElement('span');
+    this.syncShortcutHint();
+    header.append(heading, this.hint);
     this.root.appendChild(header);
 
     this.grid = document.createElement('div');
@@ -60,6 +61,7 @@ export class PlayCallUi {
 
   setPlays(plays: PlayDefinition[]): void {
     this.plays = plays;
+    this.syncShortcutHint();
     this.lastRenderKey = '';
     this.pendingSelectedPlayId = null;
     this.currentPreSnapKey = null;
@@ -167,6 +169,10 @@ export class PlayCallUi {
     );
 
     this.grid.replaceChildren(...cards);
+  }
+
+  private syncShortcutHint(): void {
+    this.hint.textContent = `Click or press 1-${this.plays.length}`;
   }
 
   private scrollSelectedCardIntoView(): void {

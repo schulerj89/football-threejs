@@ -125,7 +125,7 @@ describe('play call diagrams', () => {
 
   it('preserves route break order for multi-segment 11v11 pass routes', () => {
     const snapPlacement = createCenterSnapPlacement(INITIAL_BALL_SPOT);
-    for (const playId of ['spread-quick-11', 'twin-slants-11', 'curl-flat-11'] as const) {
+    for (const playId of ['spread-quick-11', 'twin-slants-11', 'curl-flat-11', 'four-verts-out-flat-11'] as const) {
       const play = getPlay(playId);
       const diagram = createPlayCallDiagramModel(play, snapPlacement);
 
@@ -205,7 +205,7 @@ describe('play call diagrams', () => {
   });
 
   it('draws added 11v11 passing plays from real route and protection data', () => {
-    for (const playId of ['twin-slants-11', 'curl-flat-11'] as const) {
+    for (const playId of ['twin-slants-11', 'curl-flat-11', 'four-verts-out-flat-11'] as const) {
       const play = getPlay(playId);
 
       for (const snapPlacement of createSnapPlacements()) {
@@ -258,7 +258,13 @@ describe('play call diagrams', () => {
     }
   });
 
-  it('uses desktop 3 by 2 layout metadata for six cards and horizontal scroll on small screens', () => {
+  it('uses desktop grid layout metadata for seven cards and horizontal scroll on small screens', () => {
+    expect(resolvePlayCallTrayLayout(1280, 7)).toEqual({
+      cardCount: 7,
+      columns: 3,
+      mode: 'desktopGrid',
+      rows: 3,
+    });
     expect(resolvePlayCallTrayLayout(1280, 6)).toEqual({
       cardCount: 6,
       columns: 3,
@@ -271,6 +277,12 @@ describe('play call diagrams', () => {
       mode: 'horizontalScroll',
       rows: 1,
     });
+    expect(resolvePlayCallTrayLayout(390, 7)).toEqual({
+      cardCount: 7,
+      columns: 7,
+      mode: 'horizontalScroll',
+      rows: 1,
+    });
   });
 
   it('creates accessible play-card labels with shortcut and run/pass context', () => {
@@ -280,6 +292,8 @@ describe('play call diagrams', () => {
       .toBe('Twin Slants 11, pass play, shortcut 5');
     expect(createPlayCardAccessibilityLabel(getPlay('curl-flat-11'), 6))
       .toBe('Curl Flat 11, pass play, shortcut 6');
+    expect(createPlayCardAccessibilityLabel(getPlay('four-verts-out-flat-11'), 7))
+      .toBe('Four Verts Out Flat 11, pass play, shortcut 7');
     expect(createPlayCardAccessibilityLabel(getPlay('inside-zone-11'), 1))
       .toBe('Inside Zone 11, run play, shortcut 1');
   });

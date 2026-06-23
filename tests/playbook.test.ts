@@ -352,7 +352,7 @@ describe('playbook', () => {
     }
   });
 
-  it('defines 11v11 as the default six-play normal playbook with preserved shortcuts', () => {
+  it('defines 11v11 as the default seven-play normal playbook with preserved shortcuts', () => {
     const plays = getAvailablePlays('11v11');
     const play = getPlay('inside-zone-11');
 
@@ -364,6 +364,7 @@ describe('playbook', () => {
       'off-tackle-11',
       'twin-slants-11',
       'curl-flat-11',
+      'four-verts-out-flat-11',
     ]);
     expect(plays.map((candidate) => candidate.id)).toEqual([
       'inside-zone-11',
@@ -372,6 +373,7 @@ describe('playbook', () => {
       'off-tackle-11',
       'twin-slants-11',
       'curl-flat-11',
+      'four-verts-out-flat-11',
     ]);
     expect(play).toMatchObject({
       ballCarrierRole: 'runner',
@@ -514,7 +516,7 @@ describe('playbook', () => {
   });
 
   it('defines added 11v11 passing plays with five ordered receivers, protection, and coverage', () => {
-    for (const playId of ['twin-slants-11', 'curl-flat-11'] as const) {
+    for (const playId of ['twin-slants-11', 'curl-flat-11', 'four-verts-out-flat-11'] as const) {
       const play = getPlay(playId);
       const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
       const assignedRushers = Object.values(play.protectionAssignments ?? {});
@@ -569,7 +571,7 @@ describe('playbook', () => {
   });
 
   it('resolves added 11v11 pass routes with ordered break points at every snap lane', () => {
-    for (const playId of ['twin-slants-11', 'curl-flat-11'] as const) {
+    for (const playId of ['twin-slants-11', 'curl-flat-11', 'four-verts-out-flat-11'] as const) {
       const play = getPlay(playId);
 
       for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
@@ -637,6 +639,38 @@ describe('playbook', () => {
       expect(Math.sign(curl!.points[0].x - snapPlacement.spot.x)).toBe(fieldDirection);
       expect(Math.sign(flat!.points[2].x - snapPlacement.spot.x)).toBe(fieldDirection);
       expect(curl!.totalLength).not.toBeCloseTo(flat!.totalLength);
+    }
+  });
+
+  it('keeps Four Verts Out Flat 11 verticals, out, and flat distinct and field-aware', () => {
+    const play = getPlay('four-verts-out-flat-11');
+
+    for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
+      const snapPlacement = createSnapPlacementForLane(lane);
+      const routes = resolveEligibleReceiverRoutes(play, snapPlacement);
+      const leftStreak = routes.find((route) => route.receiverId === 'offense-wr-left');
+      const rightStreak = routes.find((route) => route.receiverId === 'offense-wr-right');
+      const slotStreak = routes.find((route) => route.receiverId === 'offense-slot');
+      const tightEndOut = routes.find((route) => route.receiverId === 'offense-tight-end');
+      const runningBackFlat = routes.find((route) => route.receiverId === 'offense-rb');
+      const fieldDirection = lane === 'rightHash' ? -1 : 1;
+
+      for (const streak of [leftStreak, rightStreak, slotStreak]) {
+        expect(streak?.points).toHaveLength(3);
+        expect(streak!.points[1].z).toBeGreaterThan(streak!.points[0].z);
+        expect(streak!.points[2].z).toBeGreaterThan(streak!.points[1].z);
+        expect(streak!.points[2].z - streak!.points[0].z).toBeGreaterThan(17);
+        expect(Math.abs(streak!.points[2].x - streak!.points[0].x)).toBeLessThan(0.01);
+      }
+
+      expect(tightEndOut?.points).toHaveLength(3);
+      expect(runningBackFlat?.points).toHaveLength(3);
+      expect(tightEndOut!.points[1].z).toBeGreaterThan(tightEndOut!.points[0].z);
+      expect(tightEndOut!.points[2].z).toBeGreaterThan(tightEndOut!.points[0].z);
+      expect(Math.sign(tightEndOut!.points[2].x - tightEndOut!.points[0].x)).toBe(fieldDirection);
+      expect(Math.sign(runningBackFlat!.points[2].x - runningBackFlat!.points[0].x)).toBe(-fieldDirection);
+      expect(runningBackFlat!.points[2].z).toBeLessThan(tightEndOut!.points[2].z);
+      expect(tightEndOut!.totalLength).not.toBeCloseTo(runningBackFlat!.totalLength);
     }
   });
 

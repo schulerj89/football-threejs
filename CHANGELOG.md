@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.30] - 2026-06-23
+
+### Added
+
+- Added `Four Verts Out Flat 11` as shortcut 7 in the normal 11v11 playbook with three vertical streak routes, a field-side tight-end out, and a boundary running-back flat.
+
+### Changed
+
+- Updated the play-call tray shortcut hint and playbook guidance for the seven-play 11v11 playbook.
+
+### Tests
+
+- Verified `npx vitest run tests/playbook.test.ts tests/playCallDiagram.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.29] - 2026-06-23
 
 ### Fixed

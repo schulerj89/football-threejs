@@ -54,6 +54,7 @@ export type PlayId =
   | 'outside-zone-11'
   | 'outside-zone-7'
   | 'curl-flat-11'
+  | 'four-verts-out-flat-11'
   | 'quick-pass'
   | 'quick-pass-7'
   | 'slant-flat'
@@ -768,6 +769,56 @@ export const ELEVEN_ON_ELEVEN_PLAYS: PlayDefinition[] = [
     roster: ELEVEN_ON_ELEVEN_ROSTER,
     validation: elevenOnElevenFieldSideValidation(),
   },
+  {
+    ballCarrierRole: 'quarterback',
+    blockerLaneTargets: {
+      'offense-center': point(alignedTo('defense-line-middle'), defenseDepth(passProtectDepth)),
+      'offense-line-left': point(alignedTo('defense-line-left'), defenseDepth(passProtectDepth)),
+      'offense-line-right': point(alignedTo('defense-line-right'), defenseDepth(passProtectDepth)),
+      'offense-tackle-left': point(alignedTo('defense-linebacker-left'), defenseDepth(ELEVEN.linebackerDepth)),
+      'offense-tackle-right': point(alignedTo('defense-linebacker-right'), defenseDepth(ELEVEN.linebackerDepth)),
+    },
+    displayName: 'Four Verts Out Flat 11',
+    formation: createElevenOnElevenFieldPassFormation(),
+    id: 'four-verts-out-flat-11',
+    initialMovementDirection: { x: 0, z: 1 },
+    kind: 'pass',
+    pass: {
+      coverageAssignments: ELEVEN_ON_ELEVEN_PASS_COVERAGE_ASSIGNMENTS,
+      deepHelpAssignments: {
+        'defense-safety': [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
+      },
+      eligibleReceiverIds: [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
+      receiverDisplayNames: ELEVEN_ON_ELEVEN_RECEIVER_DISPLAY_NAMES,
+    },
+    playbookId: '11v11',
+    preferredSide: PLAY_SIDE,
+    protectionAssignments: ELEVEN_ON_ELEVEN_PASS_PROTECTION_ASSIGNMENTS,
+    receiverRoutes: {
+      'offense-rb': route('four-verts-out-flat-11-rb-boundary-flat', 8, [
+        waypoint('check-release', point(snapSide('boundary', 3.5), offenseDepth(1.4))),
+        waypoint('flat', point(sidelineInset('boundary', ELEVEN.receiverSidelineInset + 6), defenseDepth(4.2))),
+      ]),
+      'offense-slot': route('four-verts-out-flat-11-slot-streak', 9.75, [
+        waypoint('vertical-stem', point(alignedTo('offense-slot'), defenseDepth(8))),
+        waypoint('streak', point(alignedTo('offense-slot'), defenseDepth(18))),
+      ]),
+      'offense-tight-end': route('four-verts-out-flat-11-tight-end-field-out', 8.75, [
+        waypoint('stem', point(alignedTo('offense-tight-end'), defenseDepth(6.5))),
+        waypoint('out', point(sidelineInset('field', ELEVEN.receiverSidelineInset + 8), defenseDepth(8.2))),
+      ]),
+      'offense-wr-left': route('four-verts-out-flat-11-left-streak', 9.75, [
+        waypoint('vertical-stem', point(alignedTo('offense-wr-left'), defenseDepth(8))),
+        waypoint('streak', point(alignedTo('offense-wr-left'), defenseDepth(19))),
+      ]),
+      'offense-wr-right': route('four-verts-out-flat-11-right-streak', 9.75, [
+        waypoint('vertical-stem', point(alignedTo('offense-wr-right'), defenseDepth(8))),
+        waypoint('streak', point(alignedTo('offense-wr-right'), defenseDepth(19))),
+      ]),
+    },
+    roster: ELEVEN_ON_ELEVEN_ROSTER,
+    validation: elevenOnElevenFieldSideValidation(),
+  },
 ];
 
 export const PLAYS = SEVEN_ON_SEVEN_PLAYS;
@@ -843,7 +894,7 @@ export function createElevenOnElevenPlayForPreferredSide(
   }
 
   const usesFieldSideRunFormation = play.id === 'outside-zone-11' || play.id === 'off-tackle-11';
-  const usesFieldSidePassFormation = play.id === 'curl-flat-11';
+  const usesFieldSidePassFormation = play.id === 'curl-flat-11' || play.id === 'four-verts-out-flat-11';
   let formation: FormationSlot[];
 
   if (usesFieldSideRunFormation) {
