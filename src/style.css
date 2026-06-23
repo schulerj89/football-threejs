@@ -1559,7 +1559,7 @@ body[data-game-mode="exhibition"] .score-counter {
   direction: ltr;
 }
 
-.pregame-matchup-helmet {
+.pregame-matchup-logo-wrap {
   display: grid;
   width: 92px;
   height: 70px;
@@ -1568,9 +1568,9 @@ body[data-game-mode="exhibition"] .score-counter {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.pregame-matchup-helmet .team-helmet-badge {
-  width: 84px;
-  height: 64px;
+.pregame-matchup-logo {
+  width: 64px;
+  border-radius: 10px;
 }
 
 .pregame-matchup-team strong {

@@ -135,7 +135,12 @@ export const KICKOFF_RETURN_CONFIG = {
   maxDeltaSeconds: 1 / 15,
   minimumForcedCatchDistanceYards: 3.4,
   pursuitTackleRadiusYards: DEFENDER_CONFIG.tackleRadius,
+  receivingBlockerEngageDistanceYards: 5.25,
+  receivingBlockerProtectCarrierDistanceYards: 8.5,
   receivingBlockerSpeedYardsPerSecond: 9.5,
+  returnEscortFrontDepthYards: 8,
+  returnEscortSecondDepthYards: 5.5,
+  returnEscortWidthYards: 4.25,
   returnerAiSpeedYardsPerSecond: 12,
   returnerTrackingSpeedYardsPerSecond: 11.8,
 } as const;
@@ -482,9 +487,7 @@ function updateReleasedKickoffParticipants(
 
     const blockTargetId = participant.assignedBlockTargetVisualId;
     if (participant.phase === 'receiving') {
-      const target = blockTargetId
-        ? findParticipant(state, blockTargetId)?.position ?? state.result.target
-        : resolveReceivingSupportTarget(state, participant);
+      const target = resolveReceivingBlockerTarget(state, participant, carrier, blockTargetId);
       moveParticipantToward(
         participant,
         target,
@@ -577,6 +580,113 @@ function resolveReceivingSupportTarget(
   }
 
   return state.result.target;
+}
+
+function resolveReceivingBlockerTarget(
+  state: KickoffReturnState,
+  participant: KickoffReturnParticipantState,
+  carrier: KickoffReturnParticipantState | null,
+  blockTargetId: string | null,
+): FootballSpot {
+  const blockTarget = blockTargetId ? findParticipant(state, blockTargetId) : null;
+  if (!carrier) {
+    if (
+      blockTarget &&
+      shouldEngageAssignedCoverageBeforeCatch(participant, blockTarget, state.result.target)
+    ) {
+      return blockTarget.position;
+    }
+    return resolveReceivingSupportTarget(state, participant);
+  }
+
+  if (
+    blockTarget &&
+    shouldEngageAssignedCoverage(participant, blockTarget, carrier)
+  ) {
+    return blockTarget.position;
+  }
+
+  return resolveReturnEscortTarget(state, participant, carrier);
+}
+
+function shouldEngageAssignedCoverageBeforeCatch(
+  blocker: KickoffReturnParticipantState,
+  coverage: KickoffReturnParticipantState,
+  landingSpot: FootballSpot,
+): boolean {
+  return (
+    distanceBetween(blocker.position, coverage.position) <=
+      KICKOFF_RETURN_CONFIG.receivingBlockerEngageDistanceYards ||
+    distanceBetween(landingSpot, coverage.position) <=
+      KICKOFF_RETURN_CONFIG.receivingBlockerProtectCarrierDistanceYards
+  );
+}
+
+function shouldEngageAssignedCoverage(
+  blocker: KickoffReturnParticipantState,
+  coverage: KickoffReturnParticipantState,
+  carrier: KickoffReturnParticipantState,
+): boolean {
+  return (
+    distanceBetween(blocker.position, coverage.position) <=
+      KICKOFF_RETURN_CONFIG.receivingBlockerEngageDistanceYards ||
+    distanceBetween(carrier.position, coverage.position) <=
+      KICKOFF_RETURN_CONFIG.receivingBlockerProtectCarrierDistanceYards
+  );
+}
+
+function resolveReturnEscortTarget(
+  state: KickoffReturnState,
+  participant: KickoffReturnParticipantState,
+  carrier: KickoffReturnParticipantState,
+): FootballSpot {
+  const receivingDirection = invertDirection(state.direction);
+  const slotOffset = resolveReceivingEscortSlotOffset(participant.slotId);
+  const depth = resolveReceivingEscortDepth(participant.slotId);
+
+  return {
+    x: clampX(carrier.position.x + slotOffset, state.fieldBounds),
+    z: clampZ(carrier.position.z + receivingDirection * depth, state.fieldBounds),
+  };
+}
+
+function resolveReceivingEscortSlotOffset(slotId: KickoffReturnParticipantState['slotId']): number {
+  switch (slotId) {
+    case 'front-line-left-2':
+      return -2 * KICKOFF_RETURN_CONFIG.returnEscortWidthYards;
+    case 'front-line-left-1':
+    case 'second-line-left-2':
+      return -KICKOFF_RETURN_CONFIG.returnEscortWidthYards;
+    case 'front-line-right-1':
+    case 'second-line-right-2':
+      return KICKOFF_RETURN_CONFIG.returnEscortWidthYards;
+    case 'front-line-right-2':
+      return 2 * KICKOFF_RETURN_CONFIG.returnEscortWidthYards;
+    case 'second-line-left-1':
+      return -0.45 * KICKOFF_RETURN_CONFIG.returnEscortWidthYards;
+    case 'second-line-right-1':
+      return 0.45 * KICKOFF_RETURN_CONFIG.returnEscortWidthYards;
+    case 'returner-left':
+      return stateLaneSideOffset(-1);
+    case 'returner-right':
+      return stateLaneSideOffset(1);
+    default:
+      return 0;
+  }
+}
+
+function stateLaneSideOffset(side: -1 | 1): number {
+  return side * 0.8 * KICKOFF_RETURN_CONFIG.returnEscortWidthYards;
+}
+
+function resolveReceivingEscortDepth(slotId: KickoffReturnParticipantState['slotId']): number {
+  if (slotId.startsWith('front-line-')) {
+    return KICKOFF_RETURN_CONFIG.returnEscortFrontDepthYards;
+  }
+  if (slotId.startsWith('second-line-')) {
+    return KICKOFF_RETURN_CONFIG.returnEscortSecondDepthYards;
+  }
+  return KICKOFF_RETURN_CONFIG.leadBlockOffsetZ;
 }
 
 function resolveAiReturnInput(

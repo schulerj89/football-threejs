@@ -29,6 +29,7 @@ import {
 } from '../../src/match/FieldPositionModel';
 import { resolveKickoffPresentationRoster } from '../../src/specialTeams/SpecialTeamsLineupResolver';
 import {
+  KICKOFF_RETURN_CONFIG,
   createKickoffReturnState,
   resolveAssignedKickReturner,
   startKickoffRunUp,
@@ -376,6 +377,39 @@ describe('kickoff match flow', () => {
       .toBe(state.blockerAssignments.length);
     expect(new Set(state.blockerAssignments.map((assignment) => assignment.coverageVisualId)).size)
       .toBe(state.blockerAssignments.length);
+  });
+
+  it('keeps receiving blockers in visible escort lanes during the automated return', () => {
+    const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
+    const kickoff = createKickoffStateForTeam('opponent', 153, { kickPower: 20 });
+    const layout = createKickoffFormation(kickoff, binding);
+    const state = createKickoffReturnState({ kickoff, layout, matchSeed: 153 });
+
+    startKickoffRunUp(state);
+    for (
+      let frame = 0;
+      frame < 600 && state.phase !== 'returnLive' && state.phase !== 'dead';
+      frame += 1
+    ) {
+      updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+    }
+    for (let frame = 0; frame < 18 && state.phase === 'returnLive'; frame += 1) {
+      updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+    }
+
+    const carrier = state.participants.find((participant) =>
+      participant.visualId === state.carrierVisualId);
+    const receivingBlockers = state.participants.filter((participant) =>
+      participant.phase === 'receiving' && participant.visualId !== state.carrierVisualId);
+    const escortingBlockers = receivingBlockers.filter((participant) =>
+      carrier &&
+      Math.hypot(participant.position.x - carrier.position.x, participant.position.z - carrier.position.z) <=
+        KICKOFF_RETURN_CONFIG.returnEscortFrontDepthYards + KICKOFF_RETURN_CONFIG.returnEscortWidthYards * 2.5);
+
+    expect(state.phase).toBe('returnLive');
+    expect(carrier).toBeDefined();
+    expect(receivingBlockers).toHaveLength(10);
+    expect(escortingBlockers.length).toBeGreaterThanOrEqual(8);
   });
 
   it('starts the clock on legal touch and resolves a fielded return to the exact dead-ball spot', () => {

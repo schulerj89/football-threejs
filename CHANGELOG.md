@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.9] - 2026-06-23
+
+### Changed
+
+- Kept receiving blockers visible during automated kickoff returns by moving them into deterministic escort lanes instead of letting them disappear into distant coverage assignments.
+- Updated the pregame team-intro matchup overlay to show the registered team logos instead of generic helmet badges.
+
+### Tests
+
+- Verified `npx vitest run tests/specialTeams/kickoff.test.ts tests/specialTeams/placeKick.test.ts`, `npx vitest run tests/pregamePresentation.test.ts tests/specialTeams/kickoff.test.ts`, and `npm run build`.
+
 ## [1.21.8] - 2026-06-23
 
 ### Changed

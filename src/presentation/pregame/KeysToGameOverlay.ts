@@ -1,5 +1,6 @@
 import { getReadableTextColor, type TeamPresentationTheme } from '../../teams/TeamThemeApplier';
-import { createTeamHelmetBadge, syncTeamHelmetBadge } from '../../ui/TeamHelmetBadge';
+import { DEFAULT_OPPONENT_TEAM_ID, DEFAULT_USER_TEAM_ID, getTeamProfileOrDefault } from '../../teams/TeamRegistry';
+import { createTeamLogoBadge, type TeamLogoBadge } from '../../ui/TeamLogoBadge';
 import type { MatchSnapshot } from '../../match/MatchTypes';
 import type { KeyToGame } from './KeysToGameResolver';
 import type { PregamePresentationSnapshot } from './PregamePresentationTypes';
@@ -23,28 +24,14 @@ export class KeysToGameOverlay {
 
   private readonly matchupCard = document.createElement('section');
   private readonly keysCard = document.createElement('section');
-  private readonly userHelmet = createTeamHelmetBadge({
-    faceguard: '#d7dcdf',
-    helmetShell: '#365fd8',
-    jersey: '#365fd8',
-    number: '#f7fbf8',
-    pants: '#f7fbf8',
-    shoe: '#101512',
-    shoulder: '#24408a',
-    socks: '#f7fbf8',
-    stripe: '#f7fbf8',
-  });
-  private readonly opponentHelmet = createTeamHelmetBadge({
-    faceguard: '#d7dcdf',
-    helmetShell: '#b92f32',
-    jersey: '#b92f32',
-    number: '#f7fbf8',
-    pants: '#f7fbf8',
-    shoe: '#101512',
-    shoulder: '#7f1f22',
-    socks: '#f7fbf8',
-    stripe: '#f7fbf8',
-  });
+  private readonly userLogo = createTeamLogoBadge(
+    getTeamProfileOrDefault(DEFAULT_USER_TEAM_ID),
+    'team-logo-badge pregame-matchup-logo',
+  );
+  private readonly opponentLogo = createTeamLogoBadge(
+    getTeamProfileOrDefault(DEFAULT_OPPONENT_TEAM_ID),
+    'team-logo-badge pregame-matchup-logo',
+  );
   private snapshot: KeysToGameOverlaySnapshot = {
     keyCount: 0,
     mode: 'hidden',
@@ -107,16 +94,16 @@ export class KeysToGameOverlay {
   private syncMatchupCard(options: KeysToGameOverlayUpdateOptions): void {
     const user = options.matchSnapshot?.userTeam ?? options.teamTheme.offense.profile;
     const opponent = options.matchSnapshot?.opponentTeam ?? options.teamTheme.defense.profile;
-    syncTeamHelmetBadge(this.userHelmet, options.teamTheme.offense.uniform);
-    syncTeamHelmetBadge(this.opponentHelmet, options.teamTheme.defense.uniform);
+    this.userLogo.sync(user);
+    this.opponentLogo.sync(opponent);
     this.matchupCard.style.setProperty('--pregame-user-accent', options.teamTheme.offense.profile.colors.primary);
     this.matchupCard.style.setProperty('--pregame-user-text', getReadableTextColor(options.teamTheme.offense.profile.colors.primary));
     this.matchupCard.style.setProperty('--pregame-opponent-accent', options.teamTheme.defense.profile.colors.primary);
     this.matchupCard.style.setProperty('--pregame-opponent-text', getReadableTextColor(options.teamTheme.defense.profile.colors.primary));
     this.matchupCard.replaceChildren(
-      createTeamPanel(this.userHelmet, user.displayName, user.abbreviation, 'user'),
+      createTeamPanel(this.userLogo, user.displayName, user.abbreviation, 'user'),
       createVsElement(),
-      createTeamPanel(this.opponentHelmet, opponent.displayName, opponent.abbreviation, 'opponent'),
+      createTeamPanel(this.opponentLogo, opponent.displayName, opponent.abbreviation, 'opponent'),
       createMetaRow(`Weather: ${options.pregameSnapshot.weatherCondition.toUpperCase()}`, options.stadiumName ?? 'Football JS Stadium'),
     );
   }
@@ -137,23 +124,23 @@ export class KeysToGameOverlay {
 }
 
 function createTeamPanel(
-  helmet: SVGSVGElement,
+  logo: TeamLogoBadge,
   name: string,
   abbreviation: string,
   side: 'opponent' | 'user',
 ): HTMLElement {
   const panel = document.createElement('div');
   panel.className = `pregame-matchup-team pregame-matchup-team-${side}`;
-  const helmetWrap = document.createElement('div');
-  helmetWrap.className = 'pregame-matchup-helmet';
-  helmetWrap.append(helmet);
+  const logoWrap = document.createElement('div');
+  logoWrap.className = 'pregame-matchup-logo-wrap';
+  logoWrap.append(logo.root);
   const text = document.createElement('div');
   const teamName = document.createElement('strong');
   teamName.textContent = name;
   const teamAbbreviation = document.createElement('span');
   teamAbbreviation.textContent = abbreviation;
   text.append(teamName, teamAbbreviation);
-  panel.append(helmetWrap, text);
+  panel.append(logoWrap, text);
   return panel;
 }
 
