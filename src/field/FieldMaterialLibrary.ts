@@ -17,6 +17,7 @@ const FIELD_MATERIAL_KEYS = [
   'line',
   'number',
   'playableField',
+  'pylon',
   'scrimmage',
   'sidelineApron',
   'teamBox',
@@ -42,6 +43,7 @@ export class FieldMaterialLibrary {
   readonly line = new THREE.MeshBasicMaterial({ color: 0xf0f2ef });
   readonly number = new THREE.MeshBasicMaterial({ color: 0xf4f6f2 });
   readonly playableField = new THREE.MeshLambertMaterial({ color: 0x47544a });
+  readonly pylon = new THREE.MeshLambertMaterial({ color: 0xff6a00 });
   readonly scrimmage = new THREE.MeshBasicMaterial({ color: 0x38a3ff });
   readonly sidelineApron = new THREE.MeshLambertMaterial({ color: 0x30383d });
   readonly teamBox = new THREE.MeshBasicMaterial({ color: 0xd8ded8 });

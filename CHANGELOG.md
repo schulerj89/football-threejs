@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.16] - 2026-06-23
+
+### Changed
+
+- Consolidated normal matchup selection into the Play Now flow, removed the duplicate Match Setup screen, and kept roster/team overview browsing separate from active matchup state.
+- Reworked Match Setup/Play Now helmet previews around the shared helmet asset path with corrected shell, facemask, normals, and team-color material handling.
+- Updated coin-toss captain staging to use stable roster-backed full player visuals with correct spacing, helmets, faceguards, and no normal officials.
+- Added deterministic match-seed generation for exhibition flow and voice/presentation selection stability.
+
+### Fixed
+
+- Rounded player-facing football yardage so down-distance and gained-yard text no longer show decimal yards.
+- Let touchdown scorers visibly enter the end zone while preserving the official goal-line touchdown spot and yardage.
+- Added mathematically placed rectangular end-zone pylons at every goal-line and end-line sideline corner.
+
+### Tests
+
+- Verified `npx vitest run tests/playState.test.ts tests/fieldSpec.test.ts tests/fieldGeometry.test.ts tests/playerSimulation.test.ts`, `npx vitest run tests/fieldSpec.test.ts tests/fieldGeometry.test.ts`, `npx vitest run tests/broadcastScorebug.test.ts`, `npx tsc --noEmit`, and `npm run build`.
+
 ## [1.21.15] - 2026-06-23
 
 ### Changed

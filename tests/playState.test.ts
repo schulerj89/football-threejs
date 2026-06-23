@@ -1649,6 +1649,9 @@ describe('play state transitions', () => {
       endingBallSpot: { z: GAMEPLAY_CONFIG.opposingGoalLineZ },
       type: 'touchdown',
     });
+    expect(gameplay.player.position.z).toBeGreaterThan(
+      GAMEPLAY_CONFIG.opposingGoalLineZ,
+    );
     const officialYards = result?.yardsGained;
 
     for (let step = 0; step < 60; step += 1) {

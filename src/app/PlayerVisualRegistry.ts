@@ -4,6 +4,7 @@ import {
   getRosterPlayerForGameplayId,
   type GameplayRosterBinding,
 } from '../roster/GameplayRosterBinding';
+import type { RosterPlayer } from '../roster/RosterPlayer';
 import {
   DEFAULT_PLAYER_TEAM_UNIFORMS,
   getPlayerBodyVisualSnapshot,
@@ -81,17 +82,18 @@ export class PlayerVisualRegistry {
 
     for (const player of players) {
       let resource = this.resources.get(player.id);
+      const rosterPlayer = this.resolveRosterPlayer(player);
       if (!resource) {
         resource = createFootballPlayerVisual(
           {
-            appearanceId: player.id,
+            appearanceId: rosterPlayer?.appearanceId ?? player.id,
             footballPosition: 'UNKNOWN',
             gameplayPlayerId: player.id,
             gameplayTeam: player.team,
             presentationOnly: false,
             role: player.role,
-            jerseyNumber: this.resolveJerseyNumber(player),
-            rosterPlayerId: this.resolveRosterPlayerId(player),
+            jerseyNumber: rosterPlayer?.jerseyNumber ?? null,
+            rosterPlayerId: rosterPlayer?.id ?? player.id,
             teamSide: player.team === 'offense' ? 'user' : 'opponent',
             uniform: this.options.teamUniforms?.[player.team] ?? DEFAULT_PLAYER_TEAM_UNIFORMS[player.team],
             visualId: player.id,
@@ -109,19 +111,22 @@ export class PlayerVisualRegistry {
       resource.syncWithPlayerModel(
         player,
         this.options.teamUniforms,
-        this.resolveJerseyNumber(player),
-        this.resolveRosterPlayerId(player),
+        rosterPlayer?.jerseyNumber ?? null,
+        rosterPlayer?.id ?? player.id,
+        rosterPlayer?.appearanceId ?? player.id,
       );
     }
   }
 
   sync(players: readonly PlayerModel[]): void {
     for (const player of players) {
+      const rosterPlayer = this.resolveRosterPlayer(player);
       this.resources.get(player.id)?.syncWithPlayerModel(
         player,
         this.options.teamUniforms,
-        this.resolveJerseyNumber(player),
-        this.resolveRosterPlayerId(player),
+        rosterPlayer?.jerseyNumber ?? null,
+        rosterPlayer?.id ?? player.id,
+        rosterPlayer?.appearanceId ?? player.id,
       );
     }
   }
@@ -145,15 +150,9 @@ export class PlayerVisualRegistry {
     this.visuals.clear();
   }
 
-  private resolveRosterPlayerId(player: PlayerModel): string {
+  private resolveRosterPlayer(player: PlayerModel): RosterPlayer | null {
     return this.rosterBinding
-      ? getRosterPlayerForGameplayId(this.rosterBinding, player.id)?.id ?? player.id
-      : player.id;
-  }
-
-  private resolveJerseyNumber(player: PlayerModel): number | null {
-    return this.rosterBinding
-      ? getRosterPlayerForGameplayId(this.rosterBinding, player.id)?.jerseyNumber ?? null
+      ? getRosterPlayerForGameplayId(this.rosterBinding, player.id)
       : null;
   }
 }

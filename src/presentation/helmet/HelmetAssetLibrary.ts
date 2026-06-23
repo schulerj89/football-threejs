@@ -3,6 +3,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { PlayerTeam } from '../../playerModel';
 import { getUniformColorNumber } from '../../teams/TeamThemeApplier';
 import type { UniformPalette } from '../../teams/UniformPalette';
+import {
+  createHelmetMaterialCacheKey,
+  getHelmetRuntimeMaterial,
+  normalizeMaterialHex,
+} from './HelmetMaterialLibrary';
 
 export type HelmetAssetStatus = 'idle' | 'loading' | 'loaded' | 'error';
 export type HelmetPart = 'accent' | 'faceguard' | 'shell';
@@ -67,7 +72,6 @@ const helmetAssetState: HelmetAssetLoadSnapshot = {
 };
 
 const loader = new GLTFLoader();
-const helmetMaterialCache = new Map<string, THREE.Material>();
 let helmetTemplatePromise: Promise<THREE.Group> | null = null;
 
 export async function loadHelmetTemplate(): Promise<THREE.Group> {
@@ -152,7 +156,7 @@ export function findHelmetPartMeshes(root: THREE.Object3D): HelmetPartMeshes {
 export function applyHelmetUniformMaterials(
   parts: HelmetPartMeshes,
   uniform: UniformPalette,
-  materialScope: string,
+  materialScope = '',
 ): void {
   for (const shellMesh of parts.shellMeshes) {
     assignUniformMaterial(shellMesh, 'shell', uniform, materialScope);
@@ -211,37 +215,24 @@ function assignUniformMaterial(
   materialScope: string,
 ): void {
   const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-  const assignedMaterials = materials.map((material) =>
-    getUniformMaterial(material, part, uniform, materialScope),
+  const assignedMaterials = materials.map(() =>
+    getUniformMaterial(part, uniform, materialScope),
   );
 
   mesh.material = Array.isArray(mesh.material) ? assignedMaterials : assignedMaterials[0];
 }
 
 function getUniformMaterial(
-  sourceMaterial: THREE.Material,
   part: HelmetPart,
   uniform: UniformPalette,
-  materialScope: string,
+  _materialScope: string,
 ): THREE.Material {
   const color = resolveHelmetPartColor(part, uniform);
-  const cacheKey = `${materialScope}:${part}:${color}:${sourceMaterial.uuid}`;
-  const cachedMaterial = helmetMaterialCache.get(cacheKey);
-
-  if (cachedMaterial) {
-    return cachedMaterial;
-  }
-
-  const material = sourceMaterial.clone();
-
-  if ('color' in material && material.color instanceof THREE.Color) {
-    material.color.setHex(color);
-  }
-
-  material.name = `${HELMET_ASSET_ID}-${materialScope}-${part}`;
-  material.needsUpdate = true;
-  helmetMaterialCache.set(cacheKey, material);
-  return material;
+  const component = part === 'faceguard' ? 'faceguard' : 'shell';
+  return getHelmetRuntimeMaterial({
+    color,
+    component,
+  });
 }
 
 function resolveHelmetPartColor(part: HelmetPart, uniform: UniformPalette): number {
@@ -249,11 +240,12 @@ function resolveHelmetPartColor(part: HelmetPart, uniform: UniformPalette): numb
     return getUniformColorNumber(uniform.faceguard);
   }
 
-  if (part === 'accent') {
-    return getUniformColorNumber(uniform.stripe);
-  }
-
   return getUniformColorNumber(uniform.helmetShell);
+}
+
+export function createHelmetRuntimeMaterialKey(part: HelmetPart, uniform: UniformPalette): string {
+  const component = part === 'faceguard' ? 'faceguard' : 'shell';
+  return createHelmetMaterialCacheKey(component, normalizeMaterialHex(resolveHelmetPartColor(part, uniform)));
 }
 
 function findMeshes(root: THREE.Object3D): THREE.Mesh[] {

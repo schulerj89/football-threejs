@@ -1106,10 +1106,10 @@ interface GameExperienceSnapshot {
   queryOverrides: Partial<GameExperienceSettingsSnapshot>;
 }
 
-test('shows the title screen, opens football hub and match setup, and holds gameplay until Play Game', async ({ page }) => {
+test('shows the title screen, opens football hub, and starts pregame from Play Now', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('/?matchSeed=20260620');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.title-screen')).toBeVisible();
   await expect(page.locator('.title-content h1')).toHaveText('Football JS');
@@ -1161,7 +1161,6 @@ test('shows the title screen, opens football hub and match setup, and holds game
   ).toBe(true);
   await expect(page.locator('.football-hub-nav button')).toHaveText([
     'Play Now',
-    'Teams',
     'Rosters',
     'Settings',
   ]);
@@ -1195,33 +1194,32 @@ test('shows the title screen, opens football hub and match setup, and holds game
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('ST');
   await expect(page.locator('.football-hub-helmet-preview')).toHaveCount(3);
   await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Teams' }).click();
-  await expect(page.locator('.football-hub-team-row')).toHaveCount(6);
-  await expect(page.locator('.football-hub-team-overview')).toContainText('Top strengths');
   await page.getByRole('button', { name: 'Rosters' }).click();
+  await expect(page.locator('.football-hub-team-row')).toHaveCount(0);
+  await expect(page.locator('.football-hub-team-overview')).toContainText('Top strengths');
+  await expect(page.locator('.football-hub-team-overview')).toContainText('Watch areas');
+  await expect(page.locator('.football-hub-team-overview')).toContainText('Starting QB');
+  await expect(page.locator('.football-hub-team-summary-metrics')).toContainText('Passing');
+  await expect(page.locator('.football-hub-team-summary-metrics')).toContainText('Special Teams');
+  await expect(page.locator('.football-hub-color-swatch')).toHaveCount(3);
+  await expect(page.getByLabel('Roster team')).toBeVisible();
   await expect(page.locator('.football-hub-roster-table tbody tr')).toHaveCount(11);
   await expect(page.locator('.football-hub-player-detail')).toContainText('OVR');
+  await expect(page.locator('.football-hub-player-detail')).toContainText('starter');
   await page.getByRole('tab', { name: 'Specialists' }).click();
   await expect(page.locator('.football-hub-roster-table tbody tr')).toHaveCount(10);
   await page.getByRole('button', { name: 'Play Now' }).click();
-  await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
-  await expect(page.locator('.match-setup-screen')).toBeVisible();
-  await expect(page.locator('body[data-app-phase="matchSetup"]')).toBeAttached();
-  await expect(page.locator('.gameplay-hud')).toBeHidden();
-  await expect(page.locator('.play-call-ui')).toBeHidden();
-  await expect(page.locator('.match-team-card')).toHaveCount(2);
-  await expect(page.locator('.match-setup-customize')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Your Team' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Opponent' })).toBeVisible();
-  await expect(page.locator('.match-team-card[data-side="user"] .match-team-display-name')).toBeVisible();
-  await expect(page.locator('.match-team-card[data-side="opponent"] .match-team-display-name')).toBeVisible();
-  await expect(page.locator('.matchup-summary')).toContainText('Weather: CLEAR');
-  await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-preview')).toBeVisible();
-  await expect(page.locator('.match-team-card[data-side="opponent"] .team-helmet-preview')).toBeVisible();
+  await expect(page.locator('.match-setup-screen')).toHaveCount(0);
+  await expect(page.getByLabel('Your team')).toBeVisible();
+  await expect(page.getByLabel('Opponent team')).toBeVisible();
+  await expect(page.getByLabel('Your uniform')).toBeVisible();
+  await expect(page.getByLabel('Opponent uniform')).toBeVisible();
+  await expect(page.locator('.football-hub-play-team[data-side="user"] .football-hub-play-team-qb')).toContainText(/^QB #\d+ .+/);
+  await expect(page.locator('.football-hub-play-team[data-side="opponent"] .football-hub-play-team-qb')).toContainText(/^QB #\d+ .+/);
   await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(1);
   await expect.poll(() => getStageVisualMatrixSnapshot(page)).toMatchObject({
     activePrimaryGroups: [],
-    appPhase: 'matchSetup',
+    appPhase: 'footballHub',
     conflictingPrimaryGroups: [],
     fieldGoalFixture: {
       family: 'fieldGoal',
@@ -1235,65 +1233,43 @@ test('shows the title screen, opens football hub and match setup, and holds game
     previewCanvasCount: 1,
     profileId: 'football-player-v1',
   });
-  await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-badge')).toHaveCount(1);
   await expect.poll(async () =>
-    page.locator('.match-team-card[data-side="user"] .team-helmet-preview').getAttribute('data-preview'),
+    page.locator('.football-hub-play-team[data-side="user"] .football-hub-helmet-preview').getAttribute('data-preview'),
   { timeout: 5000 }).toBe('glb');
-  await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-badge')).toHaveAttribute('aria-hidden', 'true');
   const registeredTeamNames = listTeamProfiles().map((profile) => profile.displayName);
-  await expect(page.locator('.match-team-card[data-side="user"] select').first().locator('option'))
+  await expect(page.getByLabel('Your team').locator('option'))
     .toHaveText(registeredTeamNames);
-  await expect(page.locator('.match-team-card[data-side="opponent"] select').first().locator('option'))
+  await expect(page.getByLabel('Opponent team').locator('option'))
     .toHaveText(registeredTeamNames);
-  const userTeamSelectWidth = await page.locator('.match-team-card[data-side="user"] select').first().evaluate(
+  const userTeamSelectWidth = await page.getByLabel('Your team').evaluate(
     (element) => element.getBoundingClientRect().width,
   );
   expect(userTeamSelectWidth).toBeGreaterThanOrEqual(200);
-  await expect(page.locator('.match-team-card[data-side="user"] .match-team-quarterback')).toContainText(/^QB .+ #\d+$/);
-  const userHelmetShell = await page.locator('.match-team-card[data-side="user"] .team-helmet-badge').evaluate((element) =>
-    getComputedStyle(element).getPropertyValue('--helmet-shell').trim(),
-  );
-  await expect(page.locator('.match-team-card[data-side="user"] .match-team-swatch[aria-label^="Helmet"]')).toHaveAttribute(
-    'aria-label',
-    new RegExp(userHelmetShell.replace('#', '#')),
-  );
-  const userTeamSelect = page.locator('.match-team-card[data-side="user"] select').first();
-  const opponentTeamSelect = page.locator('.match-team-card[data-side="opponent"] select').first();
+  const userTeamSelect = page.getByLabel('Your team');
+  const opponentTeamSelect = page.getByLabel('Opponent team');
   const originalUserTeam = await userTeamSelect.inputValue();
-  await page.getByRole('button', { name: 'Next Your Team team' }).click();
+  await page.getByRole('button', { name: 'Next user' }).click();
   await expect(userTeamSelect).not.toHaveValue(originalUserTeam);
-  await page.getByRole('button', { name: 'Previous Your Team team' }).click();
+  await page.getByRole('button', { name: 'Previous user' }).click();
   await expect(userTeamSelect).toHaveValue(originalUserTeam);
-  const userUniformSelect = page.locator('.match-team-card[data-side="user"] select').nth(1);
-  await page.getByRole('button', { name: 'Next Your Team uniform' }).click();
+  const userUniformSelect = page.getByLabel('Your uniform');
+  await userUniformSelect.selectOption('away');
   await expect(userUniformSelect).toHaveValue('away');
-  const awayHelmetShell = await page.locator('.match-team-card[data-side="user"] .team-helmet-badge').evaluate((element) =>
-    getComputedStyle(element).getPropertyValue('--helmet-shell').trim(),
-  );
-  await expect(page.locator('.match-team-card[data-side="user"] .match-team-swatch[aria-label^="Helmet"]')).toHaveAttribute(
-    'aria-label',
-    new RegExp(awayHelmetShell.replace('#', '#')),
-  );
-  await page.getByRole('button', { name: 'Previous Your Team uniform' }).click();
+  await userUniformSelect.selectOption('home');
   await expect(userUniformSelect).toHaveValue('home');
   const originalOpponentTeam = await opponentTeamSelect.inputValue();
   await opponentTeamSelect.selectOption(await userTeamSelect.inputValue());
   await expect(page.getByRole('button', { name: 'Play Game' })).toBeDisabled();
-  await expect(page.locator('.matchup-summary-warning')).toContainText('Choose two different teams.');
+  await expect(page.locator('.football-hub-play-validation')).toContainText('Choose two different teams.');
   await opponentTeamSelect.selectOption(originalOpponentTeam);
   await expect(page.getByRole('button', { name: 'Play Game' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Back' }).click();
-  await expect(page.locator('.match-setup-screen')).toBeHidden();
-  await expect(page.locator('.football-hub-screen')).toBeVisible();
   await page.locator('.football-hub-screen').getByRole('button', { name: 'Back' }).click();
   await expect(page.locator('.football-hub-screen')).toBeHidden();
   await expect(page.locator('.title-screen')).toBeVisible();
   await page.getByRole('button', { name: 'Start Game' }).click();
   await expect(page.locator('.football-hub-screen')).toBeVisible();
   await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
-  await expect(page.locator('.match-setup-screen')).toBeVisible();
-  await page.locator('.match-setup-screen').getByRole('button', { name: 'Play Game' }).click();
-  await expect(page.locator('.match-setup-screen')).toBeHidden();
+  await expect(page.locator('.match-setup-screen')).toHaveCount(0);
   await expect(page.locator('body[data-app-phase="pregamePresentation"]')).toBeAttached();
   await expect(page.locator('.gameplay-hud')).toBeHidden();
   await expect(page.locator('.play-call-ui')).toBeHidden();
@@ -1669,21 +1645,19 @@ test('keeps the gameplay camera still while scrolling pause settings', async ({ 
   expect(vector3Distance(after.targetPosition, before.targetPosition)).toBeLessThan(0.001);
 });
 
-test('keeps the gameplay camera still while using match setup', async ({ page }) => {
+test('keeps the gameplay camera still while using Play Now matchup controls', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 620 });
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.getByRole('button', { name: 'Start Game' }).click();
   await expect(page.locator('.football-hub-screen')).toBeVisible();
-  await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
-  const panel = page.locator('.match-setup-panel');
-  await expect(page.locator('.match-setup-screen')).toBeVisible();
+  const panel = page.locator('.football-hub-panel');
   await expect(panel).toBeVisible();
   await page.waitForTimeout(100);
 
   const before = await getCameraSnapshot(page);
-  await page.getByRole('button', { name: 'Next Your Team team' }).click();
+  await page.getByRole('button', { name: 'Next user' }).click();
   await panel.hover();
   await page.mouse.wheel(0, 520);
   await page.waitForTimeout(500);
@@ -1693,7 +1667,7 @@ test('keeps the gameplay camera still while using match setup', async ({ page })
   expect(vector3Distance(after.targetPosition, before.targetPosition)).toBeLessThan(0.001);
 });
 
-test('cycles title and match setup without exposing debug helpers', async ({ page }) => {
+test('cycles title and football hub without exposing debug helpers', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
@@ -1704,14 +1678,12 @@ test('cycles title and match setup without exposing debug helpers', async ({ pag
     await expect(page.locator('.football-hub-screen')).toBeVisible();
     await expect(page.locator('body[data-app-phase="footballHub"]')).toBeAttached();
     await expectNoDebugHelpers(page);
-    await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
-    await expect(page.locator('.match-setup-screen')).toBeVisible();
-    await expect(page.locator('body[data-app-phase="matchSetup"]')).toBeAttached();
+    await page.locator('.football-hub-nav').getByRole('button', { name: 'Rosters' }).click();
+    await expect(page.locator('.football-hub-team-overview')).toBeVisible();
+    await page.locator('.football-hub-nav').getByRole('button', { name: 'Play Now' }).click();
+    await expect(page.locator('.football-hub-play-team')).toHaveCount(2);
     await expectNoDebugHelpers(page);
 
-    await page.getByRole('button', { name: 'Back' }).click();
-    await expect(page.locator('.football-hub-screen')).toBeVisible();
-    await expect(page.locator('body[data-app-phase="footballHub"]')).toBeAttached();
     await page.locator('.football-hub-screen').getByRole('button', { name: 'Back' }).click();
     await expect(page.locator('.title-screen')).toBeVisible();
     await expect(page.locator('body[data-app-phase="title"]')).toBeAttached();
@@ -1732,8 +1704,7 @@ test('starts the performance preset without visual crowd or cinematics', async (
   await hubSettings.getByLabel('Presentation preset').selectOption('performance');
   await page.locator('.football-hub-nav').getByRole('button', { name: 'Play Now' }).click();
   await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
-  await expect(page.locator('.match-setup-screen')).toBeVisible();
-  await page.locator('.match-setup-screen').getByRole('button', { name: 'Play Game' }).click();
+  await expect(page.locator('.match-setup-screen')).toHaveCount(0);
 
   await expect(page.locator('.title-screen')).toBeHidden();
   const experience = await getGameExperienceSnapshot(page);

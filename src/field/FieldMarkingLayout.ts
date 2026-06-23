@@ -27,6 +27,8 @@ export const AUDIT_Y = 0.2;
 export const AUDIT_LINE_HEIGHT = 0.05;
 export const AUDIT_LINE_WIDTH = 0.18;
 export const AUDIT_CORNER_SIZE = 0.8;
+export const PYLON_HEIGHT = 1.35;
+export const PYLON_WIDTH = 0.42;
 
 export const PRESENTATION_CONFIG = {
   groundMargin: 28,
@@ -208,6 +210,22 @@ export function createGoalpostBoxes(endLineZ: number): BoxBatchItem[] {
       size: { depth: postDepth, height: uprightHeight, width: postWidth },
     },
   ];
+}
+
+export function createEndZonePylonBoxes(layout: FieldLayout): BoxBatchItem[] {
+  return layout.pylons.map((pylon) => ({
+    center: {
+      x: pylon.center.x,
+      y: PYLON_HEIGHT / 2,
+      z: pylon.center.z,
+    },
+    id: pylon.id,
+    size: {
+      depth: PYLON_WIDTH,
+      height: PYLON_HEIGHT,
+      width: PYLON_WIDTH,
+    },
+  }));
 }
 
 export function getFieldBoundsOutlineBoxes(name: string, bounds: FieldBounds): BoxBatchItem[] {

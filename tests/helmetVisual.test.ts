@@ -6,6 +6,15 @@ import {
   findHelmetPartMeshes,
   syncHelmetTeamMaterials,
 } from '../src/helmetVisual';
+import {
+  applyHelmetUniformMaterials,
+  createHelmetRuntimeMaterialKey,
+} from '../src/presentation/helmet/HelmetAssetLibrary';
+import {
+  getHelmetMaterialCacheSnapshot,
+  getHelmetUnlitExactMaterial,
+  resetHelmetMaterialLibraryForTests,
+} from '../src/presentation/helmet/HelmetMaterialLibrary';
 import { createPlayerModel } from '../src/playerModel';
 import {
   PLAYER_BODY_ROOT_NAME,
@@ -71,9 +80,19 @@ describe('helmet visual integration', () => {
     expect(parts.faceguardMeshes).toEqual([]);
   });
 
-  it('clones and tints shell and faceguard materials independently per team', () => {
+  it('creates clean runtime shell and faceguard materials independently per team', () => {
+    resetHelmetMaterialLibraryForTests();
+    const shellTexture = new THREE.Texture();
+    const faceguardTexture = new THREE.Texture();
     const shellMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    shellMaterial.name = 'imported-shell-source';
+    shellMaterial.map = shellTexture;
+    shellMaterial.vertexColors = true;
+    shellMaterial.emissive.setHex(0xff00ff);
     const faceguardMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    faceguardMaterial.name = 'imported-faceguard-source';
+    faceguardMaterial.map = faceguardTexture;
+    faceguardMaterial.vertexColors = true;
     const shell = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), shellMaterial);
     const faceguard = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), faceguardMaterial);
 
@@ -93,6 +112,16 @@ describe('helmet visual integration', () => {
     expect((faceguard.material as THREE.MeshStandardMaterial).color.getHex()).toBe(
       HELMET_VISUAL_CONFIG.teamColors.defense.faceguard,
     );
+    expect((shell.material as THREE.MeshStandardMaterial).map).toBeNull();
+    expect((faceguard.material as THREE.MeshStandardMaterial).map).toBeNull();
+    expect((shell.material as THREE.MeshStandardMaterial).emissive.getHex()).toBe(0x000000);
+    expect((faceguard.material as THREE.MeshStandardMaterial).emissive.getHex()).toBe(0x000000);
+    expect((shell.material as THREE.MeshStandardMaterial).vertexColors).toBe(false);
+    expect((faceguard.material as THREE.MeshStandardMaterial).vertexColors).toBe(false);
+    expect((shell.material as THREE.MeshStandardMaterial).side).toBe(THREE.FrontSide);
+    expect((faceguard.material as THREE.MeshStandardMaterial).side).toBe(THREE.FrontSide);
+    expect((shell.material as THREE.MeshStandardMaterial).name).not.toContain(shellMaterial.uuid);
+    expect((faceguard.material as THREE.MeshStandardMaterial).name).not.toContain(faceguardMaterial.uuid);
   });
 
   it('uses helmet shell and faceguard colors from the active uniform palette', () => {
@@ -124,9 +153,66 @@ describe('helmet visual integration', () => {
 
     expect((shell.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0x654321);
     expect((faceguard.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0x101820);
-    expect((accent.material as THREE.MeshStandardMaterial).color.getHex()).toBe(
-      parseInt(theme.offense.uniform.stripe.slice(1), 16),
+    expect((accent.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0x654321);
+  });
+
+  it('shares cached runtime materials by component and requested color only', () => {
+    resetHelmetMaterialLibraryForTests();
+    const uniform = {
+      faceguard: '#a0a0a0',
+      helmetShell: '#112233',
+      jersey: '#ffffff',
+      number: '#112233',
+      pants: '#ffffff',
+      shoe: '#111111',
+      shoulder: '#ffffff',
+      socks: '#112233',
+      stripe: '#ff00ff',
+    };
+    const shellA = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ name: 'source-a' }),
     );
+    const shellB = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ name: 'source-b' }),
+    );
+    const faceguard = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ name: 'source-c' }),
+    );
+
+    applyHelmetUniformMaterials({ faceguardMeshes: [], shellMeshes: [shellA] }, uniform, 'team-a');
+    applyHelmetUniformMaterials({ faceguardMeshes: [], shellMeshes: [shellB] }, uniform, 'team-b');
+    applyHelmetUniformMaterials({ faceguardMeshes: [faceguard], shellMeshes: [] }, uniform, 'team-a');
+
+    expect(shellA.material).toBe(shellB.material);
+    expect(shellA.material).not.toBe(faceguard.material);
+    expect(createHelmetRuntimeMaterialKey('shell', uniform)).toBe('shell:#112233:standard');
+    expect(createHelmetRuntimeMaterialKey('faceguard', uniform)).toBe('faceguard:#a0a0a0:standard');
+    expect(getHelmetMaterialCacheSnapshot()).toEqual([
+      expect.objectContaining({
+        cacheKey: 'shell:#112233:standard',
+        component: 'shell',
+      }),
+      expect.objectContaining({
+        cacheKey: 'faceguard:#a0a0a0:standard',
+        component: 'faceguard',
+      }),
+    ]);
+  });
+
+  it('keeps unlit diagnostic preview materials exact and map-free', () => {
+    const material = getHelmetUnlitExactMaterial({
+      color: '#ff0000',
+      component: 'shell',
+    });
+
+    expect(material).toBeInstanceOf(THREE.MeshBasicMaterial);
+    expect(material.color.getHex()).toBe(0xff0000);
+    expect(material.map).toBeNull();
+    expect(material.vertexColors).toBe(false);
+    expect(material.wireframe).toBe(false);
   });
 
   it('reuses cached helmet parts when the team color is unchanged', () => {

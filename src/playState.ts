@@ -152,6 +152,7 @@ export const GAMEPLAY_CONFIG = {
   turnoverResetDelaySeconds: 1.25,
   touchdownRunoutDeceleration: 7.5,
   touchdownRunoutDurationSeconds: 1,
+  touchdownRunoutMinimumEntryDepthYards: 1.25,
   touchdownRunoutMaxDepthYards: 6,
 } as const;
 
@@ -954,6 +955,15 @@ function startTouchdownRunout(
   scorer: PlayerModel,
   preStopVelocity: FootballSpot,
 ): void {
+  const minimumEntryZ =
+    GAMEPLAY_CONFIG.opposingGoalLineZ +
+    FIELD_DIRECTION.playDirectionZ * GAMEPLAY_CONFIG.touchdownRunoutMinimumEntryDepthYards;
+  if (FIELD_DIRECTION.playDirectionZ >= 0) {
+    scorer.position.z = Math.max(scorer.position.z, minimumEntryZ);
+  } else {
+    scorer.position.z = Math.min(scorer.position.z, minimumEntryZ);
+  }
+
   const speed = Math.hypot(preStopVelocity.x, preStopVelocity.z);
   const fallbackDirection = {
     x: Math.sin(scorer.facingRadians),

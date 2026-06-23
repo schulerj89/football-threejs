@@ -43,7 +43,7 @@ export class ApplicationLifecycle {
     const normalLaunchShouldShowTitle =
       !options.crowdPreviewEnabled &&
       !options.formationPreviewActive &&
-      options.searchParams.toString().length === 0;
+      shouldShowTitleForSearchParams(options.searchParams);
     this.phaseValue = normalLaunchShouldShowTitle ? 'title' : 'gameplay';
 
     this.titleController = !options.crowdPreviewEnabled && !options.formationPreviewActive
@@ -53,8 +53,6 @@ export class ApplicationLifecycle {
           onFirstGesture: options.onTitleFirstGesture,
           onFootballHubBack: () => this.returnToTitleFromFootballHub(),
           onFootballHubOpen: () => this.startFootballHub(),
-          onMatchSetupBack: () => this.returnToHubFromMatchSetup(),
-          onMatchSetupOpen: () => this.startMatchSetup(),
           onStart: options.onStart,
           onSettingsChange: options.onTitleSettingsChange,
         })
@@ -143,32 +141,12 @@ export class ApplicationLifecycle {
     this.syncChrome();
   }
 
-  returnToHubFromMatchSetup(): void {
-    if (!this.titleController) {
-      return;
-    }
-
-    this.phaseValue = 'footballHub';
-    this.setPauseSettingsVisible(false, false);
-    this.syncChrome();
-  }
-
   startFootballHub(): void {
     if (!this.titleController) {
       return;
     }
 
     this.phaseValue = 'footballHub';
-    this.setPauseSettingsVisible(false, false);
-    this.syncChrome();
-  }
-
-  startMatchSetup(): void {
-    if (!this.titleController) {
-      return;
-    }
-
-    this.phaseValue = 'matchSetup';
     this.setPauseSettingsVisible(false, false);
     this.syncChrome();
   }
@@ -241,6 +219,12 @@ export class ApplicationLifecycle {
     this.titleController?.dispose();
     this.pauseSettingsPanel?.root.remove();
   }
+}
+
+function shouldShowTitleForSearchParams(searchParams: URLSearchParams): boolean {
+  const keys = [...searchParams.keys()];
+  return keys.length === 0 ||
+    keys.every((key) => key === 'matchSeed' || key === 'seed');
 }
 
 function canOpenPauseSettings(playState: PlayState): boolean {

@@ -43,6 +43,14 @@ export interface FieldMarkingLayout {
   size: FieldSize;
 }
 
+export interface FieldPylonLayout {
+  center: FieldPoint;
+  endZoneId: 'far-end-zone' | 'near-end-zone';
+  id: string;
+  sideline: 'left' | 'right';
+  zBoundary: 'endLine' | 'goalLine';
+}
+
 export interface FieldLayout {
   endZones: FieldRectLayout[];
   fieldBounds: FieldBounds;
@@ -50,6 +58,7 @@ export interface FieldLayout {
   innerMarkingBounds: FieldBounds;
   lineOfScrimmage: FieldMarkingLayout;
   markings: FieldMarkingLayout[];
+  pylons: FieldPylonLayout[];
   playableBounds: FieldBounds;
   surface: FieldRectLayout;
 }
@@ -164,6 +173,7 @@ export function createFieldLayout(): FieldLayout {
     innerMarkingBounds: INNER_MARKING_BOUNDS,
     lineOfScrimmage,
     markings,
+    pylons: createPylonLayouts(),
     playableBounds: FIELD_OF_PLAY_BOUNDS,
     surface: createRectLayout('playable-field-surface', 'surface', 0, 0, {
       depth: FIELD_DIMENSIONS.fieldLength,
@@ -216,6 +226,46 @@ function createEndZoneLayouts(): FieldRectLayout[] {
       width: FIELD_DIMENSIONS.fieldWidth,
     }),
   ];
+}
+
+function createPylonLayouts(): FieldPylonLayout[] {
+  const sidelines = [
+    ['left', FULL_FIELD_BOUNDS.minX],
+    ['right', FULL_FIELD_BOUNDS.maxX],
+  ] as const;
+  const endZoneBoundaries = [
+    {
+      endZoneId: 'near-end-zone',
+      points: [
+        ['endLine', FULL_FIELD_BOUNDS.minZ],
+        ['goalLine', NEAR_GOAL_LINE_Z],
+      ],
+    },
+    {
+      endZoneId: 'far-end-zone',
+      points: [
+        ['goalLine', FAR_GOAL_LINE_Z],
+        ['endLine', FULL_FIELD_BOUNDS.maxZ],
+      ],
+    },
+  ] as const;
+  const pylons: FieldPylonLayout[] = [];
+
+  for (const endZone of endZoneBoundaries) {
+    for (const [zBoundary, z] of endZone.points) {
+      for (const [sideline, x] of sidelines) {
+        pylons.push({
+          center: { x, z },
+          endZoneId: endZone.endZoneId,
+          id: `${endZone.endZoneId}-${zBoundary}-${sideline}-pylon`,
+          sideline,
+          zBoundary,
+        });
+      }
+    }
+  }
+
+  return pylons;
 }
 
 function createBoundaryMarkings(): FieldMarkingLayout[] {

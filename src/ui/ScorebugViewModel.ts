@@ -6,6 +6,7 @@ import {
   type PossessionFieldPosition,
 } from '../match/FieldPositionModel';
 import type { TeamProfile } from '../teams/TeamProfile';
+import { formatYardsToGoForDisplay } from '../yardDisplay';
 
 export interface BroadcastScorebugTeamViewModel {
   readonly abbreviation: string;
@@ -208,5 +209,5 @@ function formatDown(down: number): string {
 }
 
 function formatDistance(distance: number): string {
-  return distance <= 0 ? 'GOAL' : Math.max(1, Math.round(distance)).toString();
+  return formatYardsToGoForDisplay(distance);
 }

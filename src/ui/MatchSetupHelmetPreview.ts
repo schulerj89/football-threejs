@@ -2,15 +2,42 @@ import * as THREE from 'three';
 import {
   applyHelmetUniformMaterials,
   cloneHelmetAsset,
+  createHelmetRuntimeMaterialKey,
   findHelmetPartMeshes,
   measureHelmetBounds,
   type HelmetPartMeshes,
 } from '../presentation/helmet/HelmetAssetLibrary';
+import { getHelmetUnlitExactMaterial } from '../presentation/helmet/HelmetMaterialLibrary';
+import { STARTER_TEAM_PROFILES } from '../teams/TeamRegistry';
 import type { UniformPalette } from '../teams/UniformPalette';
+
+export type HelmetPreviewMode =
+  | 'normalVisualization'
+  | 'sourceMaterial'
+  | 'standardNeutralLight'
+  | 'teamMaterial'
+  | 'unlitExactColor'
+  | 'wireframe';
 
 export interface HelmetPreviewFit {
   centerOffset: THREE.Vector3;
   scale: number;
+}
+
+export interface HelmetPreviewDiagnostics {
+  faceguardMaterialColor: string | null;
+  faceguardMaterialName: string | null;
+  faceguardRequestedColor: string;
+  faceguardSourceMapStatus: string;
+  faceguardVertexColorStatus: string;
+  materialCacheKey: string;
+  mode: HelmetPreviewMode;
+  runtimeMaterialType: string | null;
+  shellMaterialColor: string | null;
+  shellMaterialName: string | null;
+  shellRequestedColor: string;
+  shellSourceMapStatus: string;
+  shellVertexColorStatus: string;
 }
 
 interface HelmetPreviewEntry {
@@ -21,9 +48,11 @@ interface HelmetPreviewEntry {
   id: string;
   loadState: 'fallback' | 'idle' | 'loaded' | 'loading';
   materialScope: string;
+  mode: HelmetPreviewMode;
   normalizer: THREE.Group | null;
   parts: HelmetPartMeshes | null;
   scene: THREE.Scene;
+  sourceMaterials: Map<THREE.Mesh, THREE.Material | THREE.Material[]>;
   uniform: UniformPalette;
 }
 
@@ -35,6 +64,24 @@ const HELMET_PREVIEW_CONFIG = {
   maximumPixelRatio: 1.5,
   previewRotationY: -0.18,
 } as const;
+
+export const HELMET_DIAGNOSTIC_SWATCHES = [
+  '#ff0000',
+  '#00ff00',
+  '#0000ff',
+  '#ffffff',
+  '#101010',
+  ...new Set(STARTER_TEAM_PROFILES.flatMap((profile) => [
+    profile.homeUniform.helmetShell.toLowerCase(),
+    profile.awayUniform.helmetShell.toLowerCase(),
+  ])),
+] as const;
+
+const normalPreviewMaterial = new THREE.MeshNormalMaterial({
+  side: THREE.FrontSide,
+});
+
+const wireframePreviewMaterials = new Map<string, THREE.MeshBasicMaterial>();
 
 export function resolveHelmetPreviewRotationY(id: string): number {
   if (id === 'user') {
@@ -99,13 +146,13 @@ export class MatchSetupHelmetPreviewRenderer {
     }
 
     const scene = new THREE.Scene();
-    scene.add(new THREE.HemisphereLight(0xf4fbff, 0x1a2428, 2.1));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x404040, 2.0));
     const keyLight = new THREE.DirectionalLight(0xffffff, 2.8);
     keyLight.position.set(2.2, 2.8, 3.8);
     scene.add(keyLight);
-    const rimLight = new THREE.DirectionalLight(0x8fb6ff, 1.1);
-    rimLight.position.set(-2.4, 1.6, -2.2);
-    scene.add(rimLight);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.65);
+    fillLight.position.set(-2.4, 1.6, -2.2);
+    scene.add(fillLight);
 
     const camera = new THREE.PerspectiveCamera(HELMET_PREVIEW_CONFIG.cameraFov, 1, 0.05, 20);
     camera.position.copy(HELMET_PREVIEW_CONFIG.cameraPosition);
@@ -119,9 +166,11 @@ export class MatchSetupHelmetPreviewRenderer {
       id,
       loadState: 'idle',
       materialScope: createPreviewMaterialScope(id, uniform),
+      mode: 'teamMaterial',
       normalizer: null,
       parts: null,
       scene,
+      sourceMaterials: new Map(),
       uniform,
     });
 
@@ -141,7 +190,7 @@ export class MatchSetupHelmetPreviewRenderer {
     entry.materialScope = createPreviewMaterialScope(id, uniform);
 
     if (entry.parts) {
-      applyHelmetUniformMaterials(entry.parts, uniform, entry.materialScope);
+      applyPreviewMode(entry);
       entry.host.dataset.preview = 'glb';
     }
 
@@ -174,6 +223,22 @@ export class MatchSetupHelmetPreviewRenderer {
     }
 
     this.requestRender();
+  }
+
+  setPreviewMode(mode: HelmetPreviewMode): void {
+    for (const entry of this.entries.values()) {
+      entry.mode = mode;
+      applyPreviewMode(entry);
+      syncPreviewDiagnostics(entry);
+    }
+
+    this.requestRender();
+  }
+
+  getPreviewDiagnostics(id: string): HelmetPreviewDiagnostics | null {
+    const entry = this.entries.get(id);
+
+    return entry ? createPreviewDiagnostics(entry) : null;
   }
 
   dispose(): void {
@@ -236,7 +301,7 @@ export class MatchSetupHelmetPreviewRenderer {
         }
 
         const parts = findHelmetPartMeshes(helmet);
-        applyHelmetUniformMaterials(parts, entry.uniform, entry.materialScope);
+        entry.sourceMaterials = captureSourceMaterials(parts);
 
         const fit = calculateHelmetPreviewFit(measureHelmetBounds(helmet));
         const normalizer = new THREE.Group();
@@ -253,6 +318,8 @@ export class MatchSetupHelmetPreviewRenderer {
         entry.loadState = 'loaded';
         entry.host.dataset.preview = 'glb';
         entry.fallback.setAttribute('aria-hidden', 'true');
+        applyPreviewMode(entry);
+        syncPreviewDiagnostics(entry);
         this.requestRender();
       })
       .catch((error: unknown) => {
@@ -335,4 +402,197 @@ export class MatchSetupHelmetPreviewRenderer {
 
 function createPreviewMaterialScope(id: string, uniform: UniformPalette): string {
   return `match-setup-preview:${id}:${uniform.helmetShell}:${uniform.faceguard}:${uniform.stripe}`;
+}
+
+function applyPreviewMode(entry: HelmetPreviewEntry): void {
+  if (!entry.parts) {
+    return;
+  }
+
+  if (entry.mode === 'sourceMaterial') {
+    restoreSourceMaterials(entry);
+    return;
+  }
+
+  if (entry.mode === 'normalVisualization') {
+    assignPreviewMaterial(entry.parts.shellMeshes, normalPreviewMaterial);
+    assignPreviewMaterial(entry.parts.faceguardMeshes, normalPreviewMaterial);
+    assignPreviewMaterial(entry.parts.accentMeshes ?? [], normalPreviewMaterial);
+    return;
+  }
+
+  if (entry.mode === 'unlitExactColor') {
+    assignPreviewMaterial(
+      entry.parts.shellMeshes,
+      getHelmetUnlitExactMaterial({ color: entry.uniform.helmetShell, component: 'shell' }),
+    );
+    assignPreviewMaterial(
+      entry.parts.faceguardMeshes,
+      getHelmetUnlitExactMaterial({ color: entry.uniform.faceguard, component: 'faceguard' }),
+    );
+    assignPreviewMaterial(
+      entry.parts.accentMeshes ?? [],
+      getHelmetUnlitExactMaterial({ color: entry.uniform.helmetShell, component: 'shell' }),
+    );
+    return;
+  }
+
+  if (entry.mode === 'wireframe') {
+    assignPreviewMaterial(
+      entry.parts.shellMeshes,
+      getWireframeMaterial(entry.uniform.helmetShell, 'shell'),
+    );
+    assignPreviewMaterial(
+      entry.parts.faceguardMeshes,
+      getWireframeMaterial(entry.uniform.faceguard, 'faceguard'),
+    );
+    assignPreviewMaterial(
+      entry.parts.accentMeshes ?? [],
+      getWireframeMaterial(entry.uniform.helmetShell, 'shell'),
+    );
+    return;
+  }
+
+  applyHelmetUniformMaterials(entry.parts, entry.uniform, entry.materialScope);
+}
+
+function captureSourceMaterials(parts: HelmetPartMeshes): Map<THREE.Mesh, THREE.Material | THREE.Material[]> {
+  const materials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
+
+  for (const mesh of [...parts.shellMeshes, ...parts.faceguardMeshes, ...(parts.accentMeshes ?? [])]) {
+    materials.set(mesh, Array.isArray(mesh.material) ? [...mesh.material] : mesh.material);
+  }
+
+  return materials;
+}
+
+function restoreSourceMaterials(entry: HelmetPreviewEntry): void {
+  for (const [mesh, material] of entry.sourceMaterials.entries()) {
+    mesh.material = Array.isArray(material) ? [...material] : material;
+  }
+}
+
+function assignPreviewMaterial(meshes: THREE.Mesh[], material: THREE.Material): void {
+  for (const mesh of meshes) {
+    mesh.material = material;
+  }
+}
+
+function getWireframeMaterial(color: string, component: 'faceguard' | 'shell'): THREE.MeshBasicMaterial {
+  const key = `${component}:${color.toLowerCase()}:wireframe`;
+  const cached = wireframePreviewMaterials.get(key);
+
+  if (cached) {
+    return cached;
+  }
+
+  const material = new THREE.MeshBasicMaterial({
+    color,
+    side: THREE.FrontSide,
+    vertexColors: false,
+    wireframe: true,
+  });
+  material.name = `football-helmet-${component}-wireframe-${color.replace('#', '').toLowerCase()}`;
+  material.map = null;
+  material.needsUpdate = true;
+  wireframePreviewMaterials.set(key, material);
+  return material;
+}
+
+function syncPreviewDiagnostics(entry: HelmetPreviewEntry): void {
+  const diagnostics = createPreviewDiagnostics(entry);
+  entry.host.dataset.helmetPreviewMode = diagnostics.mode;
+  entry.host.dataset.shellRequested = diagnostics.shellRequestedColor;
+  entry.host.dataset.faceguardRequested = diagnostics.faceguardRequestedColor;
+  entry.host.dataset.shellMaterial = diagnostics.shellMaterialColor ?? 'none';
+  entry.host.dataset.faceguardMaterial = diagnostics.faceguardMaterialColor ?? 'none';
+  entry.host.dataset.sourceMapStatus = [
+    `shell:${diagnostics.shellSourceMapStatus}`,
+    `faceguard:${diagnostics.faceguardSourceMapStatus}`,
+  ].join(',');
+  entry.host.dataset.vertexColorStatus = [
+    `shell:${diagnostics.shellVertexColorStatus}`,
+    `faceguard:${diagnostics.faceguardVertexColorStatus}`,
+  ].join(',');
+  entry.host.dataset.materialCacheKey = diagnostics.materialCacheKey;
+  entry.host.title = [
+    `Helmet preview: ${diagnostics.mode}`,
+    `shell requested ${diagnostics.shellRequestedColor}, material ${diagnostics.shellMaterialColor ?? 'none'}`,
+    `faceguard requested ${diagnostics.faceguardRequestedColor}, material ${diagnostics.faceguardMaterialColor ?? 'none'}`,
+    `maps ${entry.host.dataset.sourceMapStatus}`,
+    `vertex colors ${entry.host.dataset.vertexColorStatus}`,
+    `cache ${diagnostics.materialCacheKey}`,
+  ].join('\n');
+}
+
+function createPreviewDiagnostics(entry: HelmetPreviewEntry): HelmetPreviewDiagnostics {
+  const shellMaterial = entry.parts ? getFirstMaterial(entry.parts.shellMeshes) : null;
+  const faceguardMaterial = entry.parts ? getFirstMaterial(entry.parts.faceguardMeshes) : null;
+  return {
+    faceguardMaterialColor: getMaterialHex(faceguardMaterial),
+    faceguardMaterialName: faceguardMaterial?.name ?? null,
+    faceguardRequestedColor: entry.uniform.faceguard.toLowerCase(),
+    faceguardSourceMapStatus: getMapStatus(faceguardMaterial),
+    faceguardVertexColorStatus: getVertexColorStatus(entry.parts?.faceguardMeshes ?? [], faceguardMaterial),
+    materialCacheKey: [
+      createHelmetRuntimeMaterialKey('shell', entry.uniform),
+      createHelmetRuntimeMaterialKey('faceguard', entry.uniform),
+    ].join('|'),
+    mode: entry.mode,
+    runtimeMaterialType: shellMaterial?.type ?? faceguardMaterial?.type ?? null,
+    shellMaterialColor: getMaterialHex(shellMaterial),
+    shellMaterialName: shellMaterial?.name ?? null,
+    shellRequestedColor: entry.uniform.helmetShell.toLowerCase(),
+    shellSourceMapStatus: getMapStatus(shellMaterial),
+    shellVertexColorStatus: getVertexColorStatus(entry.parts?.shellMeshes ?? [], shellMaterial),
+  };
+}
+
+function getFirstMaterial(meshes: THREE.Mesh[]): THREE.Material | null {
+  const material = meshes[0]?.material;
+  if (!material) {
+    return null;
+  }
+
+  return Array.isArray(material) ? material[0] ?? null : material;
+}
+
+function getMaterialHex(material: THREE.Material | null): string | null {
+  if (!material || !('color' in material) || !(material.color instanceof THREE.Color)) {
+    return null;
+  }
+
+  return `#${material.color.getHexString()}`;
+}
+
+function getMapStatus(material: THREE.Material | null): string {
+  if (!material) {
+    return 'missing-material';
+  }
+
+  const candidate = material as THREE.Material & {
+    emissiveMap?: THREE.Texture | null;
+    map?: THREE.Texture | null;
+    metalnessMap?: THREE.Texture | null;
+    normalMap?: THREE.Texture | null;
+    roughnessMap?: THREE.Texture | null;
+  };
+  const activeMaps = [
+    candidate.map ? 'base' : null,
+    candidate.emissiveMap ? 'emissive' : null,
+    candidate.normalMap ? 'normal' : null,
+    candidate.roughnessMap ? 'roughness' : null,
+    candidate.metalnessMap ? 'metalness' : null,
+  ].filter(Boolean);
+
+  return activeMaps.length > 0 ? activeMaps.join('+') : 'none';
+}
+
+function getVertexColorStatus(meshes: THREE.Mesh[], material: THREE.Material | null): string {
+  const hasGeometryColor = meshes.some((mesh) => Boolean(mesh.geometry.getAttribute('color')));
+  const materialVertexColors = Boolean((material as THREE.Material | null | undefined)?.vertexColors);
+  return [
+    hasGeometryColor ? 'geometry-color' : 'no-geometry-color',
+    materialVertexColors ? 'material-vertex-colors' : 'material-vertex-colors-off',
+  ].join('+');
 }

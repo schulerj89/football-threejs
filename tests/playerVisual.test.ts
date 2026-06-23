@@ -351,6 +351,10 @@ describe('player visual', () => {
       visible: true,
       visualId: 'offense-qb',
     });
+    expect(quarterbackVisual ? getPlayerBodyVisualSnapshot(quarterbackVisual).appearance : null).toEqual(
+      resolvePlayerAppearance(quarterbackRoster?.appearanceId ?? 'offense-qb'),
+    );
+    expect(quarterbackVisual?.userData.appearanceId).toBe(quarterbackRoster?.appearanceId);
 
     registry.dispose();
   });
@@ -388,6 +392,10 @@ describe('player visual', () => {
       visible: true,
       visualId: 'offense-qb',
     });
+    expect(reusedRoot ? getPlayerBodyVisualSnapshot(reusedRoot).appearance : null).toEqual(
+      resolvePlayerAppearance(nextQuarterback?.appearanceId ?? 'offense-qb'),
+    );
+    expect(reusedRoot?.userData.appearanceId).toBe(nextQuarterback?.appearanceId);
 
     registry.dispose();
   });

@@ -15,14 +15,22 @@ import {
 } from '../src/match/MatchModel';
 import { MatchFlowController } from '../src/match/MatchFlowController';
 import { createGameplayModel, snapshotGameplayModel } from '../src/playState';
+import { resolvePlayerAppearance } from '../src/playerAppearance';
 import {
   DEFAULT_OPPONENT_TEAM_ID,
   DEFAULT_USER_TEAM_ID,
 } from '../src/teams/TeamRegistry';
 import { BROADCAST_EXPERIENCE_SETTINGS } from '../src/config/GameExperienceSettings';
-import { getPlayerVisualHeadAnchor, type PlayerTeamUniforms } from '../src/playerVisual';
+import {
+  getPlayerBodyVisualSnapshot,
+  getPlayerVisualHeadAnchor,
+  type PlayerTeamUniforms,
+} from '../src/playerVisual';
 import type { PlayerModel } from '../src/playerModel';
-import { createGameplayRosterBinding } from '../src/roster/GameplayRosterBinding';
+import {
+  createGameplayRosterBinding,
+  getRosterPlayerForGameplayId,
+} from '../src/roster/GameplayRosterBinding';
 import { resolveTeamPresentationTheme } from '../src/teams/TeamThemeApplier';
 import {
   createCoinTossLayout,
@@ -181,6 +189,15 @@ describe('coin toss presentation data', () => {
     }
     for (const placement of layout.captainPlacements) {
       expect(placement.jerseyNumber).toBe(jerseyNumbersByRosterId.get(placement.rosterPlayerId));
+      expect(placement.appearanceId).toBe(
+        [...binding.userRoster.players, ...binding.opponentRoster.players]
+          .find((player) => player.id === placement.rosterPlayerId)?.appearanceId,
+      );
+      if (placement.gameplayPlayerId) {
+        expect(getRosterPlayerForGameplayId(binding, placement.gameplayPlayerId)?.id).toBe(
+          placement.rosterPlayerId,
+        );
+      }
     }
     for (const team of ['user', 'opponent'] as const) {
       const teammates = layout.captainPlacements.filter((placement) => placement.team === team);
@@ -217,6 +234,7 @@ describe('coin toss presentation data', () => {
       rosterBinding: binding,
       teamTheme: resolveTeamPresentationTheme(BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
     });
+    const layout = createCoinTossLayout(binding);
 
     try {
       expect(controller.group.visible).toBe(false);
@@ -244,6 +262,15 @@ describe('coin toss presentation data', () => {
           visualProfileCount: 4,
           visualProfileId: FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
         });
+        for (const placement of layout.captainPlacements) {
+          const root = controller.group.getObjectByName(placement.id);
+          expect(root?.userData.appearanceId).toBe(placement.appearanceId);
+          expect(root?.userData.rosterPlayerId).toBe(placement.rosterPlayerId);
+          expect(root?.userData.gameplayPlayerId ?? null).toBe(placement.gameplayPlayerId);
+          expect(root ? getPlayerBodyVisualSnapshot(root).appearance : null).toEqual(
+            resolvePlayerAppearance(placement.appearanceId),
+          );
+        }
 
         controller.reset();
         expect(controller.group.visible).toBe(false);

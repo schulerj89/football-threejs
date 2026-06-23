@@ -83,6 +83,36 @@ describe('field specification', () => {
     expect(FIELD_BOUNDS.maxX - FIELD_BOUNDS.minX).toBe(160 / 3);
   });
 
+  it('places rectangular end-zone pylons on each mathematical end-zone corner', () => {
+    const layout = createFieldLayout();
+
+    expect(layout.pylons).toHaveLength(8);
+    expect(layout.pylons.map((pylon) => pylon.id)).toEqual([
+      'near-end-zone-endLine-left-pylon',
+      'near-end-zone-endLine-right-pylon',
+      'near-end-zone-goalLine-left-pylon',
+      'near-end-zone-goalLine-right-pylon',
+      'far-end-zone-goalLine-left-pylon',
+      'far-end-zone-goalLine-right-pylon',
+      'far-end-zone-endLine-left-pylon',
+      'far-end-zone-endLine-right-pylon',
+    ]);
+
+    const expectedCorners = new Set([
+      `${FIELD_BOUNDS.minX}:${FIELD_BOUNDS.minZ}`,
+      `${FIELD_BOUNDS.maxX}:${FIELD_BOUNDS.minZ}`,
+      `${FIELD_BOUNDS.minX}:${NEAR_GOAL_LINE_Z}`,
+      `${FIELD_BOUNDS.maxX}:${NEAR_GOAL_LINE_Z}`,
+      `${FIELD_BOUNDS.minX}:${FAR_GOAL_LINE_Z}`,
+      `${FIELD_BOUNDS.maxX}:${FAR_GOAL_LINE_Z}`,
+      `${FIELD_BOUNDS.minX}:${FIELD_BOUNDS.maxZ}`,
+      `${FIELD_BOUNDS.maxX}:${FIELD_BOUNDS.maxZ}`,
+    ]);
+    const actualCorners = new Set(layout.pylons.map((pylon) => `${pylon.center.x}:${pylon.center.z}`));
+
+    expect(actualCorners).toEqual(expectedCorners);
+  });
+
   it('spaces yard lines exactly five yards apart', () => {
     const yardLineZ = createFieldLayout()
       .markings

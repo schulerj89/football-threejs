@@ -1881,7 +1881,6 @@ body[data-game-mode="exhibition"] .score-counter {
 .gameplay-hud[hidden],
 .match-transition-panel[hidden],
 .football-hub-screen[hidden],
-.match-setup-screen[hidden],
 .title-screen[hidden],
 .pause-settings-panel[hidden],
 .title-development-details[hidden] {
@@ -2092,6 +2091,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-player-detail header,
 .football-hub-overview-header,
 .football-hub-strengths,
+.football-hub-team-colors,
 .football-hub-team-overview > div {
   display: flex;
   gap: 12px;
@@ -2176,6 +2176,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-nav button:focus-visible,
 .football-hub-roster-tabs button:focus-visible,
 .football-hub-team-row:focus-visible,
+.football-hub-play-team-controls select:focus-visible,
 .football-hub-roster-table tr:focus-visible,
 .football-hub-roster-controls select:focus-visible {
   border-color: rgba(242, 217, 75, 0.84);
@@ -2283,6 +2284,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-player-detail span,
 .football-hub-overview-header span,
 .football-hub-strengths span,
+.football-hub-team-colors span,
 .football-hub-team-overview > div span {
   color: #cbd6cf;
   font-size: 13px;
@@ -2303,10 +2305,25 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-vs {
   align-self: center;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
   color: #f0f5ea;
   font-size: clamp(22px, 3vw, 42px);
   font-weight: 950;
+  text-align: center;
   text-shadow: 0 8px 28px rgba(0, 0, 0, 0.42);
+}
+
+.football-hub-play-validation {
+  display: grid;
+  gap: 5px;
+  max-width: 190px;
+  color: #dce6de;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.25;
+  text-shadow: none;
 }
 
 .football-hub-rating-grid {
@@ -2314,6 +2331,31 @@ body[data-game-mode="exhibition"] .score-counter {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
+}
+
+.football-hub-play-team-controls {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(110px, 0.42fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.football-hub-play-team-controls select {
+  min-height: 40px;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  background: #101716;
+  color: #f6faf6;
+  font: inherit;
+}
+
+.football-hub-play-team-qb {
+  grid-column: 1 / -1;
+  color: #dfe8df;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .football-hub-score-block {
@@ -2393,6 +2435,8 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-overview-header,
 .football-hub-strengths,
+.football-hub-team-colors,
+.football-hub-team-summary-metrics,
 .football-hub-team-overview > div {
   flex-wrap: wrap;
   padding: 10px;
@@ -2403,8 +2447,31 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-rosters {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 12px;
+}
+
+.football-hub-roster-overview {
+  grid-column: 1 / -1;
+}
+
+.football-hub-team-colors {
+  align-content: center;
+}
+
+.football-hub-color-swatch {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 50%;
+  background: var(--swatch-color, #f0f5ea);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.32);
+}
+
+.football-hub-team-summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .football-hub-roster-controls {
@@ -2412,6 +2479,7 @@ body[data-game-mode="exhibition"] .score-counter {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .football-hub-roster-controls select {
@@ -2466,7 +2534,7 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-player-detail {
   grid-column: 2;
-  grid-row: 3;
+  grid-row: 4;
   padding: 14px;
   min-width: 0;
 }
@@ -2660,20 +2728,6 @@ body[data-game-mode="exhibition"] .score-counter {
   grid-template-columns: minmax(340px, 1.25fr) minmax(220px, 0.75fr);
   gap: 16px;
   margin-top: 16px;
-}
-
-.match-setup-screen {
-  position: fixed;
-  inset: 0;
-  z-index: 61;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background:
-    radial-gradient(circle at 18% 22%, rgba(47, 102, 216, 0.22), transparent 34%),
-    linear-gradient(135deg, rgba(4, 7, 8, 0.96), rgba(11, 19, 17, 0.94));
-  color: #f7fbf8;
-  overflow: auto;
 }
 
 .match-setup-panel {
@@ -3649,7 +3703,6 @@ body[data-game-mode="exhibition"] .score-counter {
   }
 
   .football-hub-matchup,
-  .football-hub-teams,
   .football-hub-rosters,
   .football-hub-team-overview {
     grid-template-columns: 1fr;
@@ -3664,12 +3717,29 @@ body[data-game-mode="exhibition"] .score-counter {
     grid-row: auto;
   }
 
+  .football-hub-team-summary-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .football-hub-roster-controls {
     display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .football-hub-roster-controls select {
     width: 100%;
+  }
+
+  .football-hub-roster-controls select:nth-of-type(n + 2) {
+    grid-column: 1 / -1;
+  }
+
+  .football-hub-play-team-controls {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .football-hub-play-team-controls select:nth-of-type(2) {
+    grid-column: 1 / -1;
   }
 
   .title-panel,

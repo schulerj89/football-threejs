@@ -30,6 +30,11 @@ import {
   resolveBallLocationText,
   resolveDownDistanceText,
 } from '../src/ui/ScorebugViewModel';
+import {
+  formatWholeFootballYards,
+  formatYardGainForDisplay,
+  formatYardsToGoForDisplay,
+} from '../src/yardDisplay';
 
 describe('broadcast scorebug', () => {
   it('maps team logos, abbreviations, score, quarter, and clock from the match snapshot', () => {
@@ -134,5 +139,13 @@ describe('broadcast scorebug', () => {
     expect(formatMatchClock(180)).toBe('3:00');
     expect(formatMatchClock(74.2)).toBe('1:15');
     expect(formatMatchClock(-4)).toBe('0:00');
+  });
+
+  it('formats player-facing football yardage as whole yards', () => {
+    expect(formatYardsToGoForDisplay(7.7)).toBe('8');
+    expect(formatYardsToGoForDisplay(0)).toBe('GOAL');
+    expect(formatYardGainForDisplay(2.5)).toBe('+3 yards');
+    expect(formatYardGainForDisplay(-2.5)).toBe('-3 yards');
+    expect(formatWholeFootballYards(14.49)).toBe('14');
   });
 });

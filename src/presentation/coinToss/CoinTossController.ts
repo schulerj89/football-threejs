@@ -307,7 +307,7 @@ export class CoinTossController {
       {
         appearanceId: placement.appearanceId,
         footballPosition: placement.footballPosition,
-        gameplayPlayerId: undefined,
+        gameplayPlayerId: placement.gameplayPlayerId ?? undefined,
         gameplayTeam: placement.gameplayTeam,
         presentationOnly: true,
         role: placement.role,

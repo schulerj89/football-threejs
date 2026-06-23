@@ -8,6 +8,11 @@ import {
   getReadableTextColor,
   type TeamPresentationTheme,
 } from './teams/TeamThemeApplier';
+import {
+  formatWholeFootballYards,
+  formatYardGainForDisplay,
+  formatYardsToGoForDisplay,
+} from './yardDisplay';
 
 export interface GameplayHud {
   cadenceStatus: HTMLDivElement;
@@ -140,7 +145,7 @@ export function syncGameplayHud(
   hud.score.textContent = `Score ${gameplay.score}`;
   hud.driveStatus.textContent = `${formatDown(gameplay.drive.currentDown)} & ${formatDistance(
     gameplay.drive.yardsToFirstDown,
-  )} | Ball ${formatNumber(gameplay.drive.lineOfScrimmage.z)}`;
+  )} | Ball ${formatWholeFootballYards(gameplay.drive.lineOfScrimmage.z)}`;
   hud.playCall.textContent = gameplay.selectedPlay.displayName;
   hud.targetLabel.hidden = !gameplay.selectedReceiver;
   hud.targetLabel.textContent = gameplay.selectedReceiver
@@ -234,23 +239,9 @@ function formatDown(down: number): string {
 }
 
 function formatDistance(yardsToFirstDown: number): string {
-  return formatNumber(Math.round(yardsToFirstDown * 10) / 10);
+  return formatYardsToGoForDisplay(yardsToFirstDown);
 }
 
 function formatYards(yardsGained: number): string {
-  const roundedYards = Math.round(yardsGained * 10) / 10;
-
-  if (roundedYards > 0) {
-    return `+${formatNumber(roundedYards)} yards`;
-  }
-
-  return `${formatNumber(roundedYards)} yards`;
-}
-
-function formatNumber(value: number): string {
-  if (Number.isInteger(value)) {
-    return value.toFixed(0);
-  }
-
-  return value.toFixed(1);
+  return formatYardGainForDisplay(yardsGained);
 }

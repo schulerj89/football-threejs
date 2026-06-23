@@ -43,6 +43,10 @@ import type { CrowdDensity } from '../presentation/CrowdPresentationController';
 import { resolveTeamPresentationTheme } from '../teams/TeamThemeApplier';
 import type { GameplayModel, GameplaySnapshot } from '../playState';
 import { MatchFlowController } from '../match/MatchFlowController';
+import {
+  createRuntimeMatchSeed,
+  parseMatchSeedOverride,
+} from '../match/MatchSeed';
 import type { MatchSnapshot } from '../match/MatchTypes';
 import type { CoinFace } from '../match/CoinTossModel';
 import { MatchScorebug } from '../ui/MatchScorebug';
@@ -83,6 +87,7 @@ export class FootballApplication {
   private readonly removeSceneResizeHandler: () => void;
   private gameExperience: ResolvedGameExperienceSettings;
   private hasRenderedFirstFrame = false;
+  private matchSeedSequence = 0;
   private crowdSuppressedForCapacityBenchmark = false;
   private previousPerformanceResourceSnapshot: ResourceChangeSnapshot | null = null;
 
@@ -815,8 +820,22 @@ export class FootballApplication {
       opponentTeamId: settings.teamProfiles.opponentTeamId,
       quarterDurationSeconds: settings.quarterLengthSeconds,
       rosterBinding: this.createGameplayRosterBinding(),
+      seed: this.createNextMatchSeed(),
       userTeamId: settings.teamProfiles.userTeamId,
     });
+  }
+
+  private createNextMatchSeed(): number {
+    const override = parseMatchSeedOverride(this.searchParams);
+    if (override !== null) {
+      return override;
+    }
+
+    const seed = createRuntimeMatchSeed({
+      sequenceIndex: this.matchSeedSequence,
+    });
+    this.matchSeedSequence += 1;
+    return seed;
   }
 
   private createGameplayRosterBinding() {

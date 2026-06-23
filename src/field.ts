@@ -1,12 +1,16 @@
 import * as THREE from 'three';
 import { DynamicFieldMarkers } from './field/DynamicFieldMarkers';
+import { createEndZonePylonBoxes } from './field/FieldMarkingLayout';
 import { FieldResourceOwner } from './field/FieldResourceOwner';
 import type { CreateFootballFieldOptions, FootballField } from './field/FieldTypes';
 import {
   LINE_OF_SCRIMMAGE_Z,
   createFieldLayout,
   validateFieldLayout,
+  type FieldLayout,
 } from './fieldSpec';
+import type { FieldGeometryBuilder } from './field/FieldGeometryBuilder';
+import type { FieldMaterialLibrary } from './field/FieldMaterialLibrary';
 
 export {
   FIELD_BOUNDS,
@@ -28,6 +32,7 @@ export {
   createFieldLayout,
   type FieldBounds,
   type PlayableFieldBounds,
+  type FieldPylonLayout,
 } from './fieldSpec';
 export type { CreateFootballFieldOptions, FootballField } from './field/FieldTypes';
 
@@ -65,6 +70,7 @@ export function createFootballField(options: CreateFootballFieldOptions = {}): F
 
   group.add(geometryBuilder.createYardNumbersMesh());
   group.add(geometryBuilder.createTeamBoxBoundaryMesh());
+  group.add(createEndZonePylonsMesh(geometryBuilder, resourceOwner.materials, layout));
   group.add(geometryBuilder.createGoalpostsMesh());
 
   const dynamicMarkers = new DynamicFieldMarkers(resourceOwner.materials, {
@@ -97,6 +103,20 @@ export function createFootballField(options: CreateFootballFieldOptions = {}): F
   dynamicMarkerControllers.set(field, dynamicMarkers);
   fieldResourceOwners.set(field, resourceOwner);
   return field;
+}
+
+function createEndZonePylonsMesh(
+  geometryBuilder: FieldGeometryBuilder,
+  materials: FieldMaterialLibrary,
+  layout: FieldLayout,
+): THREE.Mesh {
+  const boxes = createEndZonePylonBoxes(layout);
+  const mesh = geometryBuilder.createBatchedBoxMesh('end-zone-pylons', boxes, materials.pylon);
+  mesh.userData.presentationOnly = true;
+  mesh.userData.endZonePylons = true;
+  mesh.userData.pylonIds = boxes.map((box) => box.id);
+  mesh.userData.pylonCenters = boxes.map((box) => ({ ...box.center }));
+  return mesh;
 }
 
 export function syncFootballFieldDriveLines(

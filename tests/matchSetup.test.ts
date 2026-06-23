@@ -15,7 +15,10 @@ import {
   updateMatchSetupUniform,
   validateMatchSetupSelection,
 } from '../src/ui/MatchSetupModel';
-import { resolveHelmetPreviewRotationY } from '../src/ui/MatchSetupHelmetPreview';
+import {
+  HELMET_DIAGNOSTIC_SWATCHES,
+  resolveHelmetPreviewRotationY,
+} from '../src/ui/MatchSetupHelmetPreview';
 
 describe('match setup model', () => {
   it('validates the default fictional matchup', () => {
@@ -88,5 +91,19 @@ describe('match setup model', () => {
     expect(resolveHelmetPreviewRotationY('user')).toBeLessThan(0);
     expect(resolveHelmetPreviewRotationY('opponent')).toBeGreaterThan(0);
     expect(resolveHelmetPreviewRotationY('user')).toBe(-resolveHelmetPreviewRotationY('opponent'));
+  });
+
+  it('offers diagnostic helmet swatches for exact-color previewing', () => {
+    expect(HELMET_DIAGNOSTIC_SWATCHES).toEqual(expect.arrayContaining([
+      '#ff0000',
+      '#00ff00',
+      '#0000ff',
+      '#ffffff',
+      '#101010',
+    ]));
+
+    for (const profile of listTeamProfiles()) {
+      expect(HELMET_DIAGNOSTIC_SWATCHES).toContain(profile.homeUniform.helmetShell.toLowerCase());
+    }
   });
 });

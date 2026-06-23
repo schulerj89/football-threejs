@@ -19,6 +19,11 @@ const COIN_TOSS_LAYOUT_CONFIG = {
   sidelineClearance: 8,
 } as const;
 
+interface CaptainRosterSelection {
+  gameplayPlayerId: string | null;
+  player: RosterPlayer | null;
+}
+
 export function createCoinTossLayout(
   binding: GameplayRosterBinding,
 ): CoinTossPresentationLayout {
@@ -41,37 +46,40 @@ export function createCoinTossLayout(
 export function resolveCoinTossCaptains(
   binding: GameplayRosterBinding,
 ): readonly CoinTossCaptainSubject[] {
-  const userQuarterback = resolveActiveRosterPlayer(binding, 'offense-qb');
-  const userNonQuarterback = resolveFirstActivePlayer(
+  const userQuarterback = resolveActiveRosterSelection(binding, 'offense-qb');
+  const userNonQuarterback = resolveFirstActiveSelection(
     binding,
     'offense',
     ['RB', 'WR', 'TE', 'SLOT'],
   );
-  const opponentQuarterback = resolveRosterPosition(binding.opponentRoster, 'QB');
-  const opponentNonQuarterback = resolveFirstActivePlayer(
+  const opponentQuarterback = {
+    gameplayPlayerId: null,
+    player: resolveRosterPosition(binding.opponentRoster, 'QB'),
+  };
+  const opponentNonQuarterback = resolveFirstActiveSelection(
     binding,
     'defense',
     ['FS', 'SS', 'ILB', 'OLB', 'CB', 'DL'],
   );
 
   return [
-    createCaptainSubject('user', userQuarterback, 'offense-qb'),
-    createCaptainSubject('user', userNonQuarterback, null),
-    createCaptainSubject('opponent', opponentQuarterback, null),
-    createCaptainSubject('opponent', opponentNonQuarterback, null),
+    createCaptainSubject('user', userQuarterback),
+    createCaptainSubject('user', userNonQuarterback),
+    createCaptainSubject('opponent', opponentQuarterback),
+    createCaptainSubject('opponent', opponentNonQuarterback),
   ];
 }
 
 function createCaptainSubject(
   team: CoinTossCaptainSubject['team'],
-  player: RosterPlayer | null,
-  gameplayPlayerId: string | null,
+  selection: CaptainRosterSelection,
 ): CoinTossCaptainSubject {
+  const player = selection.player;
   return {
     appearanceId: player?.appearanceId ?? player?.id ?? `${team}-coin-toss-captain`,
     displayName: player?.displayName ?? (team === 'user' ? 'User Captain' : 'Opponent Captain'),
     footballPosition: player?.footballPosition ?? 'CAPT',
-    gameplayPlayerId,
+    gameplayPlayerId: selection.gameplayPlayerId,
     jerseyNumber: player?.jerseyNumber ?? null,
     rosterPlayerId: player?.id ?? `${team}-coin-toss-captain`,
     team,
@@ -110,18 +118,21 @@ function createCaptainPlacement(
   };
 }
 
-function resolveActiveRosterPlayer(
+function resolveActiveRosterSelection(
   binding: GameplayRosterBinding,
   gameplayPlayerId: string,
-): RosterPlayer | null {
-  return getRosterPlayerForGameplayId(binding, gameplayPlayerId);
+): CaptainRosterSelection {
+  return {
+    gameplayPlayerId,
+    player: getRosterPlayerForGameplayId(binding, gameplayPlayerId),
+  };
 }
 
-function resolveFirstActivePlayer(
+function resolveFirstActiveSelection(
   binding: GameplayRosterBinding,
   team: 'defense' | 'offense',
   preferredPositions: readonly string[],
-): RosterPlayer | null {
+): CaptainRosterSelection {
   for (const position of preferredPositions) {
     const lineupBinding = binding.activeLineup.bindings.find(
       (candidate) =>
@@ -133,12 +144,23 @@ function resolveFirstActivePlayer(
     }
     const player = getRosterPlayerForGameplayId(binding, lineupBinding.gameplayPlayerId);
     if (player) {
-      return player;
+      return {
+        gameplayPlayerId: lineupBinding.gameplayPlayerId,
+        player,
+      };
     }
   }
 
   const fallback = binding.activeLineup.bindings.find((candidate) => candidate.team === team);
-  return fallback ? getRosterPlayerForGameplayId(binding, fallback.gameplayPlayerId) : null;
+  return fallback
+    ? {
+      gameplayPlayerId: fallback.gameplayPlayerId,
+      player: getRosterPlayerForGameplayId(binding, fallback.gameplayPlayerId),
+    }
+    : {
+      gameplayPlayerId: null,
+      player: null,
+    };
 }
 
 function resolveRosterPosition(roster: TeamRoster, position: string): RosterPlayer | null {
@@ -222,15 +244,16 @@ function resolveCaptainRole(
   footballPosition: string,
   offense: boolean,
 ): CoinTossCaptainPlacement['role'] {
+  if (footballPosition === 'QB') {
+    return 'quarterback';
+  }
+
   if (!offense) {
     return footballPosition === 'CB' || footballPosition === 'FS' || footballPosition === 'SS'
       ? 'coverageDefender'
       : 'defender';
   }
 
-  if (footballPosition === 'QB') {
-    return 'quarterback';
-  }
   if (footballPosition === 'RB') {
     return 'runner';
   }

@@ -18,6 +18,7 @@ import {
   LINE_Y,
   PRESENTATION_CONFIG,
   createGoalpostBoxes,
+  createEndZonePylonBoxes,
   createStaticFieldMarkingBuckets,
   createTeamBoxBoundaryBoxes,
   createTurfBandBoxBuckets,
@@ -142,6 +143,16 @@ export class FieldGeometryBuilder {
     const mesh = this.createBatchedBoxMesh('goalposts', boxes, this.materials.goalpost);
     mesh.userData.presentationOnly = true;
     mesh.userData.endLineZs = [FIELD_BOUNDS.minZ, FIELD_BOUNDS.maxZ];
+    return mesh;
+  }
+
+  createEndZonePylonsMesh(layout: FieldLayout): THREE.Mesh {
+    const boxes = createEndZonePylonBoxes(layout);
+    const mesh = this.createBatchedBoxMesh('end-zone-pylons', boxes, this.materials.pylon);
+    mesh.userData.presentationOnly = true;
+    mesh.userData.endZonePylons = true;
+    mesh.userData.pylonIds = boxes.map((box) => box.id);
+    mesh.userData.pylonCenters = boxes.map((box) => ({ ...box.center }));
     return mesh;
   }
 

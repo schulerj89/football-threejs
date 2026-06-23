@@ -66,5 +66,11 @@ describe('field geometry integration', () => {
     const goalposts = field.group.getObjectByName('goalposts');
     expect(goalposts).toBeInstanceOf(THREE.Mesh);
     expect(goalposts?.userData.endLineZs).toEqual([FIELD_BOUNDS.minZ, FIELD_BOUNDS.maxZ]);
+
+    const pylons = field.group.getObjectByName('end-zone-pylons');
+    expect(pylons).toBeInstanceOf(THREE.Mesh);
+    expect(pylons?.userData.presentationOnly).toBe(true);
+    expect(pylons?.userData.endZonePylons).toBe(true);
+    expect(pylons?.userData.pylonIds).toHaveLength(8);
   });
 });

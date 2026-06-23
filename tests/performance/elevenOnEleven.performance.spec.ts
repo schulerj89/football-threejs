@@ -364,11 +364,6 @@ async function startGameIfTitleScreenIsVisible(page: Page): Promise<void> {
       await footballHub.getByRole('button', { name: 'Play Game' }).click();
       await expect(footballHub).toBeHidden();
     }
-    const matchSetup = page.locator('.match-setup-screen');
-    if (await matchSetup.isVisible()) {
-      await page.getByRole('button', { name: 'Play Game' }).click();
-      await expect(matchSetup).toBeHidden();
-    }
     await expect(titleScreen).toBeHidden();
   }
 }

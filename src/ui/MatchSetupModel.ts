@@ -14,6 +14,13 @@ export interface MatchSetupSelection {
   teamProfiles: TeamProfileSettings;
 }
 
+export interface MatchupSelection {
+  opponentTeamId: string;
+  opponentUniform: UniformVariant;
+  userTeamId: string;
+  userUniform: UniformVariant;
+}
+
 export interface MatchSetupValidation {
   canConfirm: boolean;
   uniformConflict: boolean;
@@ -26,7 +33,44 @@ export function createMatchSetupSelection(
   settings: TeamProfileSettings = DEFAULT_TEAM_PROFILE_SETTINGS,
 ): MatchSetupSelection {
   return {
-    teamProfiles: normalizeTeamProfileSettings(settings),
+    teamProfiles: createTeamProfileSettingsFromMatchupSelection(
+      createMatchupSelection(settings),
+      settings,
+    ),
+  };
+}
+
+export function createMatchupSelection(
+  settings: TeamProfileSettings = DEFAULT_TEAM_PROFILE_SETTINGS,
+): MatchupSelection {
+  const teamProfiles = normalizeTeamProfileSettings(settings);
+  return {
+    opponentTeamId: teamProfiles.opponentTeamId,
+    opponentUniform: teamProfiles.opponentUniform,
+    userTeamId: teamProfiles.userTeamId,
+    userUniform: teamProfiles.userUniform,
+  };
+}
+
+export function createTeamProfileSettingsFromMatchupSelection(
+  selection: MatchupSelection,
+  baseSettings: TeamProfileSettings = DEFAULT_TEAM_PROFILE_SETTINGS,
+): TeamProfileSettings {
+  return normalizeTeamProfileSettings({
+    ...baseSettings,
+    opponentTeamId: selection.opponentTeamId,
+    opponentUniform: selection.opponentUniform,
+    userTeamId: selection.userTeamId,
+    userUniform: selection.userUniform,
+  });
+}
+
+export function createMatchSetupSelectionFromMatchupSelection(
+  selection: MatchupSelection,
+  baseSettings: TeamProfileSettings = DEFAULT_TEAM_PROFILE_SETTINGS,
+): MatchSetupSelection {
+  return {
+    teamProfiles: createTeamProfileSettingsFromMatchupSelection(selection, baseSettings),
   };
 }
 
@@ -58,6 +102,34 @@ export function validateMatchSetupSelection(
     issues,
     uniformConflict,
   };
+}
+
+export function validateMatchupSelection(selection: MatchupSelection): MatchSetupValidation {
+  return validateMatchSetupSelection(createMatchSetupSelectionFromMatchupSelection(selection));
+}
+
+export function updateMatchupTeam(
+  selection: MatchupSelection,
+  side: 'opponent' | 'user',
+  teamId: string,
+  baseSettings: TeamProfileSettings = DEFAULT_TEAM_PROFILE_SETTINGS,
+): MatchupSelection {
+  return createMatchupSelection(createTeamProfileSettingsFromMatchupSelection({
+    ...selection,
+    [side === 'user' ? 'userTeamId' : 'opponentTeamId']: teamId,
+  }, baseSettings));
+}
+
+export function updateMatchupUniform(
+  selection: MatchupSelection,
+  side: 'opponent' | 'user',
+  uniform: UniformVariant,
+  baseSettings: TeamProfileSettings = DEFAULT_TEAM_PROFILE_SETTINGS,
+): MatchupSelection {
+  return createMatchupSelection(createTeamProfileSettingsFromMatchupSelection({
+    ...selection,
+    [side === 'user' ? 'userUniform' : 'opponentUniform']: uniform,
+  }, baseSettings));
 }
 
 export function updateMatchSetupTeam(
@@ -107,6 +179,15 @@ export function createAutoUniformCorrection(
   return {
     teamProfiles: corrected,
   };
+}
+
+export function createAutoUniformCorrectionForMatchup(
+  selection: MatchupSelection,
+  baseSettings: TeamProfileSettings = DEFAULT_TEAM_PROFILE_SETTINGS,
+): MatchupSelection {
+  return createMatchupSelection(
+    createAutoUniformCorrection(createMatchSetupSelectionFromMatchupSelection(selection, baseSettings)).teamProfiles,
+  );
 }
 
 function hasUniformConflict(teamProfiles: TeamProfileSettings): boolean {

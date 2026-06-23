@@ -124,6 +124,7 @@ export interface FootballPlayerVisualResources {
     teamUniforms?: PlayerTeamUniforms,
     jerseyNumber?: number | null,
     rosterPlayerId?: string | null,
+    appearanceId?: string | null,
   ) => void;
 }
 
@@ -151,7 +152,7 @@ export function createFootballPlayerVisual(
     options.teamUniforms ?? options.playerVisualOptions?.teamUniforms,
   );
   const model = createPlayerModel(undefined, {
-    id: activeDescriptor.gameplayPlayerId ?? activeDescriptor.visualId,
+    id: resolveVisualAppearanceIdentity(activeDescriptor),
     role: activeDescriptor.role,
     state: 'idle',
     team: activeDescriptor.gameplayTeam,
@@ -256,7 +257,9 @@ export function createFootballPlayerVisual(
     nextTeamUniforms?: PlayerTeamUniforms,
     jerseyNumber?: number | null,
     rosterPlayerId?: string | null,
+    appearanceId?: string | null,
   ): void {
+    model.id = appearanceId ?? activeDescriptor.appearanceId;
     model.position.x = player.position.x;
     model.position.z = player.position.z;
     model.facingRadians = player.facingRadians;
@@ -270,6 +273,7 @@ export function createFootballPlayerVisual(
       ...activeDescriptor,
       gameplayPlayerId: player.id,
       gameplayTeam: player.team,
+      appearanceId: appearanceId ?? activeDescriptor.appearanceId,
       jerseyNumber: jerseyNumber ?? activeDescriptor.jerseyNumber ?? null,
       rosterPlayerId: rosterPlayerId ?? activeDescriptor.rosterPlayerId,
       role: player.role,
@@ -277,6 +281,7 @@ export function createFootballPlayerVisual(
     };
     root.userData.gameplayPlayerId = player.id;
     root.userData.gameplayTeam = player.team;
+    root.userData.appearanceId = activeDescriptor.appearanceId;
     root.userData.jerseyNumber = activeDescriptor.jerseyNumber ?? null;
     root.userData.rosterPlayerId = activeDescriptor.rosterPlayerId;
     root.userData.role = player.role;
@@ -469,4 +474,11 @@ function createDescriptorTeamUniforms(
     defense: team === 'defense' ? uniform : baseUniforms.defense,
     offense: team === 'offense' ? uniform : baseUniforms.offense,
   };
+}
+
+function resolveVisualAppearanceIdentity(descriptor: FootballPlayerVisualDescriptor): string {
+  return descriptor.appearanceId ||
+    descriptor.rosterPlayerId ||
+    descriptor.gameplayPlayerId ||
+    descriptor.visualId;
 }
