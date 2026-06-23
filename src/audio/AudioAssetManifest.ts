@@ -1,5 +1,6 @@
 import { COMMENTARY_CATALOG } from './CommentaryCatalog';
 import { PREGAME_COMMENTARY_CATALOG } from './PregameCommentaryCatalog';
+import { POSTGAME_SIGNOFF_CLIP } from './PostgameSignoffCatalog';
 import { isLocalPregameCommentaryAssetId } from './PregameLocalAudioAssets';
 import { createMusicLocalAudioAssets } from './MusicCatalog';
 
@@ -63,6 +64,19 @@ const PLACE_KICK_ANNOUNCER_AUDIO_ASSETS: readonly LocalAudioAsset[] = [
     optional: true,
     semanticCategory: 'placeKick',
     url: '/audio/announcer/place_kick_good_01.wav',
+  },
+];
+
+const POSTGAME_ANNOUNCER_AUDIO_ASSETS: readonly LocalAudioAsset[] = [
+  {
+    assetId: POSTGAME_SIGNOFF_CLIP.assetId,
+    category: 'announcer',
+    defaultGain: 1,
+    loadingStrategy: 'buffer',
+    loop: false,
+    maxSimultaneousInstances: 1,
+    optional: true,
+    url: `/audio/announcer/${POSTGAME_SIGNOFF_CLIP.assetId}.mp3`,
   },
 ];
 
@@ -255,6 +269,7 @@ export const LOCAL_AUDIO_ASSET_MANIFEST: readonly LocalAudioAsset[] = [
   ...ANNOUNCER_AUDIO_ASSETS,
   ...PREGAME_ANNOUNCER_AUDIO_ASSETS,
   ...PLACE_KICK_ANNOUNCER_AUDIO_ASSETS,
+  ...POSTGAME_ANNOUNCER_AUDIO_ASSETS,
 ] as const;
 
 export function getAudioAsset(

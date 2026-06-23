@@ -178,6 +178,7 @@ import type {
   HalftimePresentationUpdateResult,
 } from '../presentation/halftime/HalftimePresentationTypes';
 import { resolvePostgameStory } from '../presentation/postgame/PostgameStoryResolver';
+import { POSTGAME_SIGNOFF_CLIP } from '../audio/PostgameSignoffCatalog';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -1552,49 +1553,98 @@ export class PresentationRuntime {
     this.resetPostgamePresentation();
     this.postgameKey = key;
     this.syncVoicePackSelection(matchSnapshot);
-    const story = resolvePostgameStory(matchSnapshot);
     this.audioMixer.stopOneShotsByCategory('announcer');
     this.audioMixer.setCrowdDuckingGain(0.68);
 
-    void this.voicePackResolver.resolveClip(story.scriptId)
-      .then((resolved) => {
-        if (this.postgameKey !== key) {
-          return null;
-        }
-
-        if (resolved) {
-          this.postgameCaption = resolved.caption;
-          return this.audioMixer.playOneShotTracked(resolved.asset.assetId);
-        }
-
-        const fallback = selectFinalHornFallback(matchSnapshot);
-        this.postgameCaption = fallback.caption;
-        return this.audioMixer.playOneShotTracked(fallback.assetId);
-      })
-      .then((handle) => {
-        if (this.postgameKey !== key) {
-          handle?.stop(0.05);
-          return;
-        }
-        if (!handle) {
-          this.audioMixer.setCrowdDuckingGain(1);
-          return;
-        }
-
-        this.postgameAudioHandle = handle;
-        this.postgameCaptionUntilSeconds = handle.startedAt + (handle.durationSeconds ?? 3) + 0.4;
-        void handle.ended.then(() => {
-          if (this.postgameKey === key) {
-            this.postgameCaptionUntilSeconds = this.audioMixer.getCurrentTime() + 0.4;
-            this.audioMixer.setCrowdDuckingGain(1);
-          }
-        });
-      })
+    void this.playPostgameSequence(matchSnapshot, key)
       .catch(() => {
         if (this.postgameKey === key) {
           this.audioMixer.setCrowdDuckingGain(1);
         }
       });
+  }
+
+  private async playPostgameSequence(matchSnapshot: MatchSnapshot, key: string): Promise<void> {
+    const opening = await this.resolvePostgameOpeningLine(matchSnapshot);
+    const openingHandle = await this.playPostgameLine(key, opening.assetId, opening.caption);
+
+    if (this.postgameKey !== key) {
+      openingHandle?.stop(0.05);
+      return;
+    }
+
+    if (openingHandle) {
+      await openingHandle.ended.catch(() => undefined);
+    }
+
+    if (this.postgameKey !== key) {
+      return;
+    }
+
+    const signoffHandle = await this.playPostgameLine(
+      key,
+      POSTGAME_SIGNOFF_CLIP.assetId,
+      POSTGAME_SIGNOFF_CLIP.caption,
+      POSTGAME_SIGNOFF_CLIP.durationSeconds,
+    );
+
+    if (this.postgameKey !== key) {
+      signoffHandle?.stop(0.05);
+      return;
+    }
+
+    if (!signoffHandle) {
+      this.audioMixer.setCrowdDuckingGain(1);
+      return;
+    }
+
+    await signoffHandle.ended.catch(() => undefined);
+    if (this.postgameKey === key) {
+      this.postgameCaptionUntilSeconds = this.audioMixer.getCurrentTime() + 0.4;
+      this.audioMixer.setCrowdDuckingGain(1);
+    }
+  }
+
+  private async resolvePostgameOpeningLine(
+    matchSnapshot: MatchSnapshot,
+  ): Promise<{ assetId: string; caption: string; durationSeconds?: number }> {
+    const story = resolvePostgameStory(matchSnapshot);
+    const resolved = await this.voicePackResolver.resolveClip(story.scriptId);
+
+    if (resolved) {
+      return {
+        assetId: resolved.asset.assetId,
+        caption: resolved.caption,
+        durationSeconds: resolved.clip.durationSeconds,
+      };
+    }
+
+    return selectFinalHornFallback(matchSnapshot);
+  }
+
+  private async playPostgameLine(
+    key: string,
+    assetId: string,
+    caption: string,
+    fallbackDurationSeconds = 3,
+  ): Promise<AudioPlaybackHandle | null> {
+    if (this.postgameKey !== key) {
+      return null;
+    }
+
+    this.postgameCaption = caption;
+    const handle = await this.audioMixer.playOneShotTracked(assetId);
+    if (this.postgameKey !== key) {
+      handle?.stop(0.05);
+      return null;
+    }
+
+    this.postgameAudioHandle = handle;
+    this.postgameCaptionUntilSeconds =
+      (handle?.startedAt ?? this.audioMixer.getCurrentTime()) +
+      (handle?.durationSeconds ?? fallbackDurationSeconds) +
+      0.4;
+    return handle;
   }
 
   private syncPostgameCaptions(): void {

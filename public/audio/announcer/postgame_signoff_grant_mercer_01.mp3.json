@@ -1,0 +1,18 @@
+{
+  "assetId": "postgame_signoff_grant_mercer_01",
+  "caption": "I'm Grant Mercer. Thanks for joining me for tonight's game. So long from Football JS.",
+  "category": "announcer",
+  "compressedBytes": 130029,
+  "contentHash": "5231d6ee0d0aada66a65a9badf25c22c695a4c394eefe80715882258320fc3b4",
+  "durationSeconds": 8.058367,
+  "eventCategory": "postgame:signoff",
+  "generatedAt": "2026-06-23T15:47:49.514Z",
+  "kind": "speech",
+  "modelId": "windows-system-speech",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 8.1,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "I'm Grant Mercer. Thanks for joining me for tonight's game. So long from Football JS.",
+  "scriptId": "postgame_signoff_grant_mercer_01",
+  "voiceId": "windows-speech-synthesis"
+}

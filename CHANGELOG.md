@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.12] - 2026-06-23
+
+### Added
+
+- Added a Grant Mercer postgame signoff that plays after the final stats screen begins its postgame commentary sequence.
+- Added the local postgame signoff announcer MP3 asset and runtime manifest entry.
+
+### Tests
+
+- Verified `npx vitest run tests/audioRuntime.test.ts tests/postgamePresentation.test.ts`, `npm run build`, and `npm run test:unit`.
+
 ## [1.22.11] - 2026-06-23
 
 ### Fixed

@@ -100,6 +100,17 @@ describe('runtime audio mixer', () => {
     expect(assetIds.has('pregame_coin_toss_result_desert-ridge-scorpions_receive_01')).toBe(false);
   });
 
+  it('registers the local postgame Grant Mercer signoff as buffered announcer audio', () => {
+    expect(LOCAL_AUDIO_ASSET_MANIFEST.find((entry) => entry.assetId === 'postgame_signoff_grant_mercer_01'))
+      .toMatchObject({
+        category: 'announcer',
+        loadingStrategy: 'buffer',
+        loop: false,
+        optional: true,
+        url: '/audio/announcer/postgame_signoff_grant_mercer_01.mp3',
+      });
+  });
+
   it('creates one AudioContext and routes category buses into master', () => {
     const fakeContext = new FakeAudioContext('suspended');
     let factoryCalls = 0;
