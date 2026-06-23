@@ -2111,6 +2111,13 @@ body[data-game-mode="exhibition"] .score-counter {
   margin: 0;
 }
 
+.title-version {
+  color: rgba(247, 251, 248, 0.72);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .football-hub-screen {
   position: fixed;
   inset: 0;

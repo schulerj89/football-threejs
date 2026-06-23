@@ -91,6 +91,8 @@ import {
   validateBrandAssetPlan,
   type BrandGenerateOptions,
 } from '../tools/branding/schemas';
+import packageJson from '../package.json';
+import { APP_VERSION } from '../src/config/AppVersion';
 import { GAME_BRAND } from '../src/config/GameBrand';
 import { listTeamProfiles } from '../src/teams/TeamRegistry';
 
@@ -123,6 +125,10 @@ describe('Football JS brand asset pipeline', () => {
       title: 'Football JS',
       titleMusicId: 'football-js-title',
     });
+  });
+
+  it('exposes the package version for player-facing build identification', () => {
+    expect(APP_VERSION).toBe(packageJson.version);
   });
 
   it('validates the typed GPT Image 2 brand generation plan', () => {

@@ -1,3 +1,4 @@
+import { APP_VERSION_LABEL } from '../config/AppVersion';
 import { GAME_BRAND } from '../config/GameBrand';
 
 export interface TitleLoadingState {
@@ -76,9 +77,12 @@ export class TitleScreen {
     footer.className = 'title-footer';
     const hint = document.createElement('p');
     hint.textContent = 'Enter starts | F1 developer tools';
+    const version = document.createElement('p');
+    version.className = 'title-version';
+    version.textContent = APP_VERSION_LABEL;
     this.loadingLine.className = 'title-loading-line';
     this.developmentDetails.className = 'title-development-details';
-    footer.append(hint, this.loadingLine, this.developmentDetails);
+    footer.append(hint, version, this.loadingLine, this.developmentDetails);
 
     content.append(emblem, title, actions, footer);
     this.root.append(art, overlay, content);

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.42] - 2026-06-23
+
+### Added
+
+- Added the current package version to the Football JS title screen footer so the visible build number matches the changelog version.
+
+### Tests
+
+- Verified `npx vitest run tests/brandAssets.test.ts` and `npm run build`.
+
 ## [1.21.41] - 2026-06-23
 
 ### Added
