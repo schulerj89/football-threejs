@@ -1993,36 +1993,8 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .match-transition-final-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 12px;
   margin: 0 0 12px;
-}
-
-.match-transition-final-stat {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 8px 10px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.match-transition-final-stat strong {
-  min-width: 0;
-  overflow: hidden;
-  color: rgba(244, 247, 239, 0.66);
-  font-size: 10px;
-  text-align: center;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.match-transition-final-stat span {
-  color: #fffdf1;
-  font-weight: 950;
 }
 
 .match-transition-panel ul {
@@ -2034,8 +2006,13 @@ body[data-game-mode="exhibition"] .score-counter {
   font-size: 13px;
 }
 
+.match-transition-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .match-transition-panel button {
-  margin-right: 8px;
   padding: 8px 11px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 6px;
@@ -2046,9 +2023,55 @@ body[data-game-mode="exhibition"] .score-counter {
   font-weight: 800;
 }
 
+.match-transition-panel-final {
+  top: auto;
+  bottom: clamp(18px, 4vh, 44px);
+  width: min(980px, calc(100vw - 28px));
+  transform: translateX(-50%);
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-color: rgba(240, 246, 238, 0.22);
+  background:
+    linear-gradient(135deg, rgba(7, 16, 18, 0.94), rgba(16, 28, 26, 0.9)),
+    rgba(6, 10, 9, 0.92);
+}
+
+.match-transition-panel-final h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2vw, 2.15rem);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.match-transition-panel-final p {
+  margin: 0;
+}
+
+.match-transition-panel-final .match-transition-story {
+  color: rgba(244, 247, 239, 0.78) !important;
+  font-size: 14px !important;
+  font-weight: 800;
+}
+
+.match-transition-panel-final .match-transition-actions {
+  justify-content: flex-end;
+}
+
+.match-transition-panel-final button {
+  min-height: 44px;
+  padding: 12px 18px;
+  border: 0;
+  background: #f4f7ef;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 @media (max-width: 720px) {
-  .match-transition-final-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .match-transition-panel-final {
+    max-height: calc(100vh - 24px);
+    overflow: auto;
   }
 }
 

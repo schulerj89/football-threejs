@@ -1,5 +1,7 @@
 import type { MatchSnapshot } from '../match/MatchTypes';
+import { createHalftimeStatsViewModel } from '../presentation/halftime/HalftimeStatsOverlay';
 import { resolvePostgameStory } from '../presentation/postgame/PostgameStoryResolver';
+import { getReadableTextColor } from '../teams/TeamThemeApplier';
 import { formatMatchClock } from './MatchScorebug';
 
 export interface QuarterTransitionOptions {
@@ -16,6 +18,7 @@ export class QuarterTransitionPanel {
   private readonly story = document.createElement('p');
   private readonly finalStats = document.createElement('div');
   private readonly drives = document.createElement('ul');
+  private readonly actions = document.createElement('div');
   private readonly continueButton = document.createElement('button');
   private readonly rematchButton = document.createElement('button');
   private readonly returnButton = document.createElement('button');
@@ -25,6 +28,7 @@ export class QuarterTransitionPanel {
     this.root.setAttribute('role', 'dialog');
     this.story.className = 'match-transition-story';
     this.finalStats.className = 'match-transition-final-stats';
+    this.actions.className = 'match-transition-actions';
     this.continueButton.type = 'button';
     this.continueButton.textContent = 'Continue';
     this.continueButton.addEventListener('click', options.onContinue);
@@ -34,15 +38,14 @@ export class QuarterTransitionPanel {
     this.returnButton.type = 'button';
     this.returnButton.textContent = 'Return to Title';
     this.returnButton.addEventListener('click', options.onReturnToTitle);
+    this.actions.append(this.continueButton, this.rematchButton, this.returnButton);
     this.root.append(
       this.title,
       this.summary,
       this.story,
       this.finalStats,
       this.drives,
-      this.continueButton,
-      this.rematchButton,
-      this.returnButton,
+      this.actions,
     );
     document.body.append(this.root);
   }
@@ -55,6 +58,8 @@ export class QuarterTransitionPanel {
       return;
     }
 
+    const isGameOver = phase === 'gameOver';
+    this.root.classList.toggle('match-transition-panel-final', isGameOver);
     this.title.textContent = getTransitionTitle(match);
     this.summary.textContent = `${match.userTeam.abbreviation} ${match.userScore} - ${match.opponentTeam.abbreviation} ${match.opponentScore} | Q${match.quarter} ${formatMatchClock(
       match.clock.remainingSeconds,
@@ -68,9 +73,10 @@ export class QuarterTransitionPanel {
         return item;
       }),
     );
-    this.continueButton.hidden = phase === 'gameOver';
-    this.rematchButton.hidden = phase !== 'gameOver';
-    this.returnButton.hidden = phase !== 'gameOver';
+    this.drives.hidden = isGameOver;
+    this.continueButton.hidden = isGameOver;
+    this.rematchButton.hidden = !isGameOver;
+    this.returnButton.hidden = !isGameOver;
   }
 
   private syncPostgameStory(match: MatchSnapshot): void {
@@ -83,14 +89,14 @@ export class QuarterTransitionPanel {
     }
 
     const story = resolvePostgameStory(match);
+    const viewModel = createHalftimeStatsViewModel(match);
     this.story.hidden = false;
     this.story.textContent = story.caption;
     this.finalStats.hidden = false;
     this.finalStats.replaceChildren(
-      createFinalStatChip('Total Yards', match.stats.teams.user.totalYards, match.stats.teams.opponent.totalYards),
-      createFinalStatChip('Passing', match.stats.teams.user.passingYards, match.stats.teams.opponent.passingYards),
-      createFinalStatChip('Rushing', match.stats.teams.user.rushingYards, match.stats.teams.opponent.rushingYards),
-      createFinalStatChip('Turnovers', match.stats.teams.user.turnovers, match.stats.teams.opponent.turnovers),
+      createFinalTeamRow(viewModel, match),
+      createFinalStatsGrid(viewModel),
+      createFinalLeaders(viewModel),
     );
   }
 
@@ -99,17 +105,81 @@ export class QuarterTransitionPanel {
   }
 }
 
-function createFinalStatChip(label: string, user: number, opponent: number): HTMLDivElement {
-  const chip = document.createElement('div');
-  const userValue = document.createElement('span');
-  const labelElement = document.createElement('strong');
-  const opponentValue = document.createElement('span');
-  chip.className = 'match-transition-final-stat';
-  userValue.textContent = String(user);
-  labelElement.textContent = label;
-  opponentValue.textContent = String(opponent);
-  chip.append(userValue, labelElement, opponentValue);
-  return chip;
+function createFinalTeamRow(
+  viewModel: ReturnType<typeof createHalftimeStatsViewModel>,
+  match: MatchSnapshot,
+): HTMLDivElement {
+  const row = document.createElement('div');
+  row.className = 'halftime-stats-teams';
+  row.append(
+    createFinalTeamPanel(viewModel.teams[0], match.userTeam.colors.secondary),
+    createFinalTeamPanel(viewModel.teams[1], match.opponentTeam.colors.secondary),
+  );
+  return row;
+}
+
+function createFinalStatsGrid(
+  viewModel: ReturnType<typeof createHalftimeStatsViewModel>,
+): HTMLDivElement {
+  const grid = document.createElement('div');
+  grid.className = 'halftime-stats-grid';
+  grid.replaceChildren(
+    ...viewModel.rows.map((row) => {
+      const item = document.createElement('div');
+      const user = document.createElement('span');
+      const label = document.createElement('strong');
+      const opponent = document.createElement('span');
+      item.className = 'halftime-stat-row';
+      user.textContent = row.user;
+      label.textContent = row.label;
+      opponent.textContent = row.opponent;
+      item.append(user, label, opponent);
+      return item;
+    }),
+  );
+  return grid;
+}
+
+function createFinalLeaders(
+  viewModel: ReturnType<typeof createHalftimeStatsViewModel>,
+): HTMLDivElement {
+  const leaders = document.createElement('div');
+  leaders.className = 'halftime-stats-leaders';
+  leaders.replaceChildren(
+    ...viewModel.leaders.map((leader) => {
+      const item = document.createElement('div');
+      const label = document.createElement('span');
+      const value = document.createElement('strong');
+      const statText = document.createElement('em');
+      item.className = `halftime-leader halftime-leader-${leader.team}`;
+      label.textContent = leader.label;
+      value.textContent = leader.value;
+      statText.textContent = leader.statText;
+      item.append(label, value, statText);
+      return item;
+    }),
+  );
+  return leaders;
+}
+
+function createFinalTeamPanel(
+  team: ReturnType<typeof createHalftimeStatsViewModel>['teams'][number],
+  secondaryColor: string,
+): HTMLDivElement {
+  const panel = document.createElement('div');
+  const swatch = document.createElement('span');
+  const name = document.createElement('strong');
+  const score = document.createElement('span');
+  panel.className = `halftime-team-panel halftime-team-panel-${team.team}`;
+  panel.style.setProperty('--halftime-team-color', team.primaryColor);
+  panel.style.setProperty('--halftime-team-secondary', secondaryColor);
+  panel.style.setProperty('--halftime-team-text', getReadableTextColor(team.primaryColor));
+  swatch.className = 'halftime-team-color-chip';
+  swatch.setAttribute('aria-hidden', 'true');
+  name.textContent = team.name;
+  score.textContent = String(team.score);
+  panel.append(swatch, name, score);
+  return panel;
 }
 
 function getTransitionTitle(match: MatchSnapshot): string {

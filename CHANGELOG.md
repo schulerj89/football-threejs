@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.3] - 2026-06-23
+
+### Changed
+
+- Reworked the end-of-game final report to use the halftime-style team panels, stat rows, and player leader cards while keeping the `Rematch` and `Return to Title` actions.
+
+### Tests
+
+- Verified `npm run build` and `npm run artifacts:game-screens`.
+
 ## [1.22.2] - 2026-06-23
 
 ### Fixed
