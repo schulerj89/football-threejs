@@ -258,7 +258,7 @@ describe('kickoff presentation formation', () => {
     director.dispose();
   });
 
-  it('applies the stiff run animation to moving kickoff participants', async () => {
+  it('applies a backswing-to-follow-through kick animation to the kickoff kicker', async () => {
     const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
     const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
     const kickoff = createKickoffStateForTeam('user', 8010);
@@ -284,22 +284,40 @@ describe('kickoff presentation formation', () => {
     await Promise.resolve();
     await Promise.resolve();
     audio.complete('kickoffReady');
+    const matchSnapshot = { deterministicSeed: 8010, kickoff } as ReturnType<MatchFlowController['getSnapshot']>;
+    for (let frame = 0; frame < 60 && director.getSnapshot().phase !== 'runUp'; frame += 1) {
+      updateKickoffFrames(
+        director,
+        gameplay,
+        matchSnapshot,
+        1,
+      );
+    }
     updateKickoffFrames(
       director,
       gameplay,
-      { deterministicSeed: 8010, kickoff } as ReturnType<MatchFlowController['getSnapshot']>,
-      36,
+      matchSnapshot,
+      3,
     );
 
     const kickerRoot = director.group.getObjectByName(`kickoff-participant-${kickerVisualId}`);
-    const leftArmPivot = kickerRoot?.getObjectByName('leftArmPivot');
-    const leftLegPivot = kickerRoot?.getObjectByName('leftLegPivot');
+    const rightLegPivot = kickerRoot?.getObjectByName('rightLegPivot');
+    const backswing = rightLegPivot?.rotation.x ?? 0;
+
+    updateKickoffFrames(
+      director,
+      gameplay,
+      matchSnapshot,
+      14,
+    );
+
+    const followThrough = rightLegPivot?.rotation.x ?? 0;
 
     expect(kickerRoot?.userData.poseIntent).toBe('locomotion');
-    expect(leftArmPivot).toBeInstanceOf(THREE.Group);
-    expect(leftLegPivot).toBeInstanceOf(THREE.Group);
-    expect(Math.abs(leftArmPivot?.rotation.x ?? 0)).toBeGreaterThan(0.01);
-    expect(Math.sign(leftArmPivot?.rotation.x ?? 0)).toBe(-Math.sign(leftLegPivot?.rotation.x ?? 0));
+    expect(kickerRoot?.userData.kickAnimationInitialized).toBe(true);
+    expect(rightLegPivot).toBeInstanceOf(THREE.Group);
+    expect(backswing).toBeLessThan(-0.05);
+    expect(followThrough).toBeGreaterThan(0.25);
 
     director.dispose();
   });

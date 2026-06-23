@@ -22,6 +22,15 @@ export interface RunAnimationConfig {
   strideRadiansPerSecondPerSpeed: number;
 }
 
+export interface KickAnimationConfig {
+  armCounterSwingRadians: number;
+  backswingProgress: number;
+  backswingRadians: number;
+  followThroughRadians: number;
+  forwardSwingProgress: number;
+  plantLegPitchRadians: number;
+}
+
 export const RUN_ANIMATION_CONFIG: RunAnimationConfig = {
   armSwingRadians: 0.34,
   legSwingRadians: 0.32,
@@ -31,6 +40,15 @@ export const RUN_ANIMATION_CONFIG: RunAnimationConfig = {
   speedForFullSwing: 7,
   speedThreshold: 0.12,
   strideRadiansPerSecondPerSpeed: 2.7,
+};
+
+export const KICK_ANIMATION_CONFIG: KickAnimationConfig = {
+  armCounterSwingRadians: 0.18,
+  backswingProgress: 0.42,
+  backswingRadians: -0.52,
+  followThroughRadians: 0.82,
+  forwardSwingProgress: 0.78,
+  plantLegPitchRadians: -0.12,
 };
 
 const TWO_PI = Math.PI * 2;
@@ -139,6 +157,35 @@ export function updateRunAnimation(
   pivots.rightLegPivot.rotation.z = 0;
 }
 
+export function updateKickAnimation(
+  player: THREE.Object3D,
+  progress: number,
+  kickingLeg: 'left' | 'right' = 'right',
+  config: KickAnimationConfig = KICK_ANIMATION_CONFIG,
+): void {
+  const pivots = ensureRunAnimationPivots(player);
+  const t = clamp(progress, 0, 1);
+  const kickPitch = resolveKickHipPitch(t, config);
+  const plantPitch = config.plantLegPitchRadians * Math.sin(t * Math.PI);
+  const armCounter = config.armCounterSwingRadians * Math.sin(t * Math.PI);
+
+  player.userData.kickAnimationInitialized = true;
+  player.userData.kickAnimationProgress = t;
+
+  if (kickingLeg === 'right') {
+    setPivotRotation(pivots.rightLegPivot, kickPitch);
+    setPivotRotation(pivots.leftLegPivot, plantPitch);
+    setPivotRotation(pivots.rightArmPivot, -armCounter);
+    setPivotRotation(pivots.leftArmPivot, armCounter * 0.55);
+    return;
+  }
+
+  setPivotRotation(pivots.leftLegPivot, kickPitch);
+  setPivotRotation(pivots.rightLegPivot, plantPitch);
+  setPivotRotation(pivots.leftArmPivot, -armCounter);
+  setPivotRotation(pivots.rightArmPivot, armCounter * 0.55);
+}
+
 function ensurePivot(
   player: THREE.Object3D,
   bodyRoot: THREE.Object3D,
@@ -186,6 +233,47 @@ function dampPivotToNeutral(pivot: THREE.Object3D, alpha: number): void {
   pivot.rotation.x = lerp(pivot.rotation.x, 0, alpha);
   pivot.rotation.y = lerp(pivot.rotation.y, 0, alpha);
   pivot.rotation.z = lerp(pivot.rotation.z, 0, alpha);
+}
+
+function setPivotRotation(pivot: THREE.Object3D, rotationX: number): void {
+  pivot.rotation.x = rotationX;
+  pivot.rotation.y = 0;
+  pivot.rotation.z = 0;
+}
+
+function resolveKickHipPitch(progress: number, config: KickAnimationConfig): number {
+  if (progress <= config.backswingProgress) {
+    return lerp(
+      0,
+      config.backswingRadians,
+      easeInOut(progress / Math.max(0.001, config.backswingProgress)),
+    );
+  }
+
+  if (progress <= config.forwardSwingProgress) {
+    return lerp(
+      config.backswingRadians,
+      config.followThroughRadians,
+      easeInOut(
+        (progress - config.backswingProgress) /
+          Math.max(0.001, config.forwardSwingProgress - config.backswingProgress),
+      ),
+    );
+  }
+
+  return lerp(
+    config.followThroughRadians,
+    config.followThroughRadians * 0.62,
+    easeInOut(
+      (progress - config.forwardSwingProgress) /
+        Math.max(0.001, 1 - config.forwardSwingProgress),
+    ),
+  );
+}
+
+function easeInOut(value: number): number {
+  const t = clamp(value, 0, 1);
+  return t * t * (3 - 2 * t);
 }
 
 function calculateDampingAlpha(rate: number, deltaSeconds: number): number {

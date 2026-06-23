@@ -13,6 +13,7 @@ import {
 } from '../src/presentation/PlayerPoseController';
 import {
   ensureRunAnimationPivots,
+  updateKickAnimation,
   updateRunAnimation,
 } from '../src/presentation/RunAnimation';
 
@@ -180,6 +181,23 @@ describe('player pose controller', () => {
 
     expect(Math.abs(pivot.rotation.x)).toBeLessThan(initialSwing);
     expect(Math.abs(pivot.rotation.x)).toBeLessThan(0.02);
+  });
+
+  it('pitches the kicking hip backward before swinging forward through contact', () => {
+    const visual = createPlaceholderPlayerVisual(createPlayer());
+
+    updateKickAnimation(visual, 0.25);
+    const rightLegPivot = getPivot(visual, 'rightLegPivot');
+    const leftLegPivot = getPivot(visual, 'leftLegPivot');
+    const backswing = rightLegPivot.rotation.x;
+
+    updateKickAnimation(visual, 0.9);
+    const followThrough = rightLegPivot.rotation.x;
+
+    expect(visual.userData.kickAnimationInitialized).toBe(true);
+    expect(backswing).toBeLessThan(-0.1);
+    expect(followThrough).toBeGreaterThan(0.3);
+    expect(Math.abs(leftLegPivot.rotation.x)).toBeLessThan(Math.abs(followThrough));
   });
 
   it('creates missing limb pivots without moving existing limb meshes', () => {

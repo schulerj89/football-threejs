@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.32] - 2026-06-23
+
+### Added
+
+- Added a reusable hip-pitch kick animation that drives the kicking leg from backswing to forward follow-through.
+
+### Changed
+
+- Updated kickoff and place-kick presentation to use the kick pose for the kicker while other participants keep their normal ready/run poses.
+
+### Tests
+
+- Verified `npx vitest run tests/playerPoseController.test.ts tests/specialTeams/kickoff.test.ts tests/specialTeams/placeKick.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.31] - 2026-06-23
 
 ### Added

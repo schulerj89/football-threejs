@@ -380,19 +380,25 @@ describe('extra-point presentation stage', () => {
     }
 
     expect(runUpSnapshot.phase).toBe('runUp');
-    director.update({
-      deltaSeconds: 1 / 60,
-      gameplaySnapshot,
-      matchSnapshot: {
-        deterministicSeed: 20260622,
-        extraPoint: activePlaceKick,
-      },
-    });
+    for (let frame = 0; frame < 8; frame += 1) {
+      director.update({
+        deltaSeconds: 1 / 60,
+        gameplaySnapshot,
+        matchSnapshot: {
+          deterministicSeed: 20260622,
+          extraPoint: activePlaceKick,
+        },
+      });
+    }
     runUpSnapshot = director.getSnapshot();
     const runUpPosition = runUpSnapshot.kickerVisualPosition;
     expect(runUpPosition).not.toBeNull();
     expect(distance2d(runUpPosition!, activePlaceKick.holderSpot))
       .toBeLessThan(distance2d(initial!, activePlaceKick.holderSpot));
+    const kickerRoot = director.group.children.find((child) =>
+      child.userData.placeKickSlotId === 'kicker');
+    const rightLegPivot = kickerRoot?.getObjectByName('rightLegPivot');
+    const backswing = rightLegPivot?.rotation.x ?? 0;
 
     let finalSnapshot = runUpSnapshot;
     for (let frame = 0; frame < 180 && finalSnapshot.phase !== 'result'; frame += 1) {
@@ -407,7 +413,13 @@ describe('extra-point presentation stage', () => {
       finalSnapshot = director.getSnapshot();
     }
 
+    const followThrough = rightLegPivot?.rotation.x ?? 0;
+
     expect(finalSnapshot.phase).toBe('result');
+    expect(kickerRoot?.userData.kickAnimationInitialized).toBe(true);
+    expect(rightLegPivot).toBeInstanceOf(THREE.Group);
+    expect(backswing).toBeLessThan(-0.05);
+    expect(followThrough).toBeGreaterThan(0.25);
     expect(finalSnapshot.resultMessage).toBe(PLACE_KICK_GOOD_MESSAGE);
     expect(finalSnapshot.playedResultWhistle).toBe(true);
     expect(finalSnapshot.playedResultAnnouncer).toBe(true);

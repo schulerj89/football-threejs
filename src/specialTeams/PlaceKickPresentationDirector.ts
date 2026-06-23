@@ -12,7 +12,10 @@ import type { PresentationCameraShot } from '../camera/PresentationShotDefinitio
 import type { TeamPresentationTheme } from '../teams/TeamThemeApplier';
 import type { GameplayRosterBinding } from '../roster/GameplayRosterBinding';
 import type { PlayerVisualMode } from '../presentation/players/PlayerVisualMode';
-import { updateRunAnimation } from '../presentation/RunAnimation';
+import {
+  updateKickAnimation,
+  updateRunAnimation,
+} from '../presentation/RunAnimation';
 import {
   FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
   createFootballPlayerVisual,
@@ -73,6 +76,7 @@ export const PLACE_KICK_GOOD_WHISTLE_ASSET_ID = 'referee_whistle_01';
 
 const PLACE_KICK_KICKER_ANIMATION_CONFIG = {
   approachStopDistanceYards: 0.78,
+  contactFollowThroughSeconds: 0.28,
   movingSpeedFloorYardsPerSecond: 4.5,
 } as const;
 
@@ -435,7 +439,10 @@ export class PlaceKickPresentationDirector {
     );
     const moving = transform.animationSpeedYardsPerSecond > 0;
     resource.setPose(moving ? 'locomotion' : placement.phase === 'protection' ? 'readyOffense' : 'readyDefense');
-    if (moving || resource.root.userData.runAnimationInitialized) {
+    const kickProgress = this.resolveKickerKickAnimationProgress(placement);
+    if (kickProgress !== null) {
+      updateKickAnimation(resource.root, kickProgress);
+    } else if (moving || resource.root.userData.runAnimationInitialized) {
       updateRunAnimation(resource.root, deltaSeconds, transform.animationSpeedYardsPerSecond);
     }
     resource.root.scale.setScalar(placement.scale);
@@ -646,6 +653,37 @@ export class PlaceKickPresentationDirector {
     }
 
     return Math.min(1, this.elapsedInPhaseSeconds / PLACE_KICK_PRESENTATION_CONFIG.runUpSeconds);
+  }
+
+  private resolveKickerKickAnimationProgress(
+    placement: PlaceKickFormationParticipantPlacement,
+  ): number | null {
+    if (placement.slotId !== 'kicker') {
+      return null;
+    }
+
+    if (this.phase === 'runUp') {
+      return Math.min(
+        0.86,
+        this.elapsedInPhaseSeconds / PLACE_KICK_PRESENTATION_CONFIG.runUpSeconds,
+      );
+    }
+
+    if (this.phase === 'contact') {
+      return 0.92;
+    }
+
+    if (
+      this.phase === 'flight' &&
+      this.flightElapsedSeconds <= PLACE_KICK_KICKER_ANIMATION_CONFIG.contactFollowThroughSeconds
+    ) {
+      const followThroughProgress =
+        this.flightElapsedSeconds /
+        PLACE_KICK_KICKER_ANIMATION_CONFIG.contactFollowThroughSeconds;
+      return Math.min(1, 0.92 + followThroughProgress * 0.08);
+    }
+
+    return null;
   }
 
   private findKickerVisualResource(): FootballPlayerVisualResources | null {

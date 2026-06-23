@@ -18,7 +18,10 @@ import type { GameplayRosterBinding } from '../roster/GameplayRosterBinding';
 import type { TeamPresentationTheme } from '../teams/TeamThemeApplier';
 import type { PlayerVisualMode } from '../presentation/players/PlayerVisualMode';
 import { createKickLandingReticle } from '../presentation/KickLandingReticle';
-import { updateRunAnimation } from '../presentation/RunAnimation';
+import {
+  updateKickAnimation,
+  updateRunAnimation,
+} from '../presentation/RunAnimation';
 import {
   FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
   createFootballPlayerVisual,
@@ -84,6 +87,11 @@ const KICKOFF_PRESENTATION_CONFIG = {
   sidelineCameraOffset: 8,
 } as const;
 
+const KICKOFF_KICK_ANIMATION_CONFIG = {
+  contactFollowThroughSeconds: 0.24,
+  visualSwingSeconds: 0.48,
+} as const;
+
 export class KickoffPresentationDirector {
   readonly group = new THREE.Group();
 
@@ -98,6 +106,8 @@ export class KickoffPresentationDirector {
   private requestedReadyLine = false;
   private requestedResultLine = false;
   private resultElapsedSeconds = 0;
+  private kickerKickAnimationElapsedSeconds = 0;
+  private kickerKickAnimationActive = false;
   private kickoffState: KickoffState | null = null;
   private matchSeed: number | string = 'kickoff';
   private returnState: KickoffReturnState | null = null;
@@ -141,6 +151,8 @@ export class KickoffPresentationDirector {
     this.requestedReadyLine = false;
     this.requestedResultLine = false;
     this.resultElapsedSeconds = 0;
+    this.kickerKickAnimationElapsedSeconds = 0;
+    this.kickerKickAnimationActive = false;
     this.group.visible = true;
     this.reticle.sync(kickoff.result, false);
     this.rebuildVisuals();
@@ -169,10 +181,13 @@ export class KickoffPresentationDirector {
         this.options.audioCoordinator.isLineComplete('kickoffReady')
       ) {
         startKickoffRunUp(this.returnState);
+        this.kickerKickAnimationElapsedSeconds = 0;
+        this.kickerKickAnimationActive = true;
         this.phase = 'runUp';
         void this.options.sfxAudio?.playOneShot('kickoff_runup_01');
       }
     } else if (this.phase === 'runUp') {
+      this.updateKickerKickAnimationTimer(delta);
       const events = updateKickoffReturnState(this.returnState, {
         deltaSeconds: delta,
         userInput: context.userInput,
@@ -189,6 +204,7 @@ export class KickoffPresentationDirector {
         this.startInFlightLine(context.matchSnapshot?.deterministicSeed ?? 'kickoff');
       }
     } else if (this.phase === 'flight') {
+      this.updateKickerKickAnimationTimer(delta);
       const events = updateKickoffReturnState(this.returnState, {
         deltaSeconds: delta,
         userInput: context.userInput,
@@ -616,7 +632,19 @@ export class KickoffPresentationDirector {
         participant.velocity,
       );
       resource.setPose(poseIntent);
-      syncKickoffParticipantRunAnimation(resource.root, participant.velocity, deltaSeconds);
+      syncKickoffParticipantRunAnimation(
+        resource.root,
+        participant.velocity,
+        deltaSeconds,
+        {
+          flightElapsedSeconds: this.returnState.flightElapsedSeconds,
+          kickAnimationElapsedSeconds: this.kickerKickAnimationElapsedSeconds,
+          kickAnimationActive: this.kickerKickAnimationActive,
+          phase: this.phase,
+          runUpElapsedSeconds: this.returnState.runUpElapsedSeconds,
+          slotId: placement.slotId,
+        },
+      );
       resource.root.scale.setScalar(placement.scale);
       resource.setVisible(this.group.visible && resource.getReadiness().subjectReady);
     }
@@ -688,6 +716,20 @@ export class KickoffPresentationDirector {
     }
     return this.completed ? 1 : 0;
   }
+
+  private updateKickerKickAnimationTimer(deltaSeconds: number): void {
+    if (!this.kickerKickAnimationActive) {
+      return;
+    }
+
+    this.kickerKickAnimationElapsedSeconds += deltaSeconds;
+    if (
+      this.kickerKickAnimationElapsedSeconds >=
+        KICKOFF_KICK_ANIMATION_CONFIG.visualSwingSeconds
+    ) {
+      this.kickerKickAnimationActive = false;
+    }
+  }
 }
 
 function cloneKickoffStateForPresentation(state: KickoffState): KickoffState {
@@ -746,11 +788,56 @@ function syncKickoffParticipantRunAnimation(
   root: THREE.Object3D,
   velocity: { x: number; z: number },
   deltaSeconds: number,
+  context: {
+    flightElapsedSeconds: number;
+    kickAnimationActive: boolean;
+    kickAnimationElapsedSeconds: number;
+    phase: KickoffPresentationPhase;
+    runUpElapsedSeconds: number;
+    slotId: string;
+  },
 ): void {
+  if (context.slotId === 'kicker') {
+    const kickProgress = resolveKickoffKickAnimationProgress(context);
+    if (kickProgress !== null) {
+      updateKickAnimation(root, kickProgress);
+      return;
+    }
+  }
+
   const speed = calculatePlanarSpeed(velocity);
   if (speed > 0.12 || root.userData.runAnimationInitialized === true) {
     updateRunAnimation(root, deltaSeconds, speed);
   }
+}
+
+function resolveKickoffKickAnimationProgress(context: {
+  flightElapsedSeconds: number;
+  kickAnimationActive: boolean;
+  kickAnimationElapsedSeconds: number;
+  phase: KickoffPresentationPhase;
+  runUpElapsedSeconds: number;
+  slotId: string;
+}): number | null {
+  if (context.kickAnimationActive) {
+    return Math.min(
+      1,
+      context.kickAnimationElapsedSeconds /
+        KICKOFF_KICK_ANIMATION_CONFIG.visualSwingSeconds,
+    );
+  }
+
+  if (
+    context.phase === 'flight' &&
+    context.flightElapsedSeconds <= KICKOFF_KICK_ANIMATION_CONFIG.contactFollowThroughSeconds
+  ) {
+    const followThroughProgress =
+      context.flightElapsedSeconds /
+      KICKOFF_KICK_ANIMATION_CONFIG.contactFollowThroughSeconds;
+    return Math.min(1, 0.86 + followThroughProgress * 0.14);
+  }
+
+  return null;
 }
 
 function calculatePlanarSpeed(velocity: { x: number; z: number }): number {
