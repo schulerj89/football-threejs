@@ -926,6 +926,7 @@ interface MatchSnapshot {
     result:
       | 'endOfGame'
       | 'endOfHalf'
+      | 'endOfQuarter'
       | 'fieldGoal'
       | 'punt'
       | 'touchdown'

@@ -52,8 +52,9 @@ export class QuarterTransitionPanel {
     this.summary.textContent = `${match.userTeam.abbreviation} ${match.userScore} - ${match.opponentTeam.abbreviation} ${match.opponentScore} | Q${match.quarter} ${formatMatchClock(
       match.clock.remainingSeconds,
     )}`;
+    const completedDrives = match.driveSummaries.filter((drive) => drive.result !== 'endOfQuarter');
     this.drives.replaceChildren(
-      ...match.driveSummaries.slice(-8).map((drive) => {
+      ...completedDrives.slice(-8).map((drive) => {
         const item = document.createElement('li');
         item.textContent = `${drive.possession === 'user' ? match.userTeam.abbreviation : match.opponentTeam.abbreviation}: ${drive.result}, ${drive.yards} yards`;
         return item;

@@ -37,7 +37,6 @@ import {
   type CoinTossState,
 } from './CoinTossModel';
 import {
-  otherPossession,
   resolveOpeningPossession,
   resolveSecondHalfPossession,
 } from './PossessionModel';
@@ -357,9 +356,13 @@ export function advanceToNextQuarter(match: MutableMatchModel): void {
 
   match.quarter += 1;
   resetMatchClock(match.clock, match.rules.quarterDurationSeconds);
-  const nextPossession = match.quarter === 3
-    ? match.secondHalfPossession
-    : otherPossession(match.possession);
+
+  if (match.quarter !== 3) {
+    match.phase = match.possession === 'user' ? 'userPossession' : 'opponentDriveSimulation';
+    return;
+  }
+
+  const nextPossession = match.secondHalfPossession;
   match.possession = nextPossession;
   match.phase = nextPossession === 'user' ? 'userPossession' : 'opponentDriveSimulation';
   match.currentFieldPosition = createFreeKickTouchbackPosition(match.rules.touchbackRules);

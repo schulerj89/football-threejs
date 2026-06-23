@@ -67,23 +67,69 @@ describe('offense-only exhibition match model', () => {
       userTeamId: DEFAULT_USER_TEAM_ID,
     });
     beginMatch(match);
+    match.currentFieldPosition = createOwnYardLinePosition(37);
 
     advanceToNextQuarter(match);
     expect(match.quarter).toBe(2);
-    expect(match.phase).toBe('opponentDriveSimulation');
+    expect(match.phase).toBe('userPossession');
+    expect(match.possession).toBe('user');
+    expect(match.currentFieldPosition).toEqual(createOwnYardLinePosition(37));
 
     advanceToNextQuarter(match);
     expect(match.quarter).toBe(3);
     expect(match.phase).toBe('opponentDriveSimulation');
     expect(match.possession).toBe('opponent');
 
+    match.currentFieldPosition = createOwnYardLinePosition(44);
     advanceToNextQuarter(match);
     expect(match.quarter).toBe(4);
-    expect(match.phase).toBe('userPossession');
+    expect(match.phase).toBe('opponentDriveSimulation');
+    expect(match.possession).toBe('opponent');
+    expect(match.currentFieldPosition).toEqual(createOwnYardLinePosition(44));
 
     advanceToNextQuarter(match);
     expect(match.phase).toBe('gameOver');
     expect(match.clock.remainingSeconds).toBe(0);
+  });
+
+  it('records Q1 clock expiry as a quarter break without changing possession or field position', () => {
+    const gameplay = createGameplayModel({
+      challengeMode: 'exhibition',
+      playbookId: '11v11',
+    });
+    const controller = createController({
+      quarterDurationSeconds: 30,
+      seed: 20260620,
+    });
+    const startingPosition = createOwnYardLinePosition(37);
+
+    controller.start(gameplay);
+    resetOffensePossession(gameplay, possessionFieldPositionToOffenseSpot(startingPosition));
+
+    expect(startPlay(gameplay)).toBe(true);
+    controller.update(31, gameplay, snapshotGameplayModel(gameplay));
+    resetPlay(gameplay);
+    controller.update(0, gameplay, snapshotGameplayModel(gameplay));
+
+    const breakSnapshot = controller.getSnapshot();
+    expect(breakSnapshot.quarter).toBe(1);
+    expect(breakSnapshot.phase).toBe('quarterBreak');
+    expect(breakSnapshot.driveNumber).toBe(1);
+    expect(breakSnapshot.driveSummaries).toHaveLength(0);
+    expect(breakSnapshot.previousDriveSummary).toBeNull();
+    expect(breakSnapshot.possession).toBe('user');
+    expect(breakSnapshot.currentFieldPosition).toEqual(startingPosition);
+
+    controller.continue(gameplay);
+    const secondQuarterSnapshot = controller.getSnapshot();
+    expect(secondQuarterSnapshot.quarter).toBe(2);
+    expect(secondQuarterSnapshot.phase).toBe('userPossession');
+    expect(secondQuarterSnapshot.driveNumber).toBe(1);
+    expect(secondQuarterSnapshot.possession).toBe('user');
+    expect(secondQuarterSnapshot.currentFieldPosition).toEqual(startingPosition);
+    expect(snapshotGameplayModel(gameplay).drive.lineOfScrimmage).toEqual(
+      possessionFieldPositionToOffenseSpot(startingPosition),
+    );
   });
 
   it('simulates opponent drives deterministically from the same input', () => {
@@ -99,6 +145,24 @@ describe('offense-only exhibition match model', () => {
     };
 
     expect(simulateOpponentDrive(input)).toEqual(simulateOpponentDrive(input));
+  });
+
+  it('records simulated Q1 opponent clock expiry as end of quarter instead of halftime', () => {
+    const summary = simulateOpponentDrive({
+      difficulty: 'pro',
+      driveNumber: 3,
+      opponentOffensiveRating: 73,
+      quarter: 1,
+      remainingSeconds: 1,
+      seed: 991,
+      startingFieldPosition: createOwnYardLinePosition(25),
+      userDefensiveRating: 69,
+    });
+
+    expect(summary.result).toBe('endOfQuarter');
+    expect(summary.description).toContain('quarter ends');
+    expect(summary.possessionTransition).toBeNull();
+    expect(summary.scoringEvents).toEqual([]);
   });
 
   it('applies opponent scoring events and elapsed clock time once', () => {

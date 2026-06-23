@@ -82,6 +82,8 @@ export function getDriveSummaryTitle(summary: DriveSummary): string {
       return 'Turnover';
     case 'turnoverOnDowns':
       return 'Turnover on downs';
+    case 'endOfQuarter':
+      return 'End of quarter';
     case 'endOfHalf':
       return 'End of half';
     case 'endOfGame':

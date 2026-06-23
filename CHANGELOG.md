@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.29] - 2026-06-23
+
+### Fixed
+
+- Fixed first- and third-quarter clock expiry so it enters a neutral quarter break instead of creating an `endOfHalf` drive result.
+- Preserved possession, drive number, and field position across normal quarter breaks while keeping halftime kickoff behavior intact.
+- Hid simulated `endOfQuarter` bookkeeping from the quarter-transition completed-drive list so the UI no longer shows a fake zero-yard drive.
+
+### Tests
+
+- Verified `npx vitest run tests/matchModel.test.ts tests/broadcastScorebug.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.28] - 2026-06-23
 
 ### Added

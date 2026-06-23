@@ -474,7 +474,7 @@ export class MatchFlowController {
       }
       const nextPhase = this.model.phase as string;
       if (nextPhase === 'userPossession') {
-        this.resetGameplayForFreeKickTouchback(gameplay);
+        this.resetGameplayForMatchPosition(gameplay, this.model.currentFieldPosition);
       } else if (nextPhase === 'opponentDriveSimulation') {
         this.simulateOpponentPossessionOnce();
       }
@@ -582,12 +582,18 @@ export class MatchFlowController {
   }
 
   private endUserDriveForClock(snapshot: GameplaySnapshot): void {
-    const finalPhase = this.model.quarter >= 4 ? 'endOfGame' : 'endOfHalf';
+    const finalPhase = resolveClockExpiredDriveResult(this.model.quarter);
     const finalFieldPosition = offenseSpotToPossessionFieldPosition(snapshot.drive.lineOfScrimmage);
+    this.model.currentFieldPosition = {
+      ...finalFieldPosition,
+    };
+    if (finalPhase === 'endOfQuarter') {
+      enterQuarterTransition(this.model);
+      return;
+    }
+
     const summary = createDriveSummary({
-      description: this.model.quarter >= 4
-        ? 'The clock expires before another snap.'
-        : 'The half ends before another snap.',
+      description: createClockExpiredDriveDescription(finalPhase),
       driveNumber: this.model.driveNumber,
       elapsedSeconds: 0,
       endingFieldPosition: finalFieldPosition,
@@ -639,6 +645,11 @@ export class MatchFlowController {
       type: 'opponentDrive',
     });
     addDriveSummary(this.model, summary);
+    if (summary.result === 'endOfQuarter') {
+      this.model.currentFieldPosition = {
+        ...summary.endingFieldPosition,
+      };
+    }
     this.model.clock.remainingSeconds = Math.max(
       0,
       this.model.clock.remainingSeconds - summary.elapsedSeconds,
@@ -961,6 +972,28 @@ function stableRatingOffset(value: string): number {
 
 function isScoringDriveResult(result: DriveSummaryResult): boolean {
   return result === 'fieldGoal' || result === 'touchdown';
+}
+
+function resolveClockExpiredDriveResult(quarter: number): DriveSummaryResult {
+  if (quarter >= 4) {
+    return 'endOfGame';
+  }
+  if (quarter === 2) {
+    return 'endOfHalf';
+  }
+  return 'endOfQuarter';
+}
+
+function createClockExpiredDriveDescription(result: DriveSummaryResult): string {
+  switch (result) {
+    case 'endOfGame':
+      return 'The clock expires before another snap.';
+    case 'endOfHalf':
+      return 'The half ends before another snap.';
+    case 'endOfQuarter':
+    default:
+      return 'The quarter ends before another snap.';
+  }
 }
 
 function getPuntTransitionReason(punt: SimulatedPuntResult): PossessionTransition['reason'] {

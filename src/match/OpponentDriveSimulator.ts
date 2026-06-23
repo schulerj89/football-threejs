@@ -58,6 +58,8 @@ export function simulateOpponentDrive(input: OpponentDriveInput): DriveSummary {
     result = 'endOfGame';
   } else if (quarterEnding && input.quarter === 2) {
     result = 'endOfHalf';
+  } else if (quarterEnding) {
+    result = 'endOfQuarter';
   } else if (roll < touchdownChance) {
     result = 'touchdown';
   } else if (roll < touchdownChance + fieldGoalChance) {
@@ -154,6 +156,7 @@ function estimateYards(
       return Math.round(rng() * 35) - 8;
     case 'turnoverOnDowns':
       return Math.round(rng() * 24);
+    case 'endOfQuarter':
     case 'endOfHalf':
     case 'endOfGame':
       return Math.round(rng() * 40);
@@ -216,6 +219,8 @@ function createOpponentDescription(
       return `The defense steals a possession after ${plays} plays.`;
     case 'turnoverOnDowns':
       return `A fourth-down stop gives the offense the ball back.`;
+    case 'endOfQuarter':
+      return `The opponent holds the ball as the quarter ends after gaining ${yards} yards.`;
     case 'endOfHalf':
       return `The opponent runs out the half after gaining ${yards} yards.`;
     case 'endOfGame':

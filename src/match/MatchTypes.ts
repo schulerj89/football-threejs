@@ -26,6 +26,7 @@ export type ExhibitionGameMode = 'exhibition' | 'scoreAttack';
 export type DriveSummaryResult =
   | 'endOfGame'
   | 'endOfHalf'
+  | 'endOfQuarter'
   | 'fieldGoal'
   | 'punt'
   | 'touchdown'
