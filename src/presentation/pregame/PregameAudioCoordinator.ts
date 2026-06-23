@@ -15,6 +15,7 @@ import {
 } from '../../audio/PregameCommentaryCatalog';
 import type { AudioSettings } from '../../audio/AudioSettings';
 import type { TitleMusicControllerSnapshot } from '../../audio/TitleMusicController';
+import type { VoicePackAssetResolver } from '../../audio/voicePacks/VoicePackAssetResolver';
 import type { GameplaySnapshot } from '../../playState';
 import type { MatchSnapshot } from '../../match/MatchTypes';
 import type {
@@ -46,6 +47,7 @@ export interface PregameAudioCoordinatorOptions {
   quietGapSeconds?: number;
   safetyTimeoutPaddingSeconds?: number;
   titleMusicDuckGain?: number;
+  voicePackResolver?: VoicePackAssetResolver;
 }
 
 interface ActivePregameLine extends PregameAudioLineSnapshot {
@@ -73,6 +75,7 @@ export class PregameAudioCoordinator {
   private readonly quietGapSeconds: number;
   private readonly safetyTimeoutPaddingSeconds: number;
   private readonly titleMusicDuckGain: number;
+  private readonly voicePackResolver: VoicePackAssetResolver | null;
   private activeLine: ActivePregameLine | null = null;
   private queuedLine: QueuedPregameLine | null = null;
   private readonly completedLineIds = new Set<PregameCommentaryLineId>();
@@ -93,6 +96,7 @@ export class PregameAudioCoordinator {
     this.safetyTimeoutPaddingSeconds =
       options.safetyTimeoutPaddingSeconds ?? DEFAULT_PREGAME_AUDIO_CONFIG.safetyTimeoutPaddingSeconds;
     this.titleMusicDuckGain = options.titleMusicDuckGain ?? DEFAULT_PREGAME_AUDIO_CONFIG.titleMusicDuckGain;
+    this.voicePackResolver = options.voicePackResolver ?? null;
   }
 
   createSelections(options: {
@@ -207,16 +211,62 @@ export class PregameAudioCoordinator {
       catalogDurationSeconds: clip.durationSeconds,
     });
 
-    const task = this.playTrackedOneShot(selection.assetId)
+    const staticPlayable = this.voicePackResolver
+      ? null
+      : {
+        assetId: selection.assetId ?? clip.assetId,
+        caption: selection.caption,
+        durationSeconds: clip.durationSeconds,
+      };
+    const task = staticPlayable
+      ? this.playResolvedLine(lineId, selection, staticPlayable)
+      : this.resolvePlayableSelection(selection)
+        .then((playable) => this.playResolvedLine(lineId, selection, playable));
+    this.pendingAudioTasks.push(task);
+  }
+
+  private playResolvedLine(
+    lineId: PregameCommentaryLineId,
+    selection: PregameCommentarySelection,
+    playable: { assetId: string; caption: string; durationSeconds: number } | null,
+  ): Promise<void> {
+    if (!playable) {
+      if (this.activeLine?.lineId === lineId) {
+        const activeAssetId = this.activeLine.assetId;
+        this.failedLineIds.add(lineId);
+        this.completedLineIds.add(lineId);
+        this.activeLine = null;
+        this.restoreDucking();
+        this.recordHistory(lineId, activeAssetId, 'suppressed', 'missingAsset', {
+          catalogDurationSeconds: selection.clip?.durationSeconds ?? null,
+        });
+        this.startQueuedLineIfReady();
+      }
+      return Promise.resolve();
+    }
+
+    if (this.activeLine?.lineId === lineId && this.activeLine.actualEndedAtSeconds === null) {
+      const nowAfterResolve = this.mixer.getCurrentTime();
+      this.activeLine.assetId = playable.assetId;
+      this.activeLine.caption = playable.caption;
+      this.activeLine.catalogDurationSeconds = playable.durationSeconds;
+      this.activeLine.endsAtSeconds = nowAfterResolve + playable.durationSeconds + this.quietGapSeconds;
+      this.activeLine.remainingSeconds = playable.durationSeconds + this.quietGapSeconds;
+      this.activeLine.safetyEndsAtSeconds =
+        nowAfterResolve + playable.durationSeconds + this.safetyTimeoutPaddingSeconds;
+    }
+
+    return this.playTrackedOneShot(playable.assetId)
       .then((handle) => {
         if (!handle) {
           if (this.activeLine?.lineId === lineId) {
+            const activeAssetId = this.activeLine.assetId;
             this.failedLineIds.add(lineId);
             this.completedLineIds.add(lineId);
             this.activeLine = null;
             this.restoreDucking();
-            this.recordHistory(lineId, selection.assetId, 'suppressed', 'missingAsset', {
-              catalogDurationSeconds: clip.durationSeconds,
+            this.recordHistory(lineId, activeAssetId, 'suppressed', 'missingAsset', {
+              catalogDurationSeconds: playable.durationSeconds,
             });
             this.startQueuedLineIfReady();
           }
@@ -230,8 +280,8 @@ export class PregameAudioCoordinator {
 
         this.activeLine.handle = handle;
         const expectedPlaybackSeconds = Math.max(
-          clip.durationSeconds,
-          handle.durationSeconds ?? clip.durationSeconds,
+          playable.durationSeconds,
+          handle.durationSeconds ?? playable.durationSeconds,
         );
         this.activeLine.startedAtSeconds = handle.startedAt;
         this.activeLine.safetyEndsAtSeconds =
@@ -239,9 +289,9 @@ export class PregameAudioCoordinator {
         this.activeLine.endsAtSeconds =
           handle.startedAt + expectedPlaybackSeconds + this.quietGapSeconds;
         this.activeLine.playbackState = 'playing';
-        this.recordHistory(lineId, selection.assetId, 'played', null, {
+        this.recordHistory(lineId, playable.assetId, 'played', null, {
           actualStartedAtSeconds: handle.startedAt,
-          catalogDurationSeconds: clip.durationSeconds,
+          catalogDurationSeconds: playable.durationSeconds,
         });
 
         const completionTask = handle.ended.then((completion) => {
@@ -249,7 +299,6 @@ export class PregameAudioCoordinator {
         });
         this.pendingAudioTasks.push(completionTask);
       });
-    this.pendingAudioTasks.push(task);
   }
 
   isLineComplete(lineId: PregameCommentaryLineId): boolean {
@@ -347,6 +396,33 @@ export class PregameAudioCoordinator {
           stopped,
         });
       },
+    };
+  }
+
+  private async resolvePlayableSelection(
+    selection: PregameCommentarySelection,
+  ): Promise<{ assetId: string; caption: string; durationSeconds: number } | null> {
+    if (!selection.clip) {
+      return null;
+    }
+
+    if (!this.voicePackResolver) {
+      return {
+        assetId: selection.assetId ?? selection.clip.assetId,
+        caption: selection.caption,
+        durationSeconds: selection.clip.durationSeconds,
+      };
+    }
+
+    const resolved = await this.voicePackResolver.resolveClip(selection.clip.scriptId);
+    if (!resolved) {
+      return null;
+    }
+
+    return {
+      assetId: resolved.asset.assetId,
+      caption: resolved.caption,
+      durationSeconds: resolved.clip.durationSeconds || selection.clip.durationSeconds,
     };
   }
 

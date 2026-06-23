@@ -1,0 +1,13 @@
+{
+  "assetId": "candidate-a-front",
+  "candidateId": "candidate-a",
+  "contentHash": "a1e455f5ab6aad5c046009f026dd33fad5cda7d213afcbd6345b372642eee243",
+  "generatedAt": "2026-06-22T11:37:02.098Z",
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "prompt": "Create a stylized modern American-football helmet reference for a modular 3D asset pipeline. The helmet has a slightly exaggerated low-poly silhouette suitable for a stylized browser football game. Show only the helmet shell and compact modern faceguard. The shell is neutral white or very light gray. The faceguard is dark charcoal. The background is plain contrasting medium gray. Depict the shell and faceguard as visually separate parts with a tiny non-contact gap at the mounting areas. Use a rounded shell, readable ear opening, clear lower shell edge, complete rear shell profile, and thick faceguard bars. Do not include a player head, neck, body, football, chinstrap, loose straps, padding, screws, visor, mouthguard, logo, lettering, numbers, decals, team marks, scenery, shadows, watermark, or readable text. Keep the helmet centered, isolated, orthographic, and at the same apparent scale as the other views in the set. Candidate A style: clean broadcast-game silhouette, smooth white shell, charcoal facemask, crisp low-poly planes, neutral studio lighting. Front orthographic view. The face opening and compact faceguard are centered and symmetrical, with thick bars and clear separation from the shell. Output an opaque square WebP-ready image. No text, no logo, no numbers, no watermark.",
+  "quality": "high",
+  "requestedSize": "1024x1024",
+  "revisedPrompt": null,
+  "view": "front"
+}

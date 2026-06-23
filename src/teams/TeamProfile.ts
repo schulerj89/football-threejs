@@ -13,6 +13,9 @@ export interface TeamProfile {
   endZoneColor: string;
   homeUniform: UniformPalette;
   id: string;
+  identity: string;
+  logoAssetId: string;
+  logoUrl: string;
   rosterId?: string;
   shortName: string;
   stadiumId?: string;

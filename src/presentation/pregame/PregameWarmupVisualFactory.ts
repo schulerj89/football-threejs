@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import { createPlayerModel } from '../../playerModel';
-import {
-  createPlaceholderPlayerVisual,
-  syncPlayerVisual,
-} from '../../playerVisual';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
+import {
+  createFootballPlayerVisual,
+  type FootballPlayerVisualFactoryOptions,
+  type FootballPlayerVisualReadiness,
+  type FootballPlayerVisualResources,
+} from '../players/FootballPlayerVisualFactory';
 import {
   createSidelineVisualResources,
   type SidelineVisualResources,
@@ -13,14 +14,23 @@ import type { SidelinePlayerPlacement, SidelinePoseId } from '../teams/SidelineT
 import type {
   PregameWarmupLayout,
   PregameWarmupPlacement,
+  PregameWarmupQuarterbackAppearanceAudit,
   PregameWarmupPropPlacement,
 } from './PregameWarmupTypes';
 
 export interface PregameWarmupVisualResources {
   dispose: () => void;
+  getQuarterbackAppearanceAudit: () => PregameWarmupQuarterbackAppearanceAudit;
   group: THREE.Group;
   metrics: WarmupVisualMetrics;
   quarterbackClone: THREE.Group | null;
+}
+
+export interface PregameWarmupVisualFactoryOptions {
+  footballPlayerVisual?: Pick<
+    FootballPlayerVisualFactoryOptions,
+    'attachHelmet' | 'helmet' | 'playerVisualOptions'
+  >;
 }
 
 export interface WarmupVisualMetrics {
@@ -60,6 +70,7 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0);
 export function createPregameWarmupVisualResources(
   layout: PregameWarmupLayout,
   theme: TeamPresentationTheme,
+  options: PregameWarmupVisualFactoryOptions = {},
 ): PregameWarmupVisualResources {
   const group = new THREE.Group();
   group.name = 'pregame-warmup-root';
@@ -77,9 +88,10 @@ export function createPregameWarmupVisualResources(
     group.add(supportResources.group);
   }
 
-  const quarterbackClone = layout.userQuarterback
-    ? createQuarterbackClone(layout.userQuarterback, theme)
+  const quarterbackResources = layout.userQuarterback
+    ? createQuarterbackClone(layout.userQuarterback, theme, options)
     : null;
+  const quarterbackClone = quarterbackResources?.root ?? null;
   if (quarterbackClone) {
     group.add(quarterbackClone);
   }
@@ -100,27 +112,14 @@ export function createPregameWarmupVisualResources(
       group.clear();
       supportResources?.dispose();
       props.dispose();
-      if (quarterbackClone) {
-        disposeQuarterbackCloneOwnedResources(quarterbackClone);
-        quarterbackClone.removeFromParent();
-      }
+      quarterbackResources?.dispose();
     },
+    getQuarterbackAppearanceAudit: () =>
+      createQuarterbackAppearanceAudit(layout.userQuarterback, quarterbackResources),
     group,
     metrics,
     quarterbackClone,
   };
-}
-
-function disposeQuarterbackCloneOwnedResources(quarterbackClone: THREE.Object3D): void {
-  const football = quarterbackClone.getObjectByName('pregame-warmup-held-football');
-  if (!(football instanceof THREE.Mesh)) {
-    return;
-  }
-
-  football.geometry.dispose();
-  for (const material of getMaterials(football.material)) {
-    material.dispose();
-  }
 }
 
 export function createEmptyWarmupVisualMetrics(): WarmupVisualMetrics {
@@ -130,49 +129,73 @@ export function createEmptyWarmupVisualMetrics(): WarmupVisualMetrics {
 function createQuarterbackClone(
   placement: PregameWarmupPlacement,
   theme: TeamPresentationTheme,
-): THREE.Group {
-  const model = createPlayerModel(placement.position, {
-    facingRadians: placement.facingRadians,
-    id: placement.player?.id ?? placement.id,
-    role: 'quarterback',
-    state: 'idle',
-    team: placement.team,
-  });
-  const visual = createPlaceholderPlayerVisual(model, {
-    teamUniforms: theme.uniforms,
-  });
-  visual.name = 'pregame-warmup-quarterback-clone';
-  visual.userData.pregameWarmup = true;
-  visual.userData.presentationOnly = true;
-  visual.userData.rosterPlayerId = placement.player?.id ?? null;
-  syncPlayerVisual(visual, model, { teamUniforms: theme.uniforms });
-
-  const football = createHeldFootball();
-  football.position.set(0.36, 0.08, 0.35);
-  football.rotation.set(0.1, Math.PI / 2, -0.25);
-  visual.add(football);
+  options: PregameWarmupVisualFactoryOptions,
+): FootballPlayerVisualResources {
+  const visual = createFootballPlayerVisual(
+    {
+      appearanceId: placement.appearanceId,
+      footballPosition: 'QB',
+      gameplayTeam: placement.team,
+      presentationOnly: true,
+      role: 'quarterback',
+      jerseyNumber: placement.player?.jerseyNumber ?? null,
+      rosterPlayerId: placement.player?.id ?? placement.id,
+      teamSide: placement.teamSide,
+      uniform: theme.uniforms[placement.team],
+      visualId: placement.id,
+    },
+    {
+      attachHelmet: options.footballPlayerVisual?.attachHelmet,
+      helmet: options.footballPlayerVisual?.helmet,
+      playerVisualOptions: {
+        ...options.footballPlayerVisual?.playerVisualOptions,
+        teamUniforms: theme.uniforms,
+      },
+      teamUniforms: theme.uniforms,
+    },
+  );
+  visual.syncTransform(
+    { x: placement.position.x, z: placement.position.z },
+    placement.facingRadians,
+  );
+  visual.root.name = 'pregame-warmup-quarterback-clone';
+  visual.root.userData.pregameWarmup = true;
+  visual.setVisible(false);
+  void visual.ready
+    .then(() => {
+      visual.setVisible(true);
+    })
+    .catch(() => {
+      visual.setVisible(false);
+    });
   return visual;
 }
 
-function createHeldFootball(): THREE.Mesh {
-  const geometry = new THREE.SphereGeometry(
-    HELD_FOOTBALL_CONFIG.diameter / 2,
-    8,
-    6,
-  );
-  geometry.scale(
-    HELD_FOOTBALL_CONFIG.length / HELD_FOOTBALL_CONFIG.diameter,
-    0.82,
-    1,
-  );
-  const material = new THREE.MeshLambertMaterial({
-    color: HELD_FOOTBALL_CONFIG.color,
-    flatShading: true,
-  });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = 'pregame-warmup-held-football';
-  mesh.userData.pregameWarmup = true;
-  return mesh;
+function createQuarterbackAppearanceAudit(
+  placement: PregameWarmupPlacement | null,
+  quarterbackResources: FootballPlayerVisualResources | null,
+): PregameWarmupQuarterbackAppearanceAudit {
+  const readiness = quarterbackResources?.getReadiness() ?? createMissingQuarterbackReadiness();
+  return {
+    ...readiness,
+    rosterPlayerId: placement?.player?.id ?? null,
+  };
+}
+
+function createMissingQuarterbackReadiness(): FootballPlayerVisualReadiness {
+  return {
+    bodyReady: false,
+    faceguardMaterialName: null,
+    fallbackReason: 'bodyMissing',
+    headBounds: null,
+    helmetAssetId: 'football-helmet-kit',
+    helmetBounds: null,
+    helmetReady: false,
+    playerAssetStatus: 'idle',
+    shellMaterialName: null,
+    subjectReady: false,
+    subjectVisible: false,
+  };
 }
 
 function createPropResources(props: readonly PregameWarmupPropPlacement[]): {

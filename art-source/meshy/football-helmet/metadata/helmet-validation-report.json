@@ -1,0 +1,12 @@
+{
+  "failures": [],
+  "passed": true,
+  "totalTriangles": 7027,
+  "manifestPath": "public/models/helmet/helmet-kit-manifest.json",
+  "runtimePaths": [
+    "public/models/helmet/football-helmet-kit.glb",
+    "public/models/helmet/helmet-shell.glb",
+    "public/models/helmet/faceguard-standard.glb"
+  ],
+  "validatedAt": "2026-06-22T12:20:35.948Z"
+}

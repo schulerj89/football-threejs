@@ -8,6 +8,10 @@ import {
 } from '../field';
 import type { RenderMetricsSnapshot } from '../debugOverlay';
 import type { TeamPresentationTheme } from '../teams/TeamThemeApplier';
+import {
+  WeatherPresentationController,
+} from '../weather/WeatherPresentationController';
+import type { WeatherPresentationSnapshot } from '../weather/WeatherTypes';
 
 export interface SceneRuntimeOptions {
   mount: HTMLElement;
@@ -19,8 +23,11 @@ export class SceneRuntime {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
 
+  private readonly ambientLight: THREE.HemisphereLight;
+  private readonly directionalLight: THREE.DirectionalLight;
   private maxPixelRatio = 2;
   private readonly resizeHandlers = new Set<(width: number, height: number) => void>();
+  private readonly weatherController: WeatherPresentationController;
 
   constructor({ mount, searchParams }: SceneRuntimeOptions) {
     this.scene.background = new THREE.Color(0x101920);
@@ -37,12 +44,21 @@ export class SceneRuntime {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     mount.appendChild(this.renderer.domElement);
 
-    const ambientLight = new THREE.HemisphereLight(0xdde7ef, 0x344038, 2.4);
-    this.scene.add(ambientLight);
+    this.ambientLight = new THREE.HemisphereLight(0xdde7ef, 0x344038, 2.4);
+    this.ambientLight.name = 'scene-hemisphere-light';
+    this.scene.add(this.ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 2.2);
-    directionalLight.position.set(-20, 45, -25);
-    this.scene.add(directionalLight);
+    this.directionalLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    this.directionalLight.name = 'scene-clear-weather-key-light';
+    this.directionalLight.position.set(-20, 45, -25);
+    this.directionalLight.castShadow = false;
+    this.scene.add(this.directionalLight);
+
+    this.weatherController = new WeatherPresentationController({
+      hemisphereLight: this.ambientLight,
+      keyLight: this.directionalLight,
+    });
+    this.scene.add(this.weatherController.group);
 
     this.resize();
     window.addEventListener('resize', this.resize);
@@ -72,7 +88,12 @@ export class SceneRuntime {
   }
 
   render(camera: THREE.Camera): void {
+    this.weatherController.update(camera);
     this.renderer.render(this.scene, camera);
+  }
+
+  getWeatherSnapshot(): WeatherPresentationSnapshot {
+    return this.weatherController.getSnapshot();
   }
 
   setMaxPixelRatio(maxPixelRatio: number): void {
@@ -94,6 +115,11 @@ export class SceneRuntime {
     firstDownMarker: { z: number },
   ): void {
     syncFootballFieldDriveLines(this.field, lineOfScrimmage, firstDownMarker);
+  }
+
+  setDriveLinesVisible(visible: boolean): void {
+    this.field.lineOfScrimmageMarker.visible = visible;
+    this.field.firstDownLineMarker.visible = visible;
   }
 
   applyTeamTheme(theme: TeamPresentationTheme): void {
@@ -195,6 +221,8 @@ export class SceneRuntime {
     window.removeEventListener('orientationchange', this.resize);
     this.resizeHandlers.clear();
     this.field.dispose();
+    this.scene.remove(this.weatherController.group);
+    this.weatherController.dispose();
     this.renderer.domElement.remove();
     this.renderer.dispose();
   }
@@ -217,7 +245,7 @@ function getMaterials(material: THREE.Material | THREE.Material[]): THREE.Materi
 
 function isStadiumObject(object: THREE.Object3D): boolean {
   return object.userData.stadium === true ||
-    /stadium|stand|seating|crowd-seating-shell/i.test(object.name);
+    /stadium|seating|crowd-seating-shell/i.test(object.name);
 }
 
 function isCrowdObject(object: THREE.Object3D): boolean {

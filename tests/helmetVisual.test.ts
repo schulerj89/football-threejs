@@ -20,6 +20,12 @@ import {
 import { resolveTeamPresentationTheme } from '../src/teams/TeamThemeApplier';
 
 describe('helmet visual integration', () => {
+  it('uses the generated modular helmet kit as the shared helmet asset', () => {
+    expect(HELMET_VISUAL_CONFIG.assetUrl).toBe('/models/helmet/football-helmet-kit.glb');
+    expect(HELMET_VISUAL_CONFIG.shellMeshNames).toContain('helmet_shell');
+    expect(HELMET_VISUAL_CONFIG.faceguardMeshNames).toContain('faceguard_standard');
+  });
+
   it('keeps a dedicated head anchor on the procedural player body', () => {
     const playerVisual = createPlaceholderPlayerVisual(createPlayerModel());
     const bodyRoot = playerVisual.getObjectByName(PLAYER_BODY_ROOT_NAME);

@@ -1,0 +1,19 @@
+{
+  "assetId": "lakefront-lights-logo-a",
+  "background": "opaque",
+  "candidateId": "candidate-a",
+  "compressedBytes": 92314,
+  "contentHash": "6616c962ddd556e689b805dc7d31601a7b3d62b6272815e8bd9e6ff908ecd1eb",
+  "generatedAt": "2026-06-22T19:23:37.196Z",
+  "generationMetadata": {
+    "apiEndpoint": "images/generations",
+    "revisedPrompt": null
+  },
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "outputPath": "public/branding/teams/lakefront-lights/candidate-a.webp",
+  "prompt": "Create an original fictional American-football team logo badge for Football JS. Use a centered square composition suitable for a menu badge and scorebug crop. Style: bold low-poly vector-like sports identity, clean silhouette, premium broadcast-game presentation, opaque background. No words, no text, no letters, no numbers, no watermark, no real professional or college marks, no league logos, no trademarked mascots. Team: Lakefront Lights. Mascot concept: a geometric lighthouse with a sweeping light beam over simplified lakefront lines. Team colors: primary #b83737, secondary #f2f4f6, accent #24282e. Candidate direction: crimson lighthouse silhouette with white light beam and charcoal shadow geometry. Keep the badge readable at small UI sizes, avoid complex fine detail, preserve crop-safe margins.",
+  "quality": "high",
+  "requestedSize": "1024x1024",
+  "teamId": "lakefront-lights"
+}

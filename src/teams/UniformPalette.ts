@@ -34,6 +34,20 @@ export function hexToNumber(value: string): number {
   return Number.parseInt(value.replace('#', ''), 16);
 }
 
+export function resolveDistinctHelmetFaceguardColor(
+  helmetShell: string,
+  requestedFaceguard: string,
+): string {
+  const shell = normalizeHexColor(helmetShell, '#2f66d8');
+  const faceguard = normalizeHexColor(requestedFaceguard, '#f3f5f8');
+
+  if (calculateHexDistance(shell, faceguard) >= 24) {
+    return faceguard;
+  }
+
+  return calculateRelativeLuminance(shell) > 0.42 ? '#24282e' : '#f3f5f8';
+}
+
 export function normalizeUniformPalette(
   value: Partial<UniformPalette> | undefined,
   fallback: UniformPalette,
@@ -63,4 +77,34 @@ export function serializeUniformPalette(palette: UniformPalette): string {
     palette.shoe,
     palette.number,
   ].join('|');
+}
+
+function calculateHexDistance(hexA: string, hexB: string): number {
+  const a = decomposeHex(hexA);
+  const b = decomposeHex(hexB);
+  return Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
+}
+
+function calculateRelativeLuminance(hex: string): number {
+  const color = decomposeHex(hex);
+  return [color.r, color.g, color.b]
+    .map((component) => {
+      const normalized = component / 255;
+      return normalized <= 0.03928
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4;
+    })
+    .reduce((sum, component, index) => {
+      const coefficients = [0.2126, 0.7152, 0.0722];
+      return sum + component * (coefficients[index] ?? 0);
+    }, 0);
+}
+
+function decomposeHex(hex: string): { b: number; g: number; r: number } {
+  const value = hexToNumber(hex);
+  return {
+    b: value & 0xff,
+    g: (value >> 8) & 0xff,
+    r: (value >> 16) & 0xff,
+  };
 }

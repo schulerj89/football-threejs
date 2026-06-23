@@ -342,6 +342,7 @@ function makeCommentarySnapshot(
     },
     queue: [],
     remainingCooldowns: [],
+    voicePack: null,
   };
 }
 

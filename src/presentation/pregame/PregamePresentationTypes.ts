@@ -7,7 +7,9 @@ import type { SidelineTeamControllerSnapshot, SidelineTeamSide, SidelineZone } f
 import type { StadiumControllerSnapshot } from '../../stadium/StadiumController';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
 import type { PlayerSpotlightStageSnapshot } from './PlayerSpotlightStage';
+import type { KeyToGame } from './KeysToGameResolver';
 import type {
+  PregameWarmupQuarterbackAppearanceAudit,
   PregameWarmupSnapshot,
   PregameWarmupZoneId,
 } from './PregameWarmupTypes';
@@ -19,8 +21,12 @@ export type PregameShotId =
   | 'matchupWide'
   | 'opponentTeamPan'
   | 'opponentWarmupPan'
+  | 'quarterbackFrontSpotlight'
   | 'quarterbackSpotlight'
+  | 'stadiumCenterOrbit'
+  | 'stadiumCenterOrbit360'
   | 'stadiumEstablish'
+  | 'transitionToCoinToss'
   | 'transitionToGameplay'
   | 'userTeamTunnelOrSideline'
   | 'userWarmupPan'
@@ -42,10 +48,12 @@ export type PregameCommentaryLineId =
 
 export interface PregameSequenceStep {
   commentaryLineId?: PregamePresentationCommentaryLineId;
+  commentaryLineIds?: readonly PregamePresentationCommentaryLineId[];
   lowerThirdTeamSide?: SidelineTeamSide;
   minimumSeconds: number;
   shotId: PregameShotId;
   waitForCommentaryLineId?: PregamePresentationCommentaryLineId;
+  waitForCommentaryLineIds?: readonly PregamePresentationCommentaryLineId[];
 }
 
 export interface PregamePresentationContext {
@@ -101,6 +109,8 @@ export interface PregamePresentationSnapshot {
   holdReason: string | null;
   lastStepTransitionSeconds: number | null;
   lowerThird: PregameLowerThirdState;
+  introOverlay: 'hidden' | 'keys' | 'matchup';
+  keysToGame: readonly KeyToGame[];
   musicState: {
     gain: number;
     loopActive: boolean;
@@ -110,6 +120,7 @@ export interface PregamePresentationSnapshot {
   phase: PregamePresentationPhase;
   presentationCloneCount: number;
   progress: number;
+  quarterbackAppearance: PregameWarmupQuarterbackAppearanceAudit | null;
   sequence: PregameShotId[];
   shotElapsedSeconds: number;
   sidelineCounts: {

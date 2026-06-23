@@ -1,0 +1,23 @@
+{
+  "assetId": "qb_hut_02",
+  "caption": "Hut!",
+  "category": "sfx",
+  "compressedBytes": 10075,
+  "contentHash": "3180e3ba604555add6db9976b1d3753f47d78350c51f29dc8567f8e16147b786",
+  "durationSeconds": 0.56,
+  "eventCategory": "cadence",
+  "generatedAt": "2026-06-22T14:14:31.801Z",
+  "kind": "speech",
+  "metadata": {
+    "semanticCategory": "cadence",
+    "voiceCategory": "quarterbackCadence",
+    "delivery": "urgent"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 0.45,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Hut!",
+  "scriptId": "qb_hut_02",
+  "voiceId": "SHkqlLNHrYVC1KK4qJev"
+}

@@ -1,0 +1,12 @@
+{
+  "candidateId": "candidate-a",
+  "createdAt": "2026-06-22T18:25:10.639Z",
+  "creditCost": null,
+  "generatedGlbHash": "24ad2791334fc8554565db1ab2cbb5a1b1da741c15cd01ca559c6d7689b60667",
+  "generatedGlbPath": "art-source/meshy/player-base/generated/candidate-a.glb",
+  "riggingRequest": {
+    "height_meters": 1.85,
+    "input_task_id": "019ef091-2cbd-7ae2-89c4-e381710c23e6"
+  },
+  "taskId": "019ef094-32ac-7bc2-98ea-b3ca1b8b1a98"
+}

@@ -6,7 +6,6 @@ import {
 import { listTeamRosters } from '../roster/RosterRegistry';
 import type { RosterPlayer } from '../roster/RosterPlayer';
 import { getTeamProfile, listTeamProfiles } from '../teams/TeamRegistry';
-import type { TeamProfile } from '../teams/TeamProfile';
 
 export type PregameCommentaryCategory =
   | 'coinTossResult'
@@ -114,6 +113,12 @@ const KICKOFF_RESULT_TYPES: readonly PregameKickoffResultType[] = [
   'shortKick',
   'touchback',
 ] as const;
+const QUARTERBACK_ARCHETYPES: readonly QuarterbackArchetype[] = [
+  'Balanced',
+  'Field General',
+  'Scrambler',
+  'Strong Arm',
+] as const;
 
 const QUARTERBACK_PRONUNCIATION: Readonly<Record<string, string>> = {
   'bay-city-current-qb-6': 'DROO BAR-tun',
@@ -179,12 +184,7 @@ export function resolveMatchupLine(
   }
 
   return selectFromCandidates({
-    candidates: PREGAME_COMMENTARY_CATALOG.filter(
-      (clip) =>
-        clip.category === 'matchup' &&
-        clip.awayTeamId === awayTeamId &&
-        clip.homeTeamId === homeTeamId,
-    ),
+    candidates: getPregameClipsByCategory('matchup'),
     category: 'matchup',
     options,
     seedParts: ['matchup', awayTeamId, homeTeamId],
@@ -214,14 +214,21 @@ export function resolveQuarterbackSpotlight(
   if (!rosterPlayerId) {
     return createFallbackSelection('quarterback', 'missingContext');
   }
+  const quarterback = findKnownStartingQuarterback(rosterPlayerId);
+
+  if (!quarterback) {
+    return createFallbackSelection('quarterback', 'unknownContext');
+  }
+
+  const profile = createQuarterbackScoutingProfile(quarterback.player);
 
   return selectFromCandidates({
     candidates: PREGAME_COMMENTARY_CATALOG.filter(
-      (clip) => clip.category === 'quarterback' && clip.rosterPlayerId === rosterPlayerId,
+      (clip) => clip.category === 'quarterback' && clip.qbArchetype === profile.archetype,
     ),
     category: 'quarterback',
     options,
-    seedParts: ['quarterback', rosterPlayerId],
+    seedParts: ['quarterback', profile.archetype, rosterPlayerId],
   });
 }
 
@@ -244,14 +251,21 @@ export function resolveQuarterbackArchetypeLine(
   if (!rosterPlayerId) {
     return createFallbackSelection('quarterbackArchetype', 'missingContext');
   }
+  const quarterback = findKnownStartingQuarterback(rosterPlayerId);
+
+  if (!quarterback) {
+    return createFallbackSelection('quarterbackArchetype', 'unknownContext');
+  }
+
+  const profile = createQuarterbackScoutingProfile(quarterback.player);
 
   return selectFromCandidates({
     candidates: PREGAME_COMMENTARY_CATALOG.filter(
-      (clip) => clip.category === 'quarterbackArchetype' && clip.rosterPlayerId === rosterPlayerId,
+      (clip) => clip.category === 'quarterbackArchetype' && clip.qbArchetype === profile.archetype,
     ),
     category: 'quarterbackArchetype',
     options,
-    seedParts: ['quarterbackArchetype', rosterPlayerId],
+    seedParts: ['quarterbackArchetype', profile.archetype, rosterPlayerId],
   });
 }
 
@@ -368,6 +382,12 @@ export function listKnownStartingQuarterbacks(): readonly PregameQuarterbackProf
   return quarterbacks;
 }
 
+function findKnownStartingQuarterback(rosterPlayerId: string): PregameQuarterbackProfile | null {
+  return listKnownStartingQuarterbacks().find(
+    (quarterback) => quarterback.rosterPlayerId === rosterPlayerId,
+  ) ?? null;
+}
+
 export function validatePregameCommentaryCatalog(
   catalog: readonly PregameCommentaryClip[] = PREGAME_COMMENTARY_CATALOG,
 ): string[] {
@@ -375,7 +395,6 @@ export function validatePregameCommentaryCatalog(
   const scriptIds = new Set<string>();
   const assetIds = new Set<string>();
   const knownTeams = listTeamProfiles();
-  const quarterbacks = listKnownStartingQuarterbacks();
 
   for (const clip of catalog) {
     if (scriptIds.has(clip.scriptId)) {
@@ -406,21 +425,8 @@ export function validatePregameCommentaryCatalog(
     errors.push('warmupTransition: expected at least 2 variants');
   }
 
-  for (const awayTeam of knownTeams) {
-    for (const homeTeam of knownTeams) {
-      if (awayTeam.id === homeTeam.id) {
-        continue;
-      }
-      const count = catalog.filter(
-        (clip) =>
-          clip.category === 'matchup' &&
-          clip.awayTeamId === awayTeam.id &&
-          clip.homeTeamId === homeTeam.id,
-      ).length;
-      if (count < 2) {
-        errors.push(`matchup:${awayTeam.id}:${homeTeam.id}: expected at least 2 variants`);
-      }
-    }
+  if (getPregameClipsByCategory('matchup', catalog).length < 2) {
+    errors.push('matchup: expected at least 2 compact generic variants');
   }
 
   for (const condition of WEATHER_CONDITIONS) {
@@ -432,22 +438,21 @@ export function validatePregameCommentaryCatalog(
     }
   }
 
-  for (const quarterback of quarterbacks) {
+  for (const archetype of QUARTERBACK_ARCHETYPES) {
     const count = catalog.filter(
-      (clip) => clip.category === 'quarterback' && clip.rosterPlayerId === quarterback.rosterPlayerId,
+      (clip) => clip.category === 'quarterback' && clip.qbArchetype === archetype,
     ).length;
-    if (count < 3) {
-      errors.push(`quarterback:${quarterback.rosterPlayerId}: expected at least 3 variants`);
+    if (count < 2) {
+      errors.push(`quarterback:${archetype}: expected at least 2 compact variants`);
     }
 
     const archetypeCount = catalog.filter(
       (clip) =>
         clip.category === 'quarterbackArchetype' &&
-        clip.rosterPlayerId === quarterback.rosterPlayerId &&
-        Boolean(clip.qbArchetype),
+        clip.qbArchetype === archetype,
     ).length;
     if (archetypeCount < 2) {
-      errors.push(`quarterbackArchetype:${quarterback.rosterPlayerId}: expected at least 2 variants`);
+      errors.push(`quarterbackArchetype:${archetype}: expected at least 2 compact variants`);
     }
   }
 
@@ -548,35 +553,22 @@ function createWarmupTransitionClips(): PregameCommentaryClip[] {
 }
 
 function createMatchupClips(): PregameCommentaryClip[] {
-  const clips: PregameCommentaryClip[] = [];
-  const teams = listTeamProfiles();
-
-  for (const awayTeam of teams) {
-    for (const homeTeam of teams) {
-      if (awayTeam.id === homeTeam.id) {
-        continue;
-      }
-
-      clips.push(
-        matchupLine(
-          awayTeam,
-          homeTeam,
-          1,
-          `${awayTeam.displayName} line up across from ${homeTeam.displayName}. The first possession should tell us plenty.`,
-          4,
-        ),
-        matchupLine(
-          awayTeam,
-          homeTeam,
-          2,
-          `${awayTeam.shortName} against ${homeTeam.shortName}. Clean execution early could tilt this one fast.`,
-          3.8,
-        ),
-      );
-    }
-  }
-
-  return clips;
+  return [
+    line(
+      'pregame_matchup_generic_01',
+      'matchup',
+      1,
+      'The matchup is set. The opening possession should tell us plenty.',
+      3.4,
+    ),
+    line(
+      'pregame_matchup_generic_02',
+      'matchup',
+      2,
+      'Two different styles meet here, and clean execution early could tilt this fast.',
+      4.1,
+    ),
+  ];
 }
 
 function createWeatherClips(): PregameCommentaryClip[] {
@@ -595,58 +587,33 @@ function createWeatherClips(): PregameCommentaryClip[] {
 }
 
 function createQuarterbackClips(): PregameCommentaryClip[] {
-  return listKnownStartingQuarterbacks().flatMap((quarterback) => {
-    const player = quarterback.player;
-    const number = player.jerseyNumber;
-    const name = player.displayName;
-
-    return [
+  return QUARTERBACK_ARCHETYPES.flatMap((archetype) =>
+    createQuarterbackIntroScripts(archetype).map((script, index) =>
       quarterbackLine(
-        quarterback,
-        1,
-        `${name}, number ${number}, leads this offense with the first snap coming.`,
-        4.2,
+        archetype,
+        index + 1,
+        script.text,
+        script.durationSeconds,
       ),
-      quarterbackLine(
-        quarterback,
-        2,
-        `Keep an eye on ${name}, number ${number}. The read comes fast in this system.`,
-        3.3,
-      ),
-      quarterbackLine(
-        quarterback,
-        3,
-        `${name}, number ${number}, starts under center with a chance to set the tone.`,
-        4.6,
-      ),
-    ];
-  });
+    ),
+  );
 }
 
 function createQuarterbackArchetypeClips(): PregameCommentaryClip[] {
-  return listKnownStartingQuarterbacks().flatMap((quarterback) => {
-    const profile = createQuarterbackScoutingProfile(quarterback.player);
-    const scripts = createQuarterbackArchetypeScripts(
-      quarterback.player.displayName,
-      quarterback.jerseyNumber,
-      profile.archetype,
-    );
+  return QUARTERBACK_ARCHETYPES.flatMap((archetype) => {
+    const scripts = createQuarterbackArchetypeScripts(archetype);
 
     return scripts.map((script, index) => ({
       ...line(
-        `pregame_qb_archetype_${quarterback.rosterPlayerId}_${formatVariant(index + 1)}`,
+        `pregame_qb_archetype_${formatArchetypeId(archetype)}_${formatVariant(index + 1)}`,
         'quarterbackArchetype',
         index + 1,
         script.text,
         script.durationSeconds,
       ),
-      jerseyNumber: quarterback.jerseyNumber,
       matchPhaseEligibility: 'warmup',
       priority: 32,
-      pronunciation: quarterback.pronunciation,
-      qbArchetype: profile.archetype,
-      rosterPlayerId: quarterback.rosterPlayerId,
-      teamId: quarterback.teamId,
+      qbArchetype: archetype,
     }));
   });
 }
@@ -811,26 +778,6 @@ function createKickoffResultClips(): PregameCommentaryClip[] {
   ];
 }
 
-function matchupLine(
-  awayTeam: TeamProfile,
-  homeTeam: TeamProfile,
-  variant: number,
-  script: string,
-  durationSeconds: number,
-): PregameCommentaryClip {
-  return {
-    ...line(
-      `pregame_matchup_${awayTeam.id}_${homeTeam.id}_${formatVariant(variant)}`,
-      'matchup',
-      variant,
-      script,
-      durationSeconds,
-    ),
-    awayTeamId: awayTeam.id,
-    homeTeamId: homeTeam.id,
-  };
-}
-
 function weatherLine(
   condition: PregameWeatherCondition,
   variant: number,
@@ -850,23 +797,22 @@ function weatherLine(
 }
 
 function quarterbackLine(
-  quarterback: PregameQuarterbackProfile,
+  archetype: QuarterbackArchetype,
   variant: number,
   script: string,
   durationSeconds: number,
 ): PregameCommentaryClip {
   return {
     ...line(
-      `pregame_qb_${quarterback.rosterPlayerId}_${formatVariant(variant)}`,
+      `pregame_qb_${formatArchetypeId(archetype)}_${formatVariant(variant)}`,
       'quarterback',
       variant,
       script,
       durationSeconds,
     ),
-    jerseyNumber: quarterback.jerseyNumber,
-    pronunciation: quarterback.pronunciation,
-    rosterPlayerId: quarterback.rosterPlayerId,
-    teamId: quarterback.teamId,
+    matchPhaseEligibility: 'warmup',
+    priority: 30,
+    qbArchetype: archetype,
   };
 }
 
@@ -916,54 +862,103 @@ function kickoffResultLine(
   };
 }
 
-function createQuarterbackArchetypeScripts(
-  displayName: string,
-  jerseyNumber: number,
+function createQuarterbackIntroScripts(
   archetype: QuarterbackArchetype,
 ): Array<{ durationSeconds: number; text: string }> {
   switch (archetype) {
     case 'Scrambler':
       return [
         {
-          durationSeconds: 5.9,
-          text: `${displayName}, number ${jerseyNumber}, can hurt a defense with his arm or his legs. Keeping him contained is the challenge.`,
+          durationSeconds: 4.2,
+          text: "Keeping the quarterback contained will be one of the defense's biggest challenges.",
         },
         {
-          durationSeconds: 4.8,
-          text: `When the play breaks down, ${displayName}, number ${jerseyNumber}, can create something on his own.`,
+          durationSeconds: 3.7,
+          text: 'When the play breaks down, he can still create something on his own.',
         },
       ];
     case 'Strong Arm':
       return [
         {
-          durationSeconds: 5.9,
-          text: `${displayName}, number ${jerseyNumber}, has the throw power to stretch the field. The defense has to respect that arm.`,
+          durationSeconds: 3.8,
+          text: 'This quarterback has the arm to challenge every part of the field.',
         },
         {
-          durationSeconds: 6.8,
-          text: `That throwing arm is the strength for ${displayName}, number ${jerseyNumber}. Expect this offense to test space downfield.`,
+          durationSeconds: 4.2,
+          text: 'That throwing arm can stretch the defense if the pocket holds up.',
         },
       ];
     case 'Field General':
       return [
         {
-          durationSeconds: 5.6,
-          text: `${displayName}, number ${jerseyNumber}, does his best work reading the field and putting the football in the right place.`,
+          durationSeconds: 3.6,
+          text: "He'll need to read the defense and keep this offense on schedule.",
         },
         {
-          durationSeconds: 8.2,
-          text: `For ${displayName}, number ${jerseyNumber}, accuracy is the calling card. The ball needs to come out on schedule.`,
+          durationSeconds: 3.8,
+          text: 'His best work comes from timing, patience, and putting the ball in the right place.',
         },
       ];
     case 'Balanced':
       return [
         {
-          durationSeconds: 5.7,
-          text: `${displayName}, number ${jerseyNumber}, gives this offense several ways to win. They'll need that balance today.`,
+          durationSeconds: 3.5,
+          text: 'This quarterback gives the offense several different ways to attack.',
         },
         {
-          durationSeconds: 6.5,
-          text: `With ${displayName}, number ${jerseyNumber}, the offense can lean on arm talent, accuracy, or movement when needed.`,
+          durationSeconds: 3.8,
+          text: 'The offense can lean on his arm, his movement, or a quick rhythm game.',
+        },
+      ];
+  }
+}
+
+function createQuarterbackArchetypeScripts(
+  archetype: QuarterbackArchetype,
+): Array<{ durationSeconds: number; text: string }> {
+  switch (archetype) {
+    case 'Scrambler':
+      return [
+        {
+          durationSeconds: 4.5,
+          text: 'He can hurt a defense with his arm or his legs, so containment matters from the first snap.',
+        },
+        {
+          durationSeconds: 3.3,
+          text: 'Broken plays are where a scrambler can turn trouble into yardage.',
+        },
+      ];
+    case 'Strong Arm':
+      return [
+        {
+          durationSeconds: 4.2,
+          text: 'He has the arm to stretch the field, and the defense has to respect the deep ball.',
+        },
+        {
+          durationSeconds: 4.1,
+          text: 'Expect this offense to test space downfield when protection gives him time.',
+        },
+      ];
+    case 'Field General':
+      return [
+        {
+          durationSeconds: 4.2,
+          text: 'He does his best work reading the field and putting the football in the right place.',
+        },
+        {
+          durationSeconds: 3.8,
+          text: 'Accuracy and timing are the calling cards. The ball needs to come out on schedule.',
+        },
+      ];
+    case 'Balanced':
+      return [
+        {
+          durationSeconds: 3.8,
+          text: "He gives this offense several ways to win, and they'll need that balance today.",
+        },
+        {
+          durationSeconds: 4.2,
+          text: 'Arm talent, accuracy, and movement all show up when this offense is in rhythm.',
         },
       ];
   }
@@ -1087,6 +1082,10 @@ function resolveStartingQuarterbackId(teamId: string | null): string | null {
 
 function formatVariant(variant: number): string {
   return String(variant).padStart(2, '0');
+}
+
+function formatArchetypeId(archetype: QuarterbackArchetype): string {
+  return archetype.toLowerCase().replace(/\s+/g, '_');
 }
 
 function stableHash(value: string): number {

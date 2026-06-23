@@ -1,0 +1,76 @@
+{
+  "candidateId": "candidate-a",
+  "createdAt": "2026-06-22T11:45:15.445Z",
+  "creditCost": null,
+  "generationRequest": {
+    "ai_model": "latest",
+    "enable_pbr": false,
+    "image_enhancement": false,
+    "image_urls": [
+      "art-source/meshy/football-helmet/references/candidate-a-front.webp",
+      "art-source/meshy/football-helmet/references/candidate-a-right.webp",
+      "art-source/meshy/football-helmet/references/candidate-a-back.webp",
+      "art-source/meshy/football-helmet/references/candidate-a-left.webp"
+    ],
+    "remove_lighting": true,
+    "save_pre_remeshed_model": true,
+    "should_remesh": true,
+    "should_texture": false,
+    "target_formats": [
+      "glb"
+    ],
+    "target_polycount": 7600,
+    "topology": "triangle"
+  },
+  "referenceImageHashes": {
+    "front": "a1e455f5ab6aad5c046009f026dd33fad5cda7d213afcbd6345b372642eee243",
+    "right": "3b654c4746a242b3581dc171f606048644e29d1702609b252e13a29c3ed9f292",
+    "back": "5712e04f32468dc361c3b31d0535c8c116a76620920cc00520738878636a7de3",
+    "left": "3ca7dd4bfabb2633723522f8542758f6e816e6c9f50b8c6de7f3df34a9f90f74"
+  },
+  "referenceImagePaths": {
+    "front": "art-source/meshy/football-helmet/references/candidate-a-front.webp",
+    "right": "art-source/meshy/football-helmet/references/candidate-a-right.webp",
+    "back": "art-source/meshy/football-helmet/references/candidate-a-back.webp",
+    "left": "art-source/meshy/football-helmet/references/candidate-a-left.webp"
+  },
+  "taskId": "019eef26-1825-737e-ae7a-240f9001e0f1",
+  "downloadedAt": "2026-06-22T11:47:56.432Z",
+  "outputBytes": 284048,
+  "outputHash": "7bdc9b80b40f05d401582447c97baf739f3b6eac1c35024ad31422e894ea6c08",
+  "outputPath": "art-source/meshy/football-helmet/generated/candidate-a.glb",
+  "taskPayload": {
+    "id": "019eef26-1825-737e-ae7a-240f9001e0f1",
+    "type": "multi-image-to-3d",
+    "name": "",
+    "art_style": "",
+    "object_prompt": "",
+    "style_prompt": "",
+    "negative_prompt": "",
+    "texture_prompt": "",
+    "texture_image_url": "",
+    "text_style_prompt": "",
+    "image_style_url": "",
+    "status": "SUCCEEDED",
+    "created_at": 1782128715161,
+    "progress": 100,
+    "started_at": 1782128715202,
+    "finished_at": 1782128842886,
+    "expires_at": 1782388042886,
+    "task_error": null,
+    "model_url": "[redacted signed asset URL]",
+    "model_urls": {
+      "glb": "[redacted signed asset URL]",
+      "pre_remeshed_glb": "[redacted signed asset URL]"
+    },
+    "thumbnail_url": "[redacted signed asset URL]",
+    "texture_urls": [
+      {
+        "base_color": "",
+        "normal": "[redacted signed asset URL]"
+      }
+    ],
+    "remove_lighting": true,
+    "consumed_credits": 20
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "assetId": "bay-city-current-logo-a",
+  "background": "opaque",
+  "candidateId": "candidate-a",
+  "compressedBytes": 120368,
+  "contentHash": "acb9510888aa9bbcf0dd0a14a8b86bb9423d5b40e84549c7dac8d09e6b1cb2d9",
+  "generatedAt": "2026-06-22T19:34:09.060Z",
+  "generationMetadata": {
+    "apiEndpoint": "images/generations",
+    "revisedPrompt": null
+  },
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "outputPath": "public/branding/teams/bay-city-current/candidate-a.webp",
+  "prompt": "Create an original fictional American-football team logo badge for Football JS. Use a centered square composition suitable for a menu badge and scorebug crop. Style: bold low-poly vector-like sports identity, clean silhouette, premium broadcast-game presentation, opaque background. No words, no text, no letters, no numbers, no watermark, no real professional or college marks, no league logos, no trademarked mascots. Team: Bay City Current. Mascot concept: a stylized ocean wave fused with a bright electric current zigzag, energetic but clean. Team colors: primary #1f6f7a, secondary #f4f7f2, accent #e0a94d. Candidate direction: bold teal wave crest with a gold electric-current accent and crisp white highlights. Keep the badge readable at small UI sizes, avoid complex fine detail, preserve crop-safe margins.",
+  "quality": "high",
+  "requestedSize": "1024x1024",
+  "teamId": "bay-city-current"
+}

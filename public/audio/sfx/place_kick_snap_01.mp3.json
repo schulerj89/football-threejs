@@ -1,0 +1,17 @@
+{
+  "assetId": "place_kick_snap_01",
+  "category": "sfx",
+  "compressedBytes": 15090,
+  "contentHash": "ffb16de2e657784f80ede837a0d646a9ee903f724d745da0f99d2ef23b499e5c",
+  "durationSeconds": 0.88,
+  "generatedAt": "2026-06-22T14:13:37.588Z",
+  "kind": "oneShot",
+  "metadata": {
+    "semanticCategory": "placeKick"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Short clean long snap into a holder's hands. Football leather, gloves, pads, and quick turf movement, isolated from crowd ambience. No speech, no whistle, no music.",
+  "requestedDurationSeconds": 0.9,
+  "runtimeLoadingStrategy": "buffer"
+}

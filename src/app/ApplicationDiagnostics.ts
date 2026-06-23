@@ -60,10 +60,25 @@ import type {
   FootballDebugApi,
   SevenAuditResetCycleResult,
 } from './DevelopmentToolsRuntime';
+import { FIELD_GOAL_DEVELOPMENT_FORMATION } from '../presentation/stage/FootballFormationFamilies';
+import { FOOTBALL_PLAYER_VISUAL_PROFILE_ID } from '../presentation/players/FootballPlayerVisualFactory';
 import type { GameplayRuntime } from './GameplayRuntime';
 import type { PlayerVisualRegistry } from './PlayerVisualRegistry';
 import type { PresentationRuntime } from './PresentationRuntime';
 import type { SceneRuntime } from './SceneRuntime';
+import type { WeatherPresentationSnapshot } from '../weather/WeatherTypes';
+import {
+  getJerseyNumberAtlasSnapshot,
+  type JerseyNumberAtlasSnapshot,
+} from '../presentation/players/JerseyNumberAtlas';
+import {
+  JERSEY_NUMBER_MESH_NAME,
+  getJerseyNumberMaterialSnapshot,
+  readJerseyNumberVisualSnapshot,
+  type JerseyNumberMaterialSnapshot,
+  type JerseyNumberVisualSnapshot,
+} from '../presentation/players/JerseyNumberVisual';
+import type { LeagueInitializationSnapshot } from '../league/LeagueTypes';
 
 export interface ApplicationDiagnosticsOptions {
   getGameExperience: () => ResolvedGameExperienceSettings;
@@ -71,6 +86,9 @@ export interface ApplicationDiagnosticsOptions {
   getCrowdCapacityBenchmarkSnapshot: () => CrowdCapacityBenchmarkSnapshot;
   isCrowdPresentationDebugEnabled: () => boolean;
   getMemoryProfileSnapshot: () => SceneResourceProfileSnapshot;
+  getWeatherSnapshot: () => WeatherPresentationSnapshot;
+  getLeagueSnapshot: () => LeagueInitializationSnapshot;
+  resetLeagueData: () => Promise<void>;
   runCrowdCapacityBenchmark: () => CrowdCapacityBenchmarkSnapshot;
   cancelCrowdCapacityBenchmark: () => CrowdCapacityBenchmarkSnapshot;
   applyCrowdCapacityRecommendation: () => string | null;
@@ -83,6 +101,86 @@ export interface ApplicationDiagnosticsOptions {
   presentation: PresentationRuntime;
   sceneRuntime: SceneRuntime;
   searchParams: URLSearchParams;
+}
+
+export type StageVisualPrimaryGroup =
+  | 'coinTossParticipants'
+  | 'gameplayPlayers'
+  | 'kickoffParticipants'
+  | 'warmupPlayers';
+
+export interface StageVisualMatrixSnapshot {
+  activePrimaryGroups: readonly StageVisualPrimaryGroup[];
+  appPhase: string;
+  coinToss: {
+    bareHeadCount: number;
+    coinVisible: boolean;
+    helmetReadyCount: number;
+    profileMatchCount: number;
+    totalCount: number;
+    visibleCount: number;
+  };
+  conflictingPrimaryGroups: readonly StageVisualPrimaryGroup[];
+  fieldGoalFixture: {
+    family: 'fieldGoal';
+    normalGameActive: boolean;
+    participantCount: number;
+    profileMatchCount: number;
+  };
+  gameplay: {
+    bareHeadCount: number;
+    helmetCount: number;
+    profileMatchCount: number;
+    totalCount: number;
+    visibleCount: number;
+  };
+  helmetAsset: ReturnType<typeof getHelmetAssetSnapshot>;
+  kickoff: {
+    bareHeadCount: number;
+    helmetReadyCount: number;
+    profileMatchCount: number;
+    reticleVisible: boolean;
+    totalCount: number;
+    visibleCount: number;
+  };
+  matchPhase: string | null;
+  normalOfficialsVisibleCount: number;
+  previewCanvasCount: number;
+  profileId: typeof FOOTBALL_PLAYER_VISUAL_PROFILE_ID;
+  resourceCounts: {
+    coinObjects: number;
+    geometries: number;
+    helmetAttachedPlayerIds: number;
+    jerseyNumberAtlasCreated: boolean;
+    jerseyNumberMeshes: number;
+    jerseyNumberMaterials: number;
+    materials: number;
+    reticleObjects: number;
+    textures: number;
+    webglContexts: number;
+  };
+  scrimmage: {
+    dynamicMarkersVisible: boolean;
+  };
+  warmup: {
+    enabled: boolean;
+    helmetReady: boolean;
+    profileMatchCount: number;
+    quarterbackReady: boolean;
+    totalFullProfileCount: number;
+    visibleFullProfileCount: number;
+  };
+}
+
+export interface JerseyNumberDebugSnapshot {
+  atlas: JerseyNumberAtlasSnapshot;
+  hiddenCount: number;
+  materialCache: JerseyNumberMaterialSnapshot;
+  missingBindingCount: number;
+  unreadableContrastCount: number;
+  visibleCount: number;
+  visualCount: number;
+  visuals: JerseyNumberVisualSnapshot[];
 }
 
 export class ApplicationDiagnostics {
@@ -202,6 +300,119 @@ export class ApplicationDiagnostics {
       : null;
   }
 
+  getStageVisualMatrixSnapshot(): StageVisualMatrixSnapshot {
+    const appPhase = document.body.dataset.appPhase ?? 'unknown';
+    const matchSnapshot = this.options.getMatchSnapshot();
+    const metrics = this.latestRenderMetrics ?? this.createRenderMetricsSnapshot(0);
+    const gameplayRoots = [...this.options.playerVisuals.values()];
+    const visibleGameplayRoots = gameplayRoots.filter(isWorldVisible);
+    const coinCaptainRoots = collectSceneObjects(this.options.sceneRuntime.scene, (object) =>
+      object.userData.coinTossCaptain === true && object.userData.fullFootballPlayerVisual === true);
+    const visibleCoinCaptainRoots = coinCaptainRoots.filter(isWorldVisible);
+    const kickoffRoots = collectSceneObjects(this.options.sceneRuntime.scene, (object) =>
+      object.userData.kickoffParticipant === true && object.userData.fullFootballPlayerVisual === true);
+    const visibleKickoffRoots = kickoffRoots.filter(isWorldVisible);
+    const warmupProfileRoots = collectSceneObjects(this.options.sceneRuntime.scene, (object) =>
+      object.userData.pregameWarmup === true && object.userData.fullFootballPlayerVisual === true);
+    const visibleWarmupProfileRoots = warmupProfileRoots.filter(isWorldVisible);
+    const warmupGroupVisible = collectSceneObjects(this.options.sceneRuntime.scene, (object) =>
+      object.userData.pregameWarmup === true && object.name === 'pregame-warmup-root')
+      .some(isWorldVisible);
+    const coinSnapshot = this.options.presentation.getCoinTossSnapshot(matchSnapshot);
+    const kickoffSnapshot = this.options.presentation.getKickoffSnapshot();
+    const pregameSnapshot = this.options.presentation.getPregamePresentationSnapshot();
+    const officialsSnapshot = this.options.presentation.getOfficialsSnapshot();
+    const helmetAsset = getHelmetAssetSnapshot();
+    const jerseyNumberSnapshot = this.getJerseyNumberDebugSnapshot();
+    const activePrimaryGroups = [
+      visibleGameplayRoots.length > 0 ? 'gameplayPlayers' : null,
+      warmupGroupVisible ? 'warmupPlayers' : null,
+      visibleCoinCaptainRoots.length > 0 ? 'coinTossParticipants' : null,
+      visibleKickoffRoots.length > 0 ? 'kickoffParticipants' : null,
+    ].filter((group): group is StageVisualPrimaryGroup => Boolean(group));
+
+    return {
+      activePrimaryGroups,
+      appPhase,
+      coinToss: {
+        bareHeadCount: countBareHeads(visibleCoinCaptainRoots),
+        coinVisible: coinSnapshot.coinVisible,
+        helmetReadyCount: coinSnapshot.helmetReadyCount,
+        profileMatchCount: countProfileRoots(coinCaptainRoots),
+        totalCount: coinSnapshot.captainVisualCount,
+        visibleCount: visibleCoinCaptainRoots.length,
+      },
+      conflictingPrimaryGroups: activePrimaryGroups.length > 1 ? activePrimaryGroups : [],
+      fieldGoalFixture: {
+        family: 'fieldGoal',
+        normalGameActive: false,
+        participantCount: FIELD_GOAL_DEVELOPMENT_FORMATION.participantPlacements.length,
+        profileMatchCount: FIELD_GOAL_DEVELOPMENT_FORMATION.participantPlacements
+          .filter((participant) => participant.visualProfileId === FOOTBALL_PLAYER_VISUAL_PROFILE_ID).length,
+      },
+      gameplay: {
+        bareHeadCount: countBareHeads(visibleGameplayRoots),
+        helmetCount: visibleGameplayRoots.filter((root) => Boolean(root.getObjectByName('low-poly-helmet'))).length,
+        profileMatchCount: countProfileRoots(gameplayRoots),
+        totalCount: gameplayRoots.length,
+        visibleCount: visibleGameplayRoots.length,
+      },
+      helmetAsset,
+      kickoff: {
+        bareHeadCount: kickoffSnapshot.visualProfile.bareHeadCount,
+        helmetReadyCount: kickoffSnapshot.helmetReadyCount,
+        profileMatchCount: kickoffSnapshot.visualProfile.profileMatchCount,
+        reticleVisible: kickoffSnapshot.reticleVisible,
+        totalCount: kickoffSnapshot.participantCount,
+        visibleCount: visibleKickoffRoots.length,
+      },
+      matchPhase: matchSnapshot?.phase ?? null,
+      normalOfficialsVisibleCount: officialsSnapshot.visibleOfficialCount,
+      previewCanvasCount: document.querySelectorAll('.match-helmet-preview-canvas').length,
+      profileId: FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
+      resourceCounts: {
+        coinObjects: collectSceneObjects(this.options.sceneRuntime.scene, (object) =>
+          object.userData.coinTossCoin === true || object.name.includes('coin')).length,
+        geometries: metrics.geometries,
+        helmetAttachedPlayerIds: helmetAsset.attachedPlayerIds.length,
+        jerseyNumberAtlasCreated: jerseyNumberSnapshot.atlas.atlasCreated,
+        jerseyNumberMeshes: collectJerseyNumberMeshes(this.options.sceneRuntime.scene).length,
+        jerseyNumberMaterials: jerseyNumberSnapshot.materialCache.materialCount,
+        materials: metrics.sceneMaterialCount,
+        reticleObjects: collectSceneObjects(this.options.sceneRuntime.scene, (object) =>
+          object.userData.kickLandingReticle === true || object.name.includes('kick-landing-reticle')).length,
+        textures: metrics.textures,
+        webglContexts: document.querySelectorAll('canvas').length,
+      },
+      scrimmage: {
+        dynamicMarkersVisible: appPhase === 'gameplay' && visibleGameplayRoots.length > 0,
+      },
+      warmup: {
+        enabled: pregameSnapshot.warmup.enabled,
+        helmetReady: pregameSnapshot.quarterbackAppearance?.helmetReady ?? false,
+        profileMatchCount: countProfileRoots(warmupProfileRoots),
+        quarterbackReady: pregameSnapshot.quarterbackAppearance?.subjectReady ?? false,
+        totalFullProfileCount: warmupProfileRoots.length,
+        visibleFullProfileCount: visibleWarmupProfileRoots.length,
+      },
+    };
+  }
+
+  getJerseyNumberDebugSnapshot(): JerseyNumberDebugSnapshot {
+    const visuals = collectJerseyNumberSnapshots(this.options.sceneRuntime.scene);
+
+    return {
+      atlas: getJerseyNumberAtlasSnapshot(),
+      hiddenCount: visuals.filter((visual) => !visual.visible).length,
+      materialCache: getJerseyNumberMaterialSnapshot(),
+      missingBindingCount: visuals.filter((visual) => visual.missingBindingReason).length,
+      unreadableContrastCount: visuals.filter((visual) => visual.contrastReadable === false).length,
+      visibleCount: visuals.filter((visual) => visual.visible).length,
+      visualCount: visuals.length,
+      visuals,
+    };
+  }
+
   createEmptyPresentationAuditSnapshot(): PresentationAuditSnapshot {
     const gameExperience = this.options.getGameExperience();
     return {
@@ -230,6 +441,7 @@ export class ApplicationDiagnostics {
     const helmetSnapshot = getHelmetAssetSnapshot();
     const audioSnapshot = this.options.presentation.getRuntimeAudioSnapshot();
     const crowdSnapshot = this.options.presentation.getCrowdPresentationSnapshot();
+    const leagueSnapshot = this.options.getLeagueSnapshot();
     const audioStatus = gameExperience.settings.audioEnabled
       ? audioSnapshot.userGestureUnlocked
         ? `Ready (${audioSnapshot.contextState})`
@@ -245,6 +457,7 @@ export class ApplicationDiagnostics {
           audioSnapshot.missingOptionalAssetIds.length > 0
             ? `Missing optional audio: ${audioSnapshot.missingOptionalAssetIds.length}`
             : '',
+          leagueSnapshot.error ? `League: ${leagueSnapshot.error}` : '',
         ]
       : [];
     return {
@@ -252,6 +465,8 @@ export class ApplicationDiagnostics {
       crowd: crowdStatus,
       developmentDetails,
       helmet: helmetSnapshot.status,
+      league: `${leagueSnapshot.status === 'ready' ? 'Ready' : leagueSnapshot.stage} (${leagueSnapshot.teamCount || 6} teams)`,
+      leagueLoadingVisible: leagueSnapshot.loadingVisible,
     };
   }
 
@@ -293,6 +508,12 @@ export class ApplicationDiagnostics {
         this.options.presentation.getGamePresentationRuntimeSnapshot(),
       getHelmetAssetSnapshot,
       getKickoffSnapshot: () => this.options.presentation.getKickoffSnapshot(),
+      getKeysToGameOverlaySnapshot: () => this.options.presentation.getKeysToGameOverlaySnapshot(),
+      getLeagueSnapshot: () => this.options.getLeagueSnapshot(),
+      getJerseyNumberDebugSnapshot: () => this.getJerseyNumberDebugSnapshot(),
+      getPlaceKickSnapshot: () => this.options.presentation.getPlaceKickSnapshot(),
+      getPreSnapCadenceSnapshot: () => this.options.gameplay.getPreSnapCadenceSnapshot(),
+      getStageVisualMatrixSnapshot: () => this.getStageVisualMatrixSnapshot(),
       getOfficialsSnapshot: () => this.options.presentation.getOfficialsSnapshot(),
       getSidelineTeamSnapshot: () => this.options.presentation.getSidelineTeamSnapshot(),
       getCrowdCapacityBenchmarkSnapshot: () =>
@@ -313,6 +534,7 @@ export class ApplicationDiagnostics {
       getPresentationAuditSnapshot: () => this.getPresentationAuditSnapshot(),
       getSevenAuditSnapshot: () => this.getSevenAuditSnapshot(),
       getStadiumSnapshot: () => this.options.presentation.getStadiumSnapshot(),
+      getWeatherSnapshot: () => this.options.getWeatherSnapshot(),
       getPlayerBodyVisualSnapshots: () => this.options.playerVisuals.getBodySnapshots(),
       getPlayerPoseSnapshots: () => this.options.presentation.getPlayerPoseSnapshots(),
       getPregamePresentationSnapshot: () =>
@@ -327,6 +549,7 @@ export class ApplicationDiagnostics {
       cancelCrowdCapacityBenchmark: () => this.options.cancelCrowdCapacityBenchmark(),
       exportCrowdCapacityReport: () => this.options.exportCrowdCapacityReport(),
       runCrowdCapacityBenchmark: () => this.options.runCrowdCapacityBenchmark(),
+      resetLeagueData: () => this.options.resetLeagueData(),
       runElevenAuditResetCycles: (cycles = 100) => this.runElevenAuditResetCycles(cycles),
       runSevenAuditResetCycles: (cycles = 100) => this.runSevenAuditResetCycles(cycles),
       setPerformanceScenario: (scenario) =>
@@ -500,6 +723,9 @@ export class ApplicationDiagnostics {
       footballMeshCount: metrics.footballMeshCount,
       geometryCount: metrics.geometries,
       helmetInstanceCount: getHelmetAssetSnapshot().attachedPlayerIds.length,
+      jerseyNumberAtlasCreated: getJerseyNumberAtlasSnapshot().atlasCreated,
+      jerseyNumberMaterialCount: getJerseyNumberMaterialSnapshot().materialCount,
+      jerseyNumberMeshCount: collectJerseyNumberMeshes(this.options.sceneRuntime.scene).length,
       materialCount: metrics.sceneMaterialCount,
       officialCount: officials.visibleOfficialCount,
       officialMeshCount: metrics.officialMeshCount,
@@ -523,6 +749,9 @@ export class ApplicationDiagnostics {
       debugOverlayCount: countActiveDebugOverlays(),
       footballMeshCount: metrics.footballMeshCount,
       geometryCount: metrics.geometries,
+      jerseyNumberAtlasCreated: getJerseyNumberAtlasSnapshot().atlasCreated,
+      jerseyNumberMaterialCount: getJerseyNumberMaterialSnapshot().materialCount,
+      jerseyNumberMeshCount: collectJerseyNumberMeshes(this.options.sceneRuntime.scene).length,
       materialCount: metrics.sceneMaterialCount,
       officialMeshCount: metrics.officialMeshCount,
       presentationHistoryCount:
@@ -573,6 +802,7 @@ function countActiveDebugOverlays(): number {
   return document.querySelectorAll([
     '.appearance-audit-overlay',
     '.audio-debug-overlay',
+    '.cadence-debug-overlay',
     '.crowd-presentation-overlay',
     '.crowd-preview-overlay',
     '.controlled-player-label-debug-overlay',
@@ -584,12 +814,69 @@ function countActiveDebugOverlays(): number {
     '.officials-debug-overlay',
     '.pass-audit-overlay',
     '.performance-debug-overlay',
+    '.place-kick-debug-overlay',
     '.pose-debug-overlay',
     '.presentation-audit-overlay',
     '.presentation-hardening-audit-overlay',
     '.pregame-debug-overlay',
+    '.intro-keys-debug-overlay',
+    '.jersey-number-debug-overlay',
+    '.kickoff-return-debug-overlay',
+    '.league-debug-overlay',
     '.route-audit-overlay',
     '.seven-audit-overlay',
     '.sideline-debug-overlay',
   ].join(',')).length;
+}
+
+function collectJerseyNumberMeshes(root: THREE.Object3D): THREE.Object3D[] {
+  return collectSceneObjects(root, (object) =>
+    object.name === JERSEY_NUMBER_MESH_NAME ||
+    object.userData.jerseyNumberVisual === true);
+}
+
+function collectJerseyNumberSnapshots(root: THREE.Object3D): JerseyNumberVisualSnapshot[] {
+  const snapshots: JerseyNumberVisualSnapshot[] = [];
+  root.traverse((object) => {
+    const snapshot = readJerseyNumberVisualSnapshot(object);
+    if (snapshot) {
+      snapshots.push(snapshot);
+    }
+  });
+  return snapshots.sort((a, b) => a.visualId.localeCompare(b.visualId));
+}
+
+function collectSceneObjects(
+  root: THREE.Object3D,
+  predicate: (object: THREE.Object3D) => boolean,
+): THREE.Object3D[] {
+  const objects: THREE.Object3D[] = [];
+  root.traverse((object) => {
+    if (predicate(object)) {
+      objects.push(object);
+    }
+  });
+  return objects;
+}
+
+function isWorldVisible(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    if (!current.visible) {
+      return false;
+    }
+    current = current.parent;
+  }
+  return true;
+}
+
+function countProfileRoots(roots: readonly THREE.Object3D[]): number {
+  return roots.filter((root) =>
+    root.userData.visualProfileId === FOOTBALL_PLAYER_VISUAL_PROFILE_ID).length;
+}
+
+function countBareHeads(roots: readonly THREE.Object3D[]): number {
+  return roots.filter((root) =>
+    root.userData.fullFootballPlayerVisual === true &&
+    !root.getObjectByName('low-poly-helmet')).length;
 }

@@ -12,8 +12,8 @@ import {
 export const QUARTERBACK_SPOTLIGHT_CONFIG = {
   cameraEndDistance: 4.7,
   cameraHeight: 2.55,
-  cameraSideOffset: 1.85,
-  cameraStartDistance: 6.4,
+  cameraSideOffset: 0.55,
+  cameraStartDistance: 5.8,
   fieldOfView: 27,
   minimumSeconds: 5,
   subjectDepth: 2.4,
@@ -66,9 +66,9 @@ export function createQuarterbackSpotlightShotVectors(
   subject: PregameSubjectBounds,
   progress: number,
 ): QuarterbackSpotlightCameraVectors {
-  const direction = resolveDirectionOfPlay(context);
-  const side = new THREE.Vector3(direction.z, 0, -direction.x);
-  const behind = new THREE.Vector3(-direction.x, 0, -direction.z);
+  const quarterback = resolveQuarterbackSpotlightSubject(context);
+  const forward = resolveForwardVector(quarterback.facingRadians);
+  const side = new THREE.Vector3(forward.z, 0, -forward.x);
   const aspectScale = context.aspectRatio < 0.8 ? 1.16 : 1;
   const distance = lerp(
     QUARTERBACK_SPOTLIGHT_CONFIG.cameraStartDistance,
@@ -79,7 +79,7 @@ export function createQuarterbackSpotlightShotVectors(
   const sideSign = focus.x < 0 ? -1 : 1;
   const position = focus
     .clone()
-    .add(behind.multiplyScalar(distance))
+    .add(forward.multiplyScalar(distance))
     .add(side.multiplyScalar(QUARTERBACK_SPOTLIGHT_CONFIG.cameraSideOffset * sideSign));
   position.y = QUARTERBACK_SPOTLIGHT_CONFIG.cameraHeight;
 
@@ -88,24 +88,18 @@ export function createQuarterbackSpotlightShotVectors(
     lookTarget: new THREE.Vector3(
       subject.center.x,
       QUARTERBACK_SPOTLIGHT_CONFIG.subjectHeight,
-      subject.center.z + direction.z * 0.18,
+      subject.center.z,
     ),
     position: clampToPresentationBounds(position),
   };
 }
 
-function resolveDirectionOfPlay(context: PregamePresentationContext): { x: number; z: number } {
-  const direction = context.gameplaySnapshot.selectedPlay.initialMovementDirection;
-  const length = Math.hypot(direction.x, direction.z);
-
-  if (length <= 0.0001) {
-    return { x: 0, z: 1 };
-  }
-
-  return {
-    x: direction.x / length,
-    z: direction.z / length,
-  };
+function resolveForwardVector(facingRadians: number): THREE.Vector3 {
+  return new THREE.Vector3(
+    Math.sin(facingRadians),
+    0,
+    Math.cos(facingRadians),
+  ).normalize();
 }
 
 function clampToPresentationBounds(position: THREE.Vector3): THREE.Vector3 {

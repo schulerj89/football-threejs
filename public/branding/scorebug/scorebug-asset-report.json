@@ -1,0 +1,612 @@
+{
+  "assetCount": 3,
+  "assets": [
+    {
+      "assetId": "candidate-a",
+      "averageBrightnessBySafeZone": [
+        {
+          "averageBrightness": 40.41,
+          "safeZoneId": "userLogo"
+        },
+        {
+          "averageBrightness": 45.58,
+          "safeZoneId": "userAbbreviation"
+        },
+        {
+          "averageBrightness": 30.65,
+          "safeZoneId": "userScore"
+        },
+        {
+          "averageBrightness": 38.7,
+          "safeZoneId": "opponentScore"
+        },
+        {
+          "averageBrightness": 31.66,
+          "safeZoneId": "opponentLogo"
+        },
+        {
+          "averageBrightness": 44.82,
+          "safeZoneId": "opponentAbbreviation"
+        },
+        {
+          "averageBrightness": 38.69,
+          "safeZoneId": "quarter"
+        },
+        {
+          "averageBrightness": 38.71,
+          "safeZoneId": "gameClock"
+        },
+        {
+          "averageBrightness": 5.56,
+          "safeZoneId": "possession"
+        },
+        {
+          "averageBrightness": 11.59,
+          "safeZoneId": "downDistance"
+        },
+        {
+          "averageBrightness": 10.63,
+          "safeZoneId": "ballLocation"
+        }
+      ],
+      "candidateId": "candidate-a",
+      "compressedBytes": 53834,
+      "contentHash": "cf71b69d339ba43a2936f260a1097e9085079cce4d3a73ba707f6ad65498a558",
+      "dimensions": {
+        "height": 512,
+        "width": 1536
+      },
+      "exists": true,
+      "model": "gpt-image-2",
+      "outputFormat": "webp",
+      "outputPath": "public/branding/scorebug/candidate-a.webp",
+      "prompt": "Create an original broadcast scorebug shell for a fictional low-poly college-football video game named Football JS. Format: wide horizontal 3:1 graphic designed for the top or bottom of a game screen. Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, polished modern sports-broadcast presentation, two symmetrical team sections, clear square or circular wells for team logos, large score areas beside each logo, central area for quarter and game clock, and a lower strip for possession, down, distance, and ball location. Keep restrained highlight edges and high readability over a bright football field. Make the shell flexible enough for any team colors. Straight-on 2D presentation, no perspective, opaque background. Candidate A variation: clean contemporary angular package with crisp beveled panels, subtle metallic layering, and neutral broadcast polish. Do not include words, letters, numbers, scores, clock text, team logos, team colors, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable. The final runtime will overlay all text and logos through HTML, so leave every label and score area blank.",
+      "provenance": {
+        "assetId": "candidate-a",
+        "background": "opaque",
+        "candidateId": "candidate-a",
+        "compressedBytes": 53834,
+        "contentHash": "cf71b69d339ba43a2936f260a1097e9085079cce4d3a73ba707f6ad65498a558",
+        "generatedAt": "2026-06-22T22:42:53.237Z",
+        "generationMetadata": {
+          "apiEndpoint": "images/generations",
+          "revisedPrompt": null
+        },
+        "model": "gpt-image-2",
+        "outputFormat": "webp",
+        "outputPath": "public/branding/scorebug/candidate-a.webp",
+        "prompt": "Create an original broadcast scorebug shell for a fictional low-poly college-football video game named Football JS. Format: wide horizontal 3:1 graphic designed for the top or bottom of a game screen. Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, polished modern sports-broadcast presentation, two symmetrical team sections, clear square or circular wells for team logos, large score areas beside each logo, central area for quarter and game clock, and a lower strip for possession, down, distance, and ball location. Keep restrained highlight edges and high readability over a bright football field. Make the shell flexible enough for any team colors. Straight-on 2D presentation, no perspective, opaque background. Candidate A variation: clean contemporary angular package with crisp beveled panels, subtle metallic layering, and neutral broadcast polish. Do not include words, letters, numbers, scores, clock text, team logos, team colors, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable. The final runtime will overlay all text and logos through HTML, so leave every label and score area blank.",
+        "quality": "high",
+        "requestedSize": "1536x512"
+      },
+      "provenancePath": "public/branding/scorebug/candidate-a.webp.json",
+      "quality": "high",
+      "requestedSize": "1536x512",
+      "textContrastBySafeZone": [
+        {
+          "blackContrastRatio": 4.17,
+          "safeZoneId": "userLogo",
+          "sourceBrightness": 40.41,
+          "status": "measured",
+          "whiteContrastRatio": 5.04
+        },
+        {
+          "blackContrastRatio": 4.57,
+          "safeZoneId": "userAbbreviation",
+          "sourceBrightness": 45.58,
+          "status": "measured",
+          "whiteContrastRatio": 4.59
+        },
+        {
+          "blackContrastRatio": 3.4,
+          "safeZoneId": "userScore",
+          "sourceBrightness": 30.65,
+          "status": "measured",
+          "whiteContrastRatio": 6.17
+        },
+        {
+          "blackContrastRatio": 4.04,
+          "safeZoneId": "opponentScore",
+          "sourceBrightness": 38.7,
+          "status": "measured",
+          "whiteContrastRatio": 5.2
+        },
+        {
+          "blackContrastRatio": 3.48,
+          "safeZoneId": "opponentLogo",
+          "sourceBrightness": 31.66,
+          "status": "measured",
+          "whiteContrastRatio": 6.03
+        },
+        {
+          "blackContrastRatio": 4.52,
+          "safeZoneId": "opponentAbbreviation",
+          "sourceBrightness": 44.82,
+          "status": "measured",
+          "whiteContrastRatio": 4.65
+        },
+        {
+          "blackContrastRatio": 4.03,
+          "safeZoneId": "quarter",
+          "sourceBrightness": 38.69,
+          "status": "measured",
+          "whiteContrastRatio": 5.21
+        },
+        {
+          "blackContrastRatio": 4.04,
+          "safeZoneId": "gameClock",
+          "sourceBrightness": 38.71,
+          "status": "measured",
+          "whiteContrastRatio": 5.2
+        },
+        {
+          "blackContrastRatio": 1.44,
+          "safeZoneId": "possession",
+          "sourceBrightness": 5.56,
+          "status": "measured",
+          "whiteContrastRatio": 14.62
+        },
+        {
+          "blackContrastRatio": 1.91,
+          "safeZoneId": "downDistance",
+          "sourceBrightness": 11.59,
+          "status": "measured",
+          "whiteContrastRatio": 11
+        },
+        {
+          "blackContrastRatio": 1.83,
+          "safeZoneId": "ballLocation",
+          "sourceBrightness": 10.63,
+          "status": "measured",
+          "whiteContrastRatio": 11.45
+        }
+      ]
+    },
+    {
+      "assetId": "candidate-b",
+      "averageBrightnessBySafeZone": [
+        {
+          "averageBrightness": 39.37,
+          "safeZoneId": "userLogo"
+        },
+        {
+          "averageBrightness": 29.75,
+          "safeZoneId": "userAbbreviation"
+        },
+        {
+          "averageBrightness": 22.6,
+          "safeZoneId": "userScore"
+        },
+        {
+          "averageBrightness": 30.56,
+          "safeZoneId": "opponentScore"
+        },
+        {
+          "averageBrightness": 22.23,
+          "safeZoneId": "opponentLogo"
+        },
+        {
+          "averageBrightness": 32.04,
+          "safeZoneId": "opponentAbbreviation"
+        },
+        {
+          "averageBrightness": 46.54,
+          "safeZoneId": "quarter"
+        },
+        {
+          "averageBrightness": 46.49,
+          "safeZoneId": "gameClock"
+        },
+        {
+          "averageBrightness": 17.65,
+          "safeZoneId": "possession"
+        },
+        {
+          "averageBrightness": 19.19,
+          "safeZoneId": "downDistance"
+        },
+        {
+          "averageBrightness": 19.57,
+          "safeZoneId": "ballLocation"
+        }
+      ],
+      "candidateId": "candidate-b",
+      "compressedBytes": 63252,
+      "contentHash": "b577c713417ebcc9f5fcda82c6331b33a54a8db491df0a473b1c2ff119ea6158",
+      "dimensions": {
+        "height": 512,
+        "width": 1536
+      },
+      "exists": true,
+      "model": "gpt-image-2",
+      "outputFormat": "webp",
+      "outputPath": "public/branding/scorebug/candidate-b.webp",
+      "prompt": "Create an original broadcast scorebug shell for a fictional low-poly college-football video game named Football JS. Format: wide horizontal 3:1 graphic designed for the top or bottom of a game screen. Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, polished modern sports-broadcast presentation, two symmetrical team sections, clear square or circular wells for team logos, large score areas beside each logo, central area for quarter and game clock, and a lower strip for possession, down, distance, and ball location. Keep restrained highlight edges and high readability over a bright football field. Make the shell flexible enough for any team colors. Straight-on 2D presentation, no perspective, opaque background. Candidate B variation: slightly retro 1990s-console influence with modern polish, chunky panel rhythm, restrained scanline-inspired details, and clean modern material finish. Do not include words, letters, numbers, scores, clock text, team logos, team colors, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable. The final runtime will overlay all text and logos through HTML, so leave every label and score area blank.",
+      "provenance": {
+        "assetId": "candidate-b",
+        "background": "opaque",
+        "candidateId": "candidate-b",
+        "compressedBytes": 63252,
+        "contentHash": "b577c713417ebcc9f5fcda82c6331b33a54a8db491df0a473b1c2ff119ea6158",
+        "generatedAt": "2026-06-22T22:43:58.610Z",
+        "generationMetadata": {
+          "apiEndpoint": "images/generations",
+          "revisedPrompt": null
+        },
+        "model": "gpt-image-2",
+        "outputFormat": "webp",
+        "outputPath": "public/branding/scorebug/candidate-b.webp",
+        "prompt": "Create an original broadcast scorebug shell for a fictional low-poly college-football video game named Football JS. Format: wide horizontal 3:1 graphic designed for the top or bottom of a game screen. Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, polished modern sports-broadcast presentation, two symmetrical team sections, clear square or circular wells for team logos, large score areas beside each logo, central area for quarter and game clock, and a lower strip for possession, down, distance, and ball location. Keep restrained highlight edges and high readability over a bright football field. Make the shell flexible enough for any team colors. Straight-on 2D presentation, no perspective, opaque background. Candidate B variation: slightly retro 1990s-console influence with modern polish, chunky panel rhythm, restrained scanline-inspired details, and clean modern material finish. Do not include words, letters, numbers, scores, clock text, team logos, team colors, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable. The final runtime will overlay all text and logos through HTML, so leave every label and score area blank.",
+        "quality": "high",
+        "requestedSize": "1536x512"
+      },
+      "provenancePath": "public/branding/scorebug/candidate-b.webp.json",
+      "quality": "high",
+      "requestedSize": "1536x512",
+      "textContrastBySafeZone": [
+        {
+          "blackContrastRatio": 4.09,
+          "safeZoneId": "userLogo",
+          "sourceBrightness": 39.37,
+          "status": "measured",
+          "whiteContrastRatio": 5.14
+        },
+        {
+          "blackContrastRatio": 3.33,
+          "safeZoneId": "userAbbreviation",
+          "sourceBrightness": 29.75,
+          "status": "measured",
+          "whiteContrastRatio": 6.3
+        },
+        {
+          "blackContrastRatio": 2.77,
+          "safeZoneId": "userScore",
+          "sourceBrightness": 22.6,
+          "status": "measured",
+          "whiteContrastRatio": 7.57
+        },
+        {
+          "blackContrastRatio": 3.4,
+          "safeZoneId": "opponentScore",
+          "sourceBrightness": 30.56,
+          "status": "measured",
+          "whiteContrastRatio": 6.18
+        },
+        {
+          "blackContrastRatio": 2.74,
+          "safeZoneId": "opponentLogo",
+          "sourceBrightness": 22.23,
+          "status": "measured",
+          "whiteContrastRatio": 7.65
+        },
+        {
+          "blackContrastRatio": 3.51,
+          "safeZoneId": "opponentAbbreviation",
+          "sourceBrightness": 32.04,
+          "status": "measured",
+          "whiteContrastRatio": 5.98
+        },
+        {
+          "blackContrastRatio": 4.65,
+          "safeZoneId": "quarter",
+          "sourceBrightness": 46.54,
+          "status": "measured",
+          "whiteContrastRatio": 4.52
+        },
+        {
+          "blackContrastRatio": 4.65,
+          "safeZoneId": "gameClock",
+          "sourceBrightness": 46.49,
+          "status": "measured",
+          "whiteContrastRatio": 4.52
+        },
+        {
+          "blackContrastRatio": 2.38,
+          "safeZoneId": "possession",
+          "sourceBrightness": 17.65,
+          "status": "measured",
+          "whiteContrastRatio": 8.81
+        },
+        {
+          "blackContrastRatio": 2.51,
+          "safeZoneId": "downDistance",
+          "sourceBrightness": 19.19,
+          "status": "measured",
+          "whiteContrastRatio": 8.38
+        },
+        {
+          "blackContrastRatio": 2.53,
+          "safeZoneId": "ballLocation",
+          "sourceBrightness": 19.57,
+          "status": "measured",
+          "whiteContrastRatio": 8.28
+        }
+      ]
+    },
+    {
+      "assetId": "candidate-c",
+      "averageBrightnessBySafeZone": [
+        {
+          "averageBrightness": 81.51,
+          "safeZoneId": "userLogo"
+        },
+        {
+          "averageBrightness": 41.18,
+          "safeZoneId": "userAbbreviation"
+        },
+        {
+          "averageBrightness": 79.93,
+          "safeZoneId": "userScore"
+        },
+        {
+          "averageBrightness": 83.54,
+          "safeZoneId": "opponentScore"
+        },
+        {
+          "averageBrightness": 77.2,
+          "safeZoneId": "opponentLogo"
+        },
+        {
+          "averageBrightness": 46.45,
+          "safeZoneId": "opponentAbbreviation"
+        },
+        {
+          "averageBrightness": 110.41,
+          "safeZoneId": "quarter"
+        },
+        {
+          "averageBrightness": 111.31,
+          "safeZoneId": "gameClock"
+        },
+        {
+          "averageBrightness": 202.64,
+          "safeZoneId": "possession"
+        },
+        {
+          "averageBrightness": 180.8,
+          "safeZoneId": "downDistance"
+        },
+        {
+          "averageBrightness": 180.36,
+          "safeZoneId": "ballLocation"
+        }
+      ],
+      "candidateId": "candidate-c",
+      "compressedBytes": 53216,
+      "contentHash": "6bfc3db89a6e87e7224acdc1bbdb9f93ae1b04eca875e2959f815cb6b99871e7",
+      "dimensions": {
+        "height": 512,
+        "width": 1536
+      },
+      "exists": true,
+      "model": "gpt-image-2",
+      "outputFormat": "webp",
+      "outputPath": "public/branding/scorebug/candidate-c.webp",
+      "prompt": "Create an original broadcast scorebug shell for a fictional low-poly college-football video game named Football JS. Format: wide horizontal 3:1 graphic designed for the top or bottom of a game screen. Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, polished modern sports-broadcast presentation, two symmetrical team sections, clear square or circular wells for team logos, large score areas beside each logo, central area for quarter and game clock, and a lower strip for possession, down, distance, and ball location. Keep restrained highlight edges and high readability over a bright football field. Make the shell flexible enough for any team colors. Straight-on 2D presentation, no perspective, opaque background. Candidate C variation: minimal stadium-board design, broad readable dark panels, thin metallic dividers, restrained low-poly texture, and generous clean safe zones for live overlay text. Do not include words, letters, numbers, scores, clock text, team logos, team colors, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable. The final runtime will overlay all text and logos through HTML, so leave every label and score area blank.",
+      "provenance": {
+        "assetId": "candidate-c",
+        "background": "opaque",
+        "candidateId": "candidate-c",
+        "compressedBytes": 53216,
+        "contentHash": "6bfc3db89a6e87e7224acdc1bbdb9f93ae1b04eca875e2959f815cb6b99871e7",
+        "generatedAt": "2026-06-22T22:44:56.130Z",
+        "generationMetadata": {
+          "apiEndpoint": "images/generations",
+          "revisedPrompt": null
+        },
+        "model": "gpt-image-2",
+        "outputFormat": "webp",
+        "outputPath": "public/branding/scorebug/candidate-c.webp",
+        "prompt": "Create an original broadcast scorebug shell for a fictional low-poly college-football video game named Football JS. Format: wide horizontal 3:1 graphic designed for the top or bottom of a game screen. Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, polished modern sports-broadcast presentation, two symmetrical team sections, clear square or circular wells for team logos, large score areas beside each logo, central area for quarter and game clock, and a lower strip for possession, down, distance, and ball location. Keep restrained highlight edges and high readability over a bright football field. Make the shell flexible enough for any team colors. Straight-on 2D presentation, no perspective, opaque background. Candidate C variation: minimal stadium-board design, broad readable dark panels, thin metallic dividers, restrained low-poly texture, and generous clean safe zones for live overlay text. Do not include words, letters, numbers, scores, clock text, team logos, team colors, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable. The final runtime will overlay all text and logos through HTML, so leave every label and score area blank.",
+        "quality": "high",
+        "requestedSize": "1536x512"
+      },
+      "provenancePath": "public/branding/scorebug/candidate-c.webp.json",
+      "quality": "high",
+      "requestedSize": "1536x512",
+      "textContrastBySafeZone": [
+        {
+          "blackContrastRatio": 7.39,
+          "safeZoneId": "userLogo",
+          "sourceBrightness": 81.51,
+          "status": "measured",
+          "whiteContrastRatio": 2.84
+        },
+        {
+          "blackContrastRatio": 4.23,
+          "safeZoneId": "userAbbreviation",
+          "sourceBrightness": 41.18,
+          "status": "measured",
+          "whiteContrastRatio": 4.96
+        },
+        {
+          "blackContrastRatio": 7.27,
+          "safeZoneId": "userScore",
+          "sourceBrightness": 79.93,
+          "status": "measured",
+          "whiteContrastRatio": 2.89
+        },
+        {
+          "blackContrastRatio": 7.55,
+          "safeZoneId": "opponentScore",
+          "sourceBrightness": 83.54,
+          "status": "measured",
+          "whiteContrastRatio": 2.78
+        },
+        {
+          "blackContrastRatio": 7.05,
+          "safeZoneId": "opponentLogo",
+          "sourceBrightness": 77.2,
+          "status": "measured",
+          "whiteContrastRatio": 2.98
+        },
+        {
+          "blackContrastRatio": 4.64,
+          "safeZoneId": "opponentAbbreviation",
+          "sourceBrightness": 46.45,
+          "status": "measured",
+          "whiteContrastRatio": 4.52
+        },
+        {
+          "blackContrastRatio": 9.66,
+          "safeZoneId": "quarter",
+          "sourceBrightness": 110.41,
+          "status": "measured",
+          "whiteContrastRatio": 2.17
+        },
+        {
+          "blackContrastRatio": 9.73,
+          "safeZoneId": "gameClock",
+          "sourceBrightness": 111.31,
+          "status": "measured",
+          "whiteContrastRatio": 2.16
+        },
+        {
+          "blackContrastRatio": 16.89,
+          "safeZoneId": "possession",
+          "sourceBrightness": 202.64,
+          "status": "measured",
+          "whiteContrastRatio": 1.24
+        },
+        {
+          "blackContrastRatio": 15.18,
+          "safeZoneId": "downDistance",
+          "sourceBrightness": 180.8,
+          "status": "measured",
+          "whiteContrastRatio": 1.38
+        },
+        {
+          "blackContrastRatio": 15.15,
+          "safeZoneId": "ballLocation",
+          "sourceBrightness": 180.36,
+          "status": "measured",
+          "whiteContrastRatio": 1.39
+        }
+      ]
+    }
+  ],
+  "galleryPath": "public/branding/scorebug/scorebug-gallery.html",
+  "generatedCount": 3,
+  "generatedTotalBytes": 170302,
+  "layout": {
+    "imageHeight": 512,
+    "imageWidth": 1536,
+    "notes": "Normalized safe zones for HTML-rendered scorebug content. The generated shell must not contain labels.",
+    "safeZones": [
+      {
+        "id": "userLogo",
+        "normalized": {
+          "height": 0.3,
+          "width": 0.075,
+          "x": 0.035,
+          "y": 0.18
+        }
+      },
+      {
+        "id": "userAbbreviation",
+        "normalized": {
+          "height": 0.22,
+          "width": 0.11,
+          "x": 0.12,
+          "y": 0.23
+        }
+      },
+      {
+        "id": "userScore",
+        "normalized": {
+          "height": 0.35,
+          "width": 0.1,
+          "x": 0.24,
+          "y": 0.17
+        }
+      },
+      {
+        "id": "opponentScore",
+        "normalized": {
+          "height": 0.35,
+          "width": 0.1,
+          "x": 0.6,
+          "y": 0.17
+        }
+      },
+      {
+        "id": "opponentLogo",
+        "normalized": {
+          "height": 0.3,
+          "width": 0.075,
+          "x": 0.7,
+          "y": 0.18
+        }
+      },
+      {
+        "id": "opponentAbbreviation",
+        "normalized": {
+          "height": 0.22,
+          "width": 0.12,
+          "x": 0.785,
+          "y": 0.23
+        }
+      },
+      {
+        "id": "quarter",
+        "normalized": {
+          "height": 0.18,
+          "width": 0.06,
+          "x": 0.435,
+          "y": 0.18
+        }
+      },
+      {
+        "id": "gameClock",
+        "normalized": {
+          "height": 0.18,
+          "width": 0.08,
+          "x": 0.505,
+          "y": 0.18
+        }
+      },
+      {
+        "id": "possession",
+        "normalized": {
+          "height": 0.18,
+          "width": 0.08,
+          "x": 0.045,
+          "y": 0.67
+        }
+      },
+      {
+        "id": "downDistance",
+        "normalized": {
+          "height": 0.2,
+          "width": 0.2,
+          "x": 0.15,
+          "y": 0.65
+        }
+      },
+      {
+        "id": "ballLocation",
+        "normalized": {
+          "height": 0.2,
+          "width": 0.18,
+          "x": 0.37,
+          "y": 0.65
+        }
+      }
+    ]
+  },
+  "layoutPath": "public/branding/scorebug/scorebug-layout.json",
+  "reportPath": "public/branding/scorebug/scorebug-asset-report.json",
+  "selection": {
+    "selected": {
+      "assetId": "candidate-a",
+      "contentHash": "cf71b69d339ba43a2936f260a1097e9085079cce4d3a73ba707f6ad65498a558",
+      "outputPath": "public/branding/scorebug/candidate-a.webp",
+      "runtimeImageUrl": "/branding/scorebug/football-js-scorebug-shell.webp",
+      "runtimePath": "public/branding/scorebug/football-js-scorebug-shell.webp"
+    },
+    "selectedAt": "2026-06-22T22:45:50.311Z",
+    "selectedCandidateId": "candidate-a"
+  },
+  "selectionPath": "public/branding/scorebug/scorebug-selection.json",
+  "validationErrors": []
+}

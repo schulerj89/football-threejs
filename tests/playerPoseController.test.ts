@@ -11,6 +11,10 @@ import {
   createPoseTarget,
   derivePlayerPoseIntent,
 } from '../src/presentation/PlayerPoseController';
+import {
+  ensureRunAnimationPivots,
+  updateRunAnimation,
+} from '../src/presentation/RunAnimation';
 
 describe('player pose controller', () => {
   it('selects offensive and defensive ready poses during pre-snap', () => {
@@ -96,6 +100,38 @@ describe('player pose controller', () => {
     expect(visual.getObjectByName('leftLegPivot')?.rotation.x).not.toBe(0);
   });
 
+  it('returns controller-owned run pivots to neutral after locomotion stops', () => {
+    const movingPlayer = createPlayer({
+      currentState: 'userControlled',
+      velocity: { x: 0, z: 7 },
+    });
+    const stoppedPlayer = {
+      ...movingPlayer,
+      currentState: 'idle' as const,
+      velocity: { x: 0, z: 0 },
+    };
+    const visual = createPlaceholderPlayerVisual(movingPlayer);
+    const controller = new PlayerPoseController();
+
+    controller.update(
+      createGameplaySnapshot([movingPlayer], 'live'),
+      new Map([[movingPlayer.id, visual]]),
+      0.1,
+    );
+    const pivot = getPivot(visual, 'leftArmPivot');
+    expect(Math.abs(pivot.rotation.x)).toBeGreaterThan(0);
+
+    for (let index = 0; index < 30; index += 1) {
+      controller.update(
+        createGameplaySnapshot([stoppedPlayer], 'live'),
+        new Map([[stoppedPlayer.id, visual]]),
+        1 / 60,
+      );
+    }
+
+    expect(Math.abs(pivot.rotation.x)).toBeLessThan(0.02);
+  });
+
   it('can disable procedural motion for comparison', () => {
     const player = createPlayer({
       currentState: 'userControlled',
@@ -113,6 +149,75 @@ describe('player pose controller', () => {
       },
     ]);
     expect(visual.getObjectByName('leftLegPivot')?.rotation.equals(new THREE.Euler())).toBe(true);
+  });
+
+  it('updates stiff run animation with opposite arm and leg swing phases', () => {
+    const visual = createPlaceholderPlayerVisual(createPlayer());
+
+    updateRunAnimation(visual, 0.1, 7);
+
+    const leftArmPivot = getPivot(visual, 'leftArmPivot');
+    const rightArmPivot = getPivot(visual, 'rightArmPivot');
+    const leftLegPivot = getPivot(visual, 'leftLegPivot');
+    const rightLegPivot = getPivot(visual, 'rightLegPivot');
+
+    expect(leftArmPivot.rotation.x).not.toBe(0);
+    expect(rightArmPivot.rotation.x).toBeCloseTo(-leftArmPivot.rotation.x);
+    expect(Math.sign(leftArmPivot.rotation.x)).toBe(-Math.sign(leftLegPivot.rotation.x));
+    expect(Math.sign(rightArmPivot.rotation.x)).toBe(-Math.sign(rightLegPivot.rotation.x));
+  });
+
+  it('smoothly returns stiff run animation pivots to neutral when speed stops', () => {
+    const visual = createPlaceholderPlayerVisual(createPlayer());
+
+    updateRunAnimation(visual, 0.1, 7);
+    const pivot = getPivot(visual, 'leftArmPivot');
+    const initialSwing = Math.abs(pivot.rotation.x);
+
+    for (let index = 0; index < 30; index += 1) {
+      updateRunAnimation(visual, 1 / 60, 0);
+    }
+
+    expect(Math.abs(pivot.rotation.x)).toBeLessThan(initialSwing);
+    expect(Math.abs(pivot.rotation.x)).toBeLessThan(0.02);
+  });
+
+  it('creates missing limb pivots without moving existing limb meshes', () => {
+    const visual = new THREE.Group();
+    const bodyRoot = new THREE.Group();
+    bodyRoot.name = 'bodyRoot';
+    visual.add(bodyRoot);
+
+    const limbs = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].map((name, index) => {
+      const limb = new THREE.Mesh(
+        new THREE.BoxGeometry(0.2, 0.5, 0.2),
+        new THREE.MeshBasicMaterial(),
+      );
+      limb.name = name;
+      limb.position.set(index - 1.5, 0.25 - index * 0.1, index * 0.05);
+      bodyRoot.add(limb);
+      return limb;
+    });
+    visual.position.set(2, 1, -3);
+    visual.rotation.y = 0.4;
+    visual.updateWorldMatrix(true, true);
+    const beforePositions = limbs.map((limb) => limb.getWorldPosition(new THREE.Vector3()));
+
+    const pivots = ensureRunAnimationPivots(visual);
+    visual.updateWorldMatrix(true, true);
+
+    expect(visual.userData.leftArmPivot).toBe(pivots.leftArmPivot);
+    expect(visual.userData.rightArmPivot).toBe(pivots.rightArmPivot);
+    expect(visual.userData.leftLegPivot).toBe(pivots.leftLegPivot);
+    expect(visual.userData.rightLegPivot).toBe(pivots.rightLegPivot);
+    expect(pivots.leftArmPivot).toBeInstanceOf(THREE.Group);
+    expect(pivots.leftLegPivot).toBeInstanceOf(THREE.Group);
+
+    for (const [index, limb] of limbs.entries()) {
+      expect(limb.getWorldPosition(new THREE.Vector3()).distanceTo(beforePositions[index])).toBeLessThan(
+        0.000001,
+      );
+    }
   });
 });
 
@@ -138,4 +243,14 @@ function createGameplaySnapshot(
     playState,
     players,
   } as unknown as GameplaySnapshot;
+}
+
+function getPivot(visual: THREE.Object3D, name: string): THREE.Object3D {
+  const pivot = visual.getObjectByName(name);
+
+  if (!pivot) {
+    throw new Error(`Missing ${name}`);
+  }
+
+  return pivot;
 }

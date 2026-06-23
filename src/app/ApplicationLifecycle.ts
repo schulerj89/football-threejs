@@ -1,4 +1,5 @@
 import type { GameExperienceSettings } from '../config/GameExperienceSettings';
+import type { LeagueData } from '../league/LeagueTypes';
 import type { PlayState } from '../playState';
 import { PauseSettingsPanel } from '../ui/PauseSettingsPanel';
 import { SettingsPanel } from '../ui/SettingsPanel';
@@ -7,6 +8,8 @@ import { TitleScreenController } from '../ui/TitleScreenController';
 
 export type AppPhase =
   | 'coinToss'
+  | 'extraPoint'
+  | 'footballHub'
   | 'gameplay'
   | 'kickoff'
   | 'matchSetup'
@@ -19,6 +22,7 @@ export interface ApplicationLifecycleOptions {
   initialSettings: GameExperienceSettings;
   searchParams: URLSearchParams;
   createTitleLoadingState: () => TitleLoadingState;
+  getLeagueData: () => LeagueData | null;
   onPauseSettingsChange: (settings: GameExperienceSettings) => void;
   onReturnToTitle: () => void;
   onTitleFirstGesture: () => void;
@@ -44,9 +48,12 @@ export class ApplicationLifecycle {
 
     this.titleController = !options.crowdPreviewEnabled && !options.formationPreviewActive
       ? new TitleScreenController({
+          getLeagueData: options.getLeagueData,
           initialSettings: options.initialSettings,
           onFirstGesture: options.onTitleFirstGesture,
-          onMatchSetupBack: () => this.returnToTitleFromMatchSetup(),
+          onFootballHubBack: () => this.returnToTitleFromFootballHub(),
+          onFootballHubOpen: () => this.startFootballHub(),
+          onMatchSetupBack: () => this.returnToHubFromMatchSetup(),
           onMatchSetupOpen: () => this.startMatchSetup(),
           onStart: options.onStart,
           onSettingsChange: options.onTitleSettingsChange,
@@ -54,15 +61,16 @@ export class ApplicationLifecycle {
       : null;
     this.pauseSetupScreen = !options.crowdPreviewEnabled && !options.formationPreviewActive
       ? new SettingsPanel({
+          context: 'activeMatch',
           initialSettings: options.initialSettings,
           onSettingsChange: options.onPauseSettingsChange,
-          showGameMode: false,
-          showTeamCustomization: false,
+          variant: 'pause',
         })
       : null;
     this.pauseSettingsPanel = this.pauseSetupScreen
       ? new PauseSettingsPanel({
           onClose: () => this.setPauseSettingsVisible(false, false),
+          onFullSettings: () => this.pauseSetupScreen?.setVariant('full'),
           onReturnToTitle: options.onReturnToTitle,
           setupElement: this.pauseSetupScreen.root,
         })
@@ -125,6 +133,36 @@ export class ApplicationLifecycle {
     this.syncChrome();
   }
 
+  returnToTitleFromFootballHub(): void {
+    if (!this.titleController) {
+      return;
+    }
+
+    this.phaseValue = 'title';
+    this.setPauseSettingsVisible(false, false);
+    this.syncChrome();
+  }
+
+  returnToHubFromMatchSetup(): void {
+    if (!this.titleController) {
+      return;
+    }
+
+    this.phaseValue = 'footballHub';
+    this.setPauseSettingsVisible(false, false);
+    this.syncChrome();
+  }
+
+  startFootballHub(): void {
+    if (!this.titleController) {
+      return;
+    }
+
+    this.phaseValue = 'footballHub';
+    this.setPauseSettingsVisible(false, false);
+    this.syncChrome();
+  }
+
   startMatchSetup(): void {
     if (!this.titleController) {
       return;
@@ -156,6 +194,13 @@ export class ApplicationLifecycle {
     this.syncChrome();
   }
 
+  startExtraPoint(): void {
+    this.phaseValue = 'extraPoint';
+    this.titleController?.setVisible(false);
+    this.setPauseSettingsVisible(false, false);
+    this.syncChrome();
+  }
+
   startPregamePresentation(): void {
     this.phaseValue = 'pregamePresentation';
     this.titleController?.setVisible(false);
@@ -171,6 +216,8 @@ export class ApplicationLifecycle {
     const nextVisible = visible && canOpen;
     this.pauseSettingsPanel.setVisible(nextVisible);
     if (nextVisible) {
+      this.pauseSetupScreen?.setContext('activeMatch');
+      this.pauseSetupScreen?.setVariant('pause');
       this.pauseSetupScreen?.setSettings(this.currentSettings);
     }
     this.syncChrome();

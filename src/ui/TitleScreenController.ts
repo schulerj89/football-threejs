@@ -1,11 +1,17 @@
 import type { GameExperienceSettings } from '../config/GameExperienceSettings';
+import type { LeagueData } from '../league/LeagueTypes';
+import { FootballHubScreen } from './FootballHubScreen';
+import { MatchSetupHelmetPreviewRenderer } from './MatchSetupHelmetPreview';
 import { MatchSetupScreen } from './MatchSetupScreen';
 import type { MatchSetupSelection } from './MatchSetupModel';
 import { SettingsPanel } from './SettingsPanel';
 import { TitleScreen, type TitleLoadingState } from './TitleScreen';
 
 export interface TitleScreenControllerOptions {
+  getLeagueData: () => LeagueData | null;
   initialSettings: GameExperienceSettings;
+  onFootballHubBack?: () => void;
+  onFootballHubOpen?: () => void;
   onFirstGesture?: () => void;
   onMatchSetupBack?: () => void;
   onMatchSetupOpen?: () => void;
@@ -14,19 +20,20 @@ export interface TitleScreenControllerOptions {
 }
 
 export class TitleScreenController {
+  readonly footballHubScreen: FootballHubScreen;
+  readonly helmetPreview: MatchSetupHelmetPreviewRenderer;
   readonly matchSetupScreen: MatchSetupScreen;
   readonly settingsPanel: SettingsPanel;
   readonly titleScreen: TitleScreen;
 
   constructor(options: TitleScreenControllerOptions) {
+    this.helmetPreview = new MatchSetupHelmetPreviewRenderer(document.body);
     this.settingsPanel = new SettingsPanel({
       initialSettings: options.initialSettings,
       onSettingsChange: options.onSettingsChange,
-      showRosterPreview: false,
-      showGameMode: false,
-      showTeamCustomization: true,
     });
     this.matchSetupScreen = new MatchSetupScreen({
+      helmetPreview: this.helmetPreview,
       initialSettings: options.initialSettings,
       onBack: () => {
         this.settingsPanel.setSettings({
@@ -34,7 +41,8 @@ export class TitleScreenController {
           teamProfiles: this.matchSetupScreen.getSelection().teamProfiles,
         });
         this.matchSetupScreen.setVisible(false);
-        this.titleScreen.setVisible(true);
+        this.footballHubScreen.setSettings(this.settingsPanel.getSettings());
+        this.footballHubScreen.setVisible(true);
         options.onMatchSetupBack?.();
       },
       onConfirm: (settings) => {
@@ -45,15 +53,37 @@ export class TitleScreenController {
       },
       onFirstGesture: options.onFirstGesture,
     });
+    this.footballHubScreen = new FootballHubScreen({
+      getLeagueData: options.getLeagueData,
+      helmetPreview: this.helmetPreview,
+      initialSettings: options.initialSettings,
+      onBack: () => {
+        this.footballHubScreen.setVisible(false);
+        this.titleScreen.setVisible(true);
+        options.onFootballHubBack?.();
+      },
+      onFirstGesture: options.onFirstGesture,
+      onPlayGame: (settings) => {
+        this.settingsPanel.setSettings(settings);
+        this.matchSetupScreen.setSettings(settings);
+        this.footballHubScreen.setVisible(false);
+        this.matchSetupScreen.setVisible(true);
+        options.onMatchSetupOpen?.();
+      },
+      onSettingsChange: (settings) => {
+        this.settingsPanel.setSettings(settings);
+        this.matchSetupScreen.setSettings(settings);
+        options.onSettingsChange(settings);
+      },
+    });
     this.titleScreen = new TitleScreen({
       onFirstGesture: options.onFirstGesture,
       onStart: () => {
-        options.onMatchSetupOpen?.();
+        options.onFootballHubOpen?.();
         this.titleScreen.setVisible(false);
-        this.matchSetupScreen.setSettings(this.settingsPanel.getSettings());
-        this.matchSetupScreen.setVisible(true);
+        this.footballHubScreen.setSettings(this.settingsPanel.getSettings());
+        this.footballHubScreen.setVisible(true);
       },
-      setupElement: this.settingsPanel.root,
     });
   }
 
@@ -63,6 +93,7 @@ export class TitleScreenController {
 
   setSettings(settings: GameExperienceSettings): void {
     this.settingsPanel.setSettings(settings);
+    this.footballHubScreen.setSettings(settings);
     if (!this.matchSetupScreen.isVisible()) {
       this.matchSetupScreen.setSettings(settings);
     }
@@ -71,6 +102,7 @@ export class TitleScreenController {
   setVisible(visible: boolean): void {
     this.titleScreen.setVisible(visible);
     if (!visible) {
+      this.footballHubScreen.setVisible(false);
       this.matchSetupScreen.setVisible(false);
     }
   }
@@ -89,6 +121,8 @@ export class TitleScreenController {
 
   dispose(): void {
     this.titleScreen.root.remove();
+    this.footballHubScreen.dispose();
     this.matchSetupScreen.dispose();
+    this.helmetPreview.dispose();
   }
 }

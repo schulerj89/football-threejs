@@ -1,0 +1,23 @@
+{
+  "assetId": "qb_ready_01",
+  "caption": "Ready!",
+  "category": "sfx",
+  "compressedBytes": 10075,
+  "contentHash": "5dc8f4c9f7e2df791efeff111adb4f69c40957cb633ede4f50c4c709de2ae53e",
+  "durationSeconds": 0.56,
+  "eventCategory": "cadence",
+  "generatedAt": "2026-06-22T14:14:29.702Z",
+  "kind": "speech",
+  "metadata": {
+    "semanticCategory": "cadence",
+    "voiceCategory": "quarterbackCadence",
+    "delivery": "firm"
+  },
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 0.55,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Ready!",
+  "scriptId": "qb_ready_01",
+  "voiceId": "SHkqlLNHrYVC1KK4qJev"
+}

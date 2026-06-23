@@ -13,14 +13,16 @@ import {
   serializeUniformPalette,
   type UniformPalette,
 } from './teams/UniformPalette';
+import type { PlayerVisualMode } from './presentation/players/PlayerVisualMode';
 
 const PLAYER_CENTER_Y = 1.1;
 const PLAYER_FORWARD_Z = 1;
 
 export const PLAYER_HEAD_ANCHOR_NAME = 'placeholder-player-head-anchor';
+export const PLAYER_BACK_NUMBER_ANCHOR_NAME = 'backNumberAnchor';
 export const PLAYER_BODY_ROOT_NAME = 'bodyRoot';
 
-export type PlayerBodyVisualStyle = 'box' | 'mannequin';
+export type PlayerBodyVisualStyle = 'box' | 'mannequin' | 'meshyRigged';
 
 export interface PlayerBodyDimensions {
   totalHeight: number;
@@ -67,6 +69,7 @@ export interface PlayerVisualOptions {
   bodyStyle?: PlayerBodyVisualStyle;
   debugRoleColors?: boolean;
   teamUniforms?: PlayerTeamUniforms;
+  visualMode?: PlayerVisualMode;
 }
 
 export interface PlayerVisualBoundsSnapshot {
@@ -138,6 +141,7 @@ export const PLAYER_BODY_DIMENSIONS: PlayerBodyDimensions = {
 };
 
 const BODY_PART_NAMES = {
+  backNumberAnchor: PLAYER_BACK_NUMBER_ANCHOR_NAME,
   head: 'head',
   headAnchor: PLAYER_HEAD_ANCHOR_NAME,
   jerseyTexturePanel: 'jerseyTexturePanel',
@@ -169,7 +173,7 @@ export type PlayerTeamUniforms = Record<PlayerTeam, UniformPalette>;
 
 export const DEFAULT_PLAYER_TEAM_UNIFORMS: PlayerTeamUniforms = {
   defense: {
-    faceguard: '#24282e',
+    faceguard: '#f2f4f6',
     helmetShell: '#b83737',
     jersey: '#f2f4f6',
     number: '#24282e',
@@ -180,7 +184,7 @@ export const DEFAULT_PLAYER_TEAM_UNIFORMS: PlayerTeamUniforms = {
     stripe: '#b83737',
   },
   offense: {
-    faceguard: '#f3f5f8',
+    faceguard: '#f2f4f6',
     helmetShell: '#2f66d8',
     jersey: '#2f66d8',
     number: '#f2f4f6',
@@ -337,7 +341,7 @@ export function getPlayerBodyVisualSnapshot(playerVisual: THREE.Object3D): Playe
 
   bodyRoot.updateWorldMatrix(true, true);
   bodyRoot.traverse((object) => {
-    if (!(object instanceof THREE.Mesh) || isHelmetDescendant(object)) {
+    if (!(object instanceof THREE.Mesh) || isHelmetDescendant(object) || isBodyBoundsExcluded(object)) {
       return;
     }
 
@@ -370,10 +374,13 @@ export function getPlayerBodyVisualSnapshot(playerVisual: THREE.Object3D): Playe
   const shoulderBounds = shoulderPads ? new THREE.Box3().setFromObject(shoulderPads) : null;
   const playerId = String(playerVisual.userData.sourcePlayerId ?? playerVisual.userData.testId ?? playerVisual.name);
 
+  const bodyStyle = readBodyStyle(playerVisual);
+  const bodySize = bounds.getSize(new THREE.Vector3());
+
   return {
     appearance: resolvePlayerAppearance(playerId),
     bodyBounds: boundsToPlain(bounds),
-    bodyStyle: readBodyStyle(playerVisual),
+    bodyStyle,
     bodyTriangleCount,
     combinedBounds: boundsToPlain(combinedBounds),
     headBounds: headBounds ? boundsToPlain(headBounds) : null,
@@ -386,8 +393,8 @@ export function getPlayerBodyVisualSnapshot(playerVisual: THREE.Object3D): Playe
     minimumBodyY,
     neckBounds: neckBounds ? boundsToPlain(neckBounds) : null,
     playerId: String(playerVisual.userData.testId ?? playerVisual.name),
-    shoulderWidth: PLAYER_BODY_DIMENSIONS.shoulderWidth,
-    totalHeight: PLAYER_BODY_DIMENSIONS.totalHeight,
+    shoulderWidth: bodyStyle === 'meshyRigged' ? bodySize.x : PLAYER_BODY_DIMENSIONS.shoulderWidth,
+    totalHeight: bodyStyle === 'meshyRigged' ? bodySize.y : PLAYER_BODY_DIMENSIONS.totalHeight,
     uniqueBodyGeometryCount: geometryIds.size,
     uniqueBodyMaterialCount: materialIds.size,
   };
@@ -411,6 +418,7 @@ function createMannequinBodyRoot(
     debugRoleColors,
   );
   torso.position.set(0, PLAYER_BODY_DIMENSIONS.torsoCenterY, 0);
+  torso.add(createBackNumberAnchor('mannequin'));
   bodyRoot.add(torso);
 
   const jerseyTexturePanel = createBodyMesh(
@@ -466,6 +474,7 @@ function createBoxBodyRoot(player: PlayerModel | undefined, debugRoleColors: boo
   const bodyRoot = createBodyRoot();
   const geometry = player?.role === 'defender' ? sharedGeometry.boxDefenderBody : sharedGeometry.boxBody;
   const body = createBodyMesh('placeholder-player-body', geometry, 'jersey', player, debugRoleColors);
+  body.add(createBackNumberAnchor('box'));
   bodyRoot.add(body);
 
   const facingStripe = new THREE.Mesh(sharedGeometry.boxFacingStripe, getBasicMaterial('box-facing', 0xf3f5f8));
@@ -560,6 +569,22 @@ function createHeadAnchor(
   headAnchor.add(head);
 
   return headAnchor;
+}
+
+function createBackNumberAnchor(bodyStyle: PlayerBodyVisualStyle): THREE.Group {
+  const anchor = new THREE.Group();
+  anchor.name = BODY_PART_NAMES.backNumberAnchor;
+  anchor.rotation.y = Math.PI;
+  if (bodyStyle === 'box') {
+    anchor.position.set(0, 0.14, -0.712);
+  } else {
+    anchor.position.set(
+      0,
+      0.03,
+      -PLAYER_BODY_DIMENSIONS.jerseyPanelForwardOffset - 0.018,
+    );
+  }
+  return anchor;
 }
 
 function createBodyMesh(
@@ -869,7 +894,7 @@ function cachePlayerVisualReferences(
       references.headAnchor = object;
     }
 
-    if (!(object instanceof THREE.Mesh) || isHelmetDescendant(object)) {
+    if (!(object instanceof THREE.Mesh) || isHelmetDescendant(object) || isBodyBoundsExcluded(object)) {
       return;
     }
 
@@ -879,8 +904,35 @@ function cachePlayerVisualReferences(
     }
   });
 
+  cacheRunAnimationPivotReferences(playerVisual, bodyRoot);
   playerVisualReferences.set(playerVisual, references);
   return references;
+}
+
+function cacheRunAnimationPivotReferences(
+  playerVisual: THREE.Object3D,
+  bodyRoot: THREE.Object3D,
+): void {
+  const leftArmPivot = bodyRoot.getObjectByName(BODY_PART_NAMES.leftArmPivot);
+  const rightArmPivot = bodyRoot.getObjectByName(BODY_PART_NAMES.rightArmPivot);
+  const leftLegPivot = bodyRoot.getObjectByName(BODY_PART_NAMES.leftLegPivot);
+  const rightLegPivot = bodyRoot.getObjectByName(BODY_PART_NAMES.rightLegPivot);
+
+  if (leftArmPivot) {
+    playerVisual.userData.leftArmPivot = leftArmPivot;
+  }
+
+  if (rightArmPivot) {
+    playerVisual.userData.rightArmPivot = rightArmPivot;
+  }
+
+  if (leftLegPivot) {
+    playerVisual.userData.leftLegPivot = leftLegPivot;
+  }
+
+  if (rightLegPivot) {
+    playerVisual.userData.rightLegPivot = rightLegPivot;
+  }
 }
 
 function isHelmetDescendant(object: THREE.Object3D): boolean {
@@ -897,8 +949,29 @@ function isHelmetDescendant(object: THREE.Object3D): boolean {
   return false;
 }
 
+function isBodyBoundsExcluded(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object;
+
+  while (current) {
+    if (current.userData.excludeFromPlayerBodyBounds === true) {
+      return true;
+    }
+    current = current.parent;
+  }
+
+  return false;
+}
+
 function readBodyStyle(playerVisual: THREE.Object3D): PlayerBodyVisualStyle {
-  return playerVisual.userData.playerBodyStyle === 'box' ? 'box' : 'mannequin';
+  if (playerVisual.userData.playerBodyStyle === 'box') {
+    return 'box';
+  }
+
+  if (playerVisual.userData.playerBodyStyle === 'meshyRigged') {
+    return 'meshyRigged';
+  }
+
+  return 'mannequin';
 }
 
 function countGeometryTriangles(geometry: THREE.BufferGeometry): number {

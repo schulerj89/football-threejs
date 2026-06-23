@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createGameplayModel,
+  resetOffensePossession,
   resetPlay,
   snapshotGameplayModel,
   startPlay,
@@ -16,7 +17,12 @@ import {
 import { MatchFlowController } from '../src/match/MatchFlowController';
 import { createDriveSummary } from '../src/match/DriveSummary';
 import { simulateOpponentDrive } from '../src/match/OpponentDriveSimulator';
-import type { DriveSummaryResult } from '../src/match/MatchTypes';
+import type { DriveSummary, DriveSummaryResult } from '../src/match/MatchTypes';
+import {
+  createOpponentYardLinePosition,
+  createOwnYardLinePosition,
+  possessionFieldPositionToOffenseSpot,
+} from '../src/match/FieldPositionModel';
 import { PLAYABLE_FIELD_BOUNDS } from '../src/fieldSpec';
 import {
   DEFAULT_OPPONENT_TEAM_ID,
@@ -88,7 +94,7 @@ describe('offense-only exhibition match model', () => {
       quarter: 2,
       remainingSeconds: 94,
       seed: 991,
-      startingFieldPosition: { x: 0, z: -15 },
+      startingFieldPosition: createOwnYardLinePosition(25),
       userDefensiveRating: 69,
     };
 
@@ -121,7 +127,7 @@ describe('offense-only exhibition match model', () => {
     expect(second.driveSummaries).toHaveLength(1);
   });
 
-  it('records a user touchdown as touchdown plus automatic extra point once', () => {
+  it('records a user touchdown as six points pending the extra-point try', () => {
     const gameplay = createGameplayModel({
       challengeMode: 'exhibition',
       playbookId: '11v11',
@@ -135,16 +141,20 @@ describe('offense-only exhibition match model', () => {
     controller.update(1 / 60, gameplay, snapshotGameplayModel(gameplay));
     const first = controller.getSnapshot();
 
-    expect(first.userScore).toBe(7);
-    expect(first.driveSummaries[0]?.result).toBe('touchdown');
-    expect(first.driveSummaries[0]?.possession).toBe('user');
-    expect(first.driveSummaries[0]?.scoringEvents).toEqual([
+    expect(first.phase).toBe('userPossession');
+    expect(first.userScore).toBe(6);
+    expect(first.driveSummaries).toHaveLength(0);
+    expect(first.pendingScoringDriveSummary?.result).toBe('touchdown');
+    expect(first.pendingScoringDriveSummary?.possession).toBe('user');
+    expect(first.pendingScoringDriveSummary?.scoringEvents).toEqual([
       { points: 6, team: 'user', type: 'touchdown' },
-      { points: 1, team: 'user', type: 'extraPoint' },
     ]);
 
     controller.update(1 / 60, gameplay, snapshotGameplayModel(gameplay));
-    expect(controller.getSnapshot().userScore).toBe(7);
+    expect(controller.getSnapshot().userScore).toBe(6);
+
+    expect(controller.beginPreparedExtraPoint()).toBe(true);
+    expect(controller.getSnapshot().phase).toBe('extraPoint');
   });
 
   it('turns a failed fourth down into one opponent possession', () => {
@@ -190,6 +200,149 @@ describe('offense-only exhibition match model', () => {
     expect(controller.punt(gameplay, snapshotGameplayModel(gameplay))).toBe(false);
   });
 
+  it('uses kickoff, not a direct user spot, after opponent scoring drives', () => {
+    for (const result of ['touchdown', 'fieldGoal'] satisfies DriveSummaryResult[]) {
+      const seed = findSeedForOpponentSummary((summary) => summary.result === result);
+      const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+      const controller = createController({ seed });
+
+      controller.start(gameplay);
+      const scored = controller.getSnapshot().previousDriveSummary;
+      expect(scored?.result).toBe(result);
+      expect(scored?.possessionTransition).toBeNull();
+
+      controller.continue(gameplay);
+      const snapshot = controller.getSnapshot();
+      expect(snapshot.phase).toBe('kickoff');
+      expect(snapshot.kickoff.reason).toBe('postScore');
+      expect(snapshot.possession).toBe('user');
+    }
+  });
+
+  it('converts opponent turnovers and failed fourth downs into exact user starts', () => {
+    for (const result of ['turnover', 'turnoverOnDowns'] satisfies DriveSummaryResult[]) {
+      const seed = findSeedForOpponentSummary((summary) => summary.result === result);
+      const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+      const controller = createController({ seed });
+
+      controller.start(gameplay);
+      const transition = controller.getSnapshot().previousDriveSummary?.possessionTransition;
+      expect(transition?.reason).toBe(result);
+      expect(transition?.toTeam).toBe('user');
+
+      controller.continue(gameplay);
+      const snapshot = controller.getSnapshot();
+      expect(snapshot.phase).toBe('userPossession');
+      expect(snapshot.currentFieldPosition).toEqual(transition?.nextOffenseStartingPosition);
+      expect(snapshotGameplayModel(gameplay).currentBallSpot).toEqual(
+        possessionFieldPositionToOffenseSpot(transition!.nextOffenseStartingPosition),
+      );
+    }
+  });
+
+  it('uses opponent punt downed and returned transitions for the user start', () => {
+    for (const reason of ['puntDowned', 'puntReturn'] as const) {
+      const seed = findSeedForOpponentSummary((summary) =>
+        summary.possessionTransition?.reason === reason);
+      const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+      const controller = createController({ seed });
+
+      controller.start(gameplay);
+      const transition = controller.getSnapshot().previousDriveSummary?.possessionTransition;
+      expect(transition?.reason).toBe(reason);
+
+      controller.continue(gameplay);
+      const snapshot = controller.getSnapshot();
+      expect(snapshot.phase).toBe('userPossession');
+      expect(snapshot.currentFieldPosition).toEqual(transition?.nextOffenseStartingPosition);
+      expect(snapshot.currentFieldPosition).not.toEqual(createOwnYardLinePosition(25));
+      expect(snapshotGameplayModel(gameplay).drive.lineOfScrimmage.z).toBeCloseTo(
+        possessionFieldPositionToOffenseSpot(transition!.nextOffenseStartingPosition).z,
+        5,
+      );
+    }
+  });
+
+  it('uses an own-20 user start for an opponent punt touchback', () => {
+    const summary = simulateOpponentDrive({
+      difficulty: 'pro',
+      driveNumber: 1,
+      opponentOffensiveRating: 70,
+      quarter: 1,
+      remainingSeconds: 180,
+      seed: 1,
+      startingFieldPosition: createOpponentYardLinePosition(35),
+      userDefensiveRating: 70,
+    });
+
+    expect(summary.result).toBe('punt');
+    expect(summary.possessionTransition?.reason).toBe('puntTouchback');
+    expect(summary.possessionTransition?.nextOffenseStartingPosition).toEqual(
+      createOwnYardLinePosition(20),
+    );
+    expect(summary.possessionTransition?.nextOffenseStartingPosition).not.toEqual(
+      createOwnYardLinePosition(25),
+    );
+  });
+
+  it('starts opponent simulation from exact user turnover-on-downs spots', () => {
+    const cases = [
+      {
+        expectedOpponentStart: createOwnYardLinePosition(35),
+        userSpot: createOpponentYardLinePosition(35),
+      },
+      {
+        expectedOpponentStart: createOpponentYardLinePosition(40),
+        userSpot: createOwnYardLinePosition(40),
+      },
+    ];
+
+    for (const testCase of cases) {
+      const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+      const controller = createController({ seed: 20260620 });
+      controller.start(gameplay);
+      resetOffensePossession(gameplay, possessionFieldPositionToOffenseSpot(testCase.userSpot));
+      gameplay.drive.currentDown = 4;
+
+      expect(startPlay(gameplay)).toBe(true);
+      const deadBallSpot = possessionFieldPositionToOffenseSpot(testCase.userSpot);
+      gameplay.player.position.x = deadBallSpot.x;
+      gameplay.player.position.z = deadBallSpot.z;
+      const tackler = gameplay.players.find((player) => player.team === 'defense');
+      if (!tackler) {
+        throw new Error('Expected a defender for turnover-on-downs setup');
+      }
+      tackler.position.x = deadBallSpot.x;
+      tackler.position.z = deadBallSpot.z;
+      updateGameplayModel(gameplay, 1 / 60, { suppressDeadPlayReset: true });
+      controller.update(1 / 60, gameplay, snapshotGameplayModel(gameplay));
+
+      const userSummary = controller.getSnapshot().driveSummaries[0];
+      expect(userSummary?.result).toBe('turnoverOnDowns');
+      expect(userSummary?.possessionTransition?.nextOffenseStartingPosition).toEqual(
+        testCase.expectedOpponentStart,
+      );
+      expect(controller.getSnapshot().currentFieldPosition).toEqual(testCase.expectedOpponentStart);
+    }
+  });
+
+  it('uses an own-20 opponent start for a user punt touchback', () => {
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const controller = createController({ seed: 20260620 });
+    controller.start(gameplay);
+    resetOffensePossession(gameplay, possessionFieldPositionToOffenseSpot(createOpponentYardLinePosition(5)));
+
+    expect(controller.punt(gameplay, snapshotGameplayModel(gameplay))).toBe(true);
+    const userSummary = controller.getSnapshot().driveSummaries[0];
+
+    expect(userSummary?.result).toBe('punt');
+    expect(userSummary?.possessionTransition?.reason).toBe('puntTouchback');
+    expect(userSummary?.possessionTransition?.nextOffenseStartingPosition).toEqual(
+      createOwnYardLinePosition(20),
+    );
+    expect(controller.getSnapshot().currentFieldPosition).toEqual(createOwnYardLinePosition(20));
+  });
+
   it('allows a live play to finish at zero but blocks a new snap afterward', () => {
     const gameplay = createGameplayModel({
       challengeMode: 'exhibition',
@@ -210,8 +363,12 @@ describe('offense-only exhibition match model', () => {
     updateGameplayModel(gameplay, 1 / 60, { suppressDeadPlayReset: true });
     controller.update(1 / 60, gameplay, snapshotGameplayModel(gameplay));
 
-    expect(controller.getSnapshot().phase).toBe('quarterBreak');
+    expect(controller.getSnapshot().phase).toBe('userPossession');
+    expect(controller.getSnapshot().userScore).toBe(6);
     expect(controller.canStartPlay(snapshotGameplayModel(gameplay))).toBe(false);
+
+    expect(controller.beginPreparedExtraPoint()).toBe(true);
+    expect(controller.getSnapshot().phase).toBe('extraPoint');
   });
 
   it('continues the clock after an in-bounds tackle but stops after out of bounds', () => {
@@ -300,7 +457,7 @@ describe('match score application', () => {
       description: 'Opponent touchdown.',
       driveNumber: match.driveNumber,
       elapsedSeconds: 42,
-      endingFieldPosition: { x: 0, z: 50 },
+      endingFieldPosition: createOpponentYardLinePosition(0),
       plays: 6,
       possession: 'opponent',
       quarter: match.quarter,
@@ -310,21 +467,21 @@ describe('match score application', () => {
         { points: 1, team: 'opponent', type: 'extraPoint' },
       ],
       startedAtSeconds: match.clock.remainingSeconds,
-      startingFieldPosition: { x: 0, z: -15 },
+      startingFieldPosition: createOwnYardLinePosition(25),
       yards: 65,
     }));
     addDriveSummary(match, createDriveSummary({
       description: 'Opponent field goal.',
       driveNumber: match.driveNumber,
       elapsedSeconds: 28,
-      endingFieldPosition: { x: 0, z: 28 },
+      endingFieldPosition: createOpponentYardLinePosition(22),
       plays: 5,
       possession: 'opponent',
       quarter: match.quarter,
       result: 'fieldGoal',
       scoringEvents: [{ points: 3, team: 'opponent', type: 'fieldGoal' }],
       startedAtSeconds: match.clock.remainingSeconds,
-      startingFieldPosition: { x: 0, z: -15 },
+      startingFieldPosition: createOwnYardLinePosition(25),
       yards: 43,
     }));
 
@@ -358,4 +515,21 @@ function findSeedForOpponentResult(result: DriveSummaryResult): number {
   }
 
   throw new Error(`Unable to find deterministic seed for ${result}`);
+}
+
+function findSeedForOpponentSummary(predicate: (summary: DriveSummary) => boolean): number {
+  for (let seed = 1; seed < 10000; seed += 2) {
+    const gameplay = createGameplayModel({
+      challengeMode: 'exhibition',
+      playbookId: '11v11',
+    });
+    const controller = createController({ seed });
+    controller.start(gameplay);
+    const summary = controller.getSnapshot().previousDriveSummary;
+    if (summary && predicate(summary)) {
+      return seed;
+    }
+  }
+
+  throw new Error('Unable to find deterministic opponent drive seed');
 }

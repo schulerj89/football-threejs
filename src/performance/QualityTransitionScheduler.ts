@@ -6,7 +6,7 @@ import {
 } from './QualityProfile';
 
 export interface QualityTransitionContext {
-  appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title';
+  appPhase: 'coinToss' | 'extraPoint' | 'footballHub' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title';
   playState: PlayState;
 }
 
@@ -110,7 +110,9 @@ export class QualityTransitionScheduler {
 
 export function isSafeResourceBoundary(context: QualityTransitionContext): boolean {
   return context.appPhase === 'title' ||
+    context.appPhase === 'footballHub' ||
     context.appPhase === 'matchSetup' ||
+    context.appPhase === 'extraPoint' ||
     context.appPhase === 'kickoff' ||
     context.playState === 'preSnap' ||
     context.playState === 'dead' ||

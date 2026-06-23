@@ -1,0 +1,44 @@
+{
+  "candidateId": "candidate-a",
+  "createdAt": "2026-06-22T18:21:54.734Z",
+  "creditCost": null,
+  "generationRequest": {
+    "ai_model": "latest",
+    "auto_size": true,
+    "enable_pbr": false,
+    "hd_texture": false,
+    "image_enhancement": false,
+    "image_urls": [
+      "art-source/meshy/player-base/references/candidate-a-front.png",
+      "art-source/meshy/player-base/references/candidate-a-right.png",
+      "art-source/meshy/player-base/references/candidate-a-back.png",
+      "art-source/meshy/player-base/references/candidate-a-left.png"
+    ],
+    "multi_view_thumbnails": true,
+    "origin_at": "bottom",
+    "pose_mode": "a-pose",
+    "remove_lighting": true,
+    "save_pre_remeshed_model": false,
+    "should_remesh": true,
+    "should_texture": true,
+    "target_formats": [
+      "glb"
+    ],
+    "target_polycount": 7000,
+    "texture_prompt": "Simple neutral temporary humanoid texture for rigging. Medium-gray practice jersey, darker charcoal pants, neutral shoes, visible skin on head and hands. No baked highlights, no numbers, no logos, no team marks, no text.",
+    "topology": "triangle"
+  },
+  "referenceImageHashes": {
+    "front": "3ba8aa044646f45542eec837b41d406fe672623acc9fc2e2976242a3235907f1",
+    "right": "df163f85ad7b703f0b898d9fc12e635339c3b5e2fa2ac393cd11ee2a959df953",
+    "back": "3557ba4e428fcf852a9ff61cd1f7ae23c7e87b531f89a86128f03a388fceb6d3",
+    "left": "8d45dc233a52bcf41b2d5224d0596ab5e266c5d9cd873878a5aa92a371a4374b"
+  },
+  "referenceImagePaths": {
+    "front": "art-source/meshy/player-base/references/candidate-a-front.png",
+    "right": "art-source/meshy/player-base/references/candidate-a-right.png",
+    "back": "art-source/meshy/player-base/references/candidate-a-back.png",
+    "left": "art-source/meshy/player-base/references/candidate-a-left.png"
+  },
+  "taskId": "019ef091-2cbd-7ae2-89c4-e381710c23e6"
+}

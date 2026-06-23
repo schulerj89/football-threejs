@@ -103,32 +103,37 @@ export const FIELD_DIRECTION = {
   playDirectionZ: 1,
 } as const;
 
-export const FIELD_BOUNDS: FieldBounds = {
+export const FULL_FIELD_BOUNDS: FieldBounds = {
   maxX: FIELD_DIMENSIONS.fieldWidth / 2,
   maxZ: FIELD_DIMENSIONS.fieldLength / 2,
   minX: -FIELD_DIMENSIONS.fieldWidth / 2,
   minZ: -FIELD_DIMENSIONS.fieldLength / 2,
 } as const;
 
-export const PLAYABLE_FIELD_BOUNDS: FieldBounds = {
-  maxX: FIELD_BOUNDS.maxX,
+export const FIELD_OF_PLAY_BOUNDS: FieldBounds = {
+  maxX: FULL_FIELD_BOUNDS.maxX,
   maxZ: FIELD_DIMENSIONS.playableLength / 2,
-  minX: FIELD_BOUNDS.minX,
+  minX: FULL_FIELD_BOUNDS.minX,
   minZ: -FIELD_DIMENSIONS.playableLength / 2,
 } as const;
 
+export const PLAYER_MOVEMENT_BOUNDS: FieldBounds = FULL_FIELD_BOUNDS;
+
+export const FIELD_BOUNDS = FULL_FIELD_BOUNDS;
+export const PLAYABLE_FIELD_BOUNDS = FIELD_OF_PLAY_BOUNDS;
+
 export const INNER_MARKING_BOUNDS: FieldBounds = {
-  maxX: FIELD_BOUNDS.maxX - FIELD_MARKING_WIDTHS.sideline,
-  maxZ: FIELD_BOUNDS.maxZ,
-  minX: FIELD_BOUNDS.minX + FIELD_MARKING_WIDTHS.sideline,
-  minZ: FIELD_BOUNDS.minZ,
+  maxX: FULL_FIELD_BOUNDS.maxX - FIELD_MARKING_WIDTHS.sideline,
+  maxZ: FULL_FIELD_BOUNDS.maxZ,
+  minX: FULL_FIELD_BOUNDS.minX + FIELD_MARKING_WIDTHS.sideline,
+  minZ: FULL_FIELD_BOUNDS.minZ,
 } as const;
 
 export const LINE_OF_SCRIMMAGE_Z = -15;
 export const INITIAL_BALL_SPOT = { x: 0, z: LINE_OF_SCRIMMAGE_Z } as const;
-export const OPPOSING_GOAL_LINE_Z = PLAYABLE_FIELD_BOUNDS.maxZ;
-export const NEAR_GOAL_LINE_Z = PLAYABLE_FIELD_BOUNDS.minZ;
-export const FAR_GOAL_LINE_Z = PLAYABLE_FIELD_BOUNDS.maxZ;
+export const OPPOSING_GOAL_LINE_Z = FIELD_OF_PLAY_BOUNDS.maxZ;
+export const NEAR_GOAL_LINE_Z = FIELD_OF_PLAY_BOUNDS.minZ;
+export const FAR_GOAL_LINE_Z = FIELD_OF_PLAY_BOUNDS.maxZ;
 
 export function createFieldLayout(): FieldLayout {
   const lineOfScrimmage = createTransverseMarking(
@@ -154,12 +159,12 @@ export function createFieldLayout(): FieldLayout {
 
   return {
     endZones: createEndZoneLayouts(),
-    fieldBounds: FIELD_BOUNDS,
+    fieldBounds: FULL_FIELD_BOUNDS,
     firstDownLine,
     innerMarkingBounds: INNER_MARKING_BOUNDS,
     lineOfScrimmage,
     markings,
-    playableBounds: PLAYABLE_FIELD_BOUNDS,
+    playableBounds: FIELD_OF_PLAY_BOUNDS,
     surface: createRectLayout('playable-field-surface', 'surface', 0, 0, {
       depth: FIELD_DIMENSIONS.fieldLength,
       width: FIELD_DIMENSIONS.fieldWidth,
@@ -202,11 +207,11 @@ export function isBoundsContained(bounds: FieldBounds, container: FieldBounds): 
 
 function createEndZoneLayouts(): FieldRectLayout[] {
   return [
-    createRectLayout('near-end-zone', 'endZone', 0, FIELD_BOUNDS.minZ + FIELD_DIMENSIONS.endZoneDepth / 2, {
+    createRectLayout('near-end-zone', 'endZone', 0, FULL_FIELD_BOUNDS.minZ + FIELD_DIMENSIONS.endZoneDepth / 2, {
       depth: FIELD_DIMENSIONS.endZoneDepth,
       width: FIELD_DIMENSIONS.fieldWidth,
     }),
-    createRectLayout('far-end-zone', 'endZone', 0, FIELD_BOUNDS.maxZ - FIELD_DIMENSIONS.endZoneDepth / 2, {
+    createRectLayout('far-end-zone', 'endZone', 0, FULL_FIELD_BOUNDS.maxZ - FIELD_DIMENSIONS.endZoneDepth / 2, {
       depth: FIELD_DIMENSIONS.endZoneDepth,
       width: FIELD_DIMENSIONS.fieldWidth,
     }),
@@ -218,7 +223,7 @@ function createBoundaryMarkings(): FieldMarkingLayout[] {
     createMarkingLayout(
       'left-sideline',
       'sideline',
-      FIELD_BOUNDS.minX + FIELD_MARKING_WIDTHS.sideline / 2,
+      FULL_FIELD_BOUNDS.minX + FIELD_MARKING_WIDTHS.sideline / 2,
       0,
       {
         depth: FIELD_DIMENSIONS.fieldLength,
@@ -228,7 +233,7 @@ function createBoundaryMarkings(): FieldMarkingLayout[] {
     createMarkingLayout(
       'right-sideline',
       'sideline',
-      FIELD_BOUNDS.maxX - FIELD_MARKING_WIDTHS.sideline / 2,
+      FULL_FIELD_BOUNDS.maxX - FIELD_MARKING_WIDTHS.sideline / 2,
       0,
       {
         depth: FIELD_DIMENSIONS.fieldLength,
@@ -239,7 +244,7 @@ function createBoundaryMarkings(): FieldMarkingLayout[] {
       'near-end-line',
       'endLine',
       0,
-      FIELD_BOUNDS.minZ + FIELD_MARKING_WIDTHS.endLine / 2,
+      FULL_FIELD_BOUNDS.minZ + FIELD_MARKING_WIDTHS.endLine / 2,
       {
         depth: FIELD_MARKING_WIDTHS.endLine,
         width: FIELD_DIMENSIONS.fieldWidth,
@@ -249,7 +254,7 @@ function createBoundaryMarkings(): FieldMarkingLayout[] {
       'far-end-line',
       'endLine',
       0,
-      FIELD_BOUNDS.maxZ - FIELD_MARKING_WIDTHS.endLine / 2,
+      FULL_FIELD_BOUNDS.maxZ - FIELD_MARKING_WIDTHS.endLine / 2,
       {
         depth: FIELD_MARKING_WIDTHS.endLine,
         width: FIELD_DIMENSIONS.fieldWidth,

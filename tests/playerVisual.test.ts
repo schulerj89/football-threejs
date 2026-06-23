@@ -4,6 +4,8 @@ import {
   SKIN_TONE_PALETTE,
   resolvePlayerAppearance,
 } from '../src/playerAppearance';
+import { PlayerVisualRegistry } from '../src/app/PlayerVisualRegistry';
+import { createGameplayModel } from '../src/playState';
 import { createPlayerModel } from '../src/playerModel';
 import {
   PLAYER_BODY_DIMENSIONS,
@@ -14,7 +16,12 @@ import {
   resolvePlayerBodyVisualStyle,
   syncPlayerVisual,
 } from '../src/playerVisual';
+import {
+  createGameplayRosterBinding,
+  getRosterPlayerForGameplayId,
+} from '../src/roster/GameplayRosterBinding';
 import { FIVE_ON_FIVE_PLAYER_IDS } from '../src/roster';
+import { readJerseyNumberVisualSnapshot } from '../src/presentation/players/JerseyNumberVisual';
 import { DEFAULT_USER_TEAM_ID } from '../src/teams/TeamRegistry';
 import {
   DEFAULT_TEAM_PROFILE_SETTINGS,
@@ -43,6 +50,10 @@ describe('player visual', () => {
     expect(bodyRoot?.getObjectByName('rightArmPivot')).toBeInstanceOf(THREE.Group);
     expect(bodyRoot?.getObjectByName('leftLegPivot')).toBeInstanceOf(THREE.Group);
     expect(bodyRoot?.getObjectByName('rightLegPivot')).toBeInstanceOf(THREE.Group);
+    expect(playerVisual.userData.leftArmPivot).toBe(bodyRoot?.getObjectByName('leftArmPivot'));
+    expect(playerVisual.userData.rightArmPivot).toBe(bodyRoot?.getObjectByName('rightArmPivot'));
+    expect(playerVisual.userData.leftLegPivot).toBe(bodyRoot?.getObjectByName('leftLegPivot'));
+    expect(playerVisual.userData.rightLegPivot).toBe(bodyRoot?.getObjectByName('rightLegPivot'));
     expect(bodyRoot?.getObjectByName('leftFoot')).toBeInstanceOf(THREE.Mesh);
     expect(bodyRoot?.getObjectByName('rightFoot')).toBeInstanceOf(THREE.Mesh);
     const headAnchor = bodyRoot?.getObjectByName(PLAYER_HEAD_ANCHOR_NAME);
@@ -313,6 +324,72 @@ describe('player visual', () => {
     }
 
     expect(materialIds.size).toBeLessThanOrEqual(18);
+  });
+
+  it('binds gameplay visual back numbers from roster identities', () => {
+    const scene = new THREE.Scene();
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const binding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
+    const theme = resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS);
+    const registry = new PlayerVisualRegistry(scene, {
+      teamUniforms: theme.uniforms,
+    }, binding);
+
+    registry.reconcile(gameplay.players);
+
+    const quarterbackVisual = registry.get('offense-qb');
+    const quarterbackRoster = getRosterPlayerForGameplayId(binding, 'offense-qb');
+    const numberSnapshot = quarterbackVisual
+      ? readJerseyNumberVisualSnapshot(quarterbackVisual)
+      : null;
+
+    expect(quarterbackRoster).not.toBeNull();
+    expect(numberSnapshot).toMatchObject({
+      jerseyNumber: quarterbackRoster?.jerseyNumber,
+      missingBindingReason: null,
+      rosterPlayerId: quarterbackRoster?.id,
+      visible: true,
+      visualId: 'offense-qb',
+    });
+
+    registry.dispose();
+  });
+
+  it('refreshes roster identity on reused gameplay visual roots', () => {
+    const scene = new THREE.Scene();
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const firstBinding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
+    const nextSettings = {
+      ...DEFAULT_TEAM_PROFILE_SETTINGS,
+      opponentTeamId: 'bay-city-current',
+      userTeamId: 'summit-forge',
+    };
+    const nextBinding = createGameplayRosterBinding('11v11', nextSettings);
+    const theme = resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS);
+    const registry = new PlayerVisualRegistry(scene, {
+      teamUniforms: theme.uniforms,
+    }, firstBinding);
+
+    registry.reconcile(gameplay.players);
+    const originalRoot = registry.get('offense-qb');
+    registry.setRosterBinding(nextBinding);
+    registry.reconcile(gameplay.players);
+    const reusedRoot = registry.get('offense-qb');
+    const nextQuarterback = getRosterPlayerForGameplayId(nextBinding, 'offense-qb');
+    const numberSnapshot = reusedRoot
+      ? readJerseyNumberVisualSnapshot(reusedRoot)
+      : null;
+
+    expect(reusedRoot).toBe(originalRoot);
+    expect(numberSnapshot).toMatchObject({
+      jerseyNumber: nextQuarterback?.jerseyNumber,
+      missingBindingReason: null,
+      rosterPlayerId: nextQuarterback?.id,
+      visible: true,
+      visualId: 'offense-qb',
+    });
+
+    registry.dispose();
   });
 
   it('resolves deterministic skin tones from stable player identity only', () => {

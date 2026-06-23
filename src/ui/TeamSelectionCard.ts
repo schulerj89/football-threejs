@@ -10,6 +10,7 @@ import {
   getReadableTextColor,
 } from '../teams/TeamThemeApplier';
 import { createTeamHelmetBadge, syncTeamHelmetBadge } from './TeamHelmetBadge';
+import { createTeamLogoBadge, type TeamLogoBadge } from './TeamLogoBadge';
 
 export interface TeamSelectionCardOptions {
   onTeamChange: (teamId: string) => void;
@@ -23,6 +24,7 @@ export class TeamSelectionCard {
   readonly root = document.createElement('section');
 
   private readonly badge: SVGSVGElement;
+  private readonly logo: TeamLogoBadge;
   private readonly displayName = document.createElement('strong');
   private readonly identityPanel = document.createElement('div');
   private readonly previewHost = document.createElement('div');
@@ -39,6 +41,7 @@ export class TeamSelectionCard {
     this.badge = createTeamHelmetBadge(
       resolveCustomizedTeamProfile(this.getTeamId(), this.settings).homeUniform,
     );
+    this.logo = createTeamLogoBadge(resolveCustomizedTeamProfile(this.getTeamId(), this.settings));
     this.root.className = 'match-team-card';
     this.root.dataset.side = options.side;
     this.root.append(this.createContent(options.title));
@@ -70,6 +73,7 @@ export class TeamSelectionCard {
     this.uniformSelect.value = uniformVariant;
     this.displayName.textContent = profile.displayName;
     this.abbreviation.textContent = profile.abbreviation;
+    this.logo.sync(profile);
     this.identityPanel.style.setProperty('--team-panel-primary', profile.colors.primary);
     this.identityPanel.style.setProperty('--team-panel-secondary', profile.colors.secondary);
     this.abbreviation.style.setProperty('--team-abbreviation-bg', profile.colors.primary);
@@ -80,6 +84,7 @@ export class TeamSelectionCard {
       createSwatch('Secondary', profile.colors.secondary),
       createSwatch('Jersey', uniform.jersey),
       createSwatch('Helmet', uniform.helmetShell),
+      createSwatch('Faceguard', uniform.faceguard),
     );
     this.quarterback.textContent = quarterback
       ? `QB ${quarterback.displayName} #${quarterback.jerseyNumber}`
@@ -97,7 +102,7 @@ export class TeamSelectionCard {
     this.identityPanel.className = 'match-team-identity';
     this.displayName.className = 'match-team-display-name';
     this.abbreviation.className = 'match-team-abbreviation';
-    this.identityPanel.append(this.displayName, this.abbreviation);
+    this.identityPanel.append(this.logo.root, this.displayName, this.abbreviation);
     this.previewHost.className = 'team-helmet-preview';
     this.previewHost.dataset.preview = 'fallback';
     this.previewHost.setAttribute('role', 'img');

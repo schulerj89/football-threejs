@@ -20,6 +20,7 @@ export interface AudioAssetLoaderSnapshot {
   decodedBufferBudgetBytes: number;
   decodedAssetIds: string[];
   decodedBufferBytes: number;
+  lastEvictedAssetId: string | null;
   loadedAssetIds: string[];
   loadedCompressedBytes: number;
   longestLoadedClipSeconds: number | null;
@@ -43,10 +44,12 @@ export class AudioAssetLoader {
   private readonly audioContext: Pick<AudioContext, 'decodeAudioData'>;
   private readonly createAudioElement: (url: string) => HTMLAudioElement;
   private readonly decodedAssets = new Map<string, DecodedAudioAsset>();
+  private readonly dynamicAssets = new Map<string, LocalAudioAsset>();
   private readonly fetcher: typeof fetch;
   private readonly manifest: readonly LocalAudioAsset[];
   private readonly maxDecodedBufferBytes: number;
   private readonly missingOptionalAssetIds = new Set<string>();
+  private lastEvictedAssetId: string | null = null;
   private readonly streamAssets = new Map<string, StreamedAudioAsset>();
   private readonly warnedAssetIds = new Set<string>();
   private readonly warn: (message: string) => void;
@@ -65,7 +68,13 @@ export class AudioAssetLoader {
   }
 
   getAsset(assetId: string): LocalAudioAsset | null {
-    return getAudioAsset(this.manifest, assetId);
+    return this.dynamicAssets.get(assetId) ?? getAudioAsset(this.manifest, assetId);
+  }
+
+  registerDynamicAssets(assets: readonly LocalAudioAsset[]): void {
+    for (const asset of assets) {
+      this.dynamicAssets.set(asset.assetId, asset);
+    }
   }
 
   async loadDecodedBuffer(assetId: string): Promise<DecodedAudioAsset | null> {
@@ -167,6 +176,7 @@ export class AudioAssetLoader {
         (sum, asset) => sum + asset.decodedBytes,
         0,
       ),
+      lastEvictedAssetId: this.lastEvictedAssetId,
       loadedAssetIds: [
         ...this.decodedAssets.keys(),
         ...this.streamAssets.keys(),
@@ -208,6 +218,7 @@ export class AudioAssetLoader {
       }
 
       this.decodedAssets.delete(oldestAssetId);
+      this.lastEvictedAssetId = oldestAssetId;
     }
   }
 

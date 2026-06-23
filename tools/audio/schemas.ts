@@ -106,11 +106,11 @@ export const OFFICIAL_ELEVENLABS_SKILLS = [
   '.agents/skills/music/SKILL.md',
 ] as const;
 
-const ALLOWED_AUDIO_DIRS: Record<AudioAssetCategory, string> = {
-  announcer: 'public/audio/announcer',
-  crowd: 'public/audio/crowd',
-  music: 'public/audio/music',
-  sfx: 'public/audio/sfx',
+const ALLOWED_AUDIO_DIRS: Record<AudioAssetCategory, readonly string[]> = {
+  announcer: ['public/audio/announcer', 'public/audio/voice-packs'],
+  crowd: ['public/audio/crowd'],
+  music: ['public/audio/music'],
+  sfx: ['public/audio/sfx'],
 };
 
 const OUTPUT_FORMAT_EXTENSIONS: Record<AudioOutputFormat, string> = {
@@ -187,7 +187,7 @@ export function validateAudioPlan(plan: readonly AudioAssetPlan[]): string[] {
 export function validateOutputPath(asset: AudioAssetPlan): string[] {
   const errors: string[] = [];
   const normalizedPath = normalize(asset.outputPath).replaceAll('\\', '/');
-  const allowedRoot = ALLOWED_AUDIO_DIRS[asset.category];
+  const allowedRoots = ALLOWED_AUDIO_DIRS[asset.category];
   const expectedExtension = OUTPUT_FORMAT_EXTENSIONS[asset.outputFormat];
 
   if (isAbsolute(asset.outputPath)) {
@@ -196,8 +196,8 @@ export function validateOutputPath(asset: AudioAssetPlan): string[] {
   if (normalizedPath.includes('..')) {
     errors.push(`${asset.assetId}: outputPath must not contain parent traversal`);
   }
-  if (!normalizedPath.startsWith(`${allowedRoot}/`)) {
-    errors.push(`${asset.assetId}: outputPath must stay under ${allowedRoot}`);
+  if (!allowedRoots.some((root) => normalizedPath.startsWith(`${root}/`))) {
+    errors.push(`${asset.assetId}: outputPath must stay under ${allowedRoots.join(' or ')}`);
   }
   if (extname(normalizedPath) !== expectedExtension) {
     errors.push(`${asset.assetId}: ${asset.outputFormat} output must use ${expectedExtension}`);

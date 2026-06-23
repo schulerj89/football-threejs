@@ -1,0 +1,243 @@
+{
+  "existingHelmetAudit": {
+    "connectedComponentCount": 1749,
+    "materialCount": 0,
+    "materialNames": [],
+    "meshCount": 1,
+    "meshNames": [
+      "Mesh1.0"
+    ],
+    "nodeNames": [
+      "Mesh1.0"
+    ],
+    "path": "C:\\Users\\joshs\\Projects\\football-threejs\\low_poly_helmet.glb",
+    "primitives": [
+      {
+        "material": null,
+        "meshName": "Mesh1.0",
+        "triangleCount": 6860,
+        "vertexCount": 10004
+      }
+    ],
+    "shellFaceguardSeparable": false,
+    "shellFaceguardSeparationReason": "Asset does not expose both helmet_shell and faceguard_standard with independent named materials.",
+    "triangleCount": 6860
+  },
+  "generatedCandidates": [
+    {
+      "connectedComponentCount": 654,
+      "materialCount": 0,
+      "materialNames": [],
+      "meshCount": 1,
+      "meshNames": [
+        "Mesh1.0"
+      ],
+      "nodeNames": [
+        "Mesh1.0"
+      ],
+      "path": "art-source/meshy/football-helmet/generated/candidate-a.glb",
+      "primitives": [
+        {
+          "material": null,
+          "meshName": "Mesh1.0",
+          "triangleCount": 7716,
+          "vertexCount": 7396
+        }
+      ],
+      "shellFaceguardSeparable": false,
+      "shellFaceguardSeparationReason": "Asset does not expose both helmet_shell and faceguard_standard with independent named materials.",
+      "triangleCount": 7716
+    },
+    {
+      "connectedComponentCount": 535,
+      "materialCount": 0,
+      "materialNames": [],
+      "meshCount": 1,
+      "meshNames": [
+        "Mesh1.0"
+      ],
+      "nodeNames": [
+        "Mesh1.0"
+      ],
+      "path": "art-source/meshy/football-helmet/generated/candidate-b.glb",
+      "primitives": [
+        {
+          "material": null,
+          "meshName": "Mesh1.0",
+          "triangleCount": 7698,
+          "vertexCount": 6927
+        }
+      ],
+      "shellFaceguardSeparable": false,
+      "shellFaceguardSeparationReason": "Asset does not expose both helmet_shell and faceguard_standard with independent named materials.",
+      "triangleCount": 7698
+    }
+  ],
+  "planValidationErrors": [],
+  "preparedRuntime": {
+    "combined": {
+      "connectedComponentCount": 103,
+      "materialCount": 2,
+      "materialNames": [
+        "mat_helmet_shell",
+        "mat_faceguard"
+      ],
+      "meshCount": 2,
+      "meshNames": [
+        "helmet_shell",
+        "faceguard_standard"
+      ],
+      "nodeNames": [
+        "footballHelmetRoot",
+        "helmet_shell",
+        "faceguard_standard"
+      ],
+      "path": "public/models/helmet/football-helmet-kit.glb",
+      "primitives": [
+        {
+          "material": "mat_helmet_shell",
+          "meshName": "helmet_shell",
+          "triangleCount": 4595,
+          "vertexCount": 3325
+        },
+        {
+          "material": "mat_faceguard",
+          "meshName": "faceguard_standard",
+          "triangleCount": 2432,
+          "vertexCount": 2072
+        }
+      ],
+      "shellFaceguardSeparable": true,
+      "shellFaceguardSeparationReason": "Required shell and faceguard meshes/materials are already named separately.",
+      "triangleCount": 7027
+    },
+    "faceguard": {
+      "connectedComponentCount": 59,
+      "materialCount": 1,
+      "materialNames": [
+        "mat_faceguard"
+      ],
+      "meshCount": 1,
+      "meshNames": [
+        "faceguard_standard"
+      ],
+      "nodeNames": [
+        "faceguard_standard"
+      ],
+      "path": "public/models/helmet/faceguard-standard.glb",
+      "primitives": [
+        {
+          "material": "mat_faceguard",
+          "meshName": "faceguard_standard",
+          "triangleCount": 2432,
+          "vertexCount": 2072
+        }
+      ],
+      "shellFaceguardSeparable": false,
+      "shellFaceguardSeparationReason": "Asset does not expose both helmet_shell and faceguard_standard with independent named materials.",
+      "triangleCount": 2432
+    },
+    "manifestExists": true,
+    "shell": {
+      "connectedComponentCount": 44,
+      "materialCount": 1,
+      "materialNames": [
+        "mat_helmet_shell"
+      ],
+      "meshCount": 1,
+      "meshNames": [
+        "helmet_shell"
+      ],
+      "nodeNames": [
+        "helmet_shell"
+      ],
+      "path": "public/models/helmet/helmet-shell.glb",
+      "primitives": [
+        {
+          "material": "mat_helmet_shell",
+          "meshName": "helmet_shell",
+          "triangleCount": 4595,
+          "vertexCount": 3325
+        }
+      ],
+      "shellFaceguardSeparable": false,
+      "shellFaceguardSeparationReason": "Asset does not expose both helmet_shell and faceguard_standard with independent named materials.",
+      "triangleCount": 4595
+    }
+  },
+  "previewPath": "public/models/helmet/helmet-preview.html",
+  "referenceImages": [
+    {
+      "assetId": "candidate-a-front",
+      "candidateId": "candidate-a",
+      "contentHash": "a1e455f5ab6aad5c046009f026dd33fad5cda7d213afcbd6345b372642eee243",
+      "exists": true,
+      "outputPath": "art-source/meshy/football-helmet/references/candidate-a-front.webp",
+      "provenanceExists": true,
+      "view": "front"
+    },
+    {
+      "assetId": "candidate-a-right",
+      "candidateId": "candidate-a",
+      "contentHash": "3b654c4746a242b3581dc171f606048644e29d1702609b252e13a29c3ed9f292",
+      "exists": true,
+      "outputPath": "art-source/meshy/football-helmet/references/candidate-a-right.webp",
+      "provenanceExists": true,
+      "view": "right"
+    },
+    {
+      "assetId": "candidate-a-back",
+      "candidateId": "candidate-a",
+      "contentHash": "5712e04f32468dc361c3b31d0535c8c116a76620920cc00520738878636a7de3",
+      "exists": true,
+      "outputPath": "art-source/meshy/football-helmet/references/candidate-a-back.webp",
+      "provenanceExists": true,
+      "view": "back"
+    },
+    {
+      "assetId": "candidate-a-left",
+      "candidateId": "candidate-a",
+      "contentHash": "8914d594ca2f61a26804f9a88167218ccf6d538281ad64f69df2fa03232d5014",
+      "exists": true,
+      "outputPath": "art-source/meshy/football-helmet/references/candidate-a-left.webp",
+      "provenanceExists": true,
+      "view": "left"
+    },
+    {
+      "assetId": "candidate-b-front",
+      "candidateId": "candidate-b",
+      "contentHash": "97242761b28ec33fd8089bef48ca165ac829bf1895b770110dfbc2a8b7e183fa",
+      "exists": true,
+      "outputPath": "art-source/meshy/football-helmet/references/candidate-b-front.webp",
+      "provenanceExists": true,
+      "view": "front"
+    },
+    {
+      "assetId": "candidate-b-right",
+      "candidateId": "candidate-b",
+      "contentHash": "1805c0c6b03e11201a305997d395f264d592dc9d2a76815fbeea97f9a25ddeb1",
+      "exists": true,
+      "outputPath": "art-source/meshy/football-helmet/references/candidate-b-right.webp",
+      "provenanceExists": true,
+      "view": "right"
+    },
+    {
+      "assetId": "candidate-b-back",
+      "candidateId": "candidate-b",
+      "contentHash": "35d541e7e030a6ab94158147170f73e26c01325936c388edc6de0be1471774df",
+      "exists": true,
+      "outputPath": "art-source/meshy/football-helmet/references/candidate-b-back.webp",
+      "provenanceExists": true,
+      "view": "back"
+    },
+    {
+      "assetId": "candidate-b-left",
+      "candidateId": "candidate-b",
+      "contentHash": "8a5da7b3aa71655a4c582c384c37c51a59c06860b0a1496c5bf03de9e11aad62",
+      "exists": true,
+      "outputPath": "art-source/meshy/football-helmet/references/candidate-b-left.webp",
+      "provenanceExists": true,
+      "view": "left"
+    }
+  ]
+}

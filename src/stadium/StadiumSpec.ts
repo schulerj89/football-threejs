@@ -50,7 +50,7 @@ export const DEFAULT_STADIUM_SPEC: StadiumSpec = {
       baseElevation: 10.3,
       baseOffset: 20.4,
       id: 'upper',
-      rowCount: 14,
+      rowCount: 20,
     },
   ],
   tunnels: [

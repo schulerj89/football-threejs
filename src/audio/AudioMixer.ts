@@ -28,12 +28,14 @@ export interface AudioMixerSnapshot {
   crowdDuckingGain: number;
   contextState: AudioContextState | 'unavailable';
   decodedAssetIds: string[];
+  decodedBufferBudgetBytes: number;
   decodedBufferBytes: number;
   enabled: boolean;
   lastUnlockError: string | null;
   loadedAssetIds: string[];
   loadedCompressedBytes: number;
   longestLoadedClipSeconds: number | null;
+  lastEvictedAudioAssetId: string | null;
   missingOptionalAssetIds: string[];
   muted: boolean;
   preparedMediaElementSourceCount: number;
@@ -192,6 +194,10 @@ export class AudioMixer {
     };
     this.applySettings();
     return { ...this.flags };
+  }
+
+  registerDynamicAudioAssets(assets: readonly LocalAudioAsset[]): void {
+    this.loader.registerDynamicAssets(assets);
   }
 
   setMuted(muted: boolean): AudioSettings {
@@ -442,12 +448,14 @@ export class AudioMixer {
       crowdDuckingGain: this.crowdDuckingGain,
       contextState: this.context.state,
       decodedAssetIds: loaderSnapshot.decodedAssetIds,
+      decodedBufferBudgetBytes: loaderSnapshot.decodedBufferBudgetBytes,
       decodedBufferBytes: loaderSnapshot.decodedBufferBytes,
       enabled: this.flags.audioEnabled,
       lastUnlockError: this.lastUnlockError,
       loadedAssetIds: loaderSnapshot.loadedAssetIds,
       loadedCompressedBytes: loaderSnapshot.loadedCompressedBytes,
       longestLoadedClipSeconds: loaderSnapshot.longestLoadedClipSeconds,
+      lastEvictedAudioAssetId: loaderSnapshot.lastEvictedAssetId,
       missingOptionalAssetIds: loaderSnapshot.missingOptionalAssetIds,
       muted: this.settings.muted,
       preparedMediaElementSourceCount: this.preparedLoops.size,

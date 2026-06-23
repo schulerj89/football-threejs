@@ -22,6 +22,7 @@ export class PlayCallUi {
   private readonly grid: HTMLDivElement;
   private lastRenderKey = '';
   private pendingSelectedPlayId: string | null = null;
+  private selectionLocked = false;
 
   constructor(
     private plays: PlayDefinition[] = PLAYS,
@@ -83,9 +84,11 @@ export class PlayCallUi {
     this.pendingSelectedPlayId = null;
   }
 
-  sync(gameplay: GameplaySnapshot): void {
+  sync(gameplay: GameplaySnapshot, options: { selectionLocked?: boolean } = {}): void {
     this.enabled = gameplay.playState === 'preSnap';
+    this.selectionLocked = Boolean(options.selectionLocked);
     this.root.hidden = !this.enabled;
+    this.root.dataset.selectionLocked = this.selectionLocked ? 'true' : 'false';
 
     if (!this.enabled) {
       return;
@@ -97,6 +100,7 @@ export class PlayCallUi {
       gameplay.drive.lineOfScrimmage.x.toFixed(3),
       gameplay.drive.lineOfScrimmage.z.toFixed(3),
       this.teamTheme?.teamKey ?? 'default',
+      this.selectionLocked ? 'locked' : 'selectable',
     ].join('|');
 
     if (renderKey === this.lastRenderKey) {
@@ -109,7 +113,7 @@ export class PlayCallUi {
   }
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
-    if (!this.enabled) {
+    if (!this.enabled || this.selectionLocked) {
       return;
     }
 
@@ -135,6 +139,7 @@ export class PlayCallUi {
         gameplay.selectedPlay.id,
         this.teamTheme,
         this.plays.indexOf(play) + 1,
+        this.selectionLocked,
       ),
     );
 
@@ -164,7 +169,7 @@ export class PlayCallUi {
   }
 
   private readonly handlePointerUp = (event: PointerEvent): void => {
-    if (!this.enabled) {
+    if (!this.enabled || this.selectionLocked) {
       return;
     }
 
@@ -193,8 +198,12 @@ export function createPlayCallUi(
   return new PlayCallUi(plays, teamTheme);
 }
 
-export function syncPlayCallUi(ui: PlayCallUi, gameplay: GameplaySnapshot): void {
-  ui.sync(gameplay);
+export function syncPlayCallUi(
+  ui: PlayCallUi,
+  gameplay: GameplaySnapshot,
+  options: { selectionLocked?: boolean } = {},
+): void {
+  ui.sync(gameplay, options);
 }
 
 function createPlayCard(
@@ -203,6 +212,7 @@ function createPlayCard(
   selectedPlayId: PlayId,
   teamTheme: TeamPresentationTheme | null,
   shortcutNumber: number,
+  selectionLocked: boolean,
 ): HTMLButtonElement {
   const selected = play.id === selectedPlayId;
   const model = createPlayCallDiagramModel(play, snapPlacement);
@@ -211,7 +221,9 @@ function createPlayCard(
   card.dataset.kind = play.kind;
   card.dataset.playId = play.id;
   card.dataset.selected = selected ? 'true' : 'false';
+  card.dataset.locked = selectionLocked ? 'true' : 'false';
   card.dataset.shortcut = shortcutNumber.toString();
+  card.disabled = selectionLocked;
   card.type = 'button';
   card.setAttribute('aria-label', createPlayCardAccessibilityLabel(play, shortcutNumber));
   card.setAttribute('aria-pressed', selected ? 'true' : 'false');

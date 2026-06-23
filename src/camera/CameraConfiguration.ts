@@ -1,4 +1,4 @@
-import { PLAYABLE_FIELD_BOUNDS } from '../field';
+import { PLAYER_MOVEMENT_BOUNDS } from '../field';
 import type { PresentationCameraConfig } from './CameraTypes';
 
 export const GAMEPLAY_CAMERA_CONFIG = {
@@ -15,13 +15,13 @@ export const GAMEPLAY_CAMERA_CONFIG = {
     maximumAngularChangePerSecond: Math.PI * 1.35,
     maximumCameraTranslationPerSecond: 85,
     maximumFieldPosition: {
-      x: PLAYABLE_FIELD_BOUNDS.maxX,
-      z: PLAYABLE_FIELD_BOUNDS.maxZ,
+      x: PLAYER_MOVEMENT_BOUNDS.maxX,
+      z: PLAYER_MOVEMENT_BOUNDS.maxZ,
     },
     maximumLookTargetTranslationPerSecond: 90,
     minimumFieldPosition: {
-      x: PLAYABLE_FIELD_BOUNDS.minX,
-      z: PLAYABLE_FIELD_BOUNDS.minZ,
+      x: PLAYER_MOVEMENT_BOUNDS.minX,
+      z: PLAYER_MOVEMENT_BOUNDS.minZ,
     },
     passFlightLookAhead: 3.5,
     preSnapDistanceBehindFocus: 58,
@@ -111,16 +111,16 @@ export const PRESENTATION_CAMERA_CONFIG: PresentationCameraConfig = {
   fieldOfView: 44,
   holdPreSnapEstablish: false,
   maximumFieldPosition: {
-    x: PLAYABLE_FIELD_BOUNDS.maxX,
-    z: PLAYABLE_FIELD_BOUNDS.maxZ,
+    x: PLAYER_MOVEMENT_BOUNDS.maxX,
+    z: PLAYER_MOVEMENT_BOUNDS.maxZ,
   },
   maximumAngularChangePerSecond: Math.PI * 1.15,
   maximumLookTargetSpeed: 90,
   maximumTransitionSpeed: 85,
   maxDeltaSeconds: 0.05,
   minimumFieldPosition: {
-    x: PLAYABLE_FIELD_BOUNDS.minX,
-    z: PLAYABLE_FIELD_BOUNDS.minZ,
+    x: PLAYER_MOVEMENT_BOUNDS.minX,
+    z: PLAYER_MOVEMENT_BOUNDS.minZ,
   },
   phases: {
     deadBallResult: {

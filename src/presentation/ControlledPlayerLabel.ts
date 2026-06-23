@@ -15,6 +15,15 @@ import {
 } from '../teams/TeamThemeApplier';
 
 export type PlayerLabelKind = 'controlled' | 'selectedReceiver';
+type LabelAppPhase =
+  | 'coinToss'
+  | 'extraPoint'
+  | 'footballHub'
+  | 'gameplay'
+  | 'kickoff'
+  | 'matchSetup'
+  | 'pregamePresentation'
+  | 'title';
 
 export interface PlayerLabelSettings {
   controlledPlayerLabelEnabled: boolean;
@@ -58,7 +67,7 @@ export class ControlledPlayerLabelRenderer {
   private readonly controlledSprite = createLabelSprite('controlled-player-label');
   private readonly selectedReceiverSprite = createLabelSprite('selected-receiver-label');
   private readonly textureCache = new Map<string, THREE.CanvasTexture>();
-  private appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title' = 'title';
+  private appPhase: LabelAppPhase = 'title';
   private binding: GameplayRosterBinding;
   private settings: PlayerLabelSettings;
   private snapshot: ControlledPlayerLabelSnapshot = {
@@ -84,7 +93,7 @@ export class ControlledPlayerLabelRenderer {
     this.group.add(this.controlledSprite, this.selectedReceiverSprite);
   }
 
-  setApplicationPhase(appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title'): void {
+  setApplicationPhase(appPhase: LabelAppPhase): void {
     this.appPhase = appPhase;
   }
 
@@ -212,7 +221,7 @@ export class ControlledPlayerLabelRenderer {
 
 export function resolveControlledPlayerLabelStates(options: {
   activeShotName: string | null;
-    appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title';
+    appPhase: LabelAppPhase;
   binding: GameplayRosterBinding;
   gameplay: GameplaySnapshot;
   gameplayActive?: boolean;
@@ -258,7 +267,7 @@ function resolveLabelState(
   gameplayPlayerId: string | null,
   options: {
     activeShotName: string | null;
-    appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title';
+    appPhase: LabelAppPhase;
     binding: GameplayRosterBinding;
     gameplay: GameplaySnapshot;
     gameplayActive?: boolean;
@@ -299,7 +308,7 @@ function getVisibilityReason(
   gameplayPlayerId: string | null,
   options: {
     activeShotName: string | null;
-    appPhase: 'coinToss' | 'gameplay' | 'kickoff' | 'matchSetup' | 'pregamePresentation' | 'title';
+    appPhase: LabelAppPhase;
     gameplay: GameplaySnapshot;
     gameplayActive?: boolean;
     settings: PlayerLabelSettings;

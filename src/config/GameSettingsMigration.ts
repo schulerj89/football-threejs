@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 12;
+export const GAME_SETTINGS_SCHEMA_VERSION = 16;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -42,9 +42,11 @@ function migrateOfficialSettings(value: unknown): unknown {
   if (preset === 'broadcast') {
     return {
       ...value,
+      announcerVoice: normalizeAnnouncerVoice(value.announcerVoice),
       coachesEnabled: value.coachesEnabled ?? true,
       controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
-      crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
+      crowdDensity: value.crowdDensity ?? 'medium',
+      crowdFullness: migrateCrowdFullness(value.crowdFullness, value.crowdDensity, 'standard'),
       gameMode: value.gameMode ?? 'exhibition',
       matchDifficulty: value.matchDifficulty ?? 'pro',
       menuPlaylistOrder: normalizeMenuPlaylistOrder(value.menuPlaylistOrder),
@@ -52,7 +54,8 @@ function migrateOfficialSettings(value: unknown): unknown {
       musicVolume: value.musicVolume ?? 0.72,
       debugToolsEnabled: false,
       officialsDebugLabels: false,
-      officialsEnabled: true,
+      officialsEnabled: false,
+      playerVisualMode: value.playerVisualMode === 'meshyRigged' ? 'meshyRigged' : 'procedural',
       quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
       selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
       sidelineDensity: value.sidelineDensity ?? 'medium',
@@ -64,9 +67,10 @@ function migrateOfficialSettings(value: unknown): unknown {
   if (preset === 'performance') {
     return {
       ...value,
+      announcerVoice: normalizeAnnouncerVoice(value.announcerVoice),
       coachesEnabled: value.coachesEnabled ?? false,
       controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
-      crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
+      crowdFullness: migrateCrowdFullness(value.crowdFullness, value.crowdDensity, 'sparse'),
       gameMode: value.gameMode ?? 'exhibition',
       matchDifficulty: value.matchDifficulty ?? 'pro',
       menuPlaylistOrder: normalizeMenuPlaylistOrder(value.menuPlaylistOrder),
@@ -75,6 +79,7 @@ function migrateOfficialSettings(value: unknown): unknown {
       debugToolsEnabled: false,
       officialsDebugLabels: false,
       officialsEnabled: false,
+      playerVisualMode: value.playerVisualMode === 'meshyRigged' ? 'meshyRigged' : 'procedural',
       quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
       selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
       sidelineDensity: value.sidelineDensity ?? 'low',
@@ -85,9 +90,10 @@ function migrateOfficialSettings(value: unknown): unknown {
 
   return {
     ...value,
+    announcerVoice: normalizeAnnouncerVoice(value.announcerVoice),
     coachesEnabled: value.coachesEnabled ?? true,
     controlledPlayerLabelEnabled: value.controlledPlayerLabelEnabled ?? true,
-    crowdFullness: value.crowdFullness ?? migrateCrowdDensityToFullness(value.crowdDensity),
+    crowdFullness: migrateCrowdFullness(value.crowdFullness, value.crowdDensity, 'standard'),
     gameMode: value.gameMode ?? 'exhibition',
     matchDifficulty: value.matchDifficulty ?? 'pro',
     menuPlaylistOrder: normalizeMenuPlaylistOrder(value.menuPlaylistOrder),
@@ -95,12 +101,18 @@ function migrateOfficialSettings(value: unknown): unknown {
     musicVolume: value.musicVolume ?? 0.72,
     debugToolsEnabled: false,
     officialsDebugLabels: false,
+    officialsEnabled: false,
+    playerVisualMode: value.playerVisualMode === 'meshyRigged' ? 'meshyRigged' : 'procedural',
     quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
     selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
     sidelineDensity: value.sidelineDensity ?? 'medium',
     sidelinePlayersEnabled: value.sidelinePlayersEnabled ?? true,
     tunnelTableauEnabled: value.tunnelTableauEnabled ?? true,
   };
+}
+
+function normalizeAnnouncerVoice(value: unknown): 'announcer-a' | 'announcer-b' | 'auto' {
+  return value === 'announcer-a' || value === 'announcer-b' ? value : 'auto';
 }
 
 function migrateCrowdDensityToFullness(value: unknown): 'full' | 'sparse' | 'standard' {
@@ -113,6 +125,26 @@ function migrateCrowdDensityToFullness(value: unknown): 'full' | 'sparse' | 'sta
   }
 
   return 'sparse';
+}
+
+function migrateCrowdFullness(
+  fullness: unknown,
+  density: unknown,
+  fallback: 'full' | 'sparse' | 'standard',
+): 'adaptive' | 'full' | 'sparse' | 'standard' {
+  if (fullness === 'adaptive') {
+    return 'adaptive';
+  }
+
+  if (fullness === 'full') {
+    return fallback === 'standard' ? 'standard' : 'full';
+  }
+
+  if (fullness === 'sparse' || fullness === 'standard') {
+    return fullness;
+  }
+
+  return migrateCrowdDensityToFullness(density) === 'full' ? fallback : migrateCrowdDensityToFullness(density);
 }
 
 function normalizeMenuPlaylistOrder(value: unknown): 'sequential' | 'shuffle' {

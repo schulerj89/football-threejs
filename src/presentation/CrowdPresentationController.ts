@@ -14,6 +14,7 @@ import {
   DEFAULT_CROWD_PRESENTATION_SETTINGS as DEFAULT_SETTINGS,
   calculateCrowdPose,
   normalizeCrowdPresentationSettings as normalizeSettings,
+  resolveCrowdAttendanceProfile,
   resolveCrowdFullnessProfile,
 } from '../crowd/CrowdReactionModel';
 import { CrowdResourceOwner } from '../crowd/CrowdResourceOwner';
@@ -42,10 +43,12 @@ export {
   applyCrowdPresentationQuerySettings,
   isCrowdFullness,
   normalizeCrowdPresentationSettings,
+  resolveCrowdAttendanceProfile,
 } from '../crowd/CrowdReactionModel';
 
 export interface CrowdPresentationSnapshot {
   actualSpectatorCount: number;
+  activeNearSpectators: number;
   averageFrameTimeMs: number;
   crowdDrawCalls: number;
   crowdFullness: CrowdFullness;
@@ -55,6 +58,7 @@ export interface CrowdPresentationSnapshot {
   estimatedInstanceBufferBytes: number;
   estimatedStaticBufferBytes: number;
   farMosaicSeatCount: number;
+  farSeatOccupancy: number;
   farInstanceCount: number;
   frameCount: number;
   geometryCount: number;
@@ -72,6 +76,7 @@ export interface CrowdPresentationSnapshot {
   };
   reactionHistory: CrowdReactionHistoryEntry[];
   reactionState: CrowdReactionState;
+  reactingSpectatorLimit: number;
   reactionUpdateCount: number;
   reactionUpdateHz: number;
   reactionsEnabled: boolean;
@@ -86,6 +91,7 @@ export interface CrowdPresentationSnapshot {
   requestedSpectatorCount: number;
   settings: CrowdPresentationSettings;
   textureCount: number;
+  visualAttendance: number;
   visualsEnabled: boolean;
 }
 
@@ -114,14 +120,19 @@ export class CrowdPresentationController {
   constructor({ accentColors = [], settings }: CrowdPresentationControllerOptions) {
     this.settings = normalizeSettings(settings);
     this.accentColorNumbers = accentColors.map(hexToNumber);
-    const profile = resolveCrowdFullnessProfile(this.settings.crowdFullness);
+    const profile = resolveCrowdAttendanceProfile(
+      this.settings.crowdFullness,
+      this.settings.crowdDensity,
+    );
     this.resourceOwner = new CrowdResourceOwner(
-      profile.visualSeatCount,
+      profile.visualAttendance,
       'crowd-presentation',
       this.accentColorNumbers,
       {
         crowdFullness: profile.crowdFullness,
-        nearCount: profile.nearSpectatorCount,
+        density: this.settings.crowdDensity,
+        nearCount: profile.activeNearSpectators,
+        reactingSpectatorLimit: profile.reactingSpectatorLimit,
       },
     );
     this.resourceOwner.enableDynamicInstanceMatrices();
@@ -213,6 +224,7 @@ export class CrowdPresentationController {
 
     return {
       actualSpectatorCount: base.actualSpectatorCount,
+      activeNearSpectators: base.activeNearSpectators,
       averageFrameTimeMs: frame.averageFrameTimeMs,
       crowdDrawCalls: countCrowdDrawCalls(this.group),
       crowdFullness: base.crowdFullness,
@@ -222,6 +234,7 @@ export class CrowdPresentationController {
       estimatedInstanceBufferBytes: base.estimatedInstanceBufferBytes,
       estimatedStaticBufferBytes: base.estimatedStaticBufferBytes,
       farMosaicSeatCount: base.farMosaicSeatCount,
+      farSeatOccupancy: base.farSeatOccupancy,
       farInstanceCount: base.farInstanceCount,
       frameCount: frame.frameCount,
       geometryCount: base.geometryCount,
@@ -233,6 +246,7 @@ export class CrowdPresentationController {
       perInstanceStorage: createPerInstanceStorageSnapshot(),
       reactionHistory: this.reactionSequencer.getHistory(),
       reactionState: this.lastRenderedState ?? 'idle',
+      reactingSpectatorLimit: base.reactingSpectatorLimit,
       reactionUpdateCount: this.reactionUpdateCount,
       reactionUpdateHz: CROWD_PRESENTATION_CONFIG.reactionUpdateHz,
       reactionsEnabled: this.settings.crowdReactionsEnabled,
@@ -241,6 +255,7 @@ export class CrowdPresentationController {
       requestedSpectatorCount: resolveCrowdFullnessProfile(this.settings.crowdFullness).visualSeatCount,
       settings: { ...this.settings },
       textureCount: base.textureCount,
+      visualAttendance: base.visualAttendance,
       visualsEnabled: this.settings.crowdVisualsEnabled,
     };
   }
@@ -260,10 +275,19 @@ export class CrowdPresentationController {
   ): void {
     const matrix = this.scratchMatrix;
     const resources = this.resourceOwner.resources;
+    const cappedReaction = activeReaction && resources.nearPlacements.length > 0
+      ? {
+          ...activeReaction,
+          participantRatio: Math.min(
+            activeReaction.participantRatio,
+            resources.snapshotBase.reactingSpectatorLimit / resources.nearPlacements.length,
+          ),
+        }
+      : activeReaction;
 
     resources.nearPlacements.forEach((placement, index) => {
       const pose = calculateCrowdPose({
-        activeReaction,
+        activeReaction: cappedReaction,
         index,
         placement,
         state,
@@ -339,8 +363,8 @@ export function syncCrowdPresentationOverlay(
 ): void {
   element.textContent = [
     'CROWD PRESENTATION',
-    `VISUALS ${snapshot.visualsEnabled ? 'on' : 'off'} fullness ${snapshot.crowdFullness} count ${snapshot.actualSpectatorCount}`,
-    `LOD near ${snapshot.nearInstanceCount} mosaic ${snapshot.farMosaicSeatCount}`,
+    `VISUALS ${snapshot.visualsEnabled ? 'on' : 'off'} attendance ${snapshot.crowdFullness} visual ${snapshot.visualAttendance}`,
+    `LOD near ${snapshot.nearInstanceCount} mosaic ${snapshot.farMosaicSeatCount} react_cap ${snapshot.reactingSpectatorLimit}`,
     `REACTIONS ${snapshot.reactionsEnabled ? 'on' : 'off'} state ${snapshot.reactionState}`,
     `UPDATES ${snapshot.reactionUpdateCount} @ ${snapshot.reactionUpdateHz}hz`,
     `CALLS ${snapshot.crowdDrawCalls} TRIS ${snapshot.crowdTriangles}`,

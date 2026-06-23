@@ -1,0 +1,19 @@
+{
+  "assetId": "summit-forge-logo-b",
+  "background": "opaque",
+  "candidateId": "candidate-b",
+  "compressedBytes": 103048,
+  "contentHash": "f306c785092211eebb4b18e400266985638d7050a14faa36181df517d2947c86",
+  "generatedAt": "2026-06-22T19:30:40.953Z",
+  "generationMetadata": {
+    "apiEndpoint": "images/generations",
+    "revisedPrompt": null
+  },
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "outputPath": "public/branding/teams/summit-forge/candidate-b.webp",
+  "prompt": "Create an original fictional American-football team logo badge for Football JS. Use a centered square composition suitable for a menu badge and scorebug crop. Style: bold low-poly vector-like sports identity, clean silhouette, premium broadcast-game presentation, opaque background. No words, no text, no letters, no numbers, no watermark, no real professional or college marks, no league logos, no trademarked mascots. Team: Summit Forge. Mascot concept: an anvil and forge-flame or sparks motif with mountain-summit geometry. Team colors: primary #285945, secondary #f4f2e8, accent #d8b35f. Candidate direction: angular forge flame rising behind an anvil, framed by subtle summit peak geometry. Keep the badge readable at small UI sizes, avoid complex fine detail, preserve crop-safe margins.",
+  "quality": "high",
+  "requestedSize": "1024x1024",
+  "teamId": "summit-forge"
+}

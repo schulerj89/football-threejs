@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   createCoinTossState,
@@ -19,12 +20,20 @@ import {
   DEFAULT_USER_TEAM_ID,
 } from '../src/teams/TeamRegistry';
 import { BROADCAST_EXPERIENCE_SETTINGS } from '../src/config/GameExperienceSettings';
+import { getPlayerVisualHeadAnchor, type PlayerTeamUniforms } from '../src/playerVisual';
+import type { PlayerModel } from '../src/playerModel';
 import { createGameplayRosterBinding } from '../src/roster/GameplayRosterBinding';
+import { resolveTeamPresentationTheme } from '../src/teams/TeamThemeApplier';
 import {
   createCoinTossLayout,
   validateCoinTossLayout,
 } from '../src/presentation/coinToss/CoinTossLayout';
-import { resolveCoinFinalRotationX } from '../src/presentation/coinToss/CoinTossVisualFactory';
+import { CoinTossController } from '../src/presentation/coinToss/CoinTossController';
+import {
+  getCoinAnimationDurationSeconds,
+  resolveCoinFinalRotationX,
+} from '../src/presentation/coinToss/CoinTossVisualFactory';
+import { FOOTBALL_PLAYER_VISUAL_PROFILE_ID } from '../src/presentation/players/FootballPlayerVisualFactory';
 import {
   PregameAudioCoordinator,
   type PregameAudioPort,
@@ -150,19 +159,30 @@ describe('opening coin toss model', () => {
 });
 
 describe('coin toss presentation data', () => {
-  it('creates four captains and one presentation-only referee without gameplay authority', () => {
+  it('creates exactly four presentation-only captains without officials or gameplay authority', () => {
     const binding = createGameplayRosterBinding(
       '11v11',
       BROADCAST_EXPERIENCE_SETTINGS.teamProfiles,
     );
     const layout = createCoinTossLayout(binding);
+    const jerseyNumbersByRosterId = new Map(
+      [...binding.userRoster.players, ...binding.opponentRoster.players]
+        .map((player) => [player.id, player.jerseyNumber]),
+    );
 
     expect(validateCoinTossLayout(layout)).toEqual([]);
     expect(layout.noGameplayAuthority).toBe(true);
     expect(layout.captains).toHaveLength(4);
     expect(layout.captainPlacements).toHaveLength(4);
-    expect(layout.officials).toHaveLength(1);
-    expect(layout.officials[0]?.id).toBe('official-referee');
+    expect(layout.captains.filter((captain) => captain.team === 'user')).toHaveLength(2);
+    expect(layout.captains.filter((captain) => captain.team === 'opponent')).toHaveLength(2);
+    for (const captain of layout.captains) {
+      expect(captain.jerseyNumber).toBe(jerseyNumbersByRosterId.get(captain.rosterPlayerId));
+    }
+    for (const placement of layout.captainPlacements) {
+      expect(placement.jerseyNumber).toBe(jerseyNumbersByRosterId.get(placement.rosterPlayerId));
+    }
+    expect('officials' in layout).toBe(false);
     expect(binding.activeLineup.bindings.map((entry) => entry.gameplayPlayerId)).not.toContain(
       'coin-toss-captain-user-1',
     );
@@ -171,6 +191,127 @@ describe('coin toss presentation data', () => {
   it('ends the visual animation with the requested face up', () => {
     expect(resolveCoinFinalRotationX('heads')).toBe(0);
     expect(resolveCoinFinalRotationX('tails')).toBeCloseTo(Math.PI, 8);
+  });
+
+  it('repeated coin-toss staging shows only four helmeted full-profile captains', async () => {
+    const restoreDom = installCoinTossDom();
+    const binding = createGameplayRosterBinding(
+      '11v11',
+      BROADCAST_EXPERIENCE_SETTINGS.teamProfiles,
+    );
+    const controller = new CoinTossController({
+      audioCoordinator: createFakeCoinTossAudioCoordinator() as never,
+      footballPlayerVisual: {
+        attachHelmet: attachMockHelmet,
+      },
+      rosterBinding: binding,
+      teamTheme: resolveTeamPresentationTheme(BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+    });
+
+    try {
+      expect(controller.group.visible).toBe(false);
+      expect(controller.getSnapshot()).toMatchObject({
+        captainVisualCount: 0,
+        captainsVisible: 0,
+        coinVisible: false,
+        stageId: 'none',
+      });
+
+      for (let index = 0; index < 25; index += 1) {
+        controller.start(null);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(controller.getSnapshot()).toMatchObject({
+          bareHeadCount: 0,
+          captainVisualCount: 4,
+          captainsVisible: 4,
+          coinVisible: true,
+          helmetReadyCount: 4,
+          officialsVisibleCount: 0,
+          refereeVisible: false,
+          stageId: 'coinToss',
+          visualProfileCount: 4,
+          visualProfileId: FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
+        });
+
+        controller.reset();
+        expect(controller.group.visible).toBe(false);
+        expect(controller.getSnapshot()).toMatchObject({
+          captainVisualCount: 0,
+          captainsVisible: 0,
+          coinVisible: false,
+          stageId: 'none',
+        });
+      }
+    } finally {
+      controller.dispose();
+      restoreDom();
+    }
+  });
+
+  it('plays coin spin and landing effects once from visual animation progress', () => {
+    const restoreDom = installCoinTossDom();
+    const binding = createGameplayRosterBinding(
+      '11v11',
+      BROADCAST_EXPERIENCE_SETTINGS.teamProfiles,
+    );
+    const playedAssetIds: string[] = [];
+    const controller = new CoinTossController({
+      audioCoordinator: createFakeCoinTossAudioCoordinator() as never,
+      coinAudio: {
+        playOneShot: (assetId: string) => {
+          playedAssetIds.push(assetId);
+          return true;
+        },
+      },
+      footballPlayerVisual: {
+        attachHelmet: attachMockHelmet,
+      },
+      rosterBinding: binding,
+      teamTheme: resolveTeamPresentationTheme(BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+    });
+    const gameplay = createGameplayModel({
+      challengeMode: 'exhibition',
+      playbookId: '11v11',
+    });
+    const match = createMatchModel({
+      opponentTeamId: DEFAULT_OPPONENT_TEAM_ID,
+      rules: { seed: 20260622 },
+      userTeamId: DEFAULT_USER_TEAM_ID,
+    });
+
+    try {
+      enterCoinToss(match);
+      controller.start(snapshotMatchModel(match));
+      resolveMatchCoinToss(match, 'heads');
+      const gameplaySnapshot = snapshotGameplayModel(gameplay);
+      const matchSnapshot = snapshotMatchModel(match);
+      const updates = Math.ceil(getCoinAnimationDurationSeconds() / (1 / 30)) + 5;
+
+      for (let index = 0; index < updates; index += 1) {
+        controller.update({
+          deltaSeconds: 1 / 30,
+          gameplaySnapshot,
+          matchSnapshot,
+        });
+      }
+
+      expect(playedAssetIds).toEqual(['coin_toss_spin_01', 'coin_toss_land_01']);
+
+      for (let index = 0; index < 10; index += 1) {
+        controller.update({
+          deltaSeconds: 1 / 30,
+          gameplaySnapshot,
+          matchSnapshot,
+        });
+      }
+
+      expect(playedAssetIds).toEqual(['coin_toss_spin_01', 'coin_toss_land_01']);
+    } finally {
+      controller.dispose();
+      restoreDom();
+    }
   });
 });
 
@@ -237,6 +378,89 @@ function createFakeGameAudioDirector() {
   };
 }
 
+function createFakeCoinTossAudioCoordinator() {
+  return {
+    getSnapshot: () => ({
+      activeLine: null,
+    }),
+    isLineComplete: () => true,
+    startLine: () => undefined,
+    updateAmbience: () => undefined,
+  };
+}
+
+async function attachMockHelmet(
+  playerVisual: THREE.Object3D,
+  _player: PlayerModel,
+  _teamUniforms?: PlayerTeamUniforms,
+): Promise<boolean> {
+  const headAnchor = getPlayerVisualHeadAnchor(playerVisual);
+  if (!headAnchor) {
+    return false;
+  }
+
+  if (!headAnchor.getObjectByName('low-poly-helmet')) {
+    const helmet = new THREE.Group();
+    helmet.name = 'low-poly-helmet';
+    helmet.userData.assetId = 'mock-low-poly-helmet';
+    headAnchor.add(helmet);
+  }
+
+  return true;
+}
+
+function installCoinTossDom(): () => void {
+  const globals = globalThis as unknown as Record<string, unknown>;
+  const hadDocument = Object.prototype.hasOwnProperty.call(globals, 'document');
+  const hadWindow = Object.prototype.hasOwnProperty.call(globals, 'window');
+  const previousDocument = globals.document;
+  const previousWindow = globals.window;
+
+  globals.document = {
+    body: createFakeElement('body'),
+    createElement: (tagName: string) => createFakeElement(tagName),
+    createElementNS: (_namespace: string, tagName: string) => createFakeElement(tagName),
+  } as unknown as Document;
+  globals.window = {
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  } as unknown as Window;
+
+  return () => {
+    if (hadDocument) {
+      globals.document = previousDocument;
+    } else {
+      delete globals.document;
+    }
+
+    if (hadWindow) {
+      globals.window = previousWindow;
+    } else {
+      delete globals.window;
+    }
+  };
+}
+
+function createFakeElement(tagName: string): HTMLElement {
+  const element = {
+    addEventListener: () => undefined,
+    append: () => undefined,
+    className: '',
+    dataset: {} as Record<string, string>,
+    disabled: false,
+    hidden: false,
+    innerHTML: '',
+    remove: () => undefined,
+    removeEventListener: () => undefined,
+    setAttribute: () => undefined,
+    set src(_value: string) {},
+    tagName: tagName.toUpperCase(),
+    textContent: '',
+    type: '',
+  };
+  return element as unknown as HTMLElement;
+}
+
 class FakePregameMixer implements PregameAudioPort {
   readonly playedAssetIds: string[] = [];
   private timeSeconds = 0;
@@ -266,7 +490,9 @@ class FakePregameMixer implements PregameAudioPort {
       crowdDuckingGain: 1,
       decodedAssetIds: [],
       decodedBufferBytes: 0,
+      decodedBufferBudgetBytes: 8 * 1024 * 1024,
       enabled: true,
+      lastEvictedAudioAssetId: null,
       lastUnlockError: null,
       loadedAssetIds: [],
       loadedCompressedBytes: 0,

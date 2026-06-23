@@ -1,23 +1,26 @@
-import type { FootballSpot } from '../fieldScale';
 import type {
   DriveSummary,
   DriveSummaryResult,
   MatchPossession,
+  PossessionTransition,
   ScoringEvent,
 } from './MatchTypes';
+import type { PossessionFieldPosition } from './FieldPositionModel';
+import { clonePossessionFieldPosition } from './FieldPositionModel';
 
 export interface CreateDriveSummaryOptions {
   description: string;
   driveNumber: number;
   elapsedSeconds: number;
-  endingFieldPosition: FootballSpot;
+  endingFieldPosition: PossessionFieldPosition;
   plays: number;
+  possessionTransition?: PossessionTransition | null;
   possession: MatchPossession;
   quarter: number;
   result: DriveSummaryResult;
   scoringEvents?: readonly ScoringEvent[];
   startedAtSeconds: number;
-  startingFieldPosition: FootballSpot;
+  startingFieldPosition: PossessionFieldPosition;
   yards: number;
 }
 
@@ -27,6 +30,7 @@ export function createDriveSummary({
   elapsedSeconds,
   endingFieldPosition,
   plays,
+  possessionTransition = null,
   possession,
   quarter,
   result,
@@ -41,17 +45,28 @@ export function createDriveSummary({
     description,
     driveNumber,
     elapsedSeconds: Math.max(0, elapsedSeconds),
-    endingFieldPosition: { ...endingFieldPosition },
+    endingFieldPosition: clonePossessionFieldPosition(endingFieldPosition),
     id: `${possession}-${driveNumber}-${quarter}`,
     plays: Math.max(0, Math.round(plays)),
     points,
     possession,
+    possessionTransition: possessionTransition ? clonePossessionTransition(possessionTransition) : null,
     quarter,
     result,
     scoringEvents: scoringEvents.map((event) => ({ ...event })),
     startedAtSeconds,
-    startingFieldPosition: { ...startingFieldPosition },
+    startingFieldPosition: clonePossessionFieldPosition(startingFieldPosition),
     yards: Math.round(yards),
+  };
+}
+
+export function clonePossessionTransition(
+  transition: PossessionTransition,
+): PossessionTransition {
+  return {
+    ...transition,
+    nextOffenseStartingPosition: clonePossessionFieldPosition(transition.nextOffenseStartingPosition),
+    previousOffenseEndingPosition: clonePossessionFieldPosition(transition.previousOffenseEndingPosition),
   };
 }
 

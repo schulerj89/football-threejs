@@ -41,7 +41,7 @@ export const REFERENCE_TIMING_TARGETS = {
 export const REFERENCE_TIMING_MEASUREMENT_EPSILON_MS = 0.05;
 
 export const REFERENCE_STRUCTURAL_BUDGETS = {
-  crowdSpectatorCount: 5000,
+  crowdSpectatorCount: 25_000,
   maxCrowdDrawCalls: 8,
   maxDrawCalls: 450,
   maxGeometries: 200,

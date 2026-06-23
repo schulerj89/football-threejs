@@ -5,6 +5,15 @@ import { createMusicLocalAudioAssets } from './MusicCatalog';
 export type AudioBusName = 'announcer' | 'crowd' | 'gameplaySfx' | 'master' | 'music' | 'ui';
 export type AudioPlaybackCategory = 'announcer' | 'crowd' | 'gameplaySfx' | 'music' | 'ui';
 export type AudioLoadingStrategy = 'buffer' | 'stream';
+export type AudioSemanticCategory =
+  | 'cadence'
+  | 'coin'
+  | 'crowd'
+  | 'gameplay'
+  | 'kickoff'
+  | 'music'
+  | 'placeKick'
+  | 'ui';
 
 export interface LocalAudioAsset {
   assetId: string;
@@ -14,6 +23,7 @@ export interface LocalAudioAsset {
   loop: boolean;
   maxSimultaneousInstances: number;
   optional: boolean;
+  semanticCategory?: AudioSemanticCategory;
   url: string;
 }
 
@@ -191,6 +201,20 @@ export const LOCAL_AUDIO_ASSET_MANIFEST: readonly LocalAudioAsset[] = [
     optional: true,
     url: '/audio/sfx/snap_01.mp3',
   },
+  createGameplaySfxAsset('coin_toss_spin_01', 'coin', 0.62, 1),
+  createGameplaySfxAsset('coin_toss_land_01', 'coin', 0.7, 1),
+  createGameplaySfxAsset('place_kick_snap_01', 'placeKick', 0.6, 1),
+  createGameplaySfxAsset('place_kick_set_01', 'placeKick', 0.5, 1),
+  createGameplaySfxAsset('place_kick_contact_01', 'placeKick', 0.72, 1),
+  createGameplaySfxAsset('kick_upright_hit_01', 'placeKick', 0.68, 1),
+  createGameplaySfxAsset('kickoff_runup_01', 'kickoff', 0.55, 1),
+  createGameplaySfxAsset('kickoff_contact_01', 'kickoff', 0.72, 1),
+  createGameplaySfxAsset('kickoff_catch_01', 'kickoff', 0.62, 1),
+  createGameplaySfxAsset('qb_ready_01', 'cadence', 0.68, 1),
+  createGameplaySfxAsset('qb_ready_02', 'cadence', 0.68, 1),
+  createGameplaySfxAsset('qb_hut_01', 'cadence', 0.72, 1),
+  createGameplaySfxAsset('qb_hut_02', 'cadence', 0.72, 1),
+  createGameplaySfxAsset('qb_hut_03', 'cadence', 0.72, 1),
   {
     assetId: 'runtime-test-click',
     category: 'ui',
@@ -220,4 +244,23 @@ export function getAudioAsset(
   assetId: string,
 ): LocalAudioAsset | null {
   return manifest.find((asset) => asset.assetId === assetId) ?? null;
+}
+
+function createGameplaySfxAsset(
+  assetId: string,
+  semanticCategory: Extract<AudioSemanticCategory, 'cadence' | 'coin' | 'kickoff' | 'placeKick'>,
+  defaultGain: number,
+  maxSimultaneousInstances: number,
+): LocalAudioAsset {
+  return {
+    assetId,
+    category: 'gameplaySfx',
+    defaultGain,
+    loadingStrategy: 'buffer',
+    loop: false,
+    maxSimultaneousInstances,
+    optional: true,
+    semanticCategory,
+    url: `/audio/sfx/${assetId}.mp3`,
+  };
 }

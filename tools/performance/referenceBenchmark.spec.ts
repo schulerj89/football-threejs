@@ -36,11 +36,13 @@ interface BenchmarkRenderMetrics {
 
 interface BenchmarkCrowdSnapshot {
   actualSpectatorCount: number;
+  activeNearSpectators: number;
   crowdDrawCalls: number;
   crowdFullness: string;
   density: string;
   farMosaicSeatCount: number;
   nearInstanceCount: number;
+  visualAttendance: number;
   visualsEnabled: boolean;
 }
 
@@ -167,9 +169,11 @@ test('reference production frame pacing and structural budgets', async ({ page }
   });
   expect(structural.crowd).toMatchObject({
     actualSpectatorCount: REFERENCE_STRUCTURAL_BUDGETS.crowdSpectatorCount,
+    activeNearSpectators: 2500,
     crowdFullness: 'full',
-    farMosaicSeatCount: 4500,
-    nearInstanceCount: 500,
+    farMosaicSeatCount: 22500,
+    nearInstanceCount: 2500,
+    visualAttendance: REFERENCE_STRUCTURAL_BUDGETS.crowdSpectatorCount,
     visualsEnabled: true,
   });
   expect(structural.renderMetrics.calls).toBeLessThanOrEqual(REFERENCE_STRUCTURAL_BUDGETS.maxDrawCalls);

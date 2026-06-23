@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Football JS Player Meshy Candidate Viewer</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; background: #0c1116; color: #f0f4f8; }
+      body { margin: 0; display: grid; min-height: 100vh; grid-template-columns: 340px 1fr; }
+      aside { padding: 20px; border-right: 1px solid #2c3844; background: #141b22; overflow: auto; }
+      main { min-height: 100vh; display: grid; }
+      canvas { width: 100%; height: 100%; display: block; }
+      button { display: block; width: 100%; margin: 8px 0; padding: 10px; border: 1px solid #43505c; background: #202a34; color: #edf2f7; border-radius: 6px; text-align: left; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; color: #cbd5e1; }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <h1>Player Candidate Viewer</h1>
+      <p>Development-only viewer for generated/rigged Meshy player candidates.</p>
+      <button data-path="art-source/meshy/player-base/rigged/candidate-a.glb">candidate-a (7006 tris)</button>
+<button data-path="">candidate-b (missing tris)</button>
+      <h2>Report</h2>
+      <pre>[
+  {
+    &quot;animationPaths&quot;: [
+      &quot;art-source/meshy/player-base/rigged/candidate-a-animation-1.glb&quot;,
+      &quot;art-source/meshy/player-base/rigged/candidate-a-animation-2.fbx&quot;,
+      &quot;art-source/meshy/player-base/rigged/candidate-a-animation-3.glb&quot;,
+      &quot;art-source/meshy/player-base/rigged/candidate-a-animation-4.glb&quot;,
+      &quot;art-source/meshy/player-base/rigged/candidate-a-animation-5.fbx&quot;,
+      &quot;art-source/meshy/player-base/rigged/candidate-a-animation-6.glb&quot;
+    ],
+    &quot;assetId&quot;: &quot;candidate-a&quot;,
+    &quot;consumedCredits&quot;: {
+      &quot;generation&quot;: 30,
+      &quot;rigging&quot;: 5
+    },
+    &quot;contentHashes&quot;: {
+      &quot;generatedGlb&quot;: &quot;24ad2791334fc8554565db1ab2cbb5a1b1da741c15cd01ca559c6d7689b60667&quot;,
+      &quot;riggedFbx&quot;: &quot;95dc62bb3004c9952de127aebde8118be4311efecb2d2fc1be4e8b15653b47f3&quot;,
+      &quot;riggedGlb&quot;: &quot;c3a867e5f8dbaeee50596176de28c54c0f3cbb1070729ef93f10407ff185ad67&quot;
+    },
+    &quot;generated&quot;: {
+      &quot;animationClipCount&quot;: 0,
+      &quot;animationClipNames&quot;: [],
+      &quot;armatureExists&quot;: false,
+      &quot;boneCount&quot;: 0,
+      &quot;boneNames&quot;: [],
+      &quot;boundingBox&quot;: {
+        &quot;height&quot;: 1.75,
+        &quot;max&quot;: [
+          0.49406248331069946,
+          1.75,
+          0.1593036949634552
+        ],
+        &quot;min&quot;: [
+          -0.49637386202812195,
+          0,
+          -0.15961691737174988
+        ]
+      },
+      &quot;connectedComponentCount&quot;: 295,
+      &quot;forwardAxis&quot;: &quot;unknown&quot;,
+      &quot;groundOrigin&quot;: {
+        &quot;minY&quot;: 0,
+        &quot;status&quot;: &quot;grounded&quot;
+      },
+      &quot;materialCount&quot;: 1,
+      &quot;materialNames&quot;: [
+        &quot;Material_0.008&quot;
+      ],
+      &quot;meshCount&quot;: 1,
+      &quot;meshNames&quot;: [
+        &quot;Mesh_0&quot;
+      ],
+      &quot;nodeNames&quot;: [
+        &quot;Mesh_0&quot;
+      ],
+      &quot;path&quot;: &quot;art-source/meshy/player-base/generated/candidate-a.glb&quot;,
+      &quot;textureDimensions&quot;: [
+        {
+          &quot;height&quot;: 2048,
+          &quot;imageIndex&quot;: 0,
+          &quot;mimeType&quot;: &quot;image/png&quot;,
+          &quot;name&quot;: &quot;normal&quot;,
+          &quot;uri&quot;: null,
+          &quot;width&quot;: 2048
+        },
+        {
+          &quot;height&quot;: 2048,
+          &quot;imageIndex&quot;: 1,
+          &quot;mimeType&quot;: &quot;image/jpeg&quot;,
+          &quot;name&quot;: &quot;Image_0&quot;,
+          &quot;uri&quot;: null,
+          &quot;width&quot;: 2048
+        }
+      ],
+      &quot;triangleCount&quot;: 7006,
+      &quot;vertexCount&quot;: 5621
+    },
+    &quot;generatedValidation&quot;: {
+      &quot;failures&quot;: [
+        &quot;Texture normal is 2048x2048, above 1024x1024.&quot;,
+        &quot;Texture Image_0 is 2048x2048, above 1024x1024.&quot;
+      ],
+      &quot;passed&quot;: false
+    },
+    &quot;rigged&quot;: {
+      &quot;animationClipCount&quot;: 1,
+      &quot;animationClipNames&quot;: [
+        &quot;Armature|clip0|baselayer&quot;
+      ],
+      &quot;armatureExists&quot;: true,
+      &quot;boneCount&quot;: 24,
+      &quot;boneNames&quot;: [
+        &quot;Hips&quot;,
+        &quot;LeftUpLeg&quot;,
+        &quot;LeftLeg&quot;,
+        &quot;LeftFoot&quot;,
+        &quot;LeftToeBase&quot;,
+        &quot;RightUpLeg&quot;,
+        &quot;RightLeg&quot;,
+        &quot;RightFoot&quot;,
+        &quot;RightToeBase&quot;,
+        &quot;Spine02&quot;,
+        &quot;Spine01&quot;,
+        &quot;Spine&quot;,
+        &quot;LeftShoulder&quot;,
+        &quot;LeftArm&quot;,
+        &quot;LeftForeArm&quot;,
+        &quot;LeftHand&quot;,
+        &quot;RightShoulder&quot;,
+        &quot;RightArm&quot;,
+        &quot;RightForeArm&quot;,
+        &quot;RightHand&quot;,
+        &quot;neck&quot;,
+        &quot;Head&quot;,
+        &quot;head_end&quot;,
+        &quot;headfront&quot;
+      ],
+      &quot;boundingBox&quot;: {
+        &quot;height&quot;: 1.8499999127959619,
+        &quot;max&quot;: [
+          0.5235162973403931,
+          1.8499999046325684,
+          0.1685723066329956
+        ],
+        &quot;min&quot;: [
+          -0.5235163569450378,
+          -8.163393516724682e-9,
+          -0.168572336435318
+        ]
+      },
+      &quot;connectedComponentCount&quot;: 295,
+      &quot;forwardAxis&quot;: &quot;+Z&quot;,
+      &quot;groundOrigin&quot;: {
+        &quot;minY&quot;: -8.163393516724682e-9,
+        &quot;status&quot;: &quot;grounded&quot;
+      },
+      &quot;materialCount&quot;: 1,
+      &quot;materialNames&quot;: [
+        &quot;Material_1&quot;
+      ],
+      &quot;meshCount&quot;: 1,
+      &quot;meshNames&quot;: [
+        &quot;char1&quot;
+      ],
+      &quot;nodeNames&quot;: [
+        &quot;LeftToeBase&quot;,
+        &quot;LeftFoot&quot;,
+        &quot;LeftLeg&quot;,
+        &quot;LeftUpLeg&quot;,
+        &quot;RightToeBase&quot;,
+        &quot;RightFoot&quot;,
+        &quot;RightLeg&quot;,
+        &quot;RightUpLeg&quot;,
+        &quot;LeftHand&quot;,
+        &quot;LeftForeArm&quot;,
+        &quot;LeftArm&quot;,
+        &quot;LeftShoulder&quot;,
+        &quot;RightHand&quot;,
+        &quot;RightForeArm&quot;,
+        &quot;RightArm&quot;,
+        &quot;RightShoulder&quot;,
+        &quot;head_end&quot;,
+        &quot;headfront&quot;,
+        &quot;Head&quot;,
+        &quot;neck&quot;,
+        &quot;Spine&quot;,
+        &quot;Spine01&quot;,
+        &quot;Spine02&quot;,
+        &quot;Hips&quot;,
+        &quot;char1&quot;,
+        &quot;Armature&quot;
+      ],
+      &quot;path&quot;: &quot;art-source/meshy/player-base/rigged/candidate-a.glb&quot;,
+      &quot;textureDimensions&quot;: [
+        {
+          &quot;height&quot;: 1024,
+          &quot;imageIndex&quot;: 0,
+          &quot;mimeType&quot;: &quot;image/png&quot;,
+          &quot;name&quot;: &quot;texture_0&quot;,
+          &quot;uri&quot;: null,
+          &quot;width&quot;: 1024
+        }
+      ],
+      &quot;triangleCount&quot;: 7006,
+      &quot;vertexCount&quot;: 5635
+    },
+    &quot;riggedFbxExists&quot;: true,
+    &quot;riggedValidation&quot;: {
+      &quot;failures&quot;: [],
+      &quot;passed&quot;: true
+    },
+    &quot;taskIds&quot;: {
+      &quot;generation&quot;: &quot;019ef091-2cbd-7ae2-89c4-e381710c23e6&quot;,
+      &quot;rigging&quot;: &quot;019ef094-32ac-7bc2-98ea-b3ca1b8b1a98&quot;
+    },
+    &quot;thumbnailPaths&quot;: []
+  },
+  {
+    &quot;animationPaths&quot;: [],
+    &quot;assetId&quot;: &quot;candidate-b&quot;,
+    &quot;consumedCredits&quot;: {
+      &quot;generation&quot;: null,
+      &quot;rigging&quot;: null
+    },
+    &quot;contentHashes&quot;: {
+      &quot;generatedGlb&quot;: null,
+      &quot;riggedFbx&quot;: null,
+      &quot;riggedGlb&quot;: null
+    },
+    &quot;generated&quot;: null,
+    &quot;generatedValidation&quot;: null,
+    &quot;rigged&quot;: null,
+    &quot;riggedFbxExists&quot;: false,
+    &quot;riggedValidation&quot;: null,
+    &quot;taskIds&quot;: {
+      &quot;generation&quot;: null,
+      &quot;rigging&quot;: null
+    },
+    &quot;thumbnailPaths&quot;: []
+  }
+]</pre>
+    </aside>
+    <main><canvas id="preview"></canvas></main>
+    <script type="importmap">
+      { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js" } }
+    </script>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/loaders/GLTFLoader.js';
+      const canvas = document.getElementById('preview');
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0b0f14);
+      const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+      camera.position.set(0, 1.25, 5.2);
+      camera.lookAt(0, 1.0, 0);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x243447, 2.5));
+      const key = new THREE.DirectionalLight(0xffffff, 2);
+      key.position.set(2, 4, 3);
+      scene.add(key);
+      const grid = new THREE.GridHelper(4, 8, 0x334155, 0x1f2937);
+      scene.add(grid);
+      const loader = new GLTFLoader();
+      let active = null;
+      async function load(path) {
+        if (!path) return;
+        if (active) scene.remove(active);
+        const gltf = await loader.loadAsync('/' + path.replace(/^public\//, ''));
+        active = gltf.scene;
+        scene.add(active);
+      }
+      for (const button of document.querySelectorAll('button[data-path]')) {
+        button.addEventListener('click', () => load(button.dataset.path));
+      }
+      function resize() {
+        const width = canvas.clientWidth || 800;
+        const height = canvas.clientHeight || 600;
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      }
+      function render() {
+        resize();
+        renderer.render(scene, camera);
+        requestAnimationFrame(render);
+      }
+      load("art-source/meshy/player-base/rigged/candidate-a.glb");
+      render();
+    </script>
+  </body>
+</html>

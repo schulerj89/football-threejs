@@ -1,0 +1,18 @@
+{
+  "assetId": "candidate-b",
+  "background": "opaque",
+  "candidateId": "candidate-b",
+  "compressedBytes": 63252,
+  "contentHash": "b577c713417ebcc9f5fcda82c6331b33a54a8db491df0a473b1c2ff119ea6158",
+  "generatedAt": "2026-06-22T22:43:58.610Z",
+  "generationMetadata": {
+    "apiEndpoint": "images/generations",
+    "revisedPrompt": null
+  },
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "outputPath": "public/branding/scorebug/candidate-b.webp",
+  "prompt": "Create an original broadcast scorebug shell for a fictional low-poly college-football video game named Football JS. Format: wide horizontal 3:1 graphic designed for the top or bottom of a game screen. Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, polished modern sports-broadcast presentation, two symmetrical team sections, clear square or circular wells for team logos, large score areas beside each logo, central area for quarter and game clock, and a lower strip for possession, down, distance, and ball location. Keep restrained highlight edges and high readability over a bright football field. Make the shell flexible enough for any team colors. Straight-on 2D presentation, no perspective, opaque background. Candidate B variation: slightly retro 1990s-console influence with modern polish, chunky panel rhythm, restrained scanline-inspired details, and clean modern material finish. Do not include words, letters, numbers, scores, clock text, team logos, team colors, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable. The final runtime will overlay all text and logos through HTML, so leave every label and score area blank.",
+  "quality": "high",
+  "requestedSize": "1536x512"
+}

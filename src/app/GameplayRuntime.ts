@@ -1,4 +1,4 @@
-import { PLAYABLE_FIELD_BOUNDS } from '../field';
+import { PLAYER_MOVEMENT_BOUNDS } from '../field';
 import { KeyboardMovementInput, KeyboardPlayControls } from '../input';
 import {
   createFormationPreviewModel,
@@ -26,12 +26,27 @@ import { createPresentationAuditGameplaySnapshot, resolvePresentationAuditState,
 import { updatePlayerSimulation } from '../playerSimulation';
 import type { PlayerModel } from '../playerModel';
 import type { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
+import type { CadenceAudioDirector } from '../audio/CadenceAudioDirector';
+import {
+  clearPreSnapCadence,
+  createPreSnapCadenceState,
+  isPreSnapPlaySelectionLocked,
+  notifyPreSnapPlaySelected,
+  requestPreSnapSnap,
+  resetPreSnapCadenceForFormation,
+  snapshotPreSnapCadence,
+  updatePreSnapCadence,
+  type PreSnapCadenceEvents,
+  type PreSnapCadenceSnapshot,
+} from '../gameplay/PreSnapCadenceModel';
 
 export interface GameplayRuntimeOptions {
   canPunt?: (snapshot: GameplaySnapshot) => boolean;
   canStartPlay?: (snapshot: GameplaySnapshot) => boolean;
   consumeSelectedPlayId: () => string | null;
   gameMode?: GameExperienceSettings['gameMode'];
+  onPassReleased?: (gameplay: GameplayModel, snapshotBeforeRelease: GameplaySnapshot) => void;
+  onPlayStarted?: (gameplay: GameplayModel, snapshotBeforeStart: GameplaySnapshot) => void;
   onPunt?: (gameplay: GameplayModel, snapshot: GameplaySnapshot) => boolean;
   playbookId: GameExperienceSettings['playbookId'];
   searchParams: URLSearchParams;
@@ -43,7 +58,10 @@ export class GameplayRuntime {
   readonly formationPreviewModel: FormationPreviewModel | null;
   private readonly keyboardInput = new KeyboardMovementInput(window);
   private readonly searchParams: URLSearchParams;
+  private readonly preSnapCadence = createPreSnapCadenceState();
+  private cadenceAudioDirector: CadenceAudioDirector | null = null;
   private gameMode: GameExperienceSettings['gameMode'];
+  private lastPreSnapCadenceKey: string | null = null;
   private playControls: KeyboardPlayControls;
   private presentationAuditState: PresentationAuditState;
 
@@ -78,6 +96,8 @@ export class GameplayRuntime {
 
   dispose(): void {
     this.playControls.dispose();
+    this.keyboardInput.dispose();
+    this.cadenceAudioDirector?.reset();
   }
 
   update(delta: number, active: boolean, profiler?: FramePerformanceProfiler): void {
@@ -92,16 +112,19 @@ export class GameplayRuntime {
 
     if (!active) {
       this.playControls.consumeRequests();
+      this.suspendPreSnapCadence();
       this.gameplayModel.player.velocity.x = 0;
       this.gameplayModel.player.velocity.z = 0;
       return;
     }
 
+    this.syncPreSnapCadenceForCurrentFormation();
     if (profiler?.enabled) {
       profiler.measure('input', () => this.updatePlayControls(profiler));
     } else {
       this.updatePlayControls();
     }
+    this.updatePreSnapCadenceRuntime(delta);
     if (
       this.gameplayModel.playState === 'live' &&
       this.gameplayModel.player.currentState === 'userControlled'
@@ -113,7 +136,7 @@ export class GameplayRuntime {
             this.gameplayModel.player,
             movement,
             delta,
-            PLAYABLE_FIELD_BOUNDS,
+            PLAYER_MOVEMENT_BOUNDS,
             { clampSidelines: false },
           );
         });
@@ -122,7 +145,7 @@ export class GameplayRuntime {
           this.gameplayModel.player,
           movement,
           delta,
-          PLAYABLE_FIELD_BOUNDS,
+          PLAYER_MOVEMENT_BOUNDS,
           { clampSidelines: false },
         );
       }
@@ -164,6 +187,9 @@ export class GameplayRuntime {
     });
     this.playControls.dispose();
     this.playControls = this.createPlayControls();
+    clearPreSnapCadence(this.preSnapCadence);
+    this.lastPreSnapCadenceKey = null;
+    this.cadenceAudioDirector?.reset();
     return true;
   }
 
@@ -208,6 +234,14 @@ export class GameplayRuntime {
 
   discardPendingPlayControls(): void {
     this.playControls.consumeRequests();
+  }
+
+  setCadenceAudioDirector(cadenceAudioDirector: CadenceAudioDirector): void {
+    this.cadenceAudioDirector = cadenceAudioDirector;
+  }
+
+  getPreSnapCadenceSnapshot(): PreSnapCadenceSnapshot {
+    return snapshotPreSnapCadence(this.preSnapCadence);
   }
 
   handleFormationPreviewLaneControls(event: KeyboardEvent, resetCamera: () => void): void {
@@ -257,13 +291,12 @@ export class GameplayRuntime {
 
   private updatePlayControls(profiler?: FramePerformanceProfiler): void {
     const requests = this.playControls.consumeRequests();
-    if (requests.startPlay || requests.resetPlay || requests.restartChallenge) {
-      this.options.skipPresentation();
-    }
     const snapshot = snapshotGameplayModel(this.gameplayModel);
 
     if (requests.restartChallenge) {
+      this.options.skipPresentation();
       restartScoreAttack(this.gameplayModel);
+      this.resetCadenceForCurrentPreSnap();
       return;
     }
     if (requests.punt && this.options.canPunt?.(snapshot)) {
@@ -271,29 +304,127 @@ export class GameplayRuntime {
       return;
     }
     if (requests.resetPlay) {
+      this.options.skipPresentation();
       resetPlay(this.gameplayModel);
+      this.resetCadenceForCurrentPreSnap();
       return;
     }
 
     const selectedPlayId = requests.selectedPlayId ?? this.options.consumeSelectedPlayId();
-    if (selectedPlayId) {
-      selectPlay(this.gameplayModel, selectedPlayId);
+    if (selectedPlayId && !isPreSnapPlaySelectionLocked(this.preSnapCadence)) {
+      const selected = selectPlay(this.gameplayModel, selectedPlayId);
+      if (selected) {
+        this.cadenceAudioDirector?.reset();
+        this.handlePreSnapCadenceEvents(
+          notifyPreSnapPlaySelected(this.preSnapCadence, this.gameplayModel.selectedPlay.id),
+        );
+        this.lastPreSnapCadenceKey = this.createPreSnapCadenceKey();
+      }
     }
     if (requests.cycleReceiver) {
       cycleSelectedReceiver(this.gameplayModel);
     }
     if (requests.pass) {
+      const snapshotBeforeRelease = snapshotGameplayModel(this.gameplayModel);
+      let released = false;
       if (profiler?.enabled) {
         profiler.measure('passTargetingAndBallSimulation', () => {
-          attemptPass(this.gameplayModel);
+          released = attemptPass(this.gameplayModel);
         });
       } else {
-        attemptPass(this.gameplayModel);
+        released = attemptPass(this.gameplayModel);
+      }
+      if (released) {
+        this.options.onPassReleased?.(this.gameplayModel, snapshotBeforeRelease);
       }
     }
     if (requests.startPlay && (this.options.canStartPlay?.(snapshot) ?? true)) {
-      startPlay(this.gameplayModel);
+      const events = requestPreSnapSnap(this.preSnapCadence);
+      this.handlePreSnapCadenceEvents(events);
+      if (events.snapAccepted) {
+        this.options.skipPresentation();
+      }
     }
+  }
+
+  private updatePreSnapCadenceRuntime(deltaSeconds: number): void {
+    if (this.gameplayModel.playState !== 'preSnap') {
+      clearPreSnapCadence(this.preSnapCadence);
+      this.lastPreSnapCadenceKey = null;
+      return;
+    }
+
+    const readyCompleted = this.cadenceAudioDirector?.consumeCompletion(
+      'ready',
+      this.preSnapCadence.readyAssetId,
+    ) ?? false;
+    const hutCompleted = this.cadenceAudioDirector?.consumeCompletion(
+      'hut',
+      this.preSnapCadence.hutAssetId,
+    ) ?? false;
+    const events = updatePreSnapCadence(this.preSnapCadence, {
+      deltaSeconds,
+      hutAudioCompleted: hutCompleted,
+      readyAudioCompleted: readyCompleted,
+    });
+    this.handlePreSnapCadenceEvents(events);
+    if (events.snapReleased) {
+      const snapshot = snapshotGameplayModel(this.gameplayModel);
+      if (this.options.canStartPlay?.(snapshot) ?? true) {
+        if (startPlay(this.gameplayModel)) {
+          this.options.onPlayStarted?.(this.gameplayModel, snapshot);
+        }
+      }
+    }
+  }
+
+  private handlePreSnapCadenceEvents(events: PreSnapCadenceEvents): void {
+    if (events.readyCueRequested) {
+      this.cadenceAudioDirector?.playCue('ready', events.readyCueRequested);
+    }
+    if (events.hutCueRequested) {
+      this.cadenceAudioDirector?.playCue('hut', events.hutCueRequested);
+    }
+  }
+
+  private syncPreSnapCadenceForCurrentFormation(): void {
+    if (this.gameplayModel.playState !== 'preSnap') {
+      clearPreSnapCadence(this.preSnapCadence);
+      this.lastPreSnapCadenceKey = null;
+      return;
+    }
+
+    const key = this.createPreSnapCadenceKey();
+    if (this.lastPreSnapCadenceKey === key) {
+      return;
+    }
+
+    this.cadenceAudioDirector?.reset();
+    this.handlePreSnapCadenceEvents(
+      resetPreSnapCadenceForFormation(this.preSnapCadence, this.gameplayModel.selectedPlay.id),
+    );
+    this.lastPreSnapCadenceKey = key;
+  }
+
+  private resetCadenceForCurrentPreSnap(): void {
+    this.lastPreSnapCadenceKey = null;
+    this.cadenceAudioDirector?.reset();
+    this.syncPreSnapCadenceForCurrentFormation();
+  }
+
+  private suspendPreSnapCadence(): void {
+    clearPreSnapCadence(this.preSnapCadence);
+    this.lastPreSnapCadenceKey = null;
+    this.cadenceAudioDirector?.reset();
+  }
+
+  private createPreSnapCadenceKey(): string {
+    return [
+      this.gameplayModel.selectedPlay.id,
+      this.gameplayModel.drive.snapLane,
+      this.gameplayModel.currentBallSpot.x.toFixed(3),
+      this.gameplayModel.currentBallSpot.z.toFixed(3),
+    ].join('|');
   }
 
   private createPlayControls(): KeyboardPlayControls {

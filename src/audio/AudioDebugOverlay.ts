@@ -104,7 +104,24 @@ function formatCommentary(snapshot: BroadcastCommentarySnapshot | undefined): st
     `cooldown:${cooldown}`,
     `queue:${queue}`,
     `crowd:${duck}`,
+    `voicePack:${formatVoicePack(snapshot)}`,
   ].join(' ');
+}
+
+function formatVoicePack(snapshot: BroadcastCommentarySnapshot): string {
+  if (!snapshot.voicePack) {
+    return 'legacy';
+  }
+
+  return [
+    `selected:${snapshot.voicePack.selectedPack}`,
+    `reason:${snapshot.voicePack.selectionReason}`,
+    `manifest:${snapshot.voicePack.loadedManifest ?? 'none'}`,
+    `clips:${snapshot.voicePack.loadedClipCount}`,
+    `decoded:${snapshot.voicePack.decodedBytes}/${snapshot.voicePack.cacheLimitBytes}`,
+    `evicted:${snapshot.voicePack.lastEviction ?? 'none'}`,
+    `fallback:${snapshot.voicePack.fallbackSource ?? 'none'}`,
+  ].join(',');
 }
 
 function formatTitleMusic(snapshot: MenuMusicPlaylistSnapshot | undefined): string {

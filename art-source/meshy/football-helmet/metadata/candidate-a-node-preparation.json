@@ -1,0 +1,66 @@
+{
+  "candidatePath": "art-source/meshy/football-helmet/generated/candidate-a.glb",
+  "componentCount": 654,
+  "faceguardComponentCount": 108,
+  "manifest": {
+    "assetId": "football-helmet-kit",
+    "assetVersion": 1,
+    "bounds": {
+      "max": {
+        "x": 0.7943710088729858,
+        "y": 0.9542700052261353,
+        "z": 0.9234319925308228
+      },
+      "min": {
+        "x": -0.797199010848999,
+        "y": -0.9561129808425903,
+        "z": -0.920993983745575
+      },
+      "size": {
+        "x": 1.5915700197219849,
+        "y": 1.9103829860687256,
+        "z": 1.8444259762763977
+      }
+    },
+    "contentHashes": {
+      "combined": "3e21754711102a7345fd0f538ba4dcf10472eaa5248452d435bc641506bd7d46",
+      "faceguard": "edd29c8326bee9e2052ed6383709ba35a49d4048d91ab30885a3496e404f4b7c",
+      "shell": "18c059191a081ed4afb0bee626df41d1caaf09f0a20d2813ae367873c7005ce9"
+    },
+    "faceguardTriangles": 1781,
+    "generationPrompt": "GPT Image 2 four-view modular helmet references submitted to Meshy Multi-Image-to-3D.",
+    "materialNames": [
+      "mat_helmet_shell",
+      "mat_faceguard"
+    ],
+    "meshNames": [
+      "helmet_shell",
+      "faceguard_standard"
+    ],
+    "meshyTaskId": "019eef26-1825-737e-ae7a-240f9001e0f1",
+    "origin": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "orientation": {
+      "forward": "+Z",
+      "up": "+Y"
+    },
+    "preparationTimestamp": "2026-06-22T11:55:26.485Z",
+    "recommendedHeadAnchorOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "recommendedScale": 1,
+    "shellTriangles": 5200,
+    "sourceCandidate": "candidate-a",
+    "totalTriangles": 6981,
+    "vertexCounts": {
+      "faceguard_standard": 1814,
+      "helmet_shell": 3867
+    }
+  },
+  "shellComponentCount": 55
+}

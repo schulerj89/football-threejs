@@ -1,0 +1,301 @@
+{
+  "candidates": [
+    {
+      "animationPaths": [
+        "art-source/meshy/player-base/rigged/candidate-a-animation-1.glb",
+        "art-source/meshy/player-base/rigged/candidate-a-animation-2.fbx",
+        "art-source/meshy/player-base/rigged/candidate-a-animation-3.glb",
+        "art-source/meshy/player-base/rigged/candidate-a-animation-4.glb",
+        "art-source/meshy/player-base/rigged/candidate-a-animation-5.fbx",
+        "art-source/meshy/player-base/rigged/candidate-a-animation-6.glb"
+      ],
+      "assetId": "candidate-a",
+      "consumedCredits": {
+        "generation": 30,
+        "rigging": 5
+      },
+      "contentHashes": {
+        "generatedGlb": "24ad2791334fc8554565db1ab2cbb5a1b1da741c15cd01ca559c6d7689b60667",
+        "riggedFbx": "95dc62bb3004c9952de127aebde8118be4311efecb2d2fc1be4e8b15653b47f3",
+        "riggedGlb": "c3a867e5f8dbaeee50596176de28c54c0f3cbb1070729ef93f10407ff185ad67"
+      },
+      "generated": {
+        "animationClipCount": 0,
+        "animationClipNames": [],
+        "armatureExists": false,
+        "boneCount": 0,
+        "boneNames": [],
+        "boundingBox": {
+          "height": 1.75,
+          "max": [
+            0.49406248331069946,
+            1.75,
+            0.1593036949634552
+          ],
+          "min": [
+            -0.49637386202812195,
+            0,
+            -0.15961691737174988
+          ]
+        },
+        "connectedComponentCount": 295,
+        "forwardAxis": "unknown",
+        "groundOrigin": {
+          "minY": 0,
+          "status": "grounded"
+        },
+        "materialCount": 1,
+        "materialNames": [
+          "Material_0.008"
+        ],
+        "meshCount": 1,
+        "meshNames": [
+          "Mesh_0"
+        ],
+        "nodeNames": [
+          "Mesh_0"
+        ],
+        "path": "art-source/meshy/player-base/generated/candidate-a.glb",
+        "textureDimensions": [
+          {
+            "height": 2048,
+            "imageIndex": 0,
+            "mimeType": "image/png",
+            "name": "normal",
+            "uri": null,
+            "width": 2048
+          },
+          {
+            "height": 2048,
+            "imageIndex": 1,
+            "mimeType": "image/jpeg",
+            "name": "Image_0",
+            "uri": null,
+            "width": 2048
+          }
+        ],
+        "triangleCount": 7006,
+        "vertexCount": 5621
+      },
+      "generatedValidation": {
+        "failures": [
+          "Texture normal is 2048x2048, above 1024x1024.",
+          "Texture Image_0 is 2048x2048, above 1024x1024."
+        ],
+        "passed": false
+      },
+      "rigged": {
+        "animationClipCount": 1,
+        "animationClipNames": [
+          "Armature|clip0|baselayer"
+        ],
+        "armatureExists": true,
+        "boneCount": 24,
+        "boneNames": [
+          "Hips",
+          "LeftUpLeg",
+          "LeftLeg",
+          "LeftFoot",
+          "LeftToeBase",
+          "RightUpLeg",
+          "RightLeg",
+          "RightFoot",
+          "RightToeBase",
+          "Spine02",
+          "Spine01",
+          "Spine",
+          "LeftShoulder",
+          "LeftArm",
+          "LeftForeArm",
+          "LeftHand",
+          "RightShoulder",
+          "RightArm",
+          "RightForeArm",
+          "RightHand",
+          "neck",
+          "Head",
+          "head_end",
+          "headfront"
+        ],
+        "boundingBox": {
+          "height": 1.8499999127959619,
+          "max": [
+            0.5235162973403931,
+            1.8499999046325684,
+            0.1685723066329956
+          ],
+          "min": [
+            -0.5235163569450378,
+            -8.163393516724682e-9,
+            -0.168572336435318
+          ]
+        },
+        "connectedComponentCount": 295,
+        "forwardAxis": "+Z",
+        "groundOrigin": {
+          "minY": -8.163393516724682e-9,
+          "status": "grounded"
+        },
+        "materialCount": 1,
+        "materialNames": [
+          "Material_1"
+        ],
+        "meshCount": 1,
+        "meshNames": [
+          "char1"
+        ],
+        "nodeNames": [
+          "LeftToeBase",
+          "LeftFoot",
+          "LeftLeg",
+          "LeftUpLeg",
+          "RightToeBase",
+          "RightFoot",
+          "RightLeg",
+          "RightUpLeg",
+          "LeftHand",
+          "LeftForeArm",
+          "LeftArm",
+          "LeftShoulder",
+          "RightHand",
+          "RightForeArm",
+          "RightArm",
+          "RightShoulder",
+          "head_end",
+          "headfront",
+          "Head",
+          "neck",
+          "Spine",
+          "Spine01",
+          "Spine02",
+          "Hips",
+          "char1",
+          "Armature"
+        ],
+        "path": "art-source/meshy/player-base/rigged/candidate-a.glb",
+        "textureDimensions": [
+          {
+            "height": 1024,
+            "imageIndex": 0,
+            "mimeType": "image/png",
+            "name": "texture_0",
+            "uri": null,
+            "width": 1024
+          }
+        ],
+        "triangleCount": 7006,
+        "vertexCount": 5635
+      },
+      "riggedFbxExists": true,
+      "riggedValidation": {
+        "failures": [],
+        "passed": true
+      },
+      "taskIds": {
+        "generation": "019ef091-2cbd-7ae2-89c4-e381710c23e6",
+        "rigging": "019ef094-32ac-7bc2-98ea-b3ca1b8b1a98"
+      },
+      "thumbnailPaths": []
+    },
+    {
+      "animationPaths": [],
+      "assetId": "candidate-b",
+      "consumedCredits": {
+        "generation": null,
+        "rigging": null
+      },
+      "contentHashes": {
+        "generatedGlb": null,
+        "riggedFbx": null,
+        "riggedGlb": null
+      },
+      "generated": null,
+      "generatedValidation": null,
+      "rigged": null,
+      "riggedFbxExists": false,
+      "riggedValidation": null,
+      "taskIds": {
+        "generation": null,
+        "rigging": null
+      },
+      "thumbnailPaths": []
+    }
+  ],
+  "generatedAt": "2026-06-22T18:29:34.663Z",
+  "planValidationErrors": [],
+  "referenceImages": [
+    {
+      "assetId": "candidate-a-front",
+      "candidateId": "candidate-a",
+      "contentHash": "3ba8aa044646f45542eec837b41d406fe672623acc9fc2e2976242a3235907f1",
+      "exists": true,
+      "outputPath": "art-source/meshy/player-base/references/candidate-a-front.png",
+      "provenanceExists": true,
+      "view": "front"
+    },
+    {
+      "assetId": "candidate-a-right",
+      "candidateId": "candidate-a",
+      "contentHash": "df163f85ad7b703f0b898d9fc12e635339c3b5e2fa2ac393cd11ee2a959df953",
+      "exists": true,
+      "outputPath": "art-source/meshy/player-base/references/candidate-a-right.png",
+      "provenanceExists": true,
+      "view": "right"
+    },
+    {
+      "assetId": "candidate-a-back",
+      "candidateId": "candidate-a",
+      "contentHash": "3557ba4e428fcf852a9ff61cd1f7ae23c7e87b531f89a86128f03a388fceb6d3",
+      "exists": true,
+      "outputPath": "art-source/meshy/player-base/references/candidate-a-back.png",
+      "provenanceExists": true,
+      "view": "back"
+    },
+    {
+      "assetId": "candidate-a-left",
+      "candidateId": "candidate-a",
+      "contentHash": "8d45dc233a52bcf41b2d5224d0596ab5e266c5d9cd873878a5aa92a371a4374b",
+      "exists": true,
+      "outputPath": "art-source/meshy/player-base/references/candidate-a-left.png",
+      "provenanceExists": true,
+      "view": "left"
+    },
+    {
+      "assetId": "candidate-b-front",
+      "candidateId": "candidate-b",
+      "contentHash": null,
+      "exists": false,
+      "outputPath": "art-source/meshy/player-base/references/candidate-b-front.png",
+      "provenanceExists": false,
+      "view": "front"
+    },
+    {
+      "assetId": "candidate-b-right",
+      "candidateId": "candidate-b",
+      "contentHash": null,
+      "exists": false,
+      "outputPath": "art-source/meshy/player-base/references/candidate-b-right.png",
+      "provenanceExists": false,
+      "view": "right"
+    },
+    {
+      "assetId": "candidate-b-back",
+      "candidateId": "candidate-b",
+      "contentHash": null,
+      "exists": false,
+      "outputPath": "art-source/meshy/player-base/references/candidate-b-back.png",
+      "provenanceExists": false,
+      "view": "back"
+    },
+    {
+      "assetId": "candidate-b-left",
+      "candidateId": "candidate-b",
+      "contentHash": null,
+      "exists": false,
+      "outputPath": "art-source/meshy/player-base/references/candidate-b-left.png",
+      "provenanceExists": false,
+      "view": "left"
+    }
+  ],
+  "viewerPath": "art-source/meshy/player-base/metadata/player-candidate-viewer.html"
+}

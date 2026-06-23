@@ -2,8 +2,8 @@ import type * as THREE from 'three';
 import type { CoinFace } from '../../match/CoinTossModel';
 import type { MatchPossession, MatchSnapshot } from '../../match/MatchTypes';
 import type { GameplaySnapshot } from '../../playState';
-import type { SidelinePlayerPlacement } from '../teams/SidelineTeamTypes';
-import type { OfficialModel } from '../../officials/OfficialTypes';
+import type { PlayerRole, PlayerTeam } from '../../playerModel';
+import type { FootballPosition } from '../../elevenOnElevenFormation';
 
 export type CoinTossPresentationPhase =
   | 'animating'
@@ -13,19 +13,36 @@ export type CoinTossPresentationPhase =
   | 'result';
 
 export interface CoinTossCaptainSubject {
+  appearanceId: string;
   displayName: string;
   footballPosition: string;
   gameplayPlayerId: string | null;
+  jerseyNumber: number | null;
   rosterPlayerId: string;
   team: MatchPossession;
 }
 
+export interface CoinTossCaptainPlacement {
+  appearanceId: string;
+  facingRadians: number;
+  footballPosition: FootballPosition | 'UNKNOWN';
+  gameplayPlayerId: string | null;
+  gameplayTeam: PlayerTeam;
+  id: string;
+  jerseyNumber: number | null;
+  position: { x: number; y: number; z: number };
+  role: PlayerRole;
+  rosterPlayerId: string;
+  scale: number;
+  team: MatchPossession;
+  visualId: string;
+}
+
 export interface CoinTossPresentationLayout {
   captains: readonly CoinTossCaptainSubject[];
-  captainPlacements: readonly SidelinePlayerPlacement[];
+  captainPlacements: readonly CoinTossCaptainPlacement[];
   coinPosition: { x: number; y: number; z: number };
   noGameplayAuthority: true;
-  officials: readonly OfficialModel[];
 }
 
 export interface CoinTossAnimationSnapshot {
@@ -46,16 +63,27 @@ export interface CoinTossDebugSnapshot {
   activeCommentary: string | null;
   animation: CoinTossAnimationSnapshot;
   callLocked: boolean;
+  captainRosterIds: readonly string[];
+  captainVisualCount: number;
   captainsVisible: number;
   completionBlockers: readonly string[];
+  coinVisible: boolean;
+  gameplayPlayersVisible: boolean;
+  bareHeadCount: number;
+  helmetReadyCount: number;
   matchSeed: number | null;
+  nextStage: 'kickoff' | null;
   openingPossession: MatchPossession | null;
   phase: CoinTossPresentationPhase;
   refereeVisible: boolean;
+  officialsVisibleCount: number;
   resolvedFace: CoinFace | null;
   secondHalfPossession: MatchPossession | null;
   selectedCall: CoinFace;
+  stageId: 'coinToss' | 'none';
   userCall: CoinFace | null;
+  visualProfileCount: number;
+  visualProfileId: string;
   winner: MatchPossession | null;
 }
 

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { GameplaySnapshot, PlayState } from '../playState';
 import type { PlayerSnapshot } from '../playerModel';
 import { PLAYER_BODY_ROOT_NAME } from '../playerVisual';
+import { updateRunAnimation } from './RunAnimation';
 
 export type PlayerPoseIntent = 'locomotion' | 'neutral' | 'readyDefense' | 'readyOffense';
 
@@ -211,7 +212,14 @@ export class PlayerPoseController {
       );
 
       if (visual) {
-        applyPoseToPlayerVisual(visual, state.appliedPose);
+        const useStiffRunAnimation =
+          this.enabled && (intent === 'locomotion' || visual.userData.runAnimationInitialized);
+        applyPoseToPlayerVisual(visual, state.appliedPose, {
+          applyLimbPivots: !useStiffRunAnimation,
+        });
+        if (useStiffRunAnimation) {
+          updateRunAnimation(visual, clampedDelta, intent === 'locomotion' ? speed : 0);
+        }
       }
     }
 
@@ -457,13 +465,17 @@ function createReadyPose(
 function applyPoseToPlayerVisual(
   playerVisual: THREE.Object3D,
   pose: PlayerPoseValues,
+  options: { applyLimbPivots?: boolean } = {},
 ): void {
   const parts = getPlayerVisualParts(playerVisual);
+  const applyLimbPivots = options.applyLimbPivots ?? true;
 
-  setRotation(parts.leftArmPivot, pose.leftArmRotationX, 0, pose.leftArmRotationZ);
-  setRotation(parts.rightArmPivot, pose.rightArmRotationX, 0, pose.rightArmRotationZ);
-  setRotation(parts.leftLegPivot, pose.leftLegRotationX, 0, pose.leftLegRotationZ);
-  setRotation(parts.rightLegPivot, pose.rightLegRotationX, 0, pose.rightLegRotationZ);
+  if (applyLimbPivots) {
+    setRotation(parts.leftArmPivot, pose.leftArmRotationX, 0, pose.leftArmRotationZ);
+    setRotation(parts.rightArmPivot, pose.rightArmRotationX, 0, pose.rightArmRotationZ);
+    setRotation(parts.leftLegPivot, pose.leftLegRotationX, 0, pose.leftLegRotationZ);
+    setRotation(parts.rightLegPivot, pose.rightLegRotationX, 0, pose.rightLegRotationZ);
+  }
   setRotation(parts.leftFoot, pose.leftFootRotationX, 0, 0);
   setRotation(parts.rightFoot, pose.rightFootRotationX, 0, 0);
   setFootLift(parts.leftFoot, pose.leftFootLiftY);

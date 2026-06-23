@@ -9,6 +9,7 @@ import {
   selectPlay,
   snapshotGameplayModel,
   startPlay,
+  updateGameplayModel,
 } from '../../src/playState';
 import type { GameplaySnapshot } from '../../src/playState';
 
@@ -94,6 +95,34 @@ describe('gameplay camera focus resolver', () => {
     expect(resetFocus.focusSource).toBe('nextSnapSpot');
     expect(resetFocus.focusPosition.x).toBeCloseTo(resetSnapshot.nextSnapSpot.x);
     expect(resetFocus.focusPosition.z).toBeCloseTo(resetSnapshot.nextSnapSpot.z);
+  });
+
+  it('follows the ball during an active touchdown runout before returning to exact dead-ball focus', () => {
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
+    startPlay(gameplay);
+    gameplay.player.position.z = 49.5;
+    updateGameplayModel(gameplay, 0);
+    updateGameplayModel(gameplay, 1 / 60);
+
+    const runoutSnapshot = snapshotGameplayModel(gameplay);
+    const runoutFocus = resolveGameplayCameraFocus(runoutSnapshot);
+
+    expect(runoutSnapshot.lastPlayResult?.type).toBe('touchdown');
+    expect(runoutSnapshot.touchdownRunout?.completed).toBe(false);
+    expect(runoutFocus.focusSource).toBe('ball');
+    expect(runoutFocus.focusPosition.z).toBeCloseTo(runoutSnapshot.ball.position.z);
+
+    for (let step = 0; step < 70; step += 1) {
+      updateGameplayModel(gameplay, 1 / 60);
+    }
+
+    const completedSnapshot = snapshotGameplayModel(gameplay);
+    const completedFocus = resolveGameplayCameraFocus(completedSnapshot);
+    expect(completedSnapshot.touchdownRunout?.completed).toBe(true);
+    expect(completedFocus.focusSource).toBe('deadBallSpot');
+    expect(completedFocus.focusPosition.z).toBeCloseTo(
+      completedSnapshot.lastPlayResult?.endingBallSpot.z ?? Number.NaN,
+    );
   });
 
   it('falls back deterministically when live possession ball coordinates are missing', () => {

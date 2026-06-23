@@ -1,0 +1,23 @@
+{
+  "attributeOrderLength": 27,
+  "contentHash": "af162910",
+  "decodedEstimateBytes": 98182,
+  "encodedBytes": 63414,
+  "generatorVersion": "football-js-six-team-generator-v1",
+  "gzipBytes": 15038,
+  "issues": [],
+  "oneLeagueRequest": true,
+  "playerCount": 192,
+  "schemaVersion": 1,
+  "seed": "football-js-six-team-league-v1",
+  "targetUncompressedBytes": 307200,
+  "teamCount": 6,
+  "totalRosterPlayersByTeam": {
+    "metro-meteors": 32,
+    "lakefront-lights": 32,
+    "summit-forge": 32,
+    "bay-city-current": 32,
+    "ironwood-owls": 32,
+    "desert-ridge-scorpions": 32
+  }
+}

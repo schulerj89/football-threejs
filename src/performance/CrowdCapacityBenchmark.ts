@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {
   CROWD_COUNT_MAX,
+  CROWD_BENCHMARK_COUNTS,
   clampCrowdCount,
 } from '../crowd/CrowdConfiguration';
 import { CrowdResourceOwner } from '../crowd/CrowdResourceOwner';
@@ -9,6 +10,7 @@ import {
 } from '../crowd/CrowdMetrics';
 import {
   CROWD_DENSITY_PRESETS,
+  resolveCrowdAttendanceProfile,
   type CrowdDensity,
 } from '../presentation/CrowdPresentationController';
 import type { CrowdResources } from '../crowd/CrowdTypes';
@@ -41,7 +43,7 @@ export interface CrowdCapacityCrowdOwner {
 
 type BenchmarkPhase = 'idle' | 'sampling' | 'warmup';
 
-const DEFAULT_CANDIDATE_COUNTS = [0, 500, 1_000, 2_000, 5_000, 10_000] as const;
+const DEFAULT_CANDIDATE_COUNTS = [0, ...CROWD_BENCHMARK_COUNTS] as const;
 const DEFAULT_TRIAL_DURATION_SECONDS = 1.2;
 const DEFAULT_WARMUP_SECONDS = 0.3;
 const DEFAULT_MEMORY_BUDGET_BYTES = 96 * 1024 * 1024;
@@ -79,7 +81,21 @@ export class CrowdCapacityBenchmark {
     this.memoryBudgetBytes = options.memoryBudgetBytes ?? DEFAULT_MEMORY_BUDGET_BYTES;
     this.createCrowdResourceOwner =
       options.createCrowdResourceOwner ??
-      ((count) => new CrowdResourceOwner(count, 'crowd-capacity-benchmark'));
+      ((count) => {
+        const density = resolveCrowdDensityForRecommendedCount(count);
+        const fullness = density === 'high'
+          ? 'full'
+          : density === 'medium'
+            ? 'standard'
+            : 'sparse';
+        const profile = resolveCrowdAttendanceProfile(fullness, density);
+        return new CrowdResourceOwner(count, 'crowd-capacity-benchmark', [], {
+          crowdFullness: profile.crowdFullness,
+          density,
+          nearCount: profile.activeNearSpectators,
+          reactingSpectatorLimit: profile.reactingSpectatorLimit,
+        });
+      });
   }
 
   start(): CrowdCapacityBenchmarkSnapshot {

@@ -13,7 +13,12 @@ import {
   createAnnouncerSpeechPlan,
   validateAnnouncerScriptCatalog,
 } from '../tools/audio/announcerScriptCatalog';
-import { FOOTBALL_AUDIO_PLAN, FOOTBALL_SFX_AUDIO_PLAN, validateFootballAudioPlan } from '../tools/audio/audioPlan';
+import {
+  FOOTBALL_AUDIO_PLAN,
+  FOOTBALL_SFX_AUDIO_PLAN,
+  QUARTERBACK_CADENCE_AUDIO_PLAN,
+  validateFootballAudioPlan,
+} from '../tools/audio/audioPlan';
 import { createFootballAudioReport, writeFootballAudioReportFiles } from '../tools/audio/audioReport';
 import { createAudioVerificationReport, writeAudioVerificationArtifacts } from '../tools/audio/audioVerify';
 import { generateSoundEffects } from '../tools/audio/generateSoundEffects';
@@ -50,11 +55,20 @@ describe('audio production pipeline', () => {
   it('validates the typed football audio generation plan', () => {
     expect(validateFootballAudioPlan()).toEqual([]);
     expect(validateAudioPlan(FOOTBALL_AUDIO_PLAN)).toEqual([]);
-    expect(FOOTBALL_SFX_AUDIO_PLAN).toHaveLength(15);
-    expect(FOOTBALL_AUDIO_PLAN).toHaveLength(42);
+    expect(FOOTBALL_SFX_AUDIO_PLAN).toHaveLength(24);
+    expect(QUARTERBACK_CADENCE_AUDIO_PLAN).toHaveLength(5);
+    expect(FOOTBALL_AUDIO_PLAN).toHaveLength(56);
     expect(FOOTBALL_SFX_AUDIO_PLAN.every((asset) => asset.modelId === 'eleven_text_to_sound_v2')).toBe(true);
     expect(FOOTBALL_AUDIO_PLAN.every((asset) => asset.outputFormat === 'mp3_44100_128')).toBe(true);
     expect(FOOTBALL_AUDIO_PLAN.filter((asset) => asset.category === 'announcer')).toHaveLength(27);
+    expect(
+      QUARTERBACK_CADENCE_AUDIO_PLAN.every(
+        (asset) => asset.category === 'sfx' &&
+          asset.kind === 'speech' &&
+          asset.metadata?.semanticCategory === 'cadence' &&
+          asset.metadata?.voiceCategory === 'quarterbackCadence',
+      ),
+    ).toBe(true);
     expect(FOOTBALL_SFX_AUDIO_PLAN.every((asset) => asset.category !== 'announcer')).toBe(true);
     expect(FOOTBALL_SFX_AUDIO_PLAN.every((asset) => !asset.script)).toBe(true);
     expect(
@@ -229,6 +243,75 @@ describe('audio production pipeline', () => {
       expect(sidecar.compressedBytes).toBeGreaterThan(0);
       expect(existsSync(join(cwd, ANNOUNCER_CAPTION_MANIFEST_PATH))).toBe(true);
       expect(existsSync(join(cwd, ANNOUNCER_AUDITION_PAGE_PATH))).toBe(true);
+    });
+  });
+
+  it('uses a separate fictional quarterback voice for cadence speech', async () => {
+    await withTemporaryCwd(async (cwd) => {
+      process.env.ELEVENLABS_API_KEY = 'test-key';
+      let designCalls = 0;
+      let createVoiceCalls = 0;
+      let speechCalls = 0;
+      const fakeClient = {
+        textToSpeech: {
+          convert: async () => {
+            speechCalls += 1;
+            return createReadableStreamFromText('cadence-audio');
+          },
+        },
+        textToVoice: {
+          create: async () => {
+            createVoiceCalls += 1;
+            return { voiceId: 'qb-cadence-voice-prototype' };
+          },
+          design: async () => {
+            designCalls += 1;
+            return {
+              previews: [1, 2, 3].map((index) => ({
+                audioBase64: Buffer.from(`qb-preview-${index}`).toString('base64'),
+                durationSecs: 0.7,
+                generatedVoiceId: `qb-generated-preview-${index}`,
+                language: 'en',
+                mediaType: 'audio/mpeg',
+              })),
+              text: 'Ready! Hut! Hut!',
+            };
+          },
+        },
+      };
+
+      const summary = await generateSpeech(
+        FOOTBALL_AUDIO_PLAN,
+        {
+          ...DEFAULT_GENERATE_OPTIONS,
+          execute: true,
+          maxFiles: 1,
+          onlyAssetId: 'qb_ready_01',
+        },
+        {
+          clientFactory: async () => fakeClient as never,
+        },
+      );
+
+      expect(summary.generated).toEqual(['qb_ready_01']);
+      expect(designCalls).toBe(1);
+      expect(createVoiceCalls).toBe(1);
+      expect(speechCalls).toBe(1);
+      expect(existsSync(join(cwd, 'public/audio/sfx/qb-cadence-voice-previews/qb_cadence_voice_preview_01.mp3'))).toBe(true);
+      const sidecar = JSON.parse(readFileSync(join(cwd, 'public/audio/sfx/qb_ready_01.mp3.json'), 'utf8')) as {
+        category: string;
+        metadata: { voiceCategory: string };
+        script: string;
+        voiceId: string;
+      };
+      expect(sidecar).toMatchObject({
+        category: 'sfx',
+        metadata: {
+          voiceCategory: 'quarterbackCadence',
+        },
+        script: 'Ready!',
+        voiceId: 'qb-cadence-voice-prototype',
+      });
     });
   });
 

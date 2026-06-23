@@ -22,6 +22,13 @@ export function getKickerRatings(player: RosterPlayer | null): KickerRatings {
     return { ...GENERIC_KICKER_RATINGS };
   }
 
+  if (player.ratings.KAC !== undefined && player.ratings.KPW !== undefined) {
+    return {
+      kickAccuracy: player.ratings.KAC,
+      kickPower: player.ratings.KPW,
+    };
+  }
+
   return {
     ...(player.kickerRatings ?? KICKER_RATINGS[player.id] ?? GENERIC_KICKER_RATINGS),
   };

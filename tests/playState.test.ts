@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { BALL_CARRY_ATTACHMENT, PASSING_CONFIG, updateCarriedBallPosition } from '../src/ballModel';
+import {
+  BALL_CARRY_ATTACHMENT,
+  PASSING_CONFIG,
+  giveBallToPlayer,
+  updateCarriedBallPosition,
+} from '../src/ballModel';
 import { SNAP_LANE_X } from '../src/ballSpotting';
 import {
   DEFENDER_COLLISION_RADII,
@@ -8,7 +13,12 @@ import {
   updateDefenderPursuit,
 } from '../src/defenderModel';
 import { resetDriveModel } from '../src/driveModel';
-import { INITIAL_BALL_SPOT, LINE_OF_SCRIMMAGE_Z, PLAYABLE_FIELD_BOUNDS } from '../src/field';
+import {
+  INITIAL_BALL_SPOT,
+  LINE_OF_SCRIMMAGE_Z,
+  PLAYABLE_FIELD_BOUNDS,
+  PLAYER_MOVEMENT_BOUNDS,
+} from '../src/field';
 import { calculateYardsGained } from '../src/fieldScale';
 import { FORMATION_MEASUREMENTS } from '../src/formationLayout';
 import { FORWARD_PASS_CONFIG } from '../src/passRules';
@@ -19,6 +29,7 @@ import {
   attemptPass,
   createGameplayModel,
   cycleSelectedReceiver,
+  hasBallBrokenGoalPlane,
   hasCrossedOpposingGoalLine,
   hasCrossedSideline,
   markPlayDead,
@@ -605,7 +616,7 @@ describe('play state transitions', () => {
     expect(gameplay.playState).toBe('live');
 
     gameplay.player.position.z =
-      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+      GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z + 0.01;
     updateGameplayModel(gameplay, 0);
 
     expect(gameplay.playState).toBe('dead');
@@ -649,7 +660,7 @@ describe('play state transitions', () => {
     startPlay(gameplay);
     updateGameplayModel(gameplay, 121);
     gameplay.player.position.z =
-      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+      GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z + 0.01;
     updateGameplayModel(gameplay, 0);
     updateGameplayModel(gameplay, GAMEPLAY_CONFIG.touchdownResetDelaySeconds);
 
@@ -1452,7 +1463,7 @@ describe('play state transitions', () => {
     receiver.position.z = gameplay.ball.position.z;
     updateGameplayModel(gameplay, 0);
 
-    receiver.position.z = GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+    receiver.position.z = GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z + 0.01;
     updateGameplayModel(gameplay, 0);
 
     expect(gameplay.playState).toBe('dead');
@@ -1465,7 +1476,7 @@ describe('play state transitions', () => {
 
     selectPlay(gameplay, 'quick-pass');
     startPlay(gameplay);
-    gameplay.player.position.z = GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+    gameplay.player.position.z = GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z + 0.01;
 
     updateGameplayModel(gameplay, 0);
 
@@ -1551,13 +1562,19 @@ describe('play state transitions', () => {
     expect(gameplay.ball.position.z).toBeCloseTo(-10 - BALL_CARRY_ATTACHMENT.x);
   });
 
-  it('scores when the possessed player crosses the opposing goal line during live play', () => {
+  it('scores when the carried football breaks the opposing goal-line plane', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
     startPlay(gameplay);
     gameplay.player.position.z =
-      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+      GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z + 0.01;
+    updateCarriedBallPosition(gameplay.ball, gameplay.player);
 
-    expect(hasCrossedOpposingGoalLine(gameplay.player)).toBe(true);
+    expect(hasCrossedOpposingGoalLine(gameplay.player)).toBe(false);
+    expect(hasBallBrokenGoalPlane(
+      gameplay.ball.position,
+      1,
+      GAMEPLAY_CONFIG.opposingGoalLineZ,
+    )).toBe(true);
     updateGameplayModel(gameplay, 0);
 
     expect(gameplay.playState).toBe('dead');
@@ -1589,9 +1606,15 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
     startPlay(gameplay);
     gameplay.player.position.z =
-      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth - 0.01;
+      GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z - 0.01;
+    updateCarriedBallPosition(gameplay.ball, gameplay.player);
 
     expect(hasCrossedOpposingGoalLine(gameplay.player)).toBe(false);
+    expect(hasBallBrokenGoalPlane(
+      gameplay.ball.position,
+      1,
+      GAMEPLAY_CONFIG.opposingGoalLineZ,
+    )).toBe(false);
     updateGameplayModel(gameplay, 0);
 
     expect(gameplay.playState).toBe('live');
@@ -1603,13 +1626,103 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
     startPlay(gameplay);
     gameplay.player.position.z =
-      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+      GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z + 0.01;
 
     updateGameplayModel(gameplay, 0);
     updateGameplayModel(gameplay, 0.1);
     updateGameplayModel(gameplay, 0.1);
 
     expect(gameplay.playState).toBe('dead');
+    expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
+  });
+
+  it('continues the scorer visually into the end zone without changing official touchdown yardage', () => {
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
+    startPlay(gameplay);
+    gameplay.player.position.z =
+      GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z + 0.01;
+
+    updateGameplayModel(gameplay, 0);
+
+    const result = gameplay.lastPlayResult;
+    expect(result).toMatchObject({
+      endingBallSpot: { z: GAMEPLAY_CONFIG.opposingGoalLineZ },
+      type: 'touchdown',
+    });
+    const officialYards = result?.yardsGained;
+
+    for (let step = 0; step < 60; step += 1) {
+      updateGameplayModel(gameplay, GAMEPLAY_CONFIG.touchdownRunoutDurationSeconds / 60);
+    }
+
+    expect(gameplay.player.position.z).toBeGreaterThanOrEqual(
+      GAMEPLAY_CONFIG.opposingGoalLineZ + 5,
+    );
+    expect(gameplay.player.position.z + gameplay.player.collisionRadius).toBeLessThanOrEqual(
+      PLAYER_MOVEMENT_BOUNDS.maxZ,
+    );
+    expect(gameplay.lastPlayResult?.endingBallSpot.z).toBe(GAMEPLAY_CONFIG.opposingGoalLineZ);
+    expect(gameplay.lastPlayResult?.yardsGained).toBe(officialYards);
+    expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
+    expect(gameplay.touchdownRunout).toMatchObject({ completed: true });
+  });
+
+  it('scores a receiver already possessing the ball inside the end zone', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+    selectPlay(gameplay, 'spread-quick-11');
+    startPlay(gameplay);
+    const receiver = gameplay.players.find((player) => player.id === 'offense-wr-left');
+    expect(receiver).toBeDefined();
+    gameplay.player.currentState = 'idle';
+    gameplay.player = receiver!;
+    gameplay.player.currentState = 'userControlled';
+    gameplay.player.position.z = GAMEPLAY_CONFIG.opposingGoalLineZ + 2;
+    giveBallToPlayer(gameplay.ball, gameplay.player, 'caught');
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.lastPlayResult).toMatchObject({
+      endingBallSpot: { z: GAMEPLAY_CONFIG.opposingGoalLineZ },
+      type: 'touchdown',
+    });
+    expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
+  });
+
+  it('does not let an out-of-bounds ball outside the pylon become a touchdown', () => {
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
+    startPlay(gameplay);
+    gameplay.player.position.x = PLAYABLE_FIELD_BOUNDS.maxX + gameplay.player.collisionRadius + 0.1;
+    gameplay.player.position.z =
+      GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z + 0.25;
+    updateCarriedBallPosition(gameplay.ball, gameplay.player);
+
+    expect(hasBallBrokenGoalPlane(
+      gameplay.ball.position,
+      1,
+      GAMEPLAY_CONFIG.opposingGoalLineZ,
+    )).toBe(false);
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.lastPlayResult).toMatchObject({
+      type: 'outOfBounds',
+    });
+    expect(gameplay.score).toBe(0);
+  });
+
+  it('does not allow a tackle to replace an already broken touchdown plane', () => {
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
+    const defender = getPrimaryDefender(gameplay.players);
+    startPlay(gameplay);
+    gameplay.player.position.z =
+      GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z + 0.01;
+    defender.position.x = gameplay.player.position.x;
+    defender.position.z = gameplay.player.position.z;
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.lastPlayResult).toMatchObject({
+      type: 'touchdown',
+    });
     expect(gameplay.score).toBe(GAMEPLAY_CONFIG.touchdownPoints);
   });
 
@@ -1818,7 +1931,7 @@ describe('play state transitions', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
     startPlay(gameplay);
     gameplay.player.position.z =
-      GAMEPLAY_CONFIG.opposingGoalLineZ - PLAYER_MOVEMENT_CONFIG.halfDepth;
+      GAMEPLAY_CONFIG.opposingGoalLineZ - BALL_CARRY_ATTACHMENT.z + 0.01;
 
     updateGameplayModel(gameplay, 0);
     updateGameplayModel(gameplay, GAMEPLAY_CONFIG.touchdownResetDelaySeconds);

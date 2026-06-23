@@ -4,13 +4,16 @@ import {
   ARCADE_HASH_SPACING_MULTIPLIER,
   FIELD_BOUNDS,
   FIELD_DIMENSIONS,
+  FIELD_OF_PLAY_BOUNDS,
   FIELD_MARKING_DIMENSIONS,
   FIELD_MARKING_WIDTHS,
+  FULL_FIELD_BOUNDS,
   HASH_DISTANCE_FROM_SIDELINE_YARDS,
   PROFESSIONAL_HASH_X,
   INITIAL_BALL_SPOT,
   NEAR_GOAL_LINE_Z,
   PLAYABLE_FIELD_BOUNDS,
+  PLAYER_MOVEMENT_BOUNDS,
   createFieldLayout,
   isBoundsContained,
 } from '../src/fieldSpec';
@@ -69,8 +72,11 @@ describe('field specification', () => {
   it('defines the football field dimensions from the authoritative spec', () => {
     expect(FIELD_DIMENSIONS.fieldLength).toBe(120);
     expect(FIELD_BOUNDS.maxZ - FIELD_BOUNDS.minZ).toBe(120);
+    expect(FULL_FIELD_BOUNDS.maxZ - FULL_FIELD_BOUNDS.minZ).toBe(120);
     expect(FAR_GOAL_LINE_Z - NEAR_GOAL_LINE_Z).toBe(100);
+    expect(FIELD_OF_PLAY_BOUNDS.maxZ - FIELD_OF_PLAY_BOUNDS.minZ).toBe(100);
     expect(PLAYABLE_FIELD_BOUNDS.maxZ - PLAYABLE_FIELD_BOUNDS.minZ).toBe(100);
+    expect(PLAYER_MOVEMENT_BOUNDS.maxZ - PLAYER_MOVEMENT_BOUNDS.minZ).toBe(120);
     expect(NEAR_GOAL_LINE_Z - FIELD_BOUNDS.minZ).toBe(10);
     expect(FIELD_BOUNDS.maxZ - FAR_GOAL_LINE_Z).toBe(10);
     expect(FIELD_DIMENSIONS.fieldWidth).toBe(160 / 3);

@@ -55,7 +55,10 @@ export class QBShowcaseCard {
     const quarterback = options.warmupSnapshot.quarterback;
     if (
       options.pregameSnapshot.phase !== 'running' ||
-      options.pregameSnapshot.currentShot !== 'quarterbackSpotlight'
+      (
+        options.pregameSnapshot.currentShot !== 'quarterbackSpotlight' &&
+        options.pregameSnapshot.currentShot !== 'quarterbackFrontSpotlight'
+      )
     ) {
       this.hide('inactiveShot');
       return;

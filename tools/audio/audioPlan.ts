@@ -9,8 +9,13 @@ import {
   createAnnouncerSpeechPlan,
 } from './announcerScriptCatalog';
 import { readConfiguredAnnouncerVoiceId } from './announcerVoice';
+import {
+  QUARTERBACK_CADENCE_VOICE_ID_PLACEHOLDER,
+  readConfiguredQuarterbackCadenceVoiceId,
+} from './quarterbackCadenceVoice';
 
 const SOUND_EFFECT_MODEL = 'eleven_text_to_sound_v2';
+const CADENCE_TTS_MODEL = 'eleven_v3';
 const WEB_OUTPUT_FORMAT = 'mp3_44100_128';
 const PROMPT_INTEGRITY =
   'No speech, no intelligible chants, no announcer, no music, no copyrighted recording, no real stadium imitation.';
@@ -275,11 +280,127 @@ export const FOOTBALL_SFX_AUDIO_PLAN: readonly AudioAssetPlan[] = [
     maxBytes: 60_000,
     notes: 'Football snap and equipment movement one-shot.',
   },
+  createSpecialTeamsSfx(
+    'coin_toss_spin_01',
+    [
+      'Clean isolated metallic ceremonial coin flipping rapidly through the air.',
+      'Fast rotating metal flutter and bright rim shimmer, approximately 1.2 to 1.8 seconds.',
+      'No speech, no crowd, no music, no room tone.',
+    ].join(' '),
+    1.5,
+    65_000,
+    'coin',
+    'Coin toss airborne spin one-shot.',
+  ),
+  createSpecialTeamsSfx(
+    'coin_toss_land_01',
+    [
+      'Heavy commemorative coin lands on a firm presentation surface and settles.',
+      'Brief metallic contact, small bounce, short final wobble, approximately 0.7 to 1.2 seconds.',
+      'No speech, no crowd, no music.',
+    ].join(' '),
+    1,
+    58_000,
+    'coin',
+    'Coin toss landing and settle one-shot.',
+  ),
+  createSpecialTeamsSfx(
+    'place_kick_snap_01',
+    [
+      "Short clean long snap into a holder's hands.",
+      'Football leather, gloves, pads, and quick turf movement, isolated from crowd ambience.',
+      'No speech, no whistle, no music.',
+    ].join(' '),
+    0.9,
+    60_000,
+    'placeKick',
+    'Place-kick long-snap one-shot.',
+  ),
+  createSpecialTeamsSfx(
+    'place_kick_set_01',
+    [
+      'Subtle close sound of a football being placed and steadied against turf by a holder.',
+      'Small glove movement, leather contact, slight equipment rustle, isolated.',
+      'No speech, no crowd, no whistle.',
+    ].join(' '),
+    0.8,
+    55_000,
+    'placeKick',
+    'Holder set one-shot for future place kicks.',
+  ),
+  createSpecialTeamsSfx(
+    'place_kick_contact_01',
+    [
+      'Strong but realistic football place-kick contact.',
+      'Cleat striking leather with a sharp compressed thump and quick air movement.',
+      'No crowd baked into the file, no music, no announcer.',
+    ].join(' '),
+    0.9,
+    65_000,
+    'placeKick',
+    'Place-kick contact one-shot.',
+  ),
+  createSpecialTeamsSfx(
+    'kick_upright_hit_01',
+    [
+      'Football striking a metal goalpost upright with brief metallic resonance.',
+      'Short impact, metal ring, natural quick decay, isolated from crowd.',
+      'No speech, no music.',
+    ].join(' '),
+    1.1,
+    70_000,
+    'placeKick',
+    'Goalpost upright hit one-shot.',
+  ),
+  createSpecialTeamsSfx(
+    'kickoff_runup_01',
+    [
+      'Short cleated kickoff run-up on synthetic turf.',
+      'A few quick approach steps with pad movement, isolated close perspective.',
+      'No speech, no crowd, no music.',
+    ].join(' '),
+    1.1,
+    62_000,
+    'kickoff',
+    'Kickoff approach one-shot.',
+  ),
+  createSpecialTeamsSfx(
+    'kickoff_contact_01',
+    [
+      'Powerful isolated kickoff contact: cleat striking football with strong leather pop and air movement.',
+      'No crowd ambience, no announcer, no music.',
+    ].join(' '),
+    0.9,
+    65_000,
+    'kickoff',
+    'Kickoff contact one-shot.',
+  ),
+  createSpecialTeamsSfx(
+    'kickoff_catch_01',
+    [
+      'Football caught against gloves and shoulder pads after a kickoff.',
+      'Leather slap, chest-pad cushion, jersey rustle, clean isolated sound.',
+      'No speech, no crowd, no whistle.',
+    ].join(' '),
+    0.8,
+    60_000,
+    'kickoff',
+    'Kickoff catch one-shot.',
+  ),
+] as const;
+
+export const QUARTERBACK_CADENCE_AUDIO_PLAN: readonly AudioAssetPlan[] = [
+  createQuarterbackCadence('qb_ready_01', 'Ready!', 0.55, 'firm'),
+  createQuarterbackCadence('qb_ready_02', 'Ready!', 0.6, 'sharper'),
+  createQuarterbackCadence('qb_hut_01', 'Hut!', 0.45, 'firm'),
+  createQuarterbackCadence('qb_hut_02', 'Hut!', 0.45, 'urgent'),
+  createQuarterbackCadence('qb_hut_03', 'Hut!', 0.48, 'lower'),
 ] as const;
 
 export const FOOTBALL_AUDIO_PLAN: readonly AudioAssetPlan[] = [
   ...FOOTBALL_SFX_AUDIO_PLAN,
   ...createAnnouncerSpeechPlan(readConfiguredAnnouncerVoiceId() ?? ANNOUNCER_VOICE_ID_PLACEHOLDER),
+  ...QUARTERBACK_CADENCE_AUDIO_PLAN,
 ] as const;
 
 export function getFootballAudioPlan(): readonly AudioAssetPlan[] {
@@ -298,4 +419,70 @@ export function validateFootballAudioPlan(): string[] {
 if (isDirectCli(import.meta.url)) {
   assertValidAudioPlan(FOOTBALL_AUDIO_PLAN);
   console.log(JSON.stringify(createAudioPlanReport(FOOTBALL_AUDIO_PLAN), null, 2));
+}
+
+function createSpecialTeamsSfx(
+  assetId: string,
+  prompt: string,
+  requestedDurationSeconds: number,
+  maxBytes: number,
+  semanticCategory: 'coin' | 'kickoff' | 'placeKick',
+  notes: string,
+): AudioAssetPlan {
+  return {
+    assetId,
+    category: 'sfx',
+    kind: 'oneShot',
+    prompt,
+    modelId: SOUND_EFFECT_MODEL,
+    requestedDurationSeconds,
+    loop: false,
+    outputFormat: WEB_OUTPUT_FORMAT,
+    outputPath: `public/audio/sfx/${assetId}.mp3`,
+    generationStatus: 'planned',
+    runtimeLoadingStrategy: 'buffer',
+    maxBytes,
+    metadata: {
+      semanticCategory,
+    },
+    notes,
+  };
+}
+
+function createQuarterbackCadence(
+  assetId: string,
+  script: string,
+  requestedDurationSeconds: number,
+  delivery: string,
+): AudioAssetPlan {
+  return {
+    assetId,
+    caption: script,
+    category: 'sfx',
+    eventCategory: 'cadence',
+    kind: 'speech',
+    script,
+    scriptId: assetId,
+    modelId: CADENCE_TTS_MODEL,
+    voiceId: readConfiguredQuarterbackCadenceVoiceId() ?? QUARTERBACK_CADENCE_VOICE_ID_PLACEHOLDER,
+    voiceSettings: {
+      similarityBoost: 0.7,
+      stability: 0.5,
+      style: 0.15,
+      useSpeakerBoost: true,
+    },
+    requestedDurationSeconds,
+    loop: false,
+    outputFormat: WEB_OUTPUT_FORMAT,
+    outputPath: `public/audio/sfx/${assetId}.mp3`,
+    generationStatus: 'planned',
+    runtimeLoadingStrategy: 'buffer',
+    maxBytes: 45_000,
+    metadata: {
+      semanticCategory: 'cadence',
+      voiceCategory: 'quarterbackCadence',
+      delivery,
+    },
+    notes: 'Short fictional quarterback cadence voice, separate from the broadcast announcer identity.',
+  };
 }

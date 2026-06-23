@@ -1,0 +1,17 @@
+{
+  "assetId": "kickoff_catch_01",
+  "category": "sfx",
+  "compressedBytes": 13836,
+  "contentHash": "3adb23a3721d4f52133af11b189dd2023d7c7a47cc20ff3cc08caae39fdfc664",
+  "durationSeconds": 0.8,
+  "generatedAt": "2026-06-22T14:13:47.379Z",
+  "kind": "oneShot",
+  "metadata": {
+    "semanticCategory": "kickoff"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Football caught against gloves and shoulder pads after a kickoff. Leather slap, chest-pad cushion, jersey rustle, clean isolated sound. No speech, no crowd, no whistle.",
+  "requestedDurationSeconds": 0.8,
+  "runtimeLoadingStrategy": "buffer"
+}

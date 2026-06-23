@@ -172,6 +172,7 @@ function createCommentaryStub() {
       },
       queue: [],
       remainingCooldowns: [],
+      voicePack: null,
     } satisfies BroadcastCommentarySnapshot)),
     processEvents: vi.fn(),
     setPageActive: vi.fn(),

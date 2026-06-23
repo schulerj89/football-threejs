@@ -21,6 +21,7 @@ export interface CrowdPreviewBenchmarkReport {
 
 export interface CrowdPreviewSnapshot {
   actualSpectatorCount: number;
+  activeNearSpectators: number;
   averageFrameTimeMs: number;
   benchmark: {
     active: boolean;
@@ -35,6 +36,7 @@ export interface CrowdPreviewSnapshot {
   estimatedInstanceBufferBytes: number;
   estimatedStaticBufferBytes: number;
   farMosaicSeatCount: number;
+  farSeatOccupancy: number;
   farInstanceCount: number;
   frameCount: number;
   gameplayPlayerCount: number;
@@ -43,10 +45,12 @@ export interface CrowdPreviewSnapshot {
   minimumObservedFps: number;
   nearInstanceCount: number;
   perInstanceStorage: CrowdPerInstanceStorageSnapshot;
+  reactingSpectatorLimit: number;
   requestedSpectatorCount: number;
   rendererMemory: CrowdRendererMemorySnapshot;
   rendererRender: CrowdRendererRenderSnapshot;
   textureCount: number;
+  visualAttendance: number;
 }
 
 export interface CrowdPreviewPlacement {
@@ -92,17 +96,21 @@ export interface CrowdRendererRenderSnapshot {
 
 export interface CrowdResourceSnapshotBase {
   actualSpectatorCount: number;
+  activeNearSpectators: number;
   crowdDrawCalls: number;
   crowdFullness: CrowdFullness;
   crowdTriangles: number;
   estimatedInstanceBufferBytes: number;
   estimatedStaticBufferBytes: number;
   farMosaicSeatCount: number;
+  farSeatOccupancy: number;
   farInstanceCount: number;
   geometryCount: number;
   materialCount: number;
   nearInstanceCount: number;
+  reactingSpectatorLimit: number;
   textureCount: number;
+  visualAttendance: number;
 }
 
 export interface CrowdResources {
@@ -119,10 +127,19 @@ export interface CrowdResources {
   snapshotBase: CrowdResourceSnapshotBase;
 }
 
-export type CrowdFullness = 'full' | 'sparse' | 'standard';
+export type CrowdFullness = 'adaptive' | 'full' | 'sparse' | 'standard';
 
-export interface CrowdFullnessProfile {
+export interface CrowdAttendanceProfile {
+  activeNearSpectators: number;
   crowdFullness: CrowdFullness;
+  farSeatOccupancy: number;
+  nearSpectatorCount: number;
+  reactingSpectatorLimit: number;
+  visualAttendance: number;
+  visualSeatCount: number;
+}
+
+export interface CrowdFullnessProfile extends CrowdAttendanceProfile {
   nearSpectatorCount: number;
   visualSeatCount: number;
 }

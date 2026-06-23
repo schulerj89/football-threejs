@@ -15,7 +15,7 @@ describe('stadium seat layout', () => {
     const keys = new Set(layout.seats.map((seat) =>
       `${seat.sectionId}:${seat.tier}:${seat.row}:${seat.seatIndex}`));
 
-    expect(layout.seats.length).toBeGreaterThan(10_000);
+    expect(layout.seats.length).toBeGreaterThan(25_000);
     expect(keys.size).toBe(layout.seats.length);
     expect(layout.seats.every((seat) => Number.isFinite(seat.facingRadians))).toBe(true);
   });
@@ -50,7 +50,7 @@ describe('stadium seat layout', () => {
     const crowdSeats = createCrowdSeatTransforms(50_000);
 
     expect(crowdSeats.length).toBeLessThanOrEqual(availableSeats.length);
-    expect(crowdSeats.length).toBe(10_000);
+    expect(crowdSeats.length).toBe(25_000);
   });
 
   it('derives crowd transforms from real seat transforms', () => {

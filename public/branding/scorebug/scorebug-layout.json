@@ -1,0 +1,106 @@
+{
+  "imageHeight": 512,
+  "imageWidth": 1536,
+  "notes": "Normalized safe zones for HTML-rendered scorebug content. The generated shell must not contain labels.",
+  "safeZones": [
+    {
+      "id": "userLogo",
+      "normalized": {
+        "height": 0.3,
+        "width": 0.075,
+        "x": 0.035,
+        "y": 0.18
+      }
+    },
+    {
+      "id": "userAbbreviation",
+      "normalized": {
+        "height": 0.22,
+        "width": 0.11,
+        "x": 0.12,
+        "y": 0.23
+      }
+    },
+    {
+      "id": "userScore",
+      "normalized": {
+        "height": 0.35,
+        "width": 0.1,
+        "x": 0.24,
+        "y": 0.17
+      }
+    },
+    {
+      "id": "opponentScore",
+      "normalized": {
+        "height": 0.35,
+        "width": 0.1,
+        "x": 0.6,
+        "y": 0.17
+      }
+    },
+    {
+      "id": "opponentLogo",
+      "normalized": {
+        "height": 0.3,
+        "width": 0.075,
+        "x": 0.7,
+        "y": 0.18
+      }
+    },
+    {
+      "id": "opponentAbbreviation",
+      "normalized": {
+        "height": 0.22,
+        "width": 0.12,
+        "x": 0.785,
+        "y": 0.23
+      }
+    },
+    {
+      "id": "quarter",
+      "normalized": {
+        "height": 0.18,
+        "width": 0.06,
+        "x": 0.435,
+        "y": 0.18
+      }
+    },
+    {
+      "id": "gameClock",
+      "normalized": {
+        "height": 0.18,
+        "width": 0.08,
+        "x": 0.505,
+        "y": 0.18
+      }
+    },
+    {
+      "id": "possession",
+      "normalized": {
+        "height": 0.18,
+        "width": 0.08,
+        "x": 0.045,
+        "y": 0.67
+      }
+    },
+    {
+      "id": "downDistance",
+      "normalized": {
+        "height": 0.2,
+        "width": 0.2,
+        "x": 0.15,
+        "y": 0.65
+      }
+    },
+    {
+      "id": "ballLocation",
+      "normalized": {
+        "height": 0.2,
+        "width": 0.18,
+        "x": 0.37,
+        "y": 0.65
+      }
+    }
+  ]
+}

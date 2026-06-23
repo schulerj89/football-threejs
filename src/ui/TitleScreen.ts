@@ -4,11 +4,12 @@ export interface TitleLoadingState {
   helmet: string;
   audio: string;
   crowd: string;
+  league?: string;
+  leagueLoadingVisible?: boolean;
   developmentDetails?: readonly string[];
 }
 
 export interface TitleScreenOptions {
-  setupElement: HTMLElement;
   onFirstGesture?: () => void;
   onStart: () => void;
 }
@@ -17,9 +18,6 @@ export class TitleScreen {
   readonly root = document.createElement('div');
 
   private readonly startButton = document.createElement('button');
-  private readonly settingsButton = document.createElement('button');
-  private readonly settingsCloseButton = document.createElement('button');
-  private readonly settingsOverlay = document.createElement('div');
   private readonly loadingLine = document.createElement('p');
   private readonly developmentDetails = document.createElement('p');
   private firstGestureHandled = false;
@@ -72,14 +70,7 @@ export class TitleScreen {
       options.onStart();
     });
 
-    this.settingsButton.className = 'title-primary-button';
-    this.settingsButton.type = 'button';
-    this.settingsButton.textContent = 'Settings';
-    this.settingsButton.addEventListener('click', () => {
-      this.handleFirstGesture(options.onFirstGesture);
-      this.openSettings();
-    });
-    actions.append(this.startButton, this.settingsButton);
+    actions.append(this.startButton);
 
     const footer = document.createElement('footer');
     footer.className = 'title-footer';
@@ -90,40 +81,15 @@ export class TitleScreen {
     footer.append(hint, this.loadingLine, this.developmentDetails);
 
     content.append(emblem, title, actions, footer);
-    this.settingsOverlay.className = 'title-settings-overlay';
-    this.settingsOverlay.hidden = true;
-    this.settingsOverlay.setAttribute('role', 'dialog');
-    this.settingsOverlay.setAttribute('aria-modal', 'true');
-    this.settingsOverlay.setAttribute('aria-label', 'Settings');
-    const settingsCard = document.createElement('div');
-    settingsCard.className = 'title-settings-card';
-    const settingsHeader = document.createElement('header');
-    const settingsTitle = document.createElement('h2');
-    settingsTitle.textContent = 'Settings';
-    this.settingsCloseButton.className = 'title-settings-close-button';
-    this.settingsCloseButton.type = 'button';
-    this.settingsCloseButton.textContent = 'Done';
-    this.settingsCloseButton.addEventListener('click', () => this.closeSettings());
-    settingsHeader.append(settingsTitle, this.settingsCloseButton);
-    settingsCard.append(settingsHeader, options.setupElement);
-    this.settingsOverlay.append(settingsCard);
-
-    this.root.append(art, overlay, content, this.settingsOverlay);
+    this.root.append(art, overlay, content);
     this.root.addEventListener('pointerdown', () => this.handleFirstGesture(options.onFirstGesture), {
       capture: true,
     });
     this.root.addEventListener('keydown', (event) => {
       this.handleFirstGesture(options.onFirstGesture);
 
-      if (event.key === 'Escape' && this.isSettingsOpen()) {
-        this.closeSettings();
-        event.preventDefault();
-        return;
-      }
-
       if (
         event.key === 'Enter' &&
-        !this.isSettingsOpen() &&
         event.target === this.root
       ) {
         this.startButton.click();
@@ -138,7 +104,6 @@ export class TitleScreen {
     this.visible = visible;
     this.root.hidden = !visible;
     if (visible) {
-      this.closeSettings(false);
       this.startButton.focus({ preventScroll: true });
     }
   }
@@ -147,31 +112,19 @@ export class TitleScreen {
     return this.visible && !this.root.hidden;
   }
 
-  isSettingsOpen(): boolean {
-    return !this.settingsOverlay.hidden;
-  }
-
-  closeSettings(restoreFocus = true): void {
-    this.settingsOverlay.hidden = true;
-    if (restoreFocus && this.isVisible()) {
-      this.settingsButton.focus({ preventScroll: true });
-    }
-  }
-
   syncLoadingState(state: TitleLoadingState): void {
-    this.loadingLine.textContent = [
+    const parts = [
       `Helmet ${state.helmet}`,
       `Audio ${state.audio}`,
       `Crowd ${state.crowd}`,
-    ].join(' | ');
+    ];
+    if (state.leagueLoadingVisible || state.league) {
+      parts.push(state.leagueLoadingVisible ? `Preparing League... ${state.league ?? ''}` : `League ${state.league}`);
+    }
+    this.loadingLine.textContent = parts.join(' | ');
     const details = state.developmentDetails?.filter(Boolean) ?? [];
     this.developmentDetails.textContent = details.join(' | ');
     this.developmentDetails.hidden = details.length === 0;
-  }
-
-  private openSettings(): void {
-    this.settingsOverlay.hidden = false;
-    this.settingsCloseButton.focus({ preventScroll: true });
   }
 
   private handleFirstGesture(callback?: () => void): void {

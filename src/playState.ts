@@ -1,4 +1,5 @@
 import {
+  BALL_CARRY_ATTACHMENT,
   PASSING_CONFIG,
   createBallModel,
   giveBallToPlayer,
@@ -24,7 +25,14 @@ import {
   type DriveModel,
   type DriveSnapshot,
 } from './driveModel';
-import { INITIAL_BALL_SPOT, OPPOSING_GOAL_LINE_Z, PLAYABLE_FIELD_BOUNDS } from './field';
+import {
+  FIELD_DIRECTION,
+  FIELD_OF_PLAY_BOUNDS,
+  INITIAL_BALL_SPOT,
+  OPPOSING_GOAL_LINE_Z,
+  PLAYABLE_FIELD_BOUNDS,
+  PLAYER_MOVEMENT_BOUNDS,
+} from './field';
 import {
   calculateYardsGained,
   cloneFootballSpot,
@@ -109,6 +117,14 @@ export interface PlayResult {
   yardsGained: number;
 }
 
+export interface TouchdownRunoutState {
+  completed: boolean;
+  elapsedSeconds: number;
+  scorerId: string;
+  startPosition: FootballSpot;
+  visualPosition: FootballSpot;
+}
+
 export interface PassAuditSnapshot {
   actualClosestApproach: {
     ball: Vector3;
@@ -134,6 +150,9 @@ export const GAMEPLAY_CONFIG = {
   sackResetDelaySeconds: 1.25,
   tackleResetDelaySeconds: 1.25,
   turnoverResetDelaySeconds: 1.25,
+  touchdownRunoutDeceleration: 7.5,
+  touchdownRunoutDurationSeconds: 1,
+  touchdownRunoutMaxDepthYards: 6,
 } as const;
 
 export interface GameplayModel {
@@ -152,6 +171,7 @@ export interface GameplayModel {
   passFeedbackTimerSeconds: number;
   passAttempted: boolean;
   passAudit: PassAuditSnapshot | null;
+  touchdownRunout: TouchdownRunoutState | null;
   forwardPassEligible: boolean;
   player: PlayerModel;
   players: PlayerModel[];
@@ -204,6 +224,7 @@ export interface GameplaySnapshot {
   snapLane: SnapLane;
   passAttempted: boolean;
   passAudit: PassAuditSnapshot | null;
+  touchdownRunout?: TouchdownRunoutState | null;
   forwardPassEligible: boolean;
   passFeedback: 'pastLineOfScrimmage' | null;
 }
@@ -246,6 +267,7 @@ export function createGameplayModel(options: CreateGameplayModelOptions = {}): G
     passFeedbackTimerSeconds: 0,
     passAttempted: false,
     passAudit: null,
+    touchdownRunout: null,
     forwardPassEligible: true,
     player: ballCarrier,
     players,
@@ -275,6 +297,7 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
   gameplay.selectedPlay = play;
   gameplay.passAttempted = false;
   gameplay.passAudit = null;
+  gameplay.touchdownRunout = null;
   gameplay.forwardPassEligible = true;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(play);
@@ -305,6 +328,7 @@ export function startPlay(gameplay: GameplayModel): boolean {
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
   gameplay.passAudit = null;
+  gameplay.touchdownRunout = null;
   gameplay.passFeedbackTimerSeconds = 0;
   ensureSelectedReceiver(gameplay);
   gameplay.playResetTimerSeconds = null;
@@ -423,6 +447,7 @@ export function resetPlay(gameplay: GameplayModel): void {
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
   gameplay.passAudit = null;
+  gameplay.touchdownRunout = null;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(gameplay.selectedPlay);
   resetReceiverRoutesForSpot(gameplay, gameplay.selectedPlay, resetSpot);
@@ -455,6 +480,7 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
   gameplay.passAudit = null;
+  gameplay.touchdownRunout = null;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(defaultPlay);
   resetReceiverRoutesForSpot(gameplay, defaultPlay, initialSpot);
@@ -484,6 +510,7 @@ export function resetOffensePossession(
   gameplay.forwardPassEligible = true;
   gameplay.passAttempted = false;
   gameplay.passAudit = null;
+  gameplay.touchdownRunout = null;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(defaultPlay);
   resetReceiverRoutesForSpot(gameplay, defaultPlay, resetSpot);
@@ -502,6 +529,7 @@ export function updateGameplayModel(
   options: GameplayUpdateOptions = {},
 ): void {
   const delta = Math.max(0, deltaSeconds);
+  const playStateAtUpdateStart = gameplay.playState;
   gameplay.previousPlayerPositions = capturePlayerPositions(gameplay.players);
 
   if (gameplay.challengeMode === 'scoreAttack') {
@@ -511,7 +539,12 @@ export function updateGameplayModel(
 
   if (gameplay.playState === 'live') {
     updateForwardPassEligibility(gameplay);
-    detectSack(gameplay);
+    syncCarriedBallToCurrentPlayer(gameplay);
+    detectTouchdown(gameplay);
+
+    if (gameplay.playState === 'live') {
+      detectSack(gameplay);
+    }
 
     if (gameplay.playState === 'live') {
       detectTackle(gameplay);
@@ -519,7 +552,7 @@ export function updateGameplayModel(
 
     if (gameplay.playState === 'live') {
       updateRushingDrillAi(gameplay.players, gameplay.blocking, gameplay.player, {
-        bounds: PLAYABLE_FIELD_BOUNDS,
+        bounds: PLAYER_MOVEMENT_BOUNDS,
         deltaSeconds: delta,
         lineOfScrimmage: gameplay.currentBallSpot,
         play: gameplay.selectedPlay,
@@ -535,20 +568,29 @@ export function updateGameplayModel(
       } else {
         updatePassFlight(gameplay, delta, gameplay.previousPlayerPositions);
       }
-      detectSack(gameplay);
+      syncCarriedBallToCurrentPlayer(gameplay);
+      detectTouchdown(gameplay);
+      if (gameplay.playState === 'live') {
+        detectSack(gameplay);
+      }
       if (gameplay.playState === 'live') {
         detectTackle(gameplay);
       }
     }
 
     if (gameplay.playState === 'live') {
-      detectTouchdown(gameplay);
-    }
-
-    if (gameplay.playState === 'live') {
       detectOutOfBounds(gameplay);
     }
-  } else if (gameplay.playResetTimerSeconds !== null && !options.suppressDeadPlayReset) {
+  } else if (gameplay.playState === 'dead') {
+    updateTouchdownRunout(gameplay, delta);
+  }
+
+  if (
+    playStateAtUpdateStart !== 'live' &&
+    gameplay.playState !== 'live' &&
+    gameplay.playResetTimerSeconds !== null &&
+    !options.suppressDeadPlayReset
+  ) {
     gameplay.playResetTimerSeconds -= delta;
 
     if (gameplay.playResetTimerSeconds <= 0) {
@@ -609,6 +651,7 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
     forwardPassEligible: gameplay.forwardPassEligible,
     passAttempted: gameplay.passAttempted,
     passAudit: clonePassAuditSnapshot(gameplay.passAudit),
+    touchdownRunout: cloneTouchdownRunout(gameplay.touchdownRunout),
     player: snapshotPlayerModel(gameplay.player),
     players: gameplay.players.map(snapshotPlayerModel),
     playbookId: gameplay.playbookId,
@@ -630,7 +673,25 @@ export function snapshotGameplayModel(gameplay: GameplayModel): GameplaySnapshot
 }
 
 export function hasCrossedOpposingGoalLine(player: PlayerModel): boolean {
-  return player.position.z + player.collisionRadius >= GAMEPLAY_CONFIG.opposingGoalLineZ;
+  return player.position.z >= GAMEPLAY_CONFIG.opposingGoalLineZ;
+}
+
+export function hasBallBrokenGoalPlane(
+  ballPosition: Pick<Vector3, 'x' | 'z'>,
+  directionOfPlay: number,
+  goalLineZ: number,
+): boolean {
+  const isInsideGoalLineWidth =
+    ballPosition.x >= FIELD_OF_PLAY_BOUNDS.minX &&
+    ballPosition.x <= FIELD_OF_PLAY_BOUNDS.maxX;
+
+  if (!isInsideGoalLineWidth) {
+    return false;
+  }
+
+  return directionOfPlay >= 0
+    ? ballPosition.z >= goalLineZ
+    : ballPosition.z <= goalLineZ;
 }
 
 export function hasCrossedSideline(player: PlayerModel): boolean {
@@ -641,18 +702,25 @@ export function hasCrossedSideline(player: PlayerModel): boolean {
 }
 
 function detectTouchdown(gameplay: GameplayModel): void {
+  const ballPosition = gameplay.ball.position;
   if (
     gameplay.ball.possession.kind !== 'player' ||
     gameplay.ball.possession.playerId !== gameplay.player.id ||
-    !hasCrossedOpposingGoalLine(gameplay.player)
+    !hasBallBrokenGoalPlane(
+      ballPosition,
+      FIELD_DIRECTION.playDirectionZ,
+      GAMEPLAY_CONFIG.opposingGoalLineZ,
+    )
   ) {
     return;
   }
 
   const endingSpot = {
-    x: gameplay.player.position.x,
+    x: clamp(ballPosition.x, FIELD_OF_PLAY_BOUNDS.minX, FIELD_OF_PLAY_BOUNDS.maxX),
     z: GAMEPLAY_CONFIG.opposingGoalLineZ,
   };
+  const scorer = gameplay.player;
+  const runoutVelocity = { ...scorer.velocity };
 
   gameplay.score += GAMEPLAY_CONFIG.touchdownPoints;
   recordPlayResult(
@@ -662,6 +730,7 @@ function detectTouchdown(gameplay: GameplayModel): void {
     GAMEPLAY_CONFIG.touchdownResetDelaySeconds,
     'offense',
   );
+  startTouchdownRunout(gameplay, scorer, runoutVelocity);
 }
 
 function updateForwardPassEligibility(gameplay: GameplayModel): void {
@@ -878,6 +947,135 @@ function stopLiveActors(gameplay: GameplayModel): void {
     player.velocity.z = 0;
     player.currentState = 'idle';
   }
+}
+
+function startTouchdownRunout(
+  gameplay: GameplayModel,
+  scorer: PlayerModel,
+  preStopVelocity: FootballSpot,
+): void {
+  const speed = Math.hypot(preStopVelocity.x, preStopVelocity.z);
+  const fallbackDirection = {
+    x: Math.sin(scorer.facingRadians),
+    z: Math.cos(scorer.facingRadians),
+  };
+  const direction = speed > 0.1
+    ? {
+        x: preStopVelocity.x / speed,
+        z: preStopVelocity.z / speed,
+      }
+    : fallbackDirection;
+  const normalizedDirection = direction.z * FIELD_DIRECTION.playDirectionZ < 0.2
+    ? { x: 0, z: FIELD_DIRECTION.playDirectionZ }
+    : normalizeSpotDirection(direction);
+  const runoutDirection = normalizeSpotDirection({
+    x: normalizedDirection.x * 0.35,
+    z: FIELD_DIRECTION.playDirectionZ,
+  });
+  const initialRunoutSpeed = Math.max(
+    speed,
+    GAMEPLAY_CONFIG.touchdownRunoutMaxDepthYards /
+      GAMEPLAY_CONFIG.touchdownRunoutDurationSeconds +
+      GAMEPLAY_CONFIG.touchdownRunoutDeceleration *
+      GAMEPLAY_CONFIG.touchdownRunoutDurationSeconds *
+      0.5,
+  );
+
+  gameplay.touchdownRunout = {
+    completed: false,
+    elapsedSeconds: 0,
+    scorerId: scorer.id,
+    startPosition: cloneFootballSpot(scorer.position),
+    visualPosition: cloneFootballSpot(scorer.position),
+  };
+  scorer.currentState = 'userControlled';
+  scorer.velocity.x = runoutDirection.x * initialRunoutSpeed;
+  scorer.velocity.z = runoutDirection.z * initialRunoutSpeed;
+  scorer.facingRadians = Math.atan2(runoutDirection.x, runoutDirection.z);
+  syncBallPresentationToPlayer(gameplay.ball, scorer);
+}
+
+function updateTouchdownRunout(gameplay: GameplayModel, deltaSeconds: number): void {
+  const runout = gameplay.touchdownRunout;
+  if (!runout || runout.completed) {
+    return;
+  }
+
+  const scorer = gameplay.players.find((player) => player.id === runout.scorerId);
+  if (!scorer) {
+    runout.completed = true;
+    return;
+  }
+
+  const delta = clamp(deltaSeconds, 0, 0.1);
+  runout.elapsedSeconds += delta;
+
+  const speed = Math.hypot(scorer.velocity.x, scorer.velocity.z);
+  if (speed > 0 && delta > 0) {
+    const direction = {
+      x: scorer.velocity.x / speed,
+      z: scorer.velocity.z / speed,
+    };
+    const nextSpeed = Math.max(
+      0,
+      speed - GAMEPLAY_CONFIG.touchdownRunoutDeceleration * delta,
+    );
+    const stepDistance = (speed + nextSpeed) * 0.5 * delta;
+    scorer.position.x += direction.x * stepDistance;
+    scorer.position.z += direction.z * stepDistance;
+    scorer.velocity.x = direction.x * nextSpeed;
+    scorer.velocity.z = direction.z * nextSpeed;
+  }
+
+  const maxRunoutZ =
+    GAMEPLAY_CONFIG.opposingGoalLineZ +
+    FIELD_DIRECTION.playDirectionZ * GAMEPLAY_CONFIG.touchdownRunoutMaxDepthYards;
+  const endLineLimitedZ =
+    PLAYER_MOVEMENT_BOUNDS.maxZ -
+    scorer.collisionRadius;
+  scorer.position.z = Math.min(
+    scorer.position.z,
+    Math.min(maxRunoutZ, endLineLimitedZ),
+  );
+  scorer.position.x = clamp(
+    scorer.position.x,
+    PLAYER_MOVEMENT_BOUNDS.minX + scorer.collisionRadius,
+    PLAYER_MOVEMENT_BOUNDS.maxX - scorer.collisionRadius,
+  );
+  runout.visualPosition = cloneFootballSpot(scorer.position);
+  syncBallPresentationToPlayer(gameplay.ball, scorer);
+
+  if (
+    runout.elapsedSeconds >= GAMEPLAY_CONFIG.touchdownRunoutDurationSeconds ||
+    Math.abs(scorer.position.z - maxRunoutZ) < 0.001 ||
+    Math.hypot(scorer.velocity.x, scorer.velocity.z) <= 0.05
+  ) {
+    scorer.velocity.x = 0;
+    scorer.velocity.z = 0;
+    scorer.currentState = 'idle';
+    runout.completed = true;
+  }
+}
+
+function syncCarriedBallToCurrentPlayer(gameplay: GameplayModel): void {
+  if (
+    gameplay.ball.possession.kind !== 'player' ||
+    gameplay.ball.possession.playerId !== gameplay.player.id
+  ) {
+    return;
+  }
+
+  updateCarriedBallPosition(gameplay.ball, gameplay.player);
+}
+
+function syncBallPresentationToPlayer(ball: BallModel, player: PlayerModel): void {
+  const cos = Math.cos(player.facingRadians);
+  const sin = Math.sin(player.facingRadians);
+
+  ball.previousPosition = { ...ball.position };
+  ball.position.x = player.position.x + BALL_CARRY_ATTACHMENT.x * cos + BALL_CARRY_ATTACHMENT.z * sin;
+  ball.position.y = BALL_CARRY_ATTACHMENT.y;
+  ball.position.z = player.position.z - BALL_CARRY_ATTACHMENT.x * sin + BALL_CARRY_ATTACHMENT.z * cos;
 }
 
 function enterScoreAttackGameOver(gameplay: GameplayModel): void {
@@ -1114,6 +1312,20 @@ function clonePassAuditSnapshot(passAudit: PassAuditSnapshot | null): PassAuditS
   };
 }
 
+function cloneTouchdownRunout(runout: TouchdownRunoutState | null): TouchdownRunoutState | null {
+  if (!runout) {
+    return null;
+  }
+
+  return {
+    completed: runout.completed,
+    elapsedSeconds: runout.elapsedSeconds,
+    scorerId: runout.scorerId,
+    startPosition: cloneFootballSpot(runout.startPosition),
+    visualPosition: cloneFootballSpot(runout.visualPosition),
+  };
+}
+
 function cloneBallState(state: BallModel['state']): BallModel['state'] {
   if (state.kind === 'inFlight') {
     return {
@@ -1132,4 +1344,16 @@ function cloneBallState(state: BallModel['state']): BallModel['state'] {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeSpotDirection(direction: FootballSpot): FootballSpot {
+  const length = Math.hypot(direction.x, direction.z);
+  if (length === 0) {
+    return { x: 0, z: FIELD_DIRECTION.playDirectionZ };
+  }
+
+  return {
+    x: direction.x / length,
+    z: direction.z / length,
+  };
 }

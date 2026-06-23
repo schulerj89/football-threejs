@@ -7,6 +7,7 @@ import {
 import type { TeamColorOverrides, TeamProfile } from './TeamProfile';
 import {
   normalizeHexColor,
+  resolveDistinctHelmetFaceguardColor,
   normalizeUniformPalette,
   type UniformVariant,
 } from './UniformPalette';
@@ -73,9 +74,12 @@ export function resolveCustomizedTeamProfile(
 
   const primary = normalizeHexColor(overrides.primary, baseProfile.colors.primary);
   const secondary = normalizeHexColor(overrides.secondary, baseProfile.colors.secondary);
-  const helmetShell = normalizeHexColor(overrides.helmetShell, baseProfile.homeUniform.helmetShell);
+  const helmetShell = normalizeHexColor(overrides.helmetShell, primary);
   const pants = normalizeHexColor(overrides.pants, baseProfile.homeUniform.pants);
-  const faceguard = normalizeHexColor(overrides.faceguard, baseProfile.homeUniform.faceguard);
+  const faceguard = resolveDistinctHelmetFaceguardColor(
+    helmetShell,
+    normalizeHexColor(overrides.faceguard, secondary),
+  );
 
   return {
     ...baseProfile,
@@ -122,8 +126,8 @@ export function updateTeamColorOverride(
   const baseProfile = getTeamProfileOrDefault(teamId);
   const existing = normalized.customProfiles[baseProfile.id] ?? {};
   const fallbackOverrides: Required<TeamColorOverrides> = {
-    faceguard: baseProfile.homeUniform.faceguard,
-    helmetShell: baseProfile.homeUniform.helmetShell,
+    faceguard: baseProfile.colors.secondary,
+    helmetShell: baseProfile.colors.primary,
     pants: baseProfile.homeUniform.pants,
     primary: baseProfile.colors.primary,
     secondary: baseProfile.colors.secondary,
@@ -176,13 +180,23 @@ function normalizeCustomProfiles(value: unknown): Record<string, TeamColorOverri
     }
 
     const baseProfile = getTeamProfileOrDefault(teamId);
-    normalized[teamId] = {
-      faceguard: normalizeHexColor(overrides.faceguard, baseProfile.homeUniform.faceguard),
-      helmetShell: normalizeHexColor(overrides.helmetShell, baseProfile.homeUniform.helmetShell),
-      pants: normalizeHexColor(overrides.pants, baseProfile.homeUniform.pants),
-      primary: normalizeHexColor(overrides.primary, baseProfile.colors.primary),
-      secondary: normalizeHexColor(overrides.secondary, baseProfile.colors.secondary),
-    };
+    const normalizedOverrides: TeamColorOverrides = {};
+    if ('faceguard' in overrides) {
+      normalizedOverrides.faceguard = normalizeHexColor(overrides.faceguard, baseProfile.colors.secondary);
+    }
+    if ('helmetShell' in overrides) {
+      normalizedOverrides.helmetShell = normalizeHexColor(overrides.helmetShell, baseProfile.colors.primary);
+    }
+    if ('pants' in overrides) {
+      normalizedOverrides.pants = normalizeHexColor(overrides.pants, baseProfile.homeUniform.pants);
+    }
+    if ('primary' in overrides) {
+      normalizedOverrides.primary = normalizeHexColor(overrides.primary, baseProfile.colors.primary);
+    }
+    if ('secondary' in overrides) {
+      normalizedOverrides.secondary = normalizeHexColor(overrides.secondary, baseProfile.colors.secondary);
+    }
+    normalized[teamId] = normalizedOverrides;
   }
 
   return normalized;

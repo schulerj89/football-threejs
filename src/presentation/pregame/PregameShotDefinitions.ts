@@ -15,6 +15,8 @@ import {
 } from './QuarterbackSpotlightShot';
 
 export const PREGAME_SHOT_DURATIONS = {
+  centerOrbitBrief: 9.5,
+  centerOrbitFull: 15,
   matchupCombined: 3.4,
   matchupWide: 4.2,
   opponentTeamPan: 5,
@@ -27,8 +29,15 @@ export const PREGAME_SHOT_DURATIONS = {
   weatherAndField: 3.5,
 } as const;
 
-const PLAY_DIRECTION = { x: 0, z: 1 } as const;
-const SIDELINE_DIRECTION = { x: 1, z: 0 } as const;
+const CENTER_ORBIT_CONFIG = {
+  briefAngleRadians: Math.PI * 1.35,
+  briefHeight: 52,
+  briefRadius: 118,
+  fullAngleRadians: Math.PI * 2,
+  fullHeight: 58,
+  fullRadius: 124,
+  startAngleRadians: -Math.PI * 0.72,
+} as const;
 
 export function createPregameSequence(cinematics: CinematicsSetting): PregameSequenceStep[] {
   if (cinematics === 'off') {
@@ -38,74 +47,40 @@ export function createPregameSequence(cinematics: CinematicsSetting): PregameSeq
   if (cinematics === 'brief') {
     return [
       {
-        commentaryLineId: 'welcome',
-        minimumSeconds: PREGAME_SHOT_DURATIONS.stadiumEstablish,
-        shotId: 'stadiumEstablish',
-        waitForCommentaryLineId: 'welcome',
-      },
-      {
-        commentaryLineId: 'matchup',
-        minimumSeconds: PREGAME_SHOT_DURATIONS.matchupWide,
-        shotId: 'matchupWide',
-        waitForCommentaryLineId: 'matchup',
-      },
-      {
-        commentaryLineId: 'weather',
-        minimumSeconds: PREGAME_SHOT_DURATIONS.weatherAndField,
-        shotId: 'weatherAndField',
-        waitForCommentaryLineId: 'weather',
+        commentaryLineIds: ['welcome', 'matchup', 'weather'],
+        minimumSeconds: PREGAME_SHOT_DURATIONS.centerOrbitBrief,
+        shotId: 'stadiumCenterOrbit',
+        waitForCommentaryLineIds: ['welcome', 'matchup', 'weather'],
       },
       {
         commentaryLineId: 'quarterback',
         minimumSeconds: PREGAME_SHOT_DURATIONS.quarterbackSpotlight,
-        shotId: 'quarterbackSpotlight',
+        shotId: 'quarterbackFrontSpotlight',
         waitForCommentaryLineId: 'quarterback',
       },
       {
         minimumSeconds: PREGAME_SHOT_DURATIONS.transitionToGameplay,
-        shotId: 'transitionToGameplay',
+        shotId: 'transitionToCoinToss',
       },
     ];
   }
 
   return [
     {
-      commentaryLineId: 'welcome',
-      minimumSeconds: PREGAME_SHOT_DURATIONS.stadiumEstablish,
-      shotId: 'stadiumEstablish',
-      waitForCommentaryLineId: 'welcome',
-    },
-    {
-      commentaryLineId: 'matchup',
-      minimumSeconds: PREGAME_SHOT_DURATIONS.matchupWide,
-      shotId: 'matchupWide',
-      waitForCommentaryLineId: 'matchup',
-    },
-    {
-      lowerThirdTeamSide: 'user',
-      minimumSeconds: PREGAME_SHOT_DURATIONS.userWarmupPan,
-      shotId: 'userWarmupPan',
-    },
-    {
-      lowerThirdTeamSide: 'opponent',
-      minimumSeconds: PREGAME_SHOT_DURATIONS.opponentWarmupPan,
-      shotId: 'opponentWarmupPan',
-    },
-    {
-      commentaryLineId: 'weather',
-      minimumSeconds: PREGAME_SHOT_DURATIONS.weatherAndField,
-      shotId: 'weatherAndField',
-      waitForCommentaryLineId: 'weather',
+      commentaryLineIds: ['welcome', 'matchup', 'weather'],
+      minimumSeconds: PREGAME_SHOT_DURATIONS.centerOrbitFull,
+      shotId: 'stadiumCenterOrbit360',
+      waitForCommentaryLineIds: ['welcome', 'matchup', 'weather'],
     },
     {
       commentaryLineId: 'quarterback',
       minimumSeconds: PREGAME_SHOT_DURATIONS.quarterbackSpotlight,
-      shotId: 'quarterbackSpotlight',
+      shotId: 'quarterbackFrontSpotlight',
       waitForCommentaryLineId: 'quarterback',
     },
     {
       minimumSeconds: PREGAME_SHOT_DURATIONS.transitionToGameplay,
-      shotId: 'transitionToGameplay',
+      shotId: 'transitionToCoinToss',
     },
   ];
 }
@@ -122,7 +97,7 @@ export function createPregameCameraShot(
     subjectBounds.center.y,
     subjectBounds.center.z,
   );
-  const shot = createShotVectors(step.shotId, context, focus, subjectBounds, progress);
+  const shot = createShotVectors(step.shotId, context, focus, subjectBounds, progress, rawProgress);
 
   return {
     activeShotName: null,
@@ -131,7 +106,9 @@ export function createPregameCameraShot(
     lookTarget: shot.lookTarget,
     orbitCenter: null,
     orbitRadius: null,
-    phase: step.shotId === 'transitionToGameplay' ? 'transitionToGameplay' : 'preSnapEstablish',
+    phase: step.shotId === 'transitionToGameplay' || step.shotId === 'transitionToCoinToss'
+      ? 'transitionToGameplay'
+      : 'preSnapEstablish',
     position: preventCameraClipping(shot.position),
     restoreCamera: context.targetGameplayCamera,
     shotProgress: rawProgress,
@@ -202,7 +179,7 @@ export function resolvePregameSubjectBounds(
     };
   }
 
-  if (shotId === 'quarterbackSpotlight') {
+  if (shotId === 'quarterbackSpotlight' || shotId === 'quarterbackFrontSpotlight') {
     return resolveQuarterbackSpotlightBounds(context);
   }
 
@@ -223,6 +200,7 @@ function createShotVectors(
   focus: THREE.Vector3,
   subject: PregameSubjectBounds,
   progress: number,
+  rawProgress: number,
 ): { fieldOfView: number; lookTarget: THREE.Vector3; position: THREE.Vector3 } {
   const aspectScale = context.aspectRatio < 0.8 ? 1.22 : 1;
 
@@ -231,6 +209,24 @@ function createShotVectors(
       fieldOfView: 50,
       lookTarget: new THREE.Vector3(0, 0.6, 3),
       position: new THREE.Vector3(46 * aspectScale, 78, -112),
+    };
+  }
+
+  if (shotId === 'stadiumCenterOrbit' || shotId === 'stadiumCenterOrbit360') {
+    const full = shotId === 'stadiumCenterOrbit360';
+    const orbitProgress = Math.min(Math.max(rawProgress, 0), 1.18);
+    const angle = CENTER_ORBIT_CONFIG.startAngleRadians +
+      orbitProgress * (full ? CENTER_ORBIT_CONFIG.fullAngleRadians : CENTER_ORBIT_CONFIG.briefAngleRadians);
+    const radius = full ? CENTER_ORBIT_CONFIG.fullRadius : CENTER_ORBIT_CONFIG.briefRadius;
+    const height = full ? CENTER_ORBIT_CONFIG.fullHeight : CENTER_ORBIT_CONFIG.briefHeight;
+    return {
+      fieldOfView: 48,
+      lookTarget: new THREE.Vector3(0, 1.6, 0),
+      position: new THREE.Vector3(
+        Math.sin(angle) * radius * aspectScale,
+        height,
+        Math.cos(angle) * radius,
+      ),
     };
   }
 
@@ -248,12 +244,16 @@ function createShotVectors(
     };
   }
 
-  if (shotId === 'transitionToGameplay') {
+  if (shotId === 'transitionToGameplay' || shotId === 'transitionToCoinToss') {
     const snap = context.gameplaySnapshot.nextSnapSpot ?? context.gameplaySnapshot.currentBallSpot;
     return {
       fieldOfView: context.targetGameplayCamera === 'tacticalOrthographic' ? 54 : 58,
-      lookTarget: new THREE.Vector3(snap.x, 1.5, snap.z + 10),
-      position: new THREE.Vector3(snap.x, 28, snap.z - 62 * aspectScale),
+      lookTarget: shotId === 'transitionToCoinToss'
+        ? new THREE.Vector3(0, 1.7, 0)
+        : new THREE.Vector3(snap.x, 1.5, snap.z + 10),
+      position: shotId === 'transitionToCoinToss'
+        ? new THREE.Vector3(0, 28, -62 * aspectScale)
+        : new THREE.Vector3(snap.x, 28, snap.z - 62 * aspectScale),
     };
   }
 
@@ -265,7 +265,7 @@ function createShotVectors(
     };
   }
 
-  if (shotId === 'quarterbackSpotlight') {
+  if (shotId === 'quarterbackSpotlight' || shotId === 'quarterbackFrontSpotlight') {
     return createQuarterbackSpotlightShotVectors(context, subject, progress);
   }
 
@@ -295,7 +295,7 @@ function createShotVectors(
     position: new THREE.Vector3(
       focus.x + sideSign * 17 * aspectScale,
       8.5,
-      panFocus.z - PLAY_DIRECTION.z * 12,
+      panFocus.z - 12,
     ),
   };
 }
@@ -438,7 +438,7 @@ function fieldSubjectBounds(source: PregameShotId): PregameSubjectBounds {
 }
 
 function preventCameraClipping(position: THREE.Vector3): THREE.Vector3 {
-  const padding = 82;
+  const padding = 150;
   return new THREE.Vector3(
     clamp(position.x, FIELD_BOUNDS.minX - padding, FIELD_BOUNDS.maxX + padding),
     Math.max(4.5, position.y),

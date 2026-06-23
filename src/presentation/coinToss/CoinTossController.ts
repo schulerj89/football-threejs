@@ -9,16 +9,13 @@ import {
 } from '../../audio/PregameCommentaryCatalog';
 import type { GameplayRosterBinding } from '../../roster/GameplayRosterBinding';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
+import type { PlayerVisualMode } from '../players/PlayerVisualMode';
 import {
-  createOfficialVisualResources,
-  syncOfficialVisualResources,
-  type OfficialVisualResources,
-} from '../../officials/OfficialVisualFactory';
-import {
-  createSidelineVisualResources,
-  syncSidelineVisualResources,
-  type SidelineVisualResources,
-} from '../teams/SidelineVisualFactory';
+  FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
+  createFootballPlayerVisual,
+  type FootballPlayerVisualFactoryOptions,
+  type FootballPlayerVisualResources,
+} from '../players/FootballPlayerVisualFactory';
 import {
   calculateCoinAnimationPose,
   createCoinVisualResources,
@@ -32,12 +29,21 @@ import type {
   CoinTossControllerContext,
   CoinTossDebugSnapshot,
   CoinTossFrameResult,
+  CoinTossCaptainPlacement,
   CoinTossPresentationLayout,
   CoinTossPresentationPhase,
 } from './CoinTossTypes';
 
 export interface CoinTossControllerOptions {
   audioCoordinator: PregameAudioCoordinator;
+  coinAudio?: {
+    playOneShot(assetId: string): Promise<boolean> | boolean;
+  };
+  footballPlayerVisual?: Pick<
+    FootballPlayerVisualFactoryOptions,
+    'attachHelmet' | 'helmet' | 'playerVisualOptions'
+  >;
+  playerVisualMode?: PlayerVisualMode;
   rosterBinding: GameplayRosterBinding;
   teamTheme: TeamPresentationTheme;
   warn?: (message: string) => void;
@@ -59,23 +65,25 @@ export class CoinTossController {
   private completed = false;
   private layout: CoinTossPresentationLayout;
   private phase: CoinTossPresentationPhase = 'idle';
+  private playedLandingSound = false;
+  private playedSpinSound = false;
   private requestedResultLine = false;
   private requestedSetupLine = false;
   private selectedCall: CoinFace = 'heads';
-  private sidelineVisuals: SidelineVisualResources | null = null;
-  private officialVisuals: OfficialVisualResources | null = null;
+  private readonly captainVisuals = new Map<string, FootballPlayerVisualResources>();
   private readonly ui = new CoinTossUi();
 
   constructor(private options: CoinTossControllerOptions) {
     this.group.name = 'coin-toss-presentation-root';
     this.group.userData.coinTossPresentation = true;
+    this.group.visible = false;
     this.layout = createCoinTossLayout(options.rosterBinding);
     this.coin = createCoinVisualResources();
     this.coin.group.visible = false;
     this.ui.setVisible(false);
   }
 
-  applySettings(options: Pick<CoinTossControllerOptions, 'rosterBinding' | 'teamTheme'>): void {
+  applySettings(options: Pick<CoinTossControllerOptions, 'playerVisualMode' | 'rosterBinding' | 'teamTheme'>): void {
     this.options = {
       ...this.options,
       ...options,
@@ -87,6 +95,8 @@ export class CoinTossController {
     this.completed = false;
     this.animationElapsedSeconds = 0;
     this.phase = 'awaitingCall';
+    this.playedLandingSound = false;
+    this.playedSpinSound = false;
     this.requestedResultLine = false;
     this.requestedSetupLine = false;
     this.selectedCall = 'heads';
@@ -161,6 +171,8 @@ export class CoinTossController {
     this.animationElapsedSeconds = 0;
     this.completed = false;
     this.phase = 'idle';
+    this.playedLandingSound = false;
+    this.playedSpinSound = false;
     this.requestedResultLine = false;
     this.requestedSetupLine = false;
     this.selectedCall = 'heads';
@@ -189,16 +201,27 @@ export class CoinTossController {
       activeCommentary: audioSnapshot.activeLine?.lineId ?? null,
       animation,
       callLocked: Boolean(matchSnapshot?.coinToss.userCall),
-      captainsVisible: this.group.visible ? this.layout.captainPlacements.length : 0,
+      captainRosterIds: this.layout.captains.map((captain) => captain.rosterPlayerId),
+      captainVisualCount: this.captainVisuals.size,
+      captainsVisible: this.countVisibleCaptains(),
       completionBlockers: blockers,
+      coinVisible: this.coin.group.visible,
+      gameplayPlayersVisible: false,
+      bareHeadCount: this.countBareHeadCaptains(),
+      helmetReadyCount: this.countHelmetReadyCaptains(),
       matchSeed: matchSnapshot?.deterministicSeed ?? null,
+      nextStage: this.completed ? 'kickoff' : null,
       openingPossession: matchSnapshot?.coinToss.firstHalfOpeningPossession ?? null,
       phase: this.phase,
-      refereeVisible: this.group.visible && this.layout.officials.length > 0,
+      refereeVisible: false,
+      officialsVisibleCount: 0,
       resolvedFace: matchSnapshot?.coinToss.resolvedFace ?? null,
       secondHalfPossession: matchSnapshot?.coinToss.secondHalfOpeningPossession ?? null,
       selectedCall: this.selectedCall,
+      stageId: this.phase === 'idle' ? 'none' : 'coinToss',
       userCall: matchSnapshot?.coinToss.userCall ?? null,
+      visualProfileCount: this.countProfileCaptains(),
+      visualProfileId: FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
       winner: matchSnapshot?.coinToss.winner ?? null,
     };
   }
@@ -225,19 +248,13 @@ export class CoinTossController {
   }
 
   private syncLayoutResources(): void {
-    if (!this.sidelineVisuals || !this.officialVisuals) {
-      return;
+    for (const placement of this.layout.captainPlacements) {
+      const resource = this.captainVisuals.get(placement.id);
+      if (!resource) {
+        continue;
+      }
+      this.syncCaptainVisual(placement, resource);
     }
-
-    syncSidelineVisualResources(
-      { meshes: this.sidelineVisuals.meshes },
-      this.layout.captainPlacements,
-      this.options.teamTheme,
-    );
-    syncOfficialVisualResources(
-      { meshes: this.officialVisuals.meshes },
-      this.layout.officials,
-    );
     this.coin.group.position.set(
       this.layout.coinPosition.x,
       this.layout.coinPosition.y,
@@ -246,16 +263,24 @@ export class CoinTossController {
   }
 
   private ensureVisualResources(): void {
-    if (!this.sidelineVisuals) {
-      this.sidelineVisuals = createSidelineVisualResources(
-        this.layout.captainPlacements,
-        this.options.teamTheme,
-      );
-      this.group.add(this.sidelineVisuals.group);
-    }
-    if (!this.officialVisuals) {
-      this.officialVisuals = createOfficialVisualResources(this.layout.officials);
-      this.group.add(this.officialVisuals.group);
+    for (const placement of this.layout.captainPlacements) {
+      if (this.captainVisuals.has(placement.id)) {
+        continue;
+      }
+      const resource = this.createCaptainVisual(placement);
+      this.captainVisuals.set(placement.id, resource);
+      this.group.add(resource.root);
+      void resource.ready
+        .then(() => {
+          if (this.captainVisuals.get(placement.id) === resource) {
+            this.syncCaptainVisual(placement, resource);
+          }
+        })
+        .catch(() => {
+          if (this.captainVisuals.get(placement.id) === resource) {
+            this.syncCaptainVisual(placement, resource);
+          }
+        });
     }
     if (!this.coin.group.parent) {
       this.group.add(this.coin.group);
@@ -265,20 +290,101 @@ export class CoinTossController {
   }
 
   private disposeVisualResources(): void {
-    if (this.sidelineVisuals) {
-      this.group.remove(this.sidelineVisuals.group);
-      this.sidelineVisuals.dispose();
-      this.sidelineVisuals = null;
+    for (const resource of this.captainVisuals.values()) {
+      resource.dispose();
     }
-    if (this.officialVisuals) {
-      this.group.remove(this.officialVisuals.group);
-      this.officialVisuals.dispose();
-      this.officialVisuals = null;
-    }
+    this.captainVisuals.clear();
     if (this.coin.group.parent === this.group) {
       this.group.remove(this.coin.group);
     }
     this.coin.group.visible = false;
+  }
+
+  private createCaptainVisual(
+    placement: CoinTossCaptainPlacement,
+  ): FootballPlayerVisualResources {
+    const resource = createFootballPlayerVisual(
+      {
+        appearanceId: placement.appearanceId,
+        footballPosition: placement.footballPosition,
+        gameplayPlayerId: undefined,
+        gameplayTeam: placement.gameplayTeam,
+        presentationOnly: true,
+        role: placement.role,
+        jerseyNumber: placement.jerseyNumber,
+        rosterPlayerId: placement.rosterPlayerId,
+        teamSide: placement.team,
+        uniform: this.options.teamTheme.uniforms[placement.gameplayTeam],
+        visualId: placement.visualId,
+      },
+      {
+        attachHelmet: this.options.footballPlayerVisual?.attachHelmet,
+        helmet: this.options.footballPlayerVisual?.helmet ?? 'required',
+        playerVisualOptions: {
+          ...this.options.footballPlayerVisual?.playerVisualOptions,
+          visualMode: this.options.playerVisualMode ?? 'procedural',
+        },
+        teamUniforms: this.options.teamTheme.uniforms,
+      },
+    );
+    resource.root.name = placement.id;
+    resource.root.userData.coinTossPresentation = true;
+    resource.root.userData.coinTossCaptain = true;
+    return resource;
+  }
+
+  private syncCaptainVisual(
+    placement: CoinTossCaptainPlacement,
+    resource: FootballPlayerVisualResources,
+  ): void {
+    resource.syncTransform(placement.position, placement.facingRadians);
+    resource.syncUniform(
+      this.options.teamTheme.uniforms[placement.gameplayTeam],
+      this.options.teamTheme.uniforms,
+    );
+    resource.setPose(placement.gameplayTeam === 'offense' ? 'readyOffense' : 'readyDefense');
+    resource.root.scale.setScalar(placement.scale);
+    resource.setVisible(this.group.visible && resource.getReadiness().subjectReady);
+  }
+
+  private countHelmetReadyCaptains(): number {
+    let count = 0;
+    for (const resource of this.captainVisuals.values()) {
+      if (resource.getReadiness().helmetReady) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  private countVisibleCaptains(): number {
+    let count = 0;
+    for (const resource of this.captainVisuals.values()) {
+      if (resource.root.visible) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  private countProfileCaptains(): number {
+    let count = 0;
+    for (const resource of this.captainVisuals.values()) {
+      if (resource.root.userData.visualProfileId === FOOTBALL_PLAYER_VISUAL_PROFILE_ID) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  private countBareHeadCaptains(): number {
+    let count = 0;
+    for (const resource of this.captainVisuals.values()) {
+      if (resource.root.visible && !resource.getReadiness().helmetReady) {
+        count += 1;
+      }
+    }
+    return count;
   }
 
   private startSetupLine(matchSnapshot: MatchSnapshot | null): void {
@@ -323,6 +429,12 @@ export class CoinTossController {
       return;
     }
 
+    if (!this.playedSpinSound) {
+      this.playedSpinSound = true;
+      this.playCoinOneShot('coin_toss_spin_01');
+    }
+
+    const previousElapsedSeconds = this.animationElapsedSeconds;
     this.animationElapsedSeconds = Math.min(
       getCoinAnimationDurationSeconds(),
       this.animationElapsedSeconds + deltaSeconds,
@@ -330,6 +442,15 @@ export class CoinTossController {
     const pose = calculateCoinAnimationPose(face, this.animationElapsedSeconds);
     this.coin.group.position.y = pose.positionY;
     this.coin.mesh.rotation.set(pose.rotationX, 0, pose.rotationZ);
+
+    if (
+      !this.playedLandingSound &&
+      previousElapsedSeconds < getCoinAnimationDurationSeconds() &&
+      this.animationElapsedSeconds >= getCoinAnimationDurationSeconds()
+    ) {
+      this.playedLandingSound = true;
+      this.playCoinOneShot('coin_toss_land_01');
+    }
   }
 
   private updateResultLine(matchSnapshot: MatchSnapshot | null): void {
@@ -377,5 +498,13 @@ export class CoinTossController {
       progress: matchSnapshot?.coinToss.resolvedFace ? pose.progress : 0,
       y: this.coin.group.position.y,
     };
+  }
+
+  private playCoinOneShot(assetId: string): void {
+    try {
+      void this.options.coinAudio?.playOneShot(assetId);
+    } catch {
+      // Missing or locked audio is optional for coin-toss presentation.
+    }
   }
 }

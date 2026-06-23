@@ -1,4 +1,5 @@
 import type { GameplaySnapshot } from './playState';
+import type { PreSnapCadenceSnapshot } from './gameplay/PreSnapCadenceModel';
 import {
   getRosterPlayerForGameplayId,
   type GameplayRosterBinding,
@@ -9,6 +10,7 @@ import {
 } from './teams/TeamThemeApplier';
 
 export interface GameplayHud {
+  cadenceStatus: HTMLDivElement;
   clock: HTMLDivElement;
   driveStatus: HTMLDivElement;
   gameOverMessage: HTMLDivElement;
@@ -41,6 +43,11 @@ export function createGameplayHud(): GameplayHud {
   const driveStatus = document.createElement('div');
   driveStatus.className = 'drive-status';
   root.appendChild(driveStatus);
+
+  const cadenceStatus = document.createElement('div');
+  cadenceStatus.className = 'cadence-status';
+  cadenceStatus.hidden = true;
+  root.appendChild(cadenceStatus);
 
   const playCall = document.createElement('div');
   playCall.className = 'play-call';
@@ -96,6 +103,7 @@ export function createGameplayHud(): GameplayHud {
   document.body.appendChild(root);
 
   return {
+    cadenceStatus,
     clock,
     driveStatus,
     gameOverMessage,
@@ -119,6 +127,7 @@ export function syncGameplayHud(
   gameplay: GameplaySnapshot,
   teamTheme: TeamPresentationTheme | null = null,
   rosterBinding: GameplayRosterBinding | null = null,
+  cadence: PreSnapCadenceSnapshot | null = null,
 ): void {
   if (teamTheme) {
     applyGameplayHudTeamTheme(hud, teamTheme);
@@ -137,6 +146,13 @@ export function syncGameplayHud(
   hud.targetLabel.textContent = gameplay.selectedReceiver
     ? `Target ${formatTargetLabel(gameplay.selectedReceiver, rosterBinding)}`
     : '';
+  hud.cadenceStatus.hidden =
+    gameplay.playState !== 'preSnap' ||
+    !cadence ||
+    cadence.hudText.length === 0;
+  hud.cadenceStatus.textContent = cadence?.hudText ?? '';
+  hud.cadenceStatus.dataset.phase = cadence?.phase ?? 'hidden';
+  hud.cadenceStatus.dataset.warning = cadence?.earlySnapWarningVisible ? 'true' : 'false';
   hud.tackleMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'tackle';
   hud.sackMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'sack';
   hud.touchdownMessage.hidden = isGameOver || lastPlayResult?.type !== 'touchdown';

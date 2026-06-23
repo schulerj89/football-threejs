@@ -54,17 +54,16 @@ afterEach(() => {
 describe('pregame commentary catalog', () => {
   it('validates the generated script catalog from teams and starting quarterbacks', () => {
     const teams = listTeamProfiles();
-    const quarterbacks = listKnownStartingQuarterbacks();
-    const orderedPairCount = teams.length * (teams.length - 1);
+    const quarterbackArchetypeCount = 4;
 
     expect(validatePregameCommentaryCatalog()).toEqual([]);
     expect(validatePregameScriptCatalog()).toEqual([]);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'welcome')).toHaveLength(3);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'warmupTransition')).toHaveLength(2);
-    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'matchup')).toHaveLength(orderedPairCount * 2);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'matchup')).toHaveLength(2);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'weather')).toHaveLength(10);
-    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'quarterback')).toHaveLength(quarterbacks.length * 3);
-    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'quarterbackArchetype')).toHaveLength(quarterbacks.length * 2);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'quarterback')).toHaveLength(quarterbackArchetypeCount * 2);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'quarterbackArchetype')).toHaveLength(quarterbackArchetypeCount * 2);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'coinTossSetup')).toHaveLength(2);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'coinTossResult')).toHaveLength((teams.length * 2) + 2);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'kickoffReady')).toHaveLength(3);
@@ -73,7 +72,7 @@ describe('pregame commentary catalog', () => {
     expect(PREGAME_COMMENTARY_CATALOG.every((clip) => clip.caption === clip.script)).toBe(true);
   });
 
-  it('resolves every known ordered team pairing and falls back for unavailable pairings', () => {
+  it('resolves every known ordered team pairing through compact generic matchup lines', () => {
     const teams = listTeamProfiles();
 
     for (const awayTeam of teams) {
@@ -89,8 +88,9 @@ describe('pregame commentary catalog', () => {
         });
 
         expect(selection.available).toBe(true);
-        expect(selection.clip?.awayTeamId).toBe(awayTeam.id);
-        expect(selection.clip?.homeTeamId).toBe(homeTeam.id);
+        expect(selection.clip?.category).toBe('matchup');
+        expect(selection.clip?.awayTeamId).toBeUndefined();
+        expect(selection.clip?.homeTeamId).toBeUndefined();
       }
     }
 
@@ -114,17 +114,19 @@ describe('pregame commentary catalog', () => {
     });
   });
 
-  it('resolves every known starting quarterback and includes exact roster identity', () => {
+  it('resolves every known starting quarterback through generic archetype commentary', () => {
     for (const quarterback of listKnownStartingQuarterbacks()) {
+      const profile = createQuarterbackScoutingProfile(quarterback.player);
       const selection = resolveQuarterbackSpotlight({
         matchSeed: 'qb',
         teamId: quarterback.teamId,
       });
 
       expect(selection.available).toBe(true);
-      expect(selection.clip?.rosterPlayerId).toBe(quarterback.rosterPlayerId);
-      expect(selection.caption).toContain(quarterback.player.displayName);
-      expect(selection.caption).toContain(`number ${quarterback.jerseyNumber}`);
+      expect(selection.clip?.qbArchetype).toBe(profile.archetype);
+      expect(selection.clip?.rosterPlayerId).toBeUndefined();
+      expect(selection.caption).not.toContain(quarterback.player.displayName);
+      expect(selection.caption).not.toContain(`number ${quarterback.jerseyNumber}`);
     }
 
     expect(resolveQuarterbackSpotlight({ teamId: 'custom-team' })).toMatchObject({
@@ -144,11 +146,11 @@ describe('pregame commentary catalog', () => {
       expect(selection.available).toBe(true);
       expect(selection.clip).toMatchObject({
         qbArchetype: profile.archetype,
-        rosterPlayerId: quarterback.rosterPlayerId,
-        teamId: quarterback.teamId,
       });
-      expect(selection.caption).toContain(quarterback.player.displayName);
-      expect(selection.caption).toContain(`number ${quarterback.jerseyNumber}`);
+      expect(selection.clip?.rosterPlayerId).toBeUndefined();
+      expect(selection.clip?.teamId).toBeUndefined();
+      expect(selection.caption).not.toContain(quarterback.player.displayName);
+      expect(selection.caption).not.toContain(`number ${quarterback.jerseyNumber}`);
     }
 
     expect(resolveQuarterbackArchetypeLine({ rosterPlayerId: 'missing-qb' })).toMatchObject({

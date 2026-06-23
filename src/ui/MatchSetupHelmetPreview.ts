@@ -157,12 +157,20 @@ export class MatchSetupHelmetPreviewRenderer {
 
     if (this.renderer) {
       this.renderer.domElement.hidden = !visible;
+      this.renderer.domElement.style.display = visible ? '' : 'none';
     }
 
     if (visible) {
       for (const entry of this.entries.values()) {
         this.loadPreview(entry.id);
       }
+    } else {
+      if (this.animationFrame) {
+        cancelAnimationFrame(this.animationFrame);
+        this.animationFrame = 0;
+      }
+      this.renderer?.setScissorTest(false);
+      this.renderer?.clear(true, true, true);
     }
 
     this.requestRender();

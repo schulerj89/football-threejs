@@ -1,0 +1,17 @@
+{
+  "assetId": "coin_toss_land_01",
+  "category": "sfx",
+  "compressedBytes": 17180,
+  "contentHash": "71b5a0770ca11c39f68d52cfe79cb7d6c54eb2b04fad70a29dfa6cc371958fc4",
+  "durationSeconds": 1,
+  "generatedAt": "2026-06-22T14:13:35.993Z",
+  "kind": "oneShot",
+  "metadata": {
+    "semanticCategory": "coin"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Heavy commemorative coin lands on a firm presentation surface and settles. Brief metallic contact, small bounce, short final wobble, approximately 0.7 to 1.2 seconds. No speech, no crowd, no music.",
+  "requestedDurationSeconds": 1,
+  "runtimeLoadingStrategy": "buffer"
+}

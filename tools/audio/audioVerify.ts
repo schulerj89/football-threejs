@@ -16,6 +16,7 @@ import {
 import { readConfiguredAnnouncerVoiceId } from './announcerVoice';
 import { FOOTBALL_AUDIO_PLAN } from './audioPlan';
 import { createFootballAudioReport } from './audioReport';
+import { FOOTBALL_STADIUM_CHANT_PLAN } from './musicPlan';
 import { createPregameSpeechPlan } from './pregameScriptCatalog';
 import {
   isDirectCli,
@@ -85,6 +86,7 @@ const AUDITION_INDEX_PATH = 'public/audio/audition-index.html';
 export function createAudioVerificationPlan(): readonly AudioAssetPlan[] {
   return [
     ...FOOTBALL_AUDIO_PLAN,
+    ...FOOTBALL_STADIUM_CHANT_PLAN,
     ...createPregameSpeechPlan(readConfiguredAnnouncerVoiceId() ?? ANNOUNCER_VOICE_ID_PLACEHOLDER),
   ];
 }

@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import helmetUrl from '../../../low_poly_helmet.glb?url';
 import type { PlayerTeam } from '../../playerModel';
 import { getUniformColorNumber } from '../../teams/TeamThemeApplier';
 import type { UniformPalette } from '../../teams/UniformPalette';
@@ -22,25 +21,38 @@ export interface HelmetPartMeshes {
   shellMeshes: THREE.Mesh[];
 }
 
-export const HELMET_ASSET_ID = 'low_poly_helmet';
+export const HELMET_ASSET_ID = 'football-helmet-kit';
 
 export const HELMET_ASSET_CONFIG = {
   accentMeshNames: ['stripe', 'helmetstripe', 'accent', 'trim'],
-  assetUrl: helmetUrl,
-  faceguardMeshNames: ['faceguard', 'face-guard', 'face_guard', 'facemask', 'face-mask', 'guard'],
+  assetUrl: '/models/helmet/football-helmet-kit.glb',
+  canonicalRotation: {
+    x: Math.PI / 2,
+    y: 0,
+    z: 0,
+  },
+  faceguardMeshNames: [
+    'faceguard_standard',
+    'faceguard',
+    'face-guard',
+    'face_guard',
+    'facemask',
+    'face-mask',
+    'guard',
+  ],
   faceguardOffset: {
     position: { x: 0, y: -0.04, z: 0.48 },
     rotation: { x: 0, y: 0, z: 0 },
     scale: { x: 1, y: 1, z: 1 },
   },
-  shellMeshNames: ['helmet_shell', 'helmet-shell', 'shell', 'helmet', 'mesh1.0'],
+  shellMeshNames: ['helmet_shell', 'helmet-shell', 'shell', 'helmet'],
   teamColors: {
     defense: {
-      faceguard: 0x24282e,
+      faceguard: 0xf2f4f6,
       shell: 0xb83737,
     },
     offense: {
-      faceguard: 0xf3f5f8,
+      faceguard: 0xf2f4f6,
       shell: 0x2f66d8,
     },
   },
@@ -89,9 +101,17 @@ export async function loadHelmetTemplate(): Promise<THREE.Group> {
 
 export async function cloneHelmetAsset(name = 'low-poly-helmet'): Promise<THREE.Group> {
   const template = await loadHelmetTemplate();
-  const helmet = template.clone(true);
+  const helmet = new THREE.Group();
+  const clone = template.clone(true);
   helmet.name = name;
   helmet.userData.assetId = HELMET_ASSET_ID;
+  clone.name = `${name}-source`;
+  clone.rotation.set(
+    HELMET_ASSET_CONFIG.canonicalRotation.x,
+    HELMET_ASSET_CONFIG.canonicalRotation.y,
+    HELMET_ASSET_CONFIG.canonicalRotation.z,
+  );
+  helmet.add(clone);
   return helmet;
 }
 

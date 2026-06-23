@@ -245,13 +245,7 @@ function createGroupProps(
   const facing = Math.atan2(inward, 0);
 
   if (groupId === 'quarterbackThrowing') {
-    return [
-      createProp(teamSide, zoneId, groupId, 'football', {
-        x: center.x - inward * 1.08,
-        y: 0.98,
-        z: center.z - 0.82,
-      }, facing, 0.9, 0),
-    ];
+    return [];
   }
 
   if (groupId !== 'runningBackFootwork') {

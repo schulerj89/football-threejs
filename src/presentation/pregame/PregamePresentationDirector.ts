@@ -21,17 +21,23 @@ import type {
   PregameCommentarySelections,
   PregameLowerThirdState,
   PregamePresentationContext,
+  PregamePresentationCommentaryLineId,
   PregamePresentationPhase,
   PregamePresentationSnapshot,
   PregameSequenceStep,
   PregameShotId,
   PregameSubjectBounds,
 } from './PregamePresentationTypes';
+import type { PregameWarmupQuarterbackAppearanceAudit } from './PregameWarmupTypes';
 import {
   createQuarterbackSpotlightMatchKey,
   resolveQuarterbackSpotlightSubject,
   type QuarterbackSpotlightSubject,
 } from './SpotlightSubjectResolver';
+import {
+  resolveKeysToGame,
+  type KeyToGame,
+} from './KeysToGameResolver';
 
 export interface PregamePresentationUpdateResult {
   completed: boolean;
@@ -40,6 +46,7 @@ export interface PregamePresentationUpdateResult {
 
 const PREGAME_DIRECTOR_CONFIG = {
   maxDeltaSeconds: 1 / 10,
+  quarterbackReadinessTimeoutSeconds: 2,
   titleMusicGameplayFadeSeconds: 1.35,
 } as const;
 
@@ -61,8 +68,11 @@ export class PregamePresentationDirector {
     ready: false,
     userReady: false,
   };
+  private latestQuarterbackAppearance: PregameWarmupQuarterbackAppearanceAudit | null = null;
+  private keysToGame: readonly KeyToGame[] = [];
   private selections: PregameCommentarySelections | null = null;
   private shotElapsedSeconds = 0;
+  private subjectReadinessWaitSeconds = 0;
   private startedLineIds = new Set<PregameCommentaryLineId>();
   private subjectBounds: PregameSubjectBounds | null = null;
   private quarterbackMatchKey: string | null = null;
@@ -99,6 +109,10 @@ export class PregamePresentationDirector {
       quarterbackRosterPlayerId: this.quarterbackSubject.rosterPlayerId,
       quarterbackTeamId: this.quarterbackSubject.teamId,
       weatherCondition: context.weatherCondition,
+    });
+    this.keysToGame = resolveKeysToGame({
+      rosterBinding: context.rosterBinding,
+      teamTheme: context.teamTheme,
     });
     this.targetGameplayCamera = context.targetGameplayCamera;
     this.weatherCondition = context.weatherCondition;
@@ -140,13 +154,21 @@ export class PregamePresentationDirector {
     this.updateLatestSidelineCounts(context);
     this.updateLatestWarmupCounts(context);
     this.options.audioCoordinator.updateAmbience(context.gameplaySnapshot, delta);
+    this.subjectBounds = resolvePregameSubjectBounds(step.shotId, context);
+
+    if (this.shouldHoldForSubjectReadiness(step, context, delta)) {
+      return {
+        completed: this.completed,
+        shot: null,
+      };
+    }
+
     this.syncStepStart(step, context);
 
     const progress = step.minimumSeconds <= 0
       ? 1
-      : clamp(this.shotElapsedSeconds / step.minimumSeconds, 0, 1);
+      : this.shotElapsedSeconds / step.minimumSeconds;
     const shot = createPregameCameraShot(step, context, progress);
-    this.subjectBounds = resolvePregameSubjectBounds(step.shotId, context);
 
     if (this.canAdvanceStep(step)) {
       this.advanceStep(context);
@@ -197,8 +219,11 @@ export class PregamePresentationDirector {
       ready: false,
       userReady: false,
     };
+    this.latestQuarterbackAppearance = null;
+    this.keysToGame = [];
     this.selections = null;
     this.shotElapsedSeconds = 0;
+    this.subjectReadinessWaitSeconds = 0;
     this.startedLineIds = new Set();
     this.subjectBounds = null;
     this.quarterbackMatchKey = null;
@@ -221,7 +246,7 @@ export class PregamePresentationDirector {
     const audioSnapshot = this.options.audioCoordinator.getSnapshot();
     const lowerThirdSnapshot = this.options.lowerThird.getSnapshot();
     const minimumSeconds = step?.minimumSeconds ?? 0;
-    const spotlightActive = step?.shotId === 'quarterbackSpotlight';
+    const spotlightActive = step ? isQuarterbackSpotlightStep(step) : false;
     const activeSpeech = audioSnapshot.activeLine?.lineId === 'quarterback'
       ? audioSnapshot.activeLine
       : null;
@@ -243,6 +268,8 @@ export class PregamePresentationDirector {
         : this.resolveHoldReason(step, audioSnapshot.completedLineIds),
       lastStepTransitionSeconds: this.lastStepTransitionSeconds,
       lowerThird: lowerThirdSnapshot,
+      introOverlay: resolveIntroOverlay(step, audioSnapshot.completedLineIds),
+      keysToGame: this.keysToGame,
       musicState: {
         gain: audioSnapshot.musicGain,
         loopActive: audioSnapshot.musicLoopActive,
@@ -254,6 +281,7 @@ export class PregamePresentationDirector {
       progress: minimumSeconds > 0
         ? clamp(this.shotElapsedSeconds / minimumSeconds, 0, 1)
         : this.completed ? 1 : 0,
+      quarterbackAppearance: this.latestQuarterbackAppearance,
       sequence: this.sequence.map((sequenceStep) => sequenceStep.shotId),
       shotElapsedSeconds: this.shotElapsedSeconds,
       sidelineCounts: { ...this.latestSidelineCounts },
@@ -280,7 +308,9 @@ export class PregamePresentationDirector {
         speechRemainingSeconds: activeSpeech?.remainingSeconds ?? null,
       }),
       nextShot: this.sequence[this.currentStepIndex + 1]?.shotId ?? null,
-      subjectReady: step ? isSubjectReady(step, this.subjectBounds) : false,
+      subjectReady: step ? isSubjectReady(step, this.subjectBounds, {
+        quarterbackAppearance: this.latestQuarterbackAppearance,
+      }) : false,
       subjectBounds: this.subjectBounds,
       targetGameplayCamera: this.targetGameplayCamera,
       weatherCondition: this.weatherCondition,
@@ -289,7 +319,7 @@ export class PregamePresentationDirector {
 
   private syncStepStart(step: PregameSequenceStep, context: PregamePresentationContext): void {
     if (
-      step.shotId === 'quarterbackSpotlight' &&
+      isQuarterbackSpotlightStep(step) &&
       this.quarterbackSubject &&
       this.quarterbackMatchKey
     ) {
@@ -300,15 +330,18 @@ export class PregamePresentationDirector {
       );
     }
 
-    if (step.commentaryLineId && this.selections && !this.startedLineIds.has(step.commentaryLineId)) {
-      this.startedLineIds.add(step.commentaryLineId);
-      this.options.audioCoordinator.startLine(
-        step.commentaryLineId,
-        this.selections[step.commentaryLineId],
-      );
+    if (this.selections) {
+      const lineId = this.resolveNextStepLineToStart(step);
+      if (lineId) {
+        this.startedLineIds.add(lineId);
+        this.options.audioCoordinator.startLine(
+          lineId,
+          this.selections[lineId],
+        );
+      }
     }
 
-    if (step.shotId === 'transitionToGameplay' && !this.transitionFadeStarted) {
+    if ((step.shotId === 'transitionToGameplay' || step.shotId === 'transitionToCoinToss') && !this.transitionFadeStarted) {
       this.transitionFadeStarted = true;
       this.options.audioCoordinator.fadeTitleMusicToGameplay(
         PREGAME_DIRECTOR_CONFIG.titleMusicGameplayFadeSeconds,
@@ -323,16 +356,18 @@ export class PregamePresentationDirector {
       return false;
     }
 
-    if (!step.waitForCommentaryLineId) {
+    const waitLineIds = resolveWaitLineIds(step);
+    if (waitLineIds.length === 0) {
       return true;
     }
 
-    return this.options.audioCoordinator.isLineComplete(step.waitForCommentaryLineId);
+    return waitLineIds.every((lineId) => this.options.audioCoordinator.isLineComplete(lineId));
   }
 
   private advanceStep(context: PregamePresentationContext): void {
     this.currentStepIndex += 1;
     this.shotElapsedSeconds = 0;
+    this.subjectReadinessWaitSeconds = 0;
     this.lastStepTransitionSeconds = this.elapsedSeconds;
 
     const nextStep = this.sequence[this.currentStepIndex];
@@ -352,6 +387,7 @@ export class PregamePresentationDirector {
   }
 
   private updateLatestWarmupCounts(context: PregamePresentationContext): void {
+    this.latestQuarterbackAppearance = context.warmupSnapshot.quarterback?.appearance ?? null;
     this.latestWarmupCounts = {
       enabled: context.warmupSnapshot.enabled,
       opponentReady: context.warmupSnapshot.opponentReady,
@@ -362,12 +398,40 @@ export class PregamePresentationDirector {
     };
   }
 
+  private shouldHoldForSubjectReadiness(
+    step: PregameSequenceStep,
+    context: PregamePresentationContext,
+    deltaSeconds: number,
+  ): boolean {
+    if (
+      !isQuarterbackSpotlightStep(step) ||
+      isSubjectReady(step, this.subjectBounds, {
+        quarterbackAppearance: context.warmupSnapshot.quarterback?.appearance ?? null,
+      })
+    ) {
+      this.subjectReadinessWaitSeconds = 0;
+      return false;
+    }
+
+    this.subjectReadinessWaitSeconds += deltaSeconds;
+    const fallbackReason = context.warmupSnapshot.quarterback?.appearance.fallbackReason ?? null;
+    if (
+      fallbackReason === 'helmetFailed' ||
+      fallbackReason === 'bodyMissing' ||
+      this.subjectReadinessWaitSeconds >= PREGAME_DIRECTOR_CONFIG.quarterbackReadinessTimeoutSeconds
+    ) {
+      this.advanceStep(context);
+    }
+
+    return true;
+  }
+
   private canUseSequenceStep(
     step: PregameSequenceStep,
     context: PregamePresentationContext,
   ): boolean {
     if (
-      step.shotId === 'quarterbackSpotlight' &&
+      isQuarterbackSpotlightStep(step) &&
       this.quarterbackMatchKey &&
       !this.playerSpotlightStage.canShow(this.quarterbackMatchKey)
     ) {
@@ -385,6 +449,26 @@ export class PregamePresentationDirector {
     return true;
   }
 
+  private resolveNextStepLineToStart(
+    step: PregameSequenceStep,
+  ): PregamePresentationCommentaryLineId | null {
+    const lineIds = resolveStepLineIds(step);
+    for (const [index, lineId] of lineIds.entries()) {
+      if (this.startedLineIds.has(lineId)) {
+        continue;
+      }
+
+      const previousLineId = lineIds[index - 1];
+      if (previousLineId && !this.options.audioCoordinator.isLineComplete(previousLineId)) {
+        return null;
+      }
+
+      return lineId;
+    }
+
+    return null;
+  }
+
   private resolveCompletionBlockers(
     step: PregameSequenceStep | null,
     completedLineIds: readonly PregameCommentaryLineId[],
@@ -397,11 +481,10 @@ export class PregamePresentationDirector {
     if (this.shotElapsedSeconds < step.minimumSeconds) {
       blockers.push('minimumDuration');
     }
-    if (
-      step.waitForCommentaryLineId &&
-      !completedLineIds.includes(step.waitForCommentaryLineId)
-    ) {
-      blockers.push(`commentary:${step.waitForCommentaryLineId}`);
+    for (const lineId of resolveWaitLineIds(step)) {
+      if (!completedLineIds.includes(lineId)) {
+        blockers.push(`commentary:${lineId}`);
+      }
     }
     return blockers;
   }
@@ -424,11 +507,50 @@ function resolveActiveTeam(step: PregameSequenceStep | null): 'opponent' | 'user
     return null;
   }
 
-  if (step.shotId === 'quarterbackSpotlight') {
+  if (isQuarterbackSpotlightStep(step)) {
     return 'user';
   }
 
   return step.lowerThirdTeamSide ?? null;
+}
+
+function resolveStepLineIds(
+  step: PregameSequenceStep,
+): readonly PregamePresentationCommentaryLineId[] {
+  if (step.commentaryLineIds) {
+    return step.commentaryLineIds;
+  }
+
+  return step.commentaryLineId ? [step.commentaryLineId] : [];
+}
+
+function resolveWaitLineIds(
+  step: PregameSequenceStep,
+): readonly PregamePresentationCommentaryLineId[] {
+  if (step.waitForCommentaryLineIds) {
+    return step.waitForCommentaryLineIds;
+  }
+
+  return step.waitForCommentaryLineId ? [step.waitForCommentaryLineId] : [];
+}
+
+function resolveIntroOverlay(
+  step: PregameSequenceStep | null,
+  completedLineIds: readonly PregameCommentaryLineId[],
+): PregamePresentationSnapshot['introOverlay'] {
+  if (!step || !isCenterOrbitStep(step)) {
+    return 'hidden';
+  }
+
+  return completedLineIds.includes('matchup') ? 'keys' : 'matchup';
+}
+
+function isCenterOrbitStep(step: PregameSequenceStep): boolean {
+  return step.shotId === 'stadiumCenterOrbit' || step.shotId === 'stadiumCenterOrbit360';
+}
+
+function isQuarterbackSpotlightStep(step: PregameSequenceStep): boolean {
+  return step.shotId === 'quarterbackSpotlight' || step.shotId === 'quarterbackFrontSpotlight';
 }
 
 function resolveActiveSubject(
@@ -439,7 +561,7 @@ function resolveActiveSubject(
     return null;
   }
 
-  if (step.shotId === 'quarterbackSpotlight') {
+  if (isQuarterbackSpotlightStep(step)) {
     return lowerThird.displayName;
   }
 
@@ -451,7 +573,7 @@ function resolveLowerThirdState(
   context: PregamePresentationContext,
   selections: PregameCommentarySelections | null,
 ): PregameLowerThirdState {
-  if (step.shotId === 'quarterbackSpotlight') {
+  if (isQuarterbackSpotlightStep(step)) {
     const subject = resolveQuarterbackSpotlightSubject(context);
     return createPlayerSpotlightLowerThirdState(
       subject,
@@ -495,9 +617,16 @@ function resolveLowerThirdState(
 function isSubjectReady(
   step: PregameSequenceStep,
   bounds: PregameSubjectBounds | null,
+  context: {
+    quarterbackAppearance: PregameWarmupQuarterbackAppearanceAudit | null;
+  },
 ): boolean {
   if (!bounds) {
     return false;
+  }
+
+  if (isQuarterbackSpotlightStep(step)) {
+    return context.quarterbackAppearance?.subjectReady === true;
   }
 
   if (step.shotId === 'matchupWide') {

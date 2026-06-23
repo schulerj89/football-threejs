@@ -240,6 +240,7 @@ function makeCommentarySnapshot(playing: boolean): BroadcastCommentarySnapshot {
     },
     queue: [],
     remainingCooldowns: [],
+    voicePack: null,
   };
 }
 
@@ -277,7 +278,9 @@ class FakeMusicPort implements MenuMusicPlaybackPort, GameMusicAudioPort, Stadiu
       crowdDuckingGain: 1,
       decodedAssetIds: [],
       decodedBufferBytes: 0,
+      decodedBufferBudgetBytes: 8 * 1024 * 1024,
       enabled: true,
+      lastEvictedAudioAssetId: null,
       lastUnlockError: null,
       loadedAssetIds: [],
       loadedCompressedBytes: 0,

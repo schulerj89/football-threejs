@@ -63,6 +63,22 @@ export function resolveGameplayCameraFocus(
 // pre-snap/reset -> nextSnapSpot; live possession -> carrier/player/current spot;
 // pass flight -> in-flight start/current spot; dead -> exactDeadBallSpot/result/ball/current spot.
 function resolveDeadBallFocus(snapshot: GameplaySnapshot): CameraFocusResult {
+  if (
+    snapshot.lastPlayResult?.type === 'touchdown' &&
+    snapshot.touchdownRunout &&
+    !snapshot.touchdownRunout.completed
+  ) {
+    const ballFocus = toFiniteFocus(snapshot.ball?.position);
+    if (ballFocus) {
+      return createCameraFocusResult({
+        focusPosition: ballFocus,
+        focusSource: 'ball',
+        phase: 'deadBall',
+        state: 'deadBall',
+      });
+    }
+  }
+
   const deadBallSpot =
     toFiniteFocus(snapshot.exactDeadBallSpot) ??
     toFiniteFocus(snapshot.lastPlayResult?.endingBallSpot);

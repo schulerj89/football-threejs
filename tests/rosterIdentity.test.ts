@@ -27,11 +27,30 @@ import {
   createRosterPlayer,
   validateRosterPlayer,
 } from '../src/roster/RosterPlayer';
+import {
+  COLLEGE_SPECIAL_TEAMS_RULE_SPEC,
+  resolveKickoffLineSpot,
+  resolveReceivingRestrainingLineZ,
+  resolveTouchbackSpot,
+  resolveTryLineSpot,
+} from '../src/specialTeams/CollegeSpecialTeamsRuleSpec';
+import {
+  createSpecialTeamsDepthChart,
+  validateSpecialTeamsDepthChart,
+  type SpecialTeamsDepthChart,
+} from '../src/specialTeams/SpecialTeamsDepthChart';
+import {
+  resolveKickoffCoverageFormation,
+  resolveKickoffReturnFormation,
+  resolvePlaceKickDefenseFormation,
+  resolvePlaceKickFormation,
+  validateSpecialTeamsFormation,
+} from '../src/specialTeams/SpecialTeamsFormations';
 import { DEFAULT_TEAM_PROFILE_SETTINGS } from '../src/teams/TeamProfileStore';
 
 describe('roster identity', () => {
   it('ships valid fictional starter team rosters with unique jersey numbers', () => {
-    expect(STARTER_TEAM_ROSTERS).toHaveLength(4);
+    expect(STARTER_TEAM_ROSTERS).toHaveLength(6);
 
     for (const [index, issues] of validateStarterTeamRosters().entries()) {
       const errors = issues.filter((issue) => issue.severity === 'error');
@@ -41,9 +60,13 @@ describe('roster identity', () => {
     for (const roster of STARTER_TEAM_ROSTERS) {
       expect(roster.offensiveStarterIds).toHaveLength(11);
       expect(roster.defensiveStarterIds).toHaveLength(11);
-      expect(roster.players).toHaveLength(24);
-      expect(new Set(roster.players.map((player) => player.id)).size).toBe(24);
-      expect(new Set(roster.players.map((player) => player.jerseyNumber)).size).toBe(24);
+      expect(roster.players).toHaveLength(32);
+      expect(roster.reserveIds).toHaveLength(7);
+      expect(roster.players.filter((player) => player.footballPosition === 'K')).toHaveLength(1);
+      expect(roster.players.filter((player) => player.footballPosition === 'P')).toHaveLength(1);
+      expect(roster.players.filter((player) => player.footballPosition === 'LS')).toHaveLength(1);
+      expect(new Set(roster.players.map((player) => player.id)).size).toBe(32);
+      expect(new Set(roster.players.map((player) => player.jerseyNumber)).size).toBe(32);
       expect(roster.players.every((player) => player.jerseyNumber >= 0 && player.jerseyNumber <= 99)).toBe(true);
     }
   });
@@ -119,5 +142,118 @@ describe('roster identity', () => {
       .toMatchObject({ rosterTeamId: 'bay-city-current', team: 'offense' });
     expect(lineup.bindings.find((binding) => binding.gameplayPlayerId === 'defense-safety'))
       .toMatchObject({ rosterTeamId: 'summit-forge', team: 'defense' });
+  });
+
+  it('resolves valid eleven-player special-teams depth-chart units for every team', () => {
+    for (const roster of STARTER_TEAM_ROSTERS) {
+      const chart = createSpecialTeamsDepthChart(roster);
+
+      expect(validateSpecialTeamsDepthChart(chart, roster)).toEqual([]);
+      expect([
+        chart.kickoffCoverage.kickerId,
+        ...chart.kickoffCoverage.leftCoverageIds,
+        ...chart.kickoffCoverage.rightCoverageIds,
+      ]).toHaveLength(11);
+      expect(chart.kickoffCoverage.leftCoverageIds).toHaveLength(5);
+      expect(chart.kickoffCoverage.rightCoverageIds).toHaveLength(5);
+      expect([
+        ...chart.kickoffReturn.returnerIds,
+        ...chart.kickoffReturn.frontLineIds,
+        ...chart.kickoffReturn.secondLineIds,
+      ]).toHaveLength(11);
+      expect(new Set(chart.kickoffReturn.returnerIds).size).toBe(2);
+      expect([
+        chart.placeKick.kickerId,
+        chart.placeKick.holderId,
+        chart.placeKick.longSnapperId,
+        ...chart.placeKick.protectorIds,
+      ]).toHaveLength(11);
+      expect(new Set([
+        chart.placeKick.kickerId,
+        chart.placeKick.holderId,
+        chart.placeKick.longSnapperId,
+      ]).size).toBe(3);
+      expect(chart.placeKickDefense.rusherIds).toHaveLength(11);
+    }
+  });
+
+  it('reports missing and duplicate special-teams depth-chart IDs clearly', () => {
+    const roster = STARTER_TEAM_ROSTERS[0]!;
+    const chart = createSpecialTeamsDepthChart(roster);
+    const invalid: SpecialTeamsDepthChart = {
+      ...chart,
+      kickoffCoverage: {
+        ...chart.kickoffCoverage,
+        leftCoverageIds: [
+          chart.kickoffCoverage.leftCoverageIds[0]!,
+          chart.kickoffCoverage.leftCoverageIds[0]!,
+          ...chart.kickoffCoverage.leftCoverageIds.slice(2),
+        ],
+      },
+      placeKick: {
+        ...chart.placeKick,
+        longSnapperId: 'missing-long-snapper',
+      },
+    };
+
+    expect(validateSpecialTeamsDepthChart(invalid, roster).map((issue) => issue.message)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('duplicate roster player'),
+        expect.stringContaining('missing roster player missing-long-snapper'),
+      ]),
+    );
+  });
+
+  it('centralizes college special-teams rule spots', () => {
+    expect(COLLEGE_SPECIAL_TEAMS_RULE_SPEC).toMatchObject({
+      kickoffYardLine: 35,
+      maximumNonKickerDepthBehindKickingLineYards: 5,
+      minimumKickingPlayersPerSideOfKicker: 4,
+      receivingRestrainingLineDistanceYards: 10,
+      touchbackReceivingYardLine: 25,
+      tryLineYardsFromOpponentGoal: 3,
+    });
+    expect(resolveKickoffLineSpot(1)).toEqual({ x: 0, z: -15 });
+    expect(resolveKickoffLineSpot(-1)).toEqual({ x: 0, z: 15 });
+    expect(resolveReceivingRestrainingLineZ(1)).toBe(-5);
+    expect(resolveReceivingRestrainingLineZ(-1)).toBe(5);
+    expect(resolveTouchbackSpot(1)).toEqual({ x: 0, z: -25 });
+    expect(resolveTouchbackSpot(-1)).toEqual({ x: 0, z: 25 });
+    expect(resolveTryLineSpot(1)).toEqual({ x: 0, z: 47 });
+    expect(resolveTryLineSpot(-1)).toEqual({ x: 0, z: -47 });
+  });
+
+  it('resolves special-teams formation contracts without activating gameplay', () => {
+    const roster = STARTER_TEAM_ROSTERS[0]!;
+    const formations = [
+      resolveKickoffCoverageFormation({ direction: 1, roster, teamSide: 'user' }),
+      resolveKickoffReturnFormation({ direction: 1, roster, teamSide: 'user' }),
+      resolvePlaceKickFormation({ direction: 1, roster, teamSide: 'user' }),
+      resolvePlaceKickDefenseFormation({ direction: 1, roster, teamSide: 'opponent' }),
+    ];
+
+    expect(formations.map((formation) => formation.family)).toEqual([
+      'kickoff',
+      'kickoff',
+      'placeKick',
+      'placeKick',
+    ]);
+    for (const formation of formations) {
+      expect(formation.participants).toHaveLength(11);
+      expect(formation.participants.every((participant) => participant.presentationOnly)).toBe(true);
+      expect(validateSpecialTeamsFormation(formation)).toEqual([]);
+    }
+  });
+
+  it('keeps existing offensive and defensive lineup bindings unchanged after roster expansion', () => {
+    const roster = STARTER_TEAM_ROSTERS[0]!;
+    const lineup = createActiveLineup('11v11', roster, STARTER_TEAM_ROSTERS[1]!);
+
+    expect(lineup.bindings.map((binding) => binding.rosterPlayerId)).not.toContain(roster.longSnapperId);
+    for (const reserveId of roster.reserveIds) {
+      expect(lineup.bindings.map((binding) => binding.rosterPlayerId)).not.toContain(reserveId);
+    }
+    expect(lineup.bindings.find((binding) => binding.gameplayPlayerId === 'offense-qb')?.rosterPlayerId)
+      .toBe(roster.offensiveStarterIds[0]);
   });
 });

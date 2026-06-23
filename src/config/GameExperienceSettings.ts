@@ -47,6 +47,15 @@ import {
 } from '../teams/TeamRegistry';
 import type { UniformVariant } from '../teams/UniformPalette';
 import type { SidelineDensity } from '../presentation/teams/SidelineTeamTypes';
+import {
+  DEFAULT_PLAYER_VISUAL_MODE,
+  resolvePlayerVisualMode,
+  type PlayerVisualMode,
+} from '../presentation/players/PlayerVisualMode';
+import {
+  normalizeAnnouncerVoiceSetting,
+} from '../audio/voicePacks/VoicePackSelector';
+import type { AnnouncerVoiceSetting } from '../audio/voicePacks/VoicePackTypes';
 
 export type ExperiencePreset =
   | 'broadcast'
@@ -57,6 +66,7 @@ export type ExperienceCameraMode = 'cinematic' | 'offense' | 'tactical';
 
 export interface GameExperienceSettings {
   announcerEnabled: boolean;
+  announcerVoice: AnnouncerVoiceSetting;
   announcerVolume: number;
   audioEnabled: boolean;
   captionsEnabled: boolean;
@@ -81,6 +91,7 @@ export interface GameExperienceSettings {
   officialsDebugLabels: boolean;
   officialsEnabled: boolean;
   playerMotionEnabled: boolean;
+  playerVisualMode: PlayerVisualMode;
   playbookId: PlaybookId;
   preset: ExperiencePreset;
   quarterLengthSeconds: number;
@@ -103,6 +114,7 @@ export interface PersistedGameExperienceSettings {
 
 export interface GameExperienceQueryOverrides {
   announcerEnabled?: boolean;
+  announcerVoice?: AnnouncerVoiceSetting;
   announcerVolume?: number;
   audioEnabled?: boolean;
   captionsEnabled?: boolean;
@@ -127,6 +139,7 @@ export interface GameExperienceQueryOverrides {
   officialsDebugLabels?: boolean;
   officialsEnabled?: boolean;
   playerMotionEnabled?: boolean;
+  playerVisualMode?: PlayerVisualMode;
   playbookId?: PlaybookId;
   preset?: ExperiencePreset;
   quarterLengthSeconds?: number;
@@ -192,6 +205,7 @@ export const GAME_EXPERIENCE_SETTINGS_STORAGE_KEY = GAME_SETTINGS_STORAGE_KEY;
 
 export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   announcerEnabled: true,
+  announcerVoice: 'auto',
   announcerVolume: DEFAULT_AUDIO_SETTINGS.announcerVolume,
   audioEnabled: true,
   captionsEnabled: false,
@@ -199,8 +213,8 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   coachesEnabled: true,
   controlledPlayerLabelEnabled: true,
   crowdAudioEnabled: true,
-  crowdDensity: 'low',
-  crowdFullness: 'full',
+  crowdDensity: 'medium',
+  crowdFullness: 'standard',
   crowdReactionsEnabled: true,
   crowdVolume: DEFAULT_AUDIO_SETTINGS.crowdVolume,
   crowdVisualsEnabled: true,
@@ -214,8 +228,9 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   musicVolume: DEFAULT_AUDIO_SETTINGS.musicVolume,
   muted: DEFAULT_AUDIO_SETTINGS.muted,
   officialsDebugLabels: false,
-  officialsEnabled: true,
+  officialsEnabled: false,
   playerMotionEnabled: true,
+  playerVisualMode: DEFAULT_PLAYER_VISUAL_MODE,
   playbookId: '11v11',
   preset: 'broadcast',
   quarterLengthSeconds: 180,
@@ -352,6 +367,9 @@ export function normalizeGameExperienceSettings(
 
   return {
     announcerEnabled: settings.announcerEnabled ?? presetDefaults.announcerEnabled,
+    announcerVoice: normalizeAnnouncerVoiceSetting(
+      settings.announcerVoice ?? presetDefaults.announcerVoice,
+    ),
     announcerVolume: clampVolume(settings.announcerVolume ?? presetDefaults.announcerVolume),
     audioEnabled: settings.audioEnabled ?? presetDefaults.audioEnabled,
     captionsEnabled: settings.captionsEnabled ?? presetDefaults.captionsEnabled,
@@ -394,6 +412,7 @@ export function normalizeGameExperienceSettings(
       settings.officialsDebugLabels ?? presetDefaults.officialsDebugLabels,
     officialsEnabled: settings.officialsEnabled ?? presetDefaults.officialsEnabled,
     playerMotionEnabled: settings.playerMotionEnabled ?? presetDefaults.playerMotionEnabled,
+    playerVisualMode: resolvePlayerVisualMode(settings.playerVisualMode),
     playbookId: isPlaybookId(settings.playbookId)
       ? settings.playbookId
       : presetDefaults.playbookId,
@@ -490,7 +509,9 @@ export function resolveGameExperienceQueryOverrides(
       ? 'high'
       : crowdFullnessValue === 'standard'
         ? 'medium'
-        : 'low';
+        : crowdFullnessValue === 'adaptive'
+          ? 'medium'
+          : 'low';
   }
 
   if (isSidelineDensity(sidelineDensityValue)) {
@@ -515,6 +536,10 @@ export function resolveGameExperienceQueryOverrides(
     'controlledPlayerLabel',
   );
   applyBooleanOverride(overrides, 'announcerEnabled', searchParams, 'announcer');
+  const announcerVoiceValue = searchParams.get('announcerVoice');
+  if (announcerVoiceValue !== null) {
+    overrides.announcerVoice = normalizeAnnouncerVoiceSetting(announcerVoiceValue);
+  }
   applyBooleanOverride(overrides, 'captionsEnabled', searchParams, 'captions');
   applyBooleanOverride(overrides, 'debugToolsEnabled', searchParams, 'debugTools');
   applyBooleanOverride(overrides, 'muted', searchParams, 'muted');
@@ -535,6 +560,9 @@ export function resolveGameExperienceQueryOverrides(
     'selectedReceiverLabel',
   );
   applyBooleanOverride(overrides, 'playerMotionEnabled', searchParams, 'playerMotion');
+  if (searchParams.has('playerVisual')) {
+    overrides.playerVisualMode = resolvePlayerVisualMode(searchParams.get('playerVisual'));
+  }
   applyBooleanOverride(overrides, 'sidelinePlayersEnabled', searchParams, 'sidelinePlayers');
   applyBooleanOverride(overrides, 'stadiumEnabled', searchParams, 'stadium');
   applyBooleanOverride(overrides, 'tunnelTableauEnabled', searchParams, 'tunnelTableau');

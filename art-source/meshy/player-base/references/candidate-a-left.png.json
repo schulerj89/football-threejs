@@ -1,0 +1,13 @@
+{
+  "assetId": "candidate-a-left",
+  "candidateId": "candidate-a",
+  "contentHash": "8d45dc233a52bcf41b2d5224d0596ab5e266c5d9cd873878a5aa92a371a4374b",
+  "generatedAt": "2026-06-22T18:21:46.308Z",
+  "model": "gpt-image-2",
+  "outputFormat": "png",
+  "prompt": "Create one orthographic reference view for the same stylized low-poly athletic male American-football video-game body. The character uses chunky PS1-inspired proportions with a clean humanoid silhouette and a neutral A-pose. He wears a tight generic practice uniform: medium-gray jersey, darker pants, neutral shoes, and visible skin. The arms and legs are clearly separated from the torso and from each other. Use simple mitten-style hands, simplified face, simple ears, and no hair extending far from the head. Do not include helmet, football, shoulder pads, pads integrated into the body, logo, text, jersey number, scenery, cast shadow, watermark, or readable marks. Use neutral flat lighting, opaque white background, centered full body, same apparent scale across views, feet on the ground line, and no perspective distortion. Candidate A style: clean athletic build, broad shoulders, compact torso, readable forearms and calves, browser-game low-poly planes. Left orthographic side view. The character faces toward the viewer right side of the image, with the same A-pose and full-body scale. Output one opaque square PNG image. No text, no logo, no numbers, no watermark.",
+  "quality": "high",
+  "requestedSize": "1024x1024",
+  "revisedPrompt": null,
+  "view": "left"
+}

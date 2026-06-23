@@ -3,9 +3,8 @@ import type { GameplayRosterBinding } from '../../roster/GameplayRosterBinding';
 import { getRosterPlayerForGameplayId } from '../../roster/GameplayRosterBinding';
 import type { RosterPlayer } from '../../roster/RosterPlayer';
 import type { TeamRoster } from '../../roster/TeamRoster';
-import type { OfficialModel } from '../../officials/OfficialTypes';
-import type { SidelinePlayerPlacement, SidelinePoseId } from '../teams/SidelineTeamTypes';
 import type {
+  CoinTossCaptainPlacement,
   CoinTossCaptainSubject,
   CoinTossPresentationLayout,
 } from './CoinTossTypes';
@@ -15,7 +14,7 @@ const COIN_TOSS_LAYOUT_CONFIG = {
   captainLineZ: 2.2,
   coinHeight: 1.55,
   coinZ: 0,
-  officialZ: 0.15,
+  minimumCaptainClearance: 0.9,
   playerScale: 1,
   sidelineClearance: 8,
 } as const;
@@ -26,7 +25,6 @@ export function createCoinTossLayout(
   const captains = resolveCoinTossCaptains(binding);
   const captainPlacements = captains.map((captain, index) =>
     createCaptainPlacement(captain, index));
-  const officials = [createCoinTossOfficial()];
 
   return {
     captains,
@@ -37,7 +35,6 @@ export function createCoinTossLayout(
       z: COIN_TOSS_LAYOUT_CONFIG.coinZ,
     },
     noGameplayAuthority: true,
-    officials,
   };
 }
 
@@ -71,9 +68,11 @@ function createCaptainSubject(
   gameplayPlayerId: string | null,
 ): CoinTossCaptainSubject {
   return {
+    appearanceId: player?.appearanceId ?? player?.id ?? `${team}-coin-toss-captain`,
     displayName: player?.displayName ?? (team === 'user' ? 'User Captain' : 'Opponent Captain'),
     footballPosition: player?.footballPosition ?? 'CAPT',
     gameplayPlayerId,
+    jerseyNumber: player?.jerseyNumber ?? null,
     rosterPlayerId: player?.id ?? `${team}-coin-toss-captain`,
     team,
   };
@@ -82,44 +81,32 @@ function createCaptainSubject(
 function createCaptainPlacement(
   captain: CoinTossCaptainSubject,
   index: number,
-): SidelinePlayerPlacement {
+): CoinTossCaptainPlacement {
   const userSide = captain.team === 'user';
   const sideIndex = userSide ? index : index - 2;
   const centeredIndex = sideIndex === 0 ? -0.5 : 0.5;
   const z = userSide
     ? -COIN_TOSS_LAYOUT_CONFIG.captainLineZ
     : COIN_TOSS_LAYOUT_CONFIG.captainLineZ;
-  const pose: SidelinePoseId = sideIndex === 0 ? 'handsOnHips' : 'armsLow';
 
   return {
-    appearanceId: captain.rosterPlayerId,
+    appearanceId: captain.appearanceId,
     facingRadians: userSide ? 0 : Math.PI,
+    footballPosition: normalizeFootballPosition(captain.footballPosition),
+    gameplayPlayerId: captain.gameplayPlayerId,
+    gameplayTeam: userSide ? 'offense' : 'defense',
     id: `coin-toss-captain-${captain.team}-${sideIndex + 1}`,
+    jerseyNumber: captain.jerseyNumber,
     position: {
       x: centeredIndex * COIN_TOSS_LAYOUT_CONFIG.captainGapX,
       y: 0,
       z,
     },
-    pose,
+    role: resolveCaptainRole(captain.footballPosition, userSide),
+    rosterPlayerId: captain.rosterPlayerId,
     scale: COIN_TOSS_LAYOUT_CONFIG.playerScale,
-    team: userSide ? 'offense' : 'defense',
-    teamSide: captain.team,
-    zoneId: userSide ? 'user-sideline' : 'opponent-sideline',
-  };
-}
-
-function createCoinTossOfficial(): OfficialModel {
-  const position = { x: 0, z: COIN_TOSS_LAYOUT_CONFIG.officialZ };
-
-  return {
-    distanceFromBall: Math.abs(COIN_TOSS_LAYOUT_CONFIG.officialZ),
-    facingRadians: Math.PI,
-    id: 'official-referee',
-    poseIntent: 'neutral',
-    position,
-    role: 'referee',
-    targetPosition: position,
-    updateState: 'formation',
+    team: captain.team,
+    visualId: `coin-toss-${captain.team}-${captain.rosterPlayerId}`,
   };
 }
 
@@ -165,14 +152,97 @@ export function validateCoinTossLayout(layout: CoinTossPresentationLayout): stri
   if (layout.captains.length !== 4) {
     errors.push(`Expected four captains, received ${layout.captains.length}`);
   }
-  if (layout.officials.length !== 1) {
-    errors.push(`Expected one coin-toss official, received ${layout.officials.length}`);
+  if (layout.captainPlacements.length !== 4) {
+    errors.push(`Expected four captain placements, received ${layout.captainPlacements.length}`);
   }
+
+  const userCaptains = layout.captains.filter((captain) => captain.team === 'user').length;
+  const opponentCaptains = layout.captains.filter((captain) => captain.team === 'opponent').length;
+  if (userCaptains !== 2 || opponentCaptains !== 2) {
+    errors.push(`Expected two captains per team, received user=${userCaptains} opponent=${opponentCaptains}`);
+  }
+
+  const rosterIds = new Set<string>();
+  for (const captain of layout.captains) {
+    if (rosterIds.has(captain.rosterPlayerId)) {
+      errors.push(`Duplicate coin-toss captain roster ID ${captain.rosterPlayerId}`);
+    }
+    rosterIds.add(captain.rosterPlayerId);
+  }
+
   for (const placement of layout.captainPlacements) {
     if (Math.abs(placement.position.x) > sidelineLimit) {
       errors.push(`${placement.id} is too close to the sideline`);
     }
+    if (Math.abs(placement.position.z) > FIELD_DIMENSIONS.fieldLength / 2) {
+      errors.push(`${placement.id} is outside the field length`);
+    }
+  }
+
+  for (let i = 0; i < layout.captainPlacements.length; i += 1) {
+    for (let j = i + 1; j < layout.captainPlacements.length; j += 1) {
+      const a = layout.captainPlacements[i]!;
+      const b = layout.captainPlacements[j]!;
+      const distance = Math.hypot(a.position.x - b.position.x, a.position.z - b.position.z);
+      if (distance < COIN_TOSS_LAYOUT_CONFIG.minimumCaptainClearance) {
+        errors.push(`${a.id} overlaps ${b.id}`);
+      }
+    }
   }
 
   return errors;
+}
+
+function normalizeFootballPosition(position: string): CoinTossCaptainPlacement['footballPosition'] {
+  const knownPositions = new Set([
+    'QB',
+    'RB',
+    'C',
+    'LG',
+    'RG',
+    'LT',
+    'RT',
+    'TE',
+    'WR',
+    'SLOT',
+    'DL',
+    'OLB',
+    'ILB',
+    'CB',
+    'FS',
+    'SS',
+  ]);
+
+  return knownPositions.has(position)
+    ? position as CoinTossCaptainPlacement['footballPosition']
+    : 'UNKNOWN';
+}
+
+function resolveCaptainRole(
+  footballPosition: string,
+  offense: boolean,
+): CoinTossCaptainPlacement['role'] {
+  if (!offense) {
+    return footballPosition === 'CB' || footballPosition === 'FS' || footballPosition === 'SS'
+      ? 'coverageDefender'
+      : 'defender';
+  }
+
+  if (footballPosition === 'QB') {
+    return 'quarterback';
+  }
+  if (footballPosition === 'RB') {
+    return 'runner';
+  }
+  if (
+    footballPosition === 'C' ||
+    footballPosition === 'LG' ||
+    footballPosition === 'RG' ||
+    footballPosition === 'LT' ||
+    footballPosition === 'RT'
+  ) {
+    return 'blocker';
+  }
+
+  return 'receiver';
 }

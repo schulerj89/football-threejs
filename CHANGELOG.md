@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.4] - 2026-06-23
+
+### Added
+
+- Added the six-team league data path, football hub, roster browser, broadcast scorebug shell integration, expanded special-teams flow, halftime presentation, voice-pack loading, weather presentation, jersey numbers, and score/stat presentation foundations.
+- Added generated and prepared presentation/audio/branding assets for special teams, cadence, voice packs, team identity, scorebug, helmets, and player-model pipeline work.
+
+### Changed
+
+- Shifted the normal player flow through title, hub, matchup setup, pregame, coin toss, kickoff, cadence, scrimmage, halftime, and game-over presentation.
+- Updated the title screen to keep only the Start Game action and moved settings access into the hub.
+- Hid matchup helmet preview canvases after Play Game so they no longer remain over gameplay.
+- Removed pregame QB-intro football props and the QB clone's held football so the spotlight presents no duplicate footballs.
+
+### Tests
+
+- Verified `npm run build`, targeted pregame/unit coverage, and focused browser smoke coverage for the title-to-hub/match-setup path.
+
 ## [1.21.3] - 2026-06-22
 
 ### Changed

@@ -1,12 +1,17 @@
 import { FIELD_BOUNDS } from '../fieldSpec';
 import type { FootballSpot } from '../fieldScale';
 import type { MatchPossession, MatchRules } from '../match/MatchTypes';
+import {
+  createFreeKickTouchbackPosition,
+  worldSpotToPossessionFieldPosition,
+} from '../match/FieldPositionModel';
 import type {
   KickoffDirection,
   KickoffResult,
   KickoffState,
   KickoffSimulationInput,
 } from './KickoffTypes';
+import { resolveKickoffLineSpot } from './CollegeSpecialTeamsRuleSpec';
 
 export const KICKOFF_SIMULATION_CONFIG = {
   accuracyLongitudinalStdMaxYards: 9.5,
@@ -38,6 +43,7 @@ export function createKickoffState(): KickoffState {
     reason: null,
     receivingTeam: null,
     result: null,
+    returnResult: null,
     sequenceIndex: -1,
   };
 }
@@ -47,6 +53,11 @@ export function cloneKickoffState(state: KickoffState): KickoffState {
     ...state,
     kickerRatings: state.kickerRatings ? { ...state.kickerRatings } : null,
     result: state.result ? cloneKickoffResult(state.result) : null,
+    returnResult: state.returnResult ? {
+      ...state.returnResult,
+      deadBallSpot: { ...state.returnResult.deadBallSpot },
+      receivingStartPosition: { ...state.returnResult.receivingStartPosition },
+    } : null,
   };
 }
 
@@ -57,10 +68,7 @@ export function createKickoffOrigin(kickingTeam: MatchPossession): {
   const direction: KickoffDirection = kickingTeam === 'user' ? 1 : -1;
   return {
     direction,
-    origin: {
-      x: 0,
-      z: direction > 0 ? -15 : 15,
-    },
+    origin: resolveKickoffLineSpot(direction),
   };
 }
 
@@ -97,10 +105,12 @@ export function simulateKickoff(input: KickoffSimulationInput): KickoffResult {
   const landingType = isTouchbackTarget(target, input.direction, input.fieldBounds)
     ? 'touchback'
     : 'fielded';
-  const receivingStartSpot = landingType === 'touchback'
-    ? { ...input.touchbackSpot }
-    : calculateFieldedStartSpot({
+  const receivingTeam = input.direction > 0 ? 'opponent' : 'user';
+  const receivingStartPosition = landingType === 'touchback'
+    ? createFreeKickTouchbackPosition()
+    : calculateFieldedStartPosition({
         direction: input.direction,
+        receivingTeam,
         rng,
         target,
       });
@@ -117,7 +127,7 @@ export function simulateKickoff(input: KickoffSimulationInput): KickoffResult {
     lateralErrorYards,
     longitudinalErrorYards,
     origin: { ...input.origin },
-    receivingStartSpot,
+    receivingStartPosition,
     target,
     uncertaintyRadiusYards: lerp(
       KICKOFF_SIMULATION_CONFIG.reticleRadiusMaxYards,
@@ -147,7 +157,6 @@ export function createKickoffSimulationInput(options: {
     matchSeed: options.matchSeed,
     origin: placement.origin,
     sequenceIndex: options.sequenceIndex,
-    touchbackSpot: options.rules.touchbackSpot,
   };
 }
 
@@ -181,11 +190,12 @@ export function classifyKickoffCommentaryResult(result: KickoffResult): 'deepKic
   return 'returnedKick';
 }
 
-function calculateFieldedStartSpot(options: {
+function calculateFieldedStartPosition(options: {
   direction: KickoffDirection;
+  receivingTeam: MatchPossession;
   rng: () => number;
   target: FootballSpot;
-}): FootballSpot {
+}) {
   const returnYards = Math.round(lerp(
     KICKOFF_SIMULATION_CONFIG.minReturnYards,
     KICKOFF_SIMULATION_CONFIG.maxReturnYards,
@@ -204,7 +214,7 @@ function calculateFieldedStartSpot(options: {
     },
   );
 
-  return normalizeReceivingStartSpot(physicalReturnSpot, options.direction);
+  return worldSpotToPossessionFieldPosition(physicalReturnSpot, options.receivingTeam);
 }
 
 function isTouchbackTarget(
@@ -221,19 +231,8 @@ function cloneKickoffResult(result: KickoffResult): KickoffResult {
   return {
     ...result,
     origin: { ...result.origin },
-    receivingStartSpot: { ...result.receivingStartSpot },
+    receivingStartPosition: { ...result.receivingStartPosition },
     target: { ...result.target },
-  };
-}
-
-function normalizeReceivingStartSpot(
-  physicalReturnSpot: FootballSpot,
-  kickingDirection: KickoffDirection,
-): FootballSpot {
-  const receivingDirection = -kickingDirection;
-  return {
-    x: physicalReturnSpot.x * receivingDirection,
-    z: physicalReturnSpot.z * receivingDirection,
   };
 }
 

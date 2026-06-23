@@ -2,12 +2,14 @@ import * as THREE from 'three';
 import type { GameplayRosterBinding } from '../../roster/GameplayRosterBinding';
 import { createQuarterbackScoutingProfile } from '../../roster/QuarterbackScoutingProfile';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
+import type { PlayerVisualMode } from '../players/PlayerVisualMode';
 import {
   createPregameWarmupLayout,
 } from './PregameWarmupLayout';
 import type {
   PregameWarmupGroup,
   PregameWarmupLayout,
+  PregameWarmupQuarterbackAppearanceAudit,
   PregameWarmupSnapshot,
   PregameWarmupSubjectBounds,
 } from './PregameWarmupTypes';
@@ -19,6 +21,7 @@ import {
 
 export interface PregameWarmupControllerOptions {
   enabled: boolean;
+  playerVisualMode?: PlayerVisualMode;
   rosterBinding: GameplayRosterBinding;
   teamTheme: TeamPresentationTheme;
 }
@@ -33,11 +36,13 @@ export class PregameWarmupController {
   private layout: PregameWarmupLayout | null = null;
   private resources: PregameWarmupVisualResources | null = null;
   private resourceKey: string | null = null;
+  private playerVisualMode: PlayerVisualMode;
   private rosterBinding: GameplayRosterBinding;
   private teamTheme: TeamPresentationTheme;
 
   constructor(options: PregameWarmupControllerOptions) {
     this.enabled = options.enabled;
+    this.playerVisualMode = options.playerVisualMode ?? 'procedural';
     this.rosterBinding = options.rosterBinding;
     this.teamTheme = options.teamTheme;
     this.group.name = 'pregame-warmup-controller';
@@ -47,6 +52,7 @@ export class PregameWarmupController {
 
   applySettings(options: PregameWarmupControllerOptions): void {
     this.enabled = options.enabled;
+    this.playerVisualMode = options.playerVisualMode ?? 'procedural';
     this.rosterBinding = options.rosterBinding;
     this.teamTheme = options.teamTheme;
     this.group.visible = this.enabled && this.active;
@@ -81,6 +87,8 @@ export class PregameWarmupController {
     const layout = this.layout;
     const quarterback = layout?.userQuarterback ?? null;
     const profile = createQuarterbackScoutingProfile(quarterback?.player ?? null);
+    const quarterbackAppearance = this.resources?.getQuarterbackAppearanceAudit() ??
+      createMissingQuarterbackAppearanceAudit(quarterback?.player?.id ?? null);
 
     return {
       cloneCount: layout?.placements.length ?? 0,
@@ -98,8 +106,10 @@ export class PregameWarmupController {
       propCount: layout?.props.length ?? 0,
       quarterback: quarterback
         ? {
+            appearance: quarterbackAppearance,
             archetype: profile.archetype,
             bounds: placementToSubjectBounds(quarterback, 'user-quarterback-warmup'),
+            facingRadians: quarterback.facingRadians,
             formattedName: profile.formattedName,
             jerseyNumber: profile.jerseyNumber,
             ratings: profile.ratings,
@@ -145,7 +155,13 @@ export class PregameWarmupController {
     this.disposeResources();
     this.resourceKey = key;
     this.layout = createPregameWarmupLayout(this.rosterBinding);
-    this.resources = createPregameWarmupVisualResources(this.layout, this.teamTheme);
+    this.resources = createPregameWarmupVisualResources(this.layout, this.teamTheme, {
+      footballPlayerVisual: {
+        playerVisualOptions: {
+          visualMode: this.playerVisualMode,
+        },
+      },
+    });
     this.group.add(this.resources.group);
   }
 
@@ -165,6 +181,7 @@ export class PregameWarmupController {
       .join('|');
     return [
       this.enabled ? 'enabled' : 'disabled',
+      this.playerVisualMode,
       this.teamTheme.teamKey,
       lineupKey,
     ].join('::');
@@ -238,5 +255,24 @@ function cloneGroup(group: PregameWarmupGroup): PregameWarmupGroup {
     })),
     ready: group.ready,
     teamSide: group.teamSide,
+  };
+}
+
+function createMissingQuarterbackAppearanceAudit(
+  rosterPlayerId: string | null,
+): PregameWarmupQuarterbackAppearanceAudit {
+  return {
+    bodyReady: false,
+    faceguardMaterialName: null,
+    fallbackReason: 'bodyMissing',
+    headBounds: null,
+    helmetAssetId: 'football-helmet-kit',
+    helmetBounds: null,
+    helmetReady: false,
+    playerAssetStatus: 'idle',
+    rosterPlayerId,
+    shellMaterialName: null,
+    subjectReady: false,
+    subjectVisible: false,
   };
 }

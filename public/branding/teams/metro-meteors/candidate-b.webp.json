@@ -1,0 +1,19 @@
+{
+  "assetId": "metro-meteors-logo-b",
+  "background": "opaque",
+  "candidateId": "candidate-b",
+  "compressedBytes": 111814,
+  "contentHash": "b050220ae0a4df6f50e5c8624dc0d5868020d22c6388b4a30b4d5335d7848cd3",
+  "generatedAt": "2026-06-22T19:21:14.122Z",
+  "generationMetadata": {
+    "apiEndpoint": "images/generations",
+    "revisedPrompt": null
+  },
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "outputPath": "public/branding/teams/metro-meteors/candidate-b.webp",
+  "prompt": "Create an original fictional American-football team logo badge for Football JS. Use a centered square composition suitable for a menu badge and scorebug crop. Style: bold low-poly vector-like sports identity, clean silhouette, premium broadcast-game presentation, opaque background. No words, no text, no letters, no numbers, no watermark, no real professional or college marks, no league logos, no trademarked mascots. Team: Metro Meteors. Mascot concept: an angular meteor streak with faceted motion trails, fast and modern. Team colors: primary #2f66d8, secondary #f2f4f6, accent #dfe8f5. Candidate direction: compact meteor badge with a diagonal streak, faceted star fragments, and broadcast-sports polish. Keep the badge readable at small UI sizes, avoid complex fine detail, preserve crop-safe margins.",
+  "quality": "high",
+  "requestedSize": "1024x1024",
+  "teamId": "metro-meteors"
+}

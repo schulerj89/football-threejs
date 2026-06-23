@@ -1,0 +1,19 @@
+{
+  "assetId": "desert-ridge-scorpions-logo-a",
+  "background": "opaque",
+  "candidateId": "candidate-a",
+  "compressedBytes": 147816,
+  "contentHash": "9a5d958e791faa71420060635892a77d9af5aefbc8419ba7fcfdf93654420130",
+  "generatedAt": "2026-06-22T19:43:57.199Z",
+  "generationMetadata": {
+    "apiEndpoint": "images/generations",
+    "revisedPrompt": null
+  },
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "outputPath": "public/branding/teams/desert-ridge-scorpions/candidate-a.webp",
+  "prompt": "Create an original fictional American-football team logo badge for Football JS. Use a centered square composition suitable for a menu badge and scorebug crop. Style: bold low-poly vector-like sports identity, clean silhouette, premium broadcast-game presentation, opaque background. No words, no text, no letters, no numbers, no watermark, no real professional or college marks, no league logos, no trademarked mascots. Team: Desert Ridge Scorpions. Mascot concept: a sharp geometric scorpion with a raised tail and strong desert-ridge silhouette. Team colors: primary #472A69, secondary #E9DFC5, accent #D5A849. Candidate direction: deep purple scorpion mark with old-gold armor highlights and cream negative-space cuts. Keep the badge readable at small UI sizes, avoid complex fine detail, preserve crop-safe margins.",
+  "quality": "high",
+  "requestedSize": "1024x1024",
+  "teamId": "desert-ridge-scorpions"
+}

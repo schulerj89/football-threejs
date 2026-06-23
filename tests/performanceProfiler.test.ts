@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { FramePerformanceProfiler } from '../src/performance/FramePerformanceProfiler';
 import { FrameSampleBuffer } from '../src/performance/FrameSampleBuffer';
@@ -6,6 +7,7 @@ import {
   createPerformanceReport,
 } from '../src/performance/PerformanceReport';
 import { PerformanceScenarioRunner } from '../src/performance/PerformanceScenarioRunner';
+import { collectSceneStructureMetrics } from '../src/performance/RendererMetricsCollector';
 import { createGameplayModel } from '../src/playState';
 
 describe('performance profiling foundation', () => {
@@ -95,6 +97,27 @@ describe('performance profiling foundation', () => {
     expect(gameplay.selectedPlay.id).toBe('spread-quick-11');
     expect(gameplay.playState).toBe('live');
     expect(runner.getSnapshot().activeScenario).toBe('eleven-pass-routes');
+  });
+
+  it('does not classify standing player pose meshes as stadium structure', () => {
+    const scene = new THREE.Scene();
+    const standingPlayer = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshBasicMaterial(),
+    );
+    standingPlayer.name = 'sideline-player-standing-pose';
+    scene.add(standingPlayer);
+
+    const stadiumMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshBasicMaterial(),
+    );
+    stadiumMesh.name = 'stadium-lower-seating';
+    scene.add(stadiumMesh);
+
+    const metrics = collectSceneStructureMetrics(scene, []);
+
+    expect(metrics.stadiumMeshCount).toBe(1);
   });
 });
 

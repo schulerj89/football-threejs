@@ -30,6 +30,11 @@ interface FootballSpot {
   z: number;
 }
 
+interface PossessionFieldPosition {
+  lateralX: number;
+  yardsFromOwnGoalLine: number;
+}
+
 interface Vector3Snapshot {
   x: number;
   y: number;
@@ -468,8 +473,12 @@ type PregameSmokeShotId =
   | 'matchupCombined'
   | 'matchupWide'
   | 'opponentTeamPan'
+  | 'quarterbackFrontSpotlight'
   | 'quarterbackSpotlight'
+  | 'stadiumCenterOrbit'
+  | 'stadiumCenterOrbit360'
   | 'stadiumEstablish'
+  | 'transitionToCoinToss'
   | 'transitionToGameplay'
   | 'userTeamTunnelOrSideline'
   | 'weatherAndField';
@@ -504,6 +513,7 @@ interface PregamePresentationSnapshot {
 
 interface CrowdPreviewSnapshot {
   actualSpectatorCount: number;
+  activeNearSpectators: number;
   averageFrameTimeMs: number;
   benchmark: {
     active: boolean;
@@ -524,12 +534,13 @@ interface CrowdPreviewSnapshot {
   };
   cameraView: 'close' | 'endZone' | 'sideline' | 'wide';
   crowdDrawCalls: number;
-  crowdFullness: 'full' | 'sparse' | 'standard';
+  crowdFullness: 'adaptive' | 'full' | 'sparse' | 'standard';
   crowdTriangles: number;
   estimatedInstanceBufferBytes: number;
   estimatedStaticBufferBytes: number;
   farInstanceCount: number;
   farMosaicSeatCount: number;
+  farSeatOccupancy: number;
   frameCount: number;
   gameplayPlayerCount: number;
   geometryCount: number;
@@ -543,17 +554,20 @@ interface CrowdPreviewSnapshot {
     nearMeshesPerSpectator: number;
     transformMatrixBytes: number;
   };
+  reactingSpectatorLimit: number;
   requestedSpectatorCount: number;
   rendererMemory: { geometries: number; textures: number };
   rendererRender: { calls: number; triangles: number };
   textureCount: number;
+  visualAttendance: number;
 }
 
 interface CrowdPresentationSnapshot {
   actualSpectatorCount: number;
+  activeNearSpectators: number;
   averageFrameTimeMs: number;
   crowdDrawCalls: number;
-  crowdFullness: 'full' | 'sparse' | 'standard';
+  crowdFullness: 'adaptive' | 'full' | 'sparse' | 'standard';
   crowdTriangles: number;
   density: 'high' | 'low' | 'medium';
   deterministicSubsets: boolean;
@@ -561,6 +575,7 @@ interface CrowdPresentationSnapshot {
   estimatedStaticBufferBytes: number;
   farInstanceCount: number;
   farMosaicSeatCount: number;
+  farSeatOccupancy: number;
   frameCount: number;
   geometryCount: number;
   materialCount: number;
@@ -583,6 +598,7 @@ interface CrowdPresentationSnapshot {
     status: 'started' | 'suppressed';
   }>;
   reactionState: 'anticipation' | 'disappointment' | 'firstDown' | 'idle' | 'touchdown';
+  reactingSpectatorLimit: number;
   reactionUpdateCount: number;
   reactionUpdateHz: number;
   reactionsEnabled: boolean;
@@ -591,10 +607,12 @@ interface CrowdPresentationSnapshot {
   requestedSpectatorCount: number;
   settings: {
     crowdDensity: 'high' | 'low' | 'medium';
+    crowdFullness: 'adaptive' | 'full' | 'sparse' | 'standard';
     crowdReactionsEnabled: boolean;
     crowdVisualsEnabled: boolean;
   };
   textureCount: number;
+  visualAttendance: number;
   visualsEnabled: boolean;
 }
 
@@ -715,6 +733,9 @@ interface SevenAuditResetCycleResourceSnapshot {
   debugOverlayCount: number;
   footballMeshCount: number;
   geometryCount: number;
+  jerseyNumberAtlasCreated: boolean;
+  jerseyNumberMaterialCount: number;
+  jerseyNumberMeshCount: number;
   materialCount: number;
   officialMeshCount: number;
   presentationHistoryCount: number;
@@ -869,21 +890,21 @@ interface MatchSnapshot {
     landingType?: 'fielded' | 'touchback' | null;
     phase: 'completed' | 'flight' | 'idle' | 'ready' | 'result';
     reason: 'opening' | 'postScore' | 'secondHalf' | null;
-    receivingStartSpot?: FootballSpot | null;
+    receivingStartPosition?: PossessionFieldPosition | null;
     receivingTeam: 'opponent' | 'user' | null;
     result: null | {
       apexHeight: number;
       flightSeconds: number;
       landingType: 'fielded' | 'touchback';
       origin: FootballSpot;
-      receivingStartSpot: FootballSpot;
+      receivingStartPosition: PossessionFieldPosition;
       target: FootballSpot;
       uncertaintyRadiusYards: number;
     };
     reticleVisible?: boolean;
     sequenceIndex: number;
   };
-  currentFieldPosition: FootballSpot;
+  currentFieldPosition: PossessionFieldPosition;
   deterministicSeed: number;
   driveNumber: number;
   gameOverReason: 'clockExpired' | null;
@@ -923,16 +944,97 @@ interface KickoffPresentationSnapshot {
   ballPosition: Vector3Snapshot | null;
   completed: boolean;
   direction: -1 | 1 | null;
+  formationFamily: 'kickoff' | null;
+  formationValidation: readonly string[];
+  helmetReadyCount: number;
   kickerRosterId: string | null;
+  kickingParticipantCount: number;
   kickingTeam: 'opponent' | 'user' | null;
   landingType: 'fielded' | 'touchback' | null;
+  participantCount: number;
   phase: 'completed' | 'flight' | 'idle' | 'ready' | 'result';
   reason?: 'opening' | 'postScore' | 'secondHalf' | null;
-  receivingStartSpot: FootballSpot | null;
+  receivingStartPosition: PossessionFieldPosition | null;
+  receivingParticipantCount: number;
   receivingTeam: 'opponent' | 'user' | null;
   result: MatchSnapshot['kickoff']['result'];
   reticleVisible: boolean;
   sequenceIndex: number | null;
+  stageVisibility: {
+    kickoffParticipantsVisible: boolean;
+    officialsVisible: boolean;
+    scrimmagePlayersVisible: boolean;
+  };
+  visualProfile: {
+    bareHeadCount: number;
+    fullFootballPlayerVisualCount: number;
+    presentationOnlyCount: number;
+    profileId: string;
+    profileMatchCount: number;
+  };
+}
+
+interface StageVisualMatrixSnapshot {
+  activePrimaryGroups: string[];
+  appPhase: string;
+  coinToss: {
+    bareHeadCount: number;
+    coinVisible: boolean;
+    helmetReadyCount: number;
+    profileMatchCount: number;
+    totalCount: number;
+    visibleCount: number;
+  };
+  conflictingPrimaryGroups: string[];
+  fieldGoalFixture: {
+    family: 'fieldGoal';
+    normalGameActive: boolean;
+    participantCount: number;
+    profileMatchCount: number;
+  };
+  gameplay: {
+    bareHeadCount: number;
+    helmetCount: number;
+    profileMatchCount: number;
+    totalCount: number;
+    visibleCount: number;
+  };
+  helmetAsset: HelmetAssetSnapshot;
+  kickoff: {
+    bareHeadCount: number;
+    helmetReadyCount: number;
+    profileMatchCount: number;
+    reticleVisible: boolean;
+    totalCount: number;
+    visibleCount: number;
+  };
+  matchPhase: string | null;
+  normalOfficialsVisibleCount: number;
+  previewCanvasCount: number;
+  profileId: string;
+  resourceCounts: {
+    coinObjects: number;
+    geometries: number;
+    helmetAttachedPlayerIds: number;
+    jerseyNumberAtlasCreated: boolean;
+    jerseyNumberMaterials: number;
+    jerseyNumberMeshes: number;
+    materials: number;
+    reticleObjects: number;
+    textures: number;
+    webglContexts: number;
+  };
+  scrimmage: {
+    dynamicMarkersVisible: boolean;
+  };
+  warmup: {
+    enabled: boolean;
+    helmetReady: boolean;
+    profileMatchCount: number;
+    quarterbackReady: boolean;
+    totalFullProfileCount: number;
+    visibleFullProfileCount: number;
+  };
 }
 
 interface StadiumSnapshot {
@@ -1004,39 +1106,20 @@ interface GameExperienceSnapshot {
   queryOverrides: Partial<GameExperienceSettingsSnapshot>;
 }
 
-test('shows the title screen, opens match setup, and holds gameplay until Play Game', async ({ page }) => {
-  test.setTimeout(75_000);
+test('shows the title screen, opens football hub and match setup, and holds gameplay until Play Game', async ({ page }) => {
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.title-screen')).toBeVisible();
   await expect(page.locator('.title-content h1')).toHaveText('Football JS');
-  await expect(page.locator('.title-primary-actions button')).toHaveCount(2);
+  await expect(page.locator('.title-primary-actions button')).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Start Game' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(page.locator('.title-screen').getByRole('button', { name: 'Settings' })).toHaveCount(0);
+  await expect(page.locator('.title-settings-overlay')).toHaveCount(0);
   await expect(page.locator('.gameplay-hud')).toBeHidden();
   await expect(page.locator('.play-call-ui')).toBeHidden();
   await expectNoDebugHelpers(page);
-
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.locator('.title-settings-overlay')).toBeVisible();
-  await expect(page.getByLabel('Settings').getByText('Music volume')).toBeVisible();
-  await expect(page.locator('.title-screen').getByLabel('Quarter length')).toBeVisible();
-  await expect(page.locator('.title-screen').getByLabel('Difficulty')).toBeVisible();
-  await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveCount(0);
-  await expect(page.locator('.title-screen').getByLabel('Regression playbook')).toHaveCount(0);
-  await expect(page.locator('.title-screen .team-customization-panel')).toHaveCount(1);
-  await expect(page.locator('.title-screen .team-customization-panel .team-selector-grid')).toHaveCount(0);
-  await expect(page.locator('.title-screen .roster-preview-panel')).toHaveCount(0);
-  await expect(page.getByText('Officials debug labels')).toHaveCount(0);
-  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
-  await expect.poll(() =>
-    getAudioSnapshot(page).then((snapshot) =>
-      snapshot.streamedAssetIds.includes('football-js-title'),
-    ),
-  ).toBe(true);
-  await page.keyboard.press('Escape');
-  await expect(page.locator('.title-settings-overlay')).toBeHidden();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('.title-screen')).toBeVisible();
@@ -1068,6 +1151,60 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   await page.getByRole('button', { name: 'Start Game' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('.title-screen')).toBeHidden();
+  await expect(page.locator('.football-hub-screen')).toBeVisible();
+  await expect(page.locator('body[data-app-phase="footballHub"]')).toBeAttached();
+  await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
+  await expect.poll(() =>
+    getAudioSnapshot(page).then((snapshot) =>
+      snapshot.streamedAssetIds.includes('football-js-title'),
+    ),
+  ).toBe(true);
+  await expect(page.locator('.football-hub-nav button')).toHaveText([
+    'Play Now',
+    'Teams',
+    'Rosters',
+    'Settings',
+  ]);
+  await page.locator('.football-hub-nav').getByRole('button', { name: 'Settings' }).click();
+  const hubSettings = page.locator('.football-hub-settings-view');
+  await expect(hubSettings.locator('.settings-navigation button')).toHaveText([
+    'Game',
+    'Presentation',
+    'Audio',
+    'Accessibility',
+  ]);
+  await expect(hubSettings.getByLabel('Quarter length')).toBeVisible();
+  await expect(hubSettings.getByLabel('Difficulty')).toBeVisible();
+  await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Audio' }).click();
+  await expect(hubSettings.getByText('Music volume')).toBeVisible();
+  await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Presentation' }).click();
+  await expect(hubSettings.getByLabel('Presentation preset')).toBeVisible();
+  await expect(hubSettings.getByLabel('Game mode')).toHaveCount(0);
+  await expect(hubSettings.getByLabel('Regression playbook')).toHaveCount(0);
+  await expect(hubSettings.locator('.team-customization-panel')).toHaveCount(0);
+  await expect(hubSettings.locator('.team-selector-grid')).toHaveCount(0);
+  await expect(hubSettings.locator('input[type="color"]')).toHaveCount(0);
+  await expect(hubSettings.locator('.roster-preview-panel')).toHaveCount(0);
+  await expect(hubSettings.getByText('Debug tools')).toHaveCount(0);
+  await expect(hubSettings.getByText('Officials debug labels')).toHaveCount(0);
+  await page.locator('.football-hub-nav').getByRole('button', { name: 'Play Now' }).click();
+  await expect(page.locator('.football-hub-play-team')).toHaveCount(2);
+  await expect(page.locator('.football-hub-rating-grid').first()).toContainText('OVR');
+  await expect(page.locator('.football-hub-rating-grid').first()).toContainText('OFF');
+  await expect(page.locator('.football-hub-rating-grid').first()).toContainText('DEF');
+  await expect(page.locator('.football-hub-rating-grid').first()).toContainText('ST');
+  await expect(page.locator('.football-hub-helmet-preview')).toHaveCount(3);
+  await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Teams' }).click();
+  await expect(page.locator('.football-hub-team-row')).toHaveCount(6);
+  await expect(page.locator('.football-hub-team-overview')).toContainText('Top strengths');
+  await page.getByRole('button', { name: 'Rosters' }).click();
+  await expect(page.locator('.football-hub-roster-table tbody tr')).toHaveCount(11);
+  await expect(page.locator('.football-hub-player-detail')).toContainText('OVR');
+  await page.getByRole('tab', { name: 'Specialists' }).click();
+  await expect(page.locator('.football-hub-roster-table tbody tr')).toHaveCount(10);
+  await page.getByRole('button', { name: 'Play Now' }).click();
+  await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
   await expect(page.locator('.match-setup-screen')).toBeVisible();
   await expect(page.locator('body[data-app-phase="matchSetup"]')).toBeAttached();
   await expect(page.locator('.gameplay-hud')).toBeHidden();
@@ -1078,9 +1215,26 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   await expect(page.getByRole('heading', { name: 'Opponent' })).toBeVisible();
   await expect(page.locator('.match-team-card[data-side="user"] .match-team-display-name')).toBeVisible();
   await expect(page.locator('.match-team-card[data-side="opponent"] .match-team-display-name')).toBeVisible();
+  await expect(page.locator('.matchup-summary')).toContainText('Weather: CLEAR');
   await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-preview')).toBeVisible();
   await expect(page.locator('.match-team-card[data-side="opponent"] .team-helmet-preview')).toBeVisible();
   await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(1);
+  await expect.poll(() => getStageVisualMatrixSnapshot(page)).toMatchObject({
+    activePrimaryGroups: [],
+    appPhase: 'matchSetup',
+    conflictingPrimaryGroups: [],
+    fieldGoalFixture: {
+      family: 'fieldGoal',
+      normalGameActive: false,
+      participantCount: 12,
+      profileMatchCount: 12,
+    },
+    gameplay: {
+      visibleCount: 0,
+    },
+    previewCanvasCount: 1,
+    profileId: 'football-player-v1',
+  });
   await expect(page.locator('.match-team-card[data-side="user"] .team-helmet-badge')).toHaveCount(1);
   await expect.poll(async () =>
     page.locator('.match-team-card[data-side="user"] .team-helmet-preview').getAttribute('data-preview'),
@@ -1130,10 +1284,15 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   await expect(page.getByRole('button', { name: 'Play Game' })).toBeEnabled();
   await page.getByRole('button', { name: 'Back' }).click();
   await expect(page.locator('.match-setup-screen')).toBeHidden();
+  await expect(page.locator('.football-hub-screen')).toBeVisible();
+  await page.locator('.football-hub-screen').getByRole('button', { name: 'Back' }).click();
+  await expect(page.locator('.football-hub-screen')).toBeHidden();
   await expect(page.locator('.title-screen')).toBeVisible();
   await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.locator('.football-hub-screen')).toBeVisible();
+  await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
   await expect(page.locator('.match-setup-screen')).toBeVisible();
-  await page.getByRole('button', { name: 'Play Game' }).click();
+  await page.locator('.match-setup-screen').getByRole('button', { name: 'Play Game' }).click();
   await expect(page.locator('.match-setup-screen')).toBeHidden();
   await expect(page.locator('body[data-app-phase="pregamePresentation"]')).toBeAttached();
   await expect(page.locator('.gameplay-hud')).toBeHidden();
@@ -1146,17 +1305,15 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
     getAudioSnapshot(page).then((snapshot) => snapshot.titleMusic?.state),
   ).toBe('handoff');
   await expect.poll(() => getPregamePresentationSnapshot(page)).toMatchObject({
-    currentShot: 'stadiumEstablish',
+    currentShot: 'stadiumCenterOrbit',
     phase: 'running',
     skipState: 'available',
   });
   const pregamePresentation = await getPregamePresentationSnapshot(page);
   expect(pregamePresentation.sequence).toEqual([
-    'stadiumEstablish',
-    'matchupWide',
-    'weatherAndField',
-    'quarterbackSpotlight',
-    'transitionToGameplay',
+    'stadiumCenterOrbit',
+    'quarterbackFrontSpotlight',
+    'transitionToCoinToss',
   ]);
   expect(pregamePresentation.musicState).toMatchObject({
     loopActive: expect.any(Boolean),
@@ -1170,6 +1327,28 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   expect(pregamePresentation.sidelineCounts?.sideline).toBeGreaterThanOrEqual(0);
   expect(pregamePresentation.sidelineCounts?.tunnel).toBeGreaterThanOrEqual(0);
   expect(pregamePresentation.presentationCloneCount).toEqual(expect.any(Number));
+  await expect.poll(() => getStageVisualMatrixSnapshot(page), { timeout: 10_000 }).toMatchObject({
+    activePrimaryGroups: ['warmupPlayers'],
+    appPhase: 'pregamePresentation',
+    coinToss: {
+      visibleCount: 0,
+    },
+    conflictingPrimaryGroups: [],
+    gameplay: {
+      visibleCount: 0,
+    },
+    kickoff: {
+      visibleCount: 0,
+    },
+    normalOfficialsVisibleCount: 0,
+    warmup: {
+      enabled: true,
+      helmetReady: true,
+      profileMatchCount: 1,
+      quarterbackReady: true,
+      visibleFullProfileCount: 1,
+    },
+  });
   await expectNoDebugHelpers(page);
 
   const started = await getGameplaySnapshot(page);
@@ -1203,6 +1382,42 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   await page.keyboard.press('Space');
   await expect(page.locator('body[data-app-phase="coinToss"]')).toBeAttached();
   await expect(page.locator('.coin-toss-ui')).toBeVisible();
+  await expect.poll(() => getCoinTossSnapshot(page), { timeout: 10_000 }).toMatchObject({
+    bareHeadCount: 0,
+    captainVisualCount: 4,
+    captainsVisible: 4,
+    coinVisible: true,
+    gameplayPlayersVisible: false,
+    officialsVisibleCount: 0,
+    refereeVisible: false,
+    stageId: 'coinToss',
+    visualProfileCount: 4,
+    visualProfileId: 'football-player-v1',
+  });
+  await expect.poll(() => getStageVisualMatrixSnapshot(page), { timeout: 10_000 }).toMatchObject({
+    activePrimaryGroups: ['coinTossParticipants'],
+    appPhase: 'coinToss',
+    coinToss: {
+      bareHeadCount: 0,
+      profileMatchCount: 4,
+      visibleCount: 4,
+    },
+    conflictingPrimaryGroups: [],
+    gameplay: {
+      visibleCount: 0,
+    },
+    kickoff: {
+      visibleCount: 0,
+    },
+    normalOfficialsVisibleCount: 0,
+    warmup: {
+      visibleFullProfileCount: 0,
+    },
+  });
+  await expect.poll(
+    () => getCoinTossSnapshot(page).then((snapshot) => snapshot.helmetReadyCount),
+    { timeout: 10_000 },
+  ).toBe(4);
   await expect.poll(() => getMatchSnapshot(page)).toMatchObject({
     coinToss: {
       completed: false,
@@ -1239,6 +1454,55 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
     quarter: 1,
   });
   await expect(page.locator('body[data-app-phase="kickoff"]')).toBeAttached();
+  await expect.poll(() => getKickoffSnapshot(page).then((snapshot) => ({
+    formationFamily: snapshot.formationFamily,
+    formationValidation: snapshot.formationValidation,
+    fullVisualProfile: snapshot.visualProfile.profileId,
+    fullVisuals: snapshot.visualProfile.fullFootballPlayerVisualCount,
+    kickoffBareHeads: snapshot.visualProfile.bareHeadCount,
+    helmetReadyCount: snapshot.helmetReadyCount,
+    kickingParticipantCount: snapshot.kickingParticipantCount,
+    kickoffVisible: snapshot.stageVisibility.kickoffParticipantsVisible,
+    officialsVisible: snapshot.stageVisibility.officialsVisible,
+    participantCount: snapshot.participantCount,
+    receivingParticipantCount: snapshot.receivingParticipantCount,
+    scrimmagePlayersVisible: snapshot.stageVisibility.scrimmagePlayersVisible,
+  })), { timeout: 10_000 }).toMatchObject({
+    formationFamily: 'kickoff',
+    formationValidation: [],
+    fullVisualProfile: 'football-player-v1',
+    fullVisuals: 22,
+    kickoffBareHeads: 0,
+    helmetReadyCount: 22,
+    kickingParticipantCount: 11,
+    kickoffVisible: true,
+    officialsVisible: false,
+    participantCount: 22,
+    receivingParticipantCount: 11,
+    scrimmagePlayersVisible: false,
+  });
+  await expect.poll(() => getStageVisualMatrixSnapshot(page), { timeout: 10_000 }).toMatchObject({
+    activePrimaryGroups: ['kickoffParticipants'],
+    appPhase: 'kickoff',
+    coinToss: {
+      visibleCount: 0,
+    },
+    conflictingPrimaryGroups: [],
+    gameplay: {
+      visibleCount: 0,
+    },
+    kickoff: {
+      bareHeadCount: 0,
+      helmetReadyCount: 22,
+      profileMatchCount: 22,
+      totalCount: 22,
+      visibleCount: 22,
+    },
+    normalOfficialsVisibleCount: 0,
+    warmup: {
+      visibleFullProfileCount: 0,
+    },
+  });
   const scheduledKickoff = await getMatchSnapshot(page);
   expect(scheduledKickoff?.kickoff).toMatchObject({
     kickingTeam: 'opponent',
@@ -1257,7 +1521,7 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   await expect.poll(() => getKickoffSnapshot(page).then((snapshot) => snapshot.reticleVisible), {
     timeout: 5_000,
   }).toBe(true);
-  await expect.poll(() => getMatchSnapshot(page), { timeout: 20_000 }).toMatchObject({
+  await expect.poll(() => getMatchSnapshot(page), { timeout: 35_000 }).toMatchObject({
     clock: {
       remainingSeconds: 180,
       running: false,
@@ -1268,8 +1532,41 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   });
   await expect(page.locator('body[data-app-phase="gameplay"]')).toBeAttached();
   await expect(page.locator('.gameplay-hud')).toBeVisible();
-  await expect(page.locator('.play-call-ui')).toBeVisible();
+  await expect(page.locator('.play-call-ui')).toBeVisible({ timeout: 15_000 });
+  const scorebug = page.locator('.broadcast-scorebug');
+  await expect(scorebug).toBeVisible();
+  await expect(scorebug.locator('.broadcast-scorebug-shell')).toHaveAttribute(
+    'src',
+    '/branding/scorebug/football-js-scorebug-shell.webp',
+  );
+  await expect(scorebug.locator('.broadcast-scorebug-user-score')).toHaveText('0');
+  await expect(scorebug.locator('.broadcast-scorebug-opponent-score')).toHaveText('0');
+  await expect(scorebug.locator('.broadcast-scorebug-down-distance')).toContainText(/1ST|KICKOFF|PAT/);
+  await expect(scorebug.locator('.broadcast-scorebug-ball-location')).toContainText(/OWN|OPP|50/);
   await expectNoDebugHelpers(page);
+  await expect.poll(() => getStageVisualMatrixSnapshot(page), { timeout: 10_000 }).toMatchObject({
+    activePrimaryGroups: ['gameplayPlayers'],
+    appPhase: 'gameplay',
+    coinToss: {
+      visibleCount: 0,
+    },
+    conflictingPrimaryGroups: [],
+    gameplay: {
+      bareHeadCount: 0,
+      helmetCount: 22,
+      profileMatchCount: 22,
+      totalCount: 22,
+      visibleCount: 22,
+    },
+    kickoff: {
+      totalCount: 0,
+      visibleCount: 0,
+    },
+    normalOfficialsVisibleCount: 0,
+    warmup: {
+      visibleFullProfileCount: 0,
+    },
+  });
   await expect.poll(() => getGameplaySnapshot(page).then((snapshot) => snapshot.playState)).toBe('preSnap');
   expect(started.selectedPlay).toMatchObject({
     displayName: 'Inside Zone 11',
@@ -1281,7 +1578,7 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
     gameplayCamera: 'offense',
     gameMode: 'exhibition',
     matchDifficulty: 'pro',
-    officialsEnabled: true,
+    officialsEnabled: false,
     preset: 'broadcast',
     quarterLengthSeconds: 180,
     stadiumEnabled: true,
@@ -1291,18 +1588,21 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
   expect(stadium.drawCalls).toBeGreaterThan(0);
   const crowd = await getCrowdPresentationSnapshot(page);
   expect(crowd).toMatchObject({
-    actualSpectatorCount: 5000,
-    crowdFullness: 'full',
+    actualSpectatorCount: 15000,
+    activeNearSpectators: 500,
+    crowdFullness: 'standard',
     density: 'low',
-    farMosaicSeatCount: 4500,
+    farMosaicSeatCount: 14500,
+    farSeatOccupancy: 14500,
     nearInstanceCount: 500,
+    visualAttendance: 15000,
     visualsEnabled: true,
   });
   const officials = await getOfficialsSnapshot(page);
   expect(officials).toMatchObject({
     debugLabelsEnabled: false,
-    enabled: true,
-    visibleOfficialCount: 2,
+    enabled: false,
+    visibleOfficialCount: 0,
   });
   await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
   await expect.poll(async () => {
@@ -1323,8 +1623,21 @@ test('shows the title screen, opens match setup, and holds gameplay until Play G
     mode: 'offensePerspective',
   });
   await page.keyboard.press('Escape');
-  await expect(page.locator('.pause-settings-panel')).toBeVisible();
-  await page.locator('.pause-settings-panel').getByRole('button', { name: 'Close' }).click();
+  const pausePanel = page.locator('.pause-settings-panel');
+  await expect(pausePanel).toBeVisible();
+  await expect(pausePanel.locator('.settings-row-title', { hasText: 'Master volume' })).toBeVisible();
+  await expect(pausePanel.locator('.settings-row-title', { hasText: 'Music volume' })).toBeVisible();
+  await expect(pausePanel.locator('.settings-row-title', { hasText: 'Announcer' })).toBeVisible();
+  await expect(pausePanel.locator('.settings-row-title', { hasText: 'Captions' })).toBeVisible();
+  await expect(pausePanel.getByLabel('Gameplay camera')).toBeVisible();
+  await expect(pausePanel.getByLabel('Cinematics')).toBeVisible();
+  await expect(pausePanel.locator('.settings-row-title', { hasText: 'Route art' })).toBeVisible();
+  await expect(pausePanel.getByRole('button', { name: 'Full Settings' })).toBeVisible();
+  await expect(pausePanel.getByLabel('Quarter length')).toHaveCount(0);
+  await expect(pausePanel.getByLabel('Difficulty')).toHaveCount(0);
+  await expect(pausePanel.locator('.team-customization-panel')).toHaveCount(0);
+  await expect(pausePanel.getByText('Debug tools')).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await expect(page.locator('.pause-settings-panel')).toBeHidden();
 });
 
@@ -1336,8 +1649,11 @@ test('keeps the gameplay camera still while scrolling pause settings', async ({ 
 
   await page.keyboard.press('Escape');
   const panel = page.locator('.pause-settings-panel');
-  const card = page.locator('.pause-settings-card');
   await expect(panel).toBeVisible();
+  await page.getByRole('button', { name: 'Full Settings' }).click();
+  await panel.locator('.settings-navigation').getByRole('button', { name: 'Presentation' }).click();
+  await panel.getByText('Advanced Presentation').click();
+  const card = page.locator('.pause-settings-card');
   await expect(card).toBeVisible();
 
   const before = await getCameraSnapshot(page);
@@ -1359,6 +1675,8 @@ test('keeps the gameplay camera still while using match setup', async ({ page })
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.locator('.football-hub-screen')).toBeVisible();
+  await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
   const panel = page.locator('.match-setup-panel');
   await expect(page.locator('.match-setup-screen')).toBeVisible();
   await expect(panel).toBeVisible();
@@ -1383,11 +1701,18 @@ test('cycles title and match setup without exposing debug helpers', async ({ pag
 
   for (let cycle = 0; cycle < TITLE_SETUP_CYCLE_COUNT; cycle += 1) {
     await page.getByRole('button', { name: 'Start Game' }).click();
+    await expect(page.locator('.football-hub-screen')).toBeVisible();
+    await expect(page.locator('body[data-app-phase="footballHub"]')).toBeAttached();
+    await expectNoDebugHelpers(page);
+    await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
     await expect(page.locator('.match-setup-screen')).toBeVisible();
     await expect(page.locator('body[data-app-phase="matchSetup"]')).toBeAttached();
     await expectNoDebugHelpers(page);
 
     await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('.football-hub-screen')).toBeVisible();
+    await expect(page.locator('body[data-app-phase="footballHub"]')).toBeAttached();
+    await page.locator('.football-hub-screen').getByRole('button', { name: 'Back' }).click();
     await expect(page.locator('.title-screen')).toBeVisible();
     await expect(page.locator('body[data-app-phase="title"]')).toBeAttached();
     await expect(page.locator('.gameplay-hud')).toBeHidden();
@@ -1399,13 +1724,16 @@ test('cycles title and match setup without exposing debug helpers', async ({ pag
 test('starts the performance preset without visual crowd or cinematics', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.locator('.title-screen').getByLabel('Presentation preset').selectOption('performance');
-  await page.keyboard.press('Escape');
-  await expect(page.locator('.title-settings-overlay')).toBeHidden();
   await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.locator('.football-hub-screen')).toBeVisible();
+  const hubSettings = page.locator('.football-hub-settings-view');
+  await page.locator('.football-hub-nav').getByRole('button', { name: 'Settings' }).click();
+  await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Presentation' }).click();
+  await hubSettings.getByLabel('Presentation preset').selectOption('performance');
+  await page.locator('.football-hub-nav').getByRole('button', { name: 'Play Now' }).click();
+  await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
   await expect(page.locator('.match-setup-screen')).toBeVisible();
-  await page.getByRole('button', { name: 'Play Game' }).click();
+  await page.locator('.match-setup-screen').getByRole('button', { name: 'Play Game' }).click();
 
   await expect(page.locator('.title-screen')).toBeHidden();
   const experience = await getGameExperienceSnapshot(page);
@@ -1454,23 +1782,35 @@ extendedSmokeTest('keeps the 5v5 legacy development mode available through query
   await expect(page.locator('.play-card')).toHaveCount(4);
 });
 
-test('persists title-screen settings across reloads', async ({ page }) => {
+test('persists football hub settings across reloads', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.locator('.title-screen').getByLabel('Presentation preset').selectOption('performance');
-  await page.locator('.title-screen').getByLabel('Quarter length').selectOption('300');
-  await page.locator('.title-screen').getByLabel('Difficulty').selectOption('rookie');
+  await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.locator('.football-hub-screen')).toBeVisible();
+  let hubSettings = page.locator('.football-hub-settings-view');
+  await page.locator('.football-hub-nav').getByRole('button', { name: 'Settings' }).click();
+  await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Presentation' }).click();
+  await hubSettings.getByLabel('Presentation preset').selectOption('performance');
+  await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Game' }).click();
+  await hubSettings.getByLabel('Quarter length').selectOption('300');
+  await hubSettings.getByLabel('Difficulty').selectOption('rookie');
 
   await page.reload();
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.title-screen')).toBeVisible();
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.locator('.title-screen').getByLabel('Presentation preset')).toHaveValue('performance');
-  await expect(page.locator('.title-screen').getByLabel('Quarter length')).toHaveValue('300');
-  await expect(page.locator('.title-screen').getByLabel('Difficulty')).toHaveValue('rookie');
-  await expect(page.locator('.title-screen').getByLabel('Game mode')).toHaveCount(0);
-  await expect(page.locator('.title-screen').getByLabel('Regression playbook')).toHaveCount(0);
+  await expect(page.locator('.title-screen').getByRole('button', { name: 'Settings' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.locator('.football-hub-screen')).toBeVisible();
+  hubSettings = page.locator('.football-hub-settings-view');
+  await page.locator('.football-hub-nav').getByRole('button', { name: 'Settings' }).click();
+  await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Presentation' }).click();
+  await expect(hubSettings.getByLabel('Presentation preset')).toHaveValue('performance');
+  await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Game' }).click();
+  await expect(hubSettings.getByLabel('Quarter length')).toHaveValue('300');
+  await expect(hubSettings.getByLabel('Difficulty')).toHaveValue('rookie');
+  await expect(hubSettings.getByLabel('Game mode')).toHaveCount(0);
+  await expect(hubSettings.getByLabel('Regression playbook')).toHaveCount(0);
 });
 
 test('toggles runtime debug tools with F1', async ({ page }) => {
@@ -1480,21 +1820,30 @@ test('toggles runtime debug tools with F1', async ({ page }) => {
 
   await page.keyboard.press('F1');
   await expect(page.locator('.debug-panel')).toBeVisible();
-  await expect(page.locator('.debug-feature-row')).toHaveCount(21);
+  await expect(page.locator('.debug-feature-row')).toHaveCount(32);
   await expect(page.locator('.debug-feature-row span')).toContainText([
     '11v11 audit',
     '7v7 audit',
     'Appearance',
     'Audio',
+    'Cadence',
     'Camera',
     'Commentary',
     'Crowd',
     'Field',
     'Formation',
     'General metrics',
+    'Halftime',
+    'Intro keys',
+    'Jersey numbers',
+    'Kickoff return',
+    'League',
+    'Match transition',
     'Memory',
+    'Meshy rigged players',
     'Officials',
     'Passing',
+    'Place kick',
     'Player motion',
     'Pregame',
     'Presentation',
@@ -1503,6 +1852,8 @@ test('toggles runtime debug tools with F1', async ({ page }) => {
     'Roster labels',
     'Route',
     'Sideline teams',
+    'Stats',
+    'Weather',
   ]);
   await page.locator('.debug-feature-row').filter({ hasText: 'General metrics' }).getByRole('checkbox').check();
   await expect(page.locator('.debug-overlay')).toBeVisible();
@@ -1510,9 +1861,15 @@ test('toggles runtime debug tools with F1', async ({ page }) => {
   await expect(page.locator('.debug-overlay')).toBeHidden();
   await page.locator('.debug-feature-row').filter({ hasText: 'Officials' }).getByRole('checkbox').check();
   await expect(page.locator('.officials-debug-overlay')).toContainText('OFFICIALS');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Cadence' }).getByRole('checkbox').check();
+  await expect(page.locator('.cadence-debug-overlay')).toContainText('CADENCE');
+  await page.locator('.debug-feature-row').filter({ hasText: 'Jersey numbers' }).getByRole('checkbox').check();
+  await expect(page.locator('.jersey-number-debug-overlay')).toContainText('JERSEY NUMBERS');
   await page.keyboard.press('F1');
   await expect(page.locator('.debug-panel')).toBeHidden();
   await expect(page.locator('.officials-debug-overlay')).toHaveCount(0);
+  await expect(page.locator('.cadence-debug-overlay')).toHaveCount(0);
+  await expect(page.locator('.jersey-number-debug-overlay')).toHaveCount(0);
 });
 
 extendedSmokeTest('starts the Three.js graybox field scene', async ({ page }) => {
@@ -1680,13 +2037,13 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
     cinematics: 'brief',
     controlledPlayerLabelEnabled: true,
     crowdAudioEnabled: true,
-    crowdDensity: 'low',
+    crowdDensity: 'medium',
     crowdReactionsEnabled: true,
     crowdVisualsEnabled: true,
     gameplayCamera: 'offense',
     gameMode: 'exhibition',
     officialsDebugLabels: false,
-    officialsEnabled: true,
+    officialsEnabled: false,
     coachesEnabled: true,
     matchDifficulty: 'pro',
     playerMotionEnabled: true,
@@ -1702,7 +2059,7 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
   });
   expect(experience.assetReadiness).toMatchObject({
     audioEnabled: true,
-    crowdSpectatorCount: 5000,
+    crowdSpectatorCount: 15000,
     crowdVisualsAllocated: true,
   });
   const stadium = await getStadiumSnapshot(page);
@@ -1714,13 +2071,10 @@ test('resolves normal launch to the broadcast experience preset', async ({ page 
   expect(stadium.seatCount).toBeGreaterThanOrEqual(500);
   const officials = await getOfficialsSnapshot(page);
   expect(officials).toMatchObject({
-    enabled: true,
-    visibleOfficialCount: 2,
+    enabled: false,
+    visibleOfficialCount: 0,
   });
-  expect(officials.officials.map((official) => official.id)).toEqual([
-    'official-referee',
-    'official-umpire',
-  ]);
+  expect(officials.officials).toEqual([]);
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
   });
@@ -1771,7 +2125,8 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
 
   const crowd = await getCrowdPresentationSnapshot(page);
   expect(crowd).toMatchObject({
-    actualSpectatorCount: 500,
+    actualSpectatorCount: 5000,
+    activeNearSpectators: 500,
     crowdFullness: 'sparse',
     crowdDrawCalls: 5,
     density: 'low',
@@ -1780,7 +2135,7 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
     reactionsEnabled: true,
     visualsEnabled: true,
   });
-  expect(crowd.nearInstanceCount + crowd.farMosaicSeatCount).toBe(500);
+  expect(crowd.nearInstanceCount + crowd.farMosaicSeatCount).toBe(5000);
   expect(crowd.reactionUpdateHz).toBeLessThanOrEqual(15);
 
   const audit = await getPresentationHardeningAuditSnapshot(page);
@@ -1794,7 +2149,7 @@ test('runs normal-game crowd visuals, reactions, and presentation audit without 
   });
   expect((await getAudioSnapshot(page)).loadedAssetIds).toEqual([]);
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await expect.poll(() => getCrowdPresentationSnapshot(page)).toMatchObject({
     reactionState: 'anticipation',
@@ -1842,6 +2197,9 @@ extendedSmokeTest('runs seven-on-seven audit and reset-cycle resource stability 
   expect(resetCycles.cycles).toBe(100);
   expect(resetCycles.after.activePlayerRootCount).toBe(14);
   expect(resetCycles.after.visualRootCount).toBe(14);
+  expect(resetCycles.after.jerseyNumberAtlasCreated).toBe(true);
+  expect(resetCycles.after.jerseyNumberMeshCount).toBe(14);
+  expect(resetCycles.after.jerseyNumberMaterialCount).toBe(resetCycles.before.jerseyNumberMaterialCount);
   expect(resetCycles.after.geometryCount).toBeLessThanOrEqual(resetCycles.before.geometryCount);
   expect(resetCycles.after.materialCount).toBe(resetCycles.before.materialCount);
   expect(resetCycles.after.activeAudioNodes).toBeLessThanOrEqual(resetCycles.before.activeAudioNodes);
@@ -1853,6 +2211,7 @@ extendedSmokeTest('runs seven-on-seven audit and reset-cycle resource stability 
 });
 
 test('runs eleven-on-eleven audit matrix and reset-cycle resource stability checks', async ({ page }) => {
+  test.setTimeout(60_000);
   const expectedElevenPlayIds = [
     'inside-zone-11',
     'spread-quick-11',
@@ -1906,6 +2265,9 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   expect(resetCycles.after.activePlayerRootCount).toBe(22);
   expect(resetCycles.after.visualRootCount).toBe(22);
   expect(resetCycles.after.helmetInstanceCount).toBe(22);
+  expect(resetCycles.after.jerseyNumberAtlasCreated).toBe(true);
+  expect(resetCycles.after.jerseyNumberMeshCount).toBe(22);
+  expect(resetCycles.after.jerseyNumberMaterialCount).toBe(resetCycles.before.jerseyNumberMaterialCount);
   expect(resetCycles.after.footballMeshCount).toBe(resetCycles.before.footballMeshCount);
   expect(resetCycles.after.officialCount).toBe(0);
   expect(resetCycles.after.officialMeshCount).toBe(0);
@@ -1937,6 +2299,11 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   expect(integratedResetCycles.after.activePlayerRootCount).toBe(22);
   expect(integratedResetCycles.after.visualRootCount).toBe(22);
   expect(integratedResetCycles.after.helmetInstanceCount).toBe(22);
+  expect(integratedResetCycles.after.jerseyNumberAtlasCreated).toBe(true);
+  expect(integratedResetCycles.after.jerseyNumberMeshCount).toBe(22);
+  expect(integratedResetCycles.after.jerseyNumberMaterialCount).toBe(
+    integratedResetCycles.before.jerseyNumberMaterialCount,
+  );
   expect(integratedResetCycles.after.footballMeshCount).toBe(integratedResetCycles.before.footballMeshCount);
   expect(integratedResetCycles.after.officialCount).toBe(2);
   expect(integratedResetCycles.after.officialMeshCount).toBe(integratedResetCycles.before.officialMeshCount);
@@ -2035,7 +2402,7 @@ test('unlocks audio from a pointer gesture and keeps audio-disabled startup unlo
 
   await page.goto('/?debug=1&readback=1&experience=performance&audioDebug=1&audio=0');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await page.keyboard.press('R');
   const disabledAudio = await getAudioSnapshot(page);
   expect(disabledAudio.enabled).toBe(false);
@@ -2056,7 +2423,7 @@ test('starts commentary debug and keeps disabled announcer speech unloaded', asy
 
   await page.mouse.click(24, 24);
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.contextState)).toBe('running');
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page).then((snapshot) => snapshot.playState)).toBe('live');
 
   audio = await getAudioSnapshot(page);
@@ -2066,7 +2433,7 @@ test('starts commentary debug and keeps disabled announcer speech unloaded', asy
   await page.goto('/?debug=1&readback=1&experience=performance&commentaryDebug=1&announcer=0');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.mouse.click(24, 24);
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   const disabledAnnouncer = await getAudioSnapshot(page);
   expect(disabledAnnouncer.announcerEnabled).toBe(false);
   expect(disabledAnnouncer.commentary?.enabled).toBe(false);
@@ -2101,7 +2468,7 @@ extendedSmokeTest('supports football visual and appearance audit presentation op
   ).toBe(true);
   await expect(page.locator('.appearance-audit-overlay')).toContainText('APPEARANCE AUDIT');
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await expect.poll(() => getBallVisualSnapshot(page)).toMatchObject({
     style: 'football',
@@ -2124,7 +2491,7 @@ extendedSmokeTest('supports procedural player motion debug and comparison modes'
   await expect(page.locator('.pose-debug-overlay')).toContainText('offense-qb readyOffense');
   await expect(page.locator('.pose-debug-overlay')).toContainText('defense-safety readyDefense');
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await page.keyboard.down('w');
   await expect.poll(async () => {
@@ -2585,7 +2952,7 @@ test('renders graphical play cards and selects plays through the shared request 
   await expect(cards).toHaveCount(4);
   await expect(page.locator('.play-call-ui')).toBeVisible();
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await expect(page.locator('.play-call-ui')).toBeHidden();
 
@@ -2595,6 +2962,7 @@ test('renders graphical play cards and selects plays through the shared request 
 });
 
 test('shows on-field receiver routes before snap and supports route audit mode', async ({ page }) => {
+  test.setTimeout(45_000);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?debug=1&readback=1&experience=performance&routeArt=1&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -2614,7 +2982,7 @@ test('shows on-field receiver routes before snap and supports route audit mode',
     (await getRouteArtSnapshot(page)).routes.find((route) => route.receiverId === 'offense-rb')?.selected,
   ).toBe(true);
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({ visible: false });
 
@@ -2646,7 +3014,7 @@ test('shows pass audit data for a route-aware throw', async ({ page }) => {
   await expect(page.locator('.pass-audit-overlay')).toContainText('no active pass');
 
   await page.keyboard.press('3');
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: { state: { kind: 'possessed' } },
     playState: 'live',
@@ -2716,7 +3084,7 @@ extendedSmokeTest('starts playable 7v7 Twin Slants Flat and throws to the select
     selectedReceiver: { displayName: 'Running Back', id: 'offense-rb' },
   });
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: { state: { kind: 'possessed' } },
     playState: 'live',
@@ -2803,7 +3171,7 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
     selectedReceiver: { id: 'offense-slot', displayName: 'Slot' },
   });
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: { state: { kind: 'possessed', playerId: 'offense-qb' } },
     playState: 'live',
@@ -2832,7 +3200,7 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
     selectedPlay: { id: 'inside-zone-11', displayName: 'Inside Zone 11' },
   });
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: {
       possession: {
@@ -2882,7 +3250,7 @@ test('selects offense perspective camera and toggles modes without resetting gam
   });
   await expectNonBlankCanvas(page);
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
@@ -2895,8 +3263,9 @@ test('selects offense perspective camera and toggles modes without resetting gam
     mode: 'cinematicBroadcast',
     state: 'cinematicBroadcast',
   });
-  expect((await getGameplaySnapshot(page)).playState).toBe(beforeToggle.playState);
-  expect((await getGameplaySnapshot(page)).score).toBe(beforeToggle.score);
+  const afterToggle = await getGameplaySnapshot(page);
+  expect(afterToggle.playState).not.toBe('preSnap');
+  expect(afterToggle.score).toBe(beforeToggle.score);
   await expect(page.locator('.debug-overlay')).toContainText('PRESENT');
   await expectNonBlankCanvas(page);
 
@@ -2928,7 +3297,7 @@ test('runs cinematic broadcast camera without delaying gameplay snap', async ({ 
   await expect(page.locator('.debug-overlay')).toContainText('FORM_BOUNDS');
   await expectNonBlankCanvas(page);
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await expect.poll(async () => {
     const camera = await getCameraSnapshot(page);
@@ -2967,7 +3336,7 @@ test('supports cinematic orbit shot settings without blocking gameplay input', a
     state: 'preSnapFormation',
   });
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await expect.poll(() => getCameraSnapshot(page)).toMatchObject({
     mode: 'offensePerspective',
@@ -3012,7 +3381,7 @@ extendedSmokeTest('moves the placeholder player with WASD and arrow keys', async
   for (const movementCase of movementCases) {
     await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
     await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
-    await page.keyboard.press('Space');
+    await pressSpaceWhenSnapReady(page);
     await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
     const before = await getPlayerSnapshot(page);
 
@@ -3033,7 +3402,7 @@ extendedSmokeTest('keeps D reserved for movement instead of debug toggling', asy
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.debug-overlay')).toBeVisible();
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   const before = await getPlayerSnapshot(page);
 
@@ -3111,7 +3480,7 @@ extendedSmokeTest('selects plays before snap and locks selection while live', as
   });
   await expect(page.locator('.target-label')).toBeHidden();
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await page.keyboard.press('2');
   await page.keyboard.press('3');
@@ -3147,7 +3516,7 @@ extendedSmokeTest('runs pre-snap, live, possession, and reset loop', async ({ pa
   expect(afterPreSnapMove.player.position.x).toBeCloseTo(initial.player.position.x);
   expect(afterPreSnapMove.player.position.z).toBeCloseTo(initial.player.position.z);
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: { possession: { kind: 'player' } },
     playState: 'live',
@@ -3189,7 +3558,7 @@ extendedSmokeTest('selects Quick Pass, starts the route after snap, and throws o
   expect(receiverBeforeSnap).toMatchObject({ role: 'receiver', currentState: 'idle' });
   expect(preSnap.ball.state).toEqual({ kind: 'dead' });
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: { state: { kind: 'possessed' } },
     playState: 'live',
@@ -3231,7 +3600,7 @@ extendedSmokeTest('selects Slant Flat, cycles the target, and throws to the sele
   });
   await expect(page.locator('.target-label')).toHaveText('Target #24 Miles Redd');
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: { state: { kind: 'possessed' } },
     playState: 'live',
@@ -3266,7 +3635,7 @@ extendedSmokeTest('offense perspective tracks an in-flight pass', async ({ page 
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('4');
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: { state: { kind: 'possessed' } },
     playState: 'live',
@@ -3284,7 +3653,7 @@ extendedSmokeTest('rejects Quick Pass after the quarterback crosses the line of 
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
   await page.keyboard.press('3');
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     ball: { state: { kind: 'possessed' } },
     forwardPassEligible: true,
@@ -3310,7 +3679,7 @@ extendedSmokeTest('scores touchdown by avoiding the defender and auto-resets', a
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await page.keyboard.down('w');
   await page.keyboard.down('d');
@@ -3331,7 +3700,7 @@ extendedSmokeTest('scores touchdown by avoiding the defender and auto-resets', a
   await page.keyboard.up('w');
   const whileDead = await getGameplaySnapshot(page);
   if (whileDead.playState === 'dead') {
-    expect(whileDead.player.position.z).toBeCloseTo(touchdown.player.position.z);
+    expect(whileDead.player.position.z).toBeGreaterThanOrEqual(touchdown.player.position.z);
   }
   expect(whileDead.score).toBe(6);
 
@@ -3358,7 +3727,7 @@ extendedSmokeTest('defender tackles the ball carrier and auto-resets', async ({ 
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.score-counter')).toHaveText('Score 0');
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await page.keyboard.down('w');
   await expect.poll(async () => (await getGameplaySnapshot(page)).playState, {
@@ -3403,7 +3772,7 @@ extendedSmokeTest('going out of bounds ends the play and resets at the resolved 
   await page.goto('/?debug=1&readback=1&experience=performance&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
 
-  await page.keyboard.press('Space');
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await page.keyboard.down('d');
   const outOfBounds = await waitForDeadPlayResult(page, 'outOfBounds', 5000);
@@ -3632,8 +4001,15 @@ async function getDebugOverlayNumber(page: Page, label: string): Promise<number>
   return Number(match[1]);
 }
 
-async function runOutOfBoundsPlay(page: Page): Promise<GameplaySnapshot> {
+async function pressSpaceWhenSnapReady(page: Page): Promise<void> {
+  await expect(page.locator('.cadence-status')).toContainText('PRESS SPACE TO SNAP', {
+    timeout: 5000,
+  });
   await page.keyboard.press('Space');
+}
+
+async function runOutOfBoundsPlay(page: Page): Promise<GameplaySnapshot> {
+  await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await page.keyboard.down('d');
   const snapshot = await waitForDeadPlayResult(page, 'outOfBounds', 5000);
@@ -3805,6 +4181,24 @@ async function getKickoffSnapshot(page: Page): Promise<KickoffPresentationSnapsh
     }
 
     return debugApi.getKickoffSnapshot();
+  });
+}
+
+async function getStageVisualMatrixSnapshot(page: Page): Promise<StageVisualMatrixSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getStageVisualMatrixSnapshot: () => StageVisualMatrixSnapshot;
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getStageVisualMatrixSnapshot();
   });
 }
 
@@ -4138,6 +4532,48 @@ async function getOfficialsSnapshot(page: Page): Promise<OfficialsPresentationSn
   });
 }
 
+async function getCoinTossSnapshot(page: Page): Promise<{
+  bareHeadCount: number;
+  captainVisualCount: number;
+  captainsVisible: number;
+  coinVisible: boolean;
+  gameplayPlayersVisible: boolean;
+  helmetReadyCount: number;
+  officialsVisibleCount: number;
+  refereeVisible: boolean;
+  stageId: string;
+  visualProfileCount: number;
+  visualProfileId: string;
+}> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getCoinTossSnapshot: () => {
+            bareHeadCount: number;
+            captainVisualCount: number;
+            captainsVisible: number;
+            coinVisible: boolean;
+            gameplayPlayersVisible: boolean;
+            helmetReadyCount: number;
+            officialsVisibleCount: number;
+            refereeVisible: boolean;
+            stageId: string;
+            visualProfileCount: number;
+            visualProfileId: string;
+          };
+        };
+      }
+    ).__footballDebug;
+
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+
+    return debugApi.getCoinTossSnapshot();
+  });
+}
+
 async function getControlledPlayerLabelSnapshot(page: Page): Promise<ControlledPlayerLabelSnapshot> {
   return page.evaluate(() => {
     const debugApi = (
@@ -4235,14 +4671,19 @@ async function expectNoDebugHelpers(page: Page): Promise<void> {
     const selectors = [
       '.debug-panel',
       '.debug-overlay',
+      '.cadence-debug-overlay',
       '.officials-debug-overlay',
       '.field-audit-overlay',
       '.formation-audit-overlay',
       '.route-audit-overlay',
       '.pass-audit-overlay',
       '.memory-debug-panel',
+      '.intro-keys-debug-overlay',
+      '.jersey-number-debug-overlay',
+      '.kickoff-return-debug-overlay',
       '.presentation-audit-overlay',
       '.presentation-hardening-audit-overlay',
+      '.place-kick-debug-overlay',
       '.pregame-debug-overlay',
       '.camera-debug-overlay',
     ];

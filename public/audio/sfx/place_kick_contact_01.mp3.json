@@ -1,0 +1,17 @@
+{
+  "assetId": "place_kick_contact_01",
+  "category": "sfx",
+  "compressedBytes": 15090,
+  "contentHash": "8eb2630a4806b98cef5b0f8fbb819cf24e288e62aab005282b71dca64529ea56",
+  "durationSeconds": 0.88,
+  "generatedAt": "2026-06-22T14:13:40.666Z",
+  "kind": "oneShot",
+  "metadata": {
+    "semanticCategory": "placeKick"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Strong but realistic football place-kick contact. Cleat striking leather with a sharp compressed thump and quick air movement. No crowd baked into the file, no music, no announcer.",
+  "requestedDurationSeconds": 0.9,
+  "runtimeLoadingStrategy": "buffer"
+}

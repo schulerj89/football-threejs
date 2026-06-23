@@ -11,9 +11,11 @@ import { getStoredKickerRatingsForPlayerId } from '../specialTeams/KickerRatings
 export interface TeamRoster {
   defensiveStarterIds: readonly string[];
   kickerId: string;
+  longSnapperId: string;
   offensiveStarterIds: readonly string[];
   players: readonly RosterPlayer[];
   punterId: string;
+  reserveIds: readonly string[];
   teamId: string;
 }
 
@@ -74,19 +76,33 @@ export function createTeamRoster(
     );
   });
   const kicker = players.find((player) => player.footballPosition === 'K');
+  const longSnapper = players.find((player) => player.footballPosition === 'LS');
   const punter = players.find((player) => player.footballPosition === 'P');
 
-  if (!kicker || !punter) {
-    throw new Error(`Roster ${teamId} must define kicker and punter`);
+  if (!kicker || !punter || !longSnapper) {
+    throw new Error(`Roster ${teamId} must define kicker, punter, and long snapper`);
   }
 
+  const offensiveStarterIds = offense.map((_, index) => players[index]!.id);
+  const defensiveStarterIds = players.slice(offense.length, offense.length + defense.length)
+    .map((player) => player.id);
+  const reserveIds = players
+    .filter((player) =>
+      !offensiveStarterIds.includes(player.id) &&
+      !defensiveStarterIds.includes(player.id) &&
+      player.id !== kicker.id &&
+      player.id !== punter.id &&
+      player.id !== longSnapper.id)
+    .map((player) => player.id);
+
   return {
-    defensiveStarterIds: players.slice(offense.length, offense.length + defense.length)
-      .map((player) => player.id),
+    defensiveStarterIds,
     kickerId: kicker.id,
-    offensiveStarterIds: offense.map((_, index) => players[index].id),
+    longSnapperId: longSnapper.id,
+    offensiveStarterIds,
     players,
     punterId: punter.id,
+    reserveIds,
     teamId,
   };
 }
@@ -115,6 +131,14 @@ export function validateTeamRoster(roster: TeamRoster): RosterValidationIssue[] 
     issues.push({
       message: `${roster.teamId} must have 11 defensive starters`,
       playerIds: [...roster.defensiveStarterIds],
+      severity: 'error',
+    });
+  }
+
+  if (roster.reserveIds.length !== 7) {
+    issues.push({
+      message: `${roster.teamId} must have seven special-teams reserve players`,
+      playerIds: [...roster.reserveIds],
       severity: 'error',
     });
   }
@@ -150,7 +174,14 @@ export function validateTeamRoster(roster: TeamRoster): RosterValidationIssue[] 
     }
   }
 
-  for (const starterId of [...roster.offensiveStarterIds, ...roster.defensiveStarterIds, roster.kickerId, roster.punterId]) {
+  for (const starterId of [
+    ...roster.offensiveStarterIds,
+    ...roster.defensiveStarterIds,
+    roster.kickerId,
+    roster.punterId,
+    roster.longSnapperId,
+    ...roster.reserveIds,
+  ]) {
     if (!ids.has(starterId)) {
       issues.push({
         message: `${roster.teamId} references missing roster player ${starterId}`,

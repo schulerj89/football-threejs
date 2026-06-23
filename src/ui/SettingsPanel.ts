@@ -2,545 +2,290 @@ import {
   BROADCAST_EXPERIENCE_SETTINGS,
   PERFORMANCE_EXPERIENCE_SETTINGS,
   normalizeGameExperienceSettings,
-  type ExperienceCameraMode,
-  type ExperiencePreset,
   type GameExperienceSettings,
 } from '../config/GameExperienceSettings';
+import { createAccessibilitySettingsSection } from './settings/AccessibilitySettingsSection';
+import { createAudioSettingsSection } from './settings/AudioSettingsSection';
+import { createGameSettingsSection } from './settings/GameSettingsSection';
+import { createPresentationSettingsSection } from './settings/PresentationSettingsSection';
+import { createRangeSetting } from './settings/RangeSetting';
+import { createSelectSetting } from './settings/SelectSetting';
+import { createSettingsNavigation } from './settings/SettingsNavigation';
+import { createToggleSetting } from './settings/ToggleSetting';
+import {
+  SETTINGS_CATEGORY_LABELS,
+  type SettingsCategoryId,
+  type SettingsPanelContext,
+  type SettingsPanelVariant,
+  type SettingsSectionContext,
+} from './settings/SettingsTypes';
 import type { CinematicsSetting } from '../camera/PresentationCameraDirector';
-import type {
-  ExhibitionGameMode,
-  MatchDifficulty,
-} from '../match/MatchTypes';
-import type { CrowdDensity, CrowdFullness } from '../presentation/CrowdPresentationController';
-import type { QualityMode } from '../performance/QualityProfile';
-import { getPlaybookOptions } from '../playbook';
-import type { PlaybookId } from '../roster';
-import type { SidelineDensity } from '../presentation/teams/SidelineTeamTypes';
-import { TeamCustomizationPanel } from './TeamCustomizationPanel';
-import { RosterPreviewPanel } from './RosterPreviewPanel';
+import type { ExperienceCameraMode, ExperiencePreset } from '../config/GameExperienceSettings';
 
 export interface SettingsPanelOptions {
   initialSettings: GameExperienceSettings;
+  context?: SettingsPanelContext;
   onSettingsChange?: (settings: GameExperienceSettings) => void;
-  showGameMode?: boolean;
-  showRosterPreview?: boolean;
-  showTeamCustomization?: boolean;
+  variant?: SettingsPanelVariant;
 }
+
+export const SETTINGS_DONE_EVENT = 'football-settings-done';
+export const SETTINGS_OPEN_FULL_EVENT = 'football-settings-open-full';
 
 export class SettingsPanel {
   readonly root = document.createElement('section');
 
+  private activeCategory: SettingsCategoryId = 'game';
+  private context: SettingsPanelContext;
   private settings: GameExperienceSettings;
+  private variant: SettingsPanelVariant;
   private readonly onSettingsChange?: (settings: GameExperienceSettings) => void;
-  private readonly showGameMode: boolean;
-  private readonly showRosterPreview: boolean;
-  private readonly showTeamCustomization: boolean;
-  private readonly teamCustomizationPanel: TeamCustomizationPanel | null;
-  private readonly rosterPreviewPanel: RosterPreviewPanel | null;
-  private readonly presetSelect = document.createElement('select');
-  private readonly gameModeSelect = document.createElement('select');
-  private readonly playbookSelect = document.createElement('select');
-  private readonly quarterLengthSelect = document.createElement('select');
-  private readonly difficultySelect = document.createElement('select');
-  private readonly qualityModeSelect = document.createElement('select');
-  private readonly debugToolsInput = document.createElement('input');
-  private readonly cameraSelect = document.createElement('select');
-  private readonly cameraDescription = document.createElement('p');
-  private readonly cinematicsSelect = document.createElement('select');
-  private readonly crowdVisualsInput = document.createElement('input');
-  private readonly stadiumInput = document.createElement('input');
-  private readonly crowdDensitySelect = document.createElement('select');
-  private readonly crowdReactionsInput = document.createElement('input');
-  private readonly coachesInput = document.createElement('input');
-  private readonly sidelinePlayersInput = document.createElement('input');
-  private readonly sidelineDensitySelect = document.createElement('select');
-  private readonly tunnelTableauInput = document.createElement('input');
-  private readonly audioEnabledInput = document.createElement('input');
-  private readonly mutedInput = document.createElement('input');
-  private readonly masterVolumeInput = document.createElement('input');
-  private readonly musicEnabledInput = document.createElement('input');
-  private readonly musicVolumeInput = document.createElement('input');
-  private readonly menuPlaylistOrderSelect = document.createElement('select');
-  private readonly crowdAudioInput = document.createElement('input');
-  private readonly crowdVolumeInput = document.createElement('input');
-  private readonly announcerInput = document.createElement('input');
-  private readonly announcerVolumeInput = document.createElement('input');
-  private readonly captionsInput = document.createElement('input');
-  private readonly routeArtInput = document.createElement('input');
-  private readonly controlledPlayerLabelInput = document.createElement('input');
-  private readonly selectedReceiverLabelInput = document.createElement('input');
-  private readonly playerMotionInput = document.createElement('input');
-  private readonly officialsInput = document.createElement('input');
-  private readonly officialsDebugLabelsInput = document.createElement('input');
-  private readonly customControls: HTMLElement[] = [];
 
   constructor(options: SettingsPanelOptions) {
+    this.context = options.context ?? 'menu';
     this.settings = normalizeGameExperienceSettings(options.initialSettings);
+    this.variant = options.variant ?? 'full';
     this.onSettingsChange = options.onSettingsChange;
-    this.showGameMode = options.showGameMode ?? true;
-    this.showTeamCustomization = options.showTeamCustomization ?? false;
-    this.showRosterPreview = options.showRosterPreview ?? this.showTeamCustomization;
-    this.teamCustomizationPanel = this.showTeamCustomization
-      ? new TeamCustomizationPanel({
-          initialSettings: this.settings.teamProfiles,
-          onSettingsChange: (teamProfiles) => {
-            this.updateSettings({
-              ...this.settings,
-              teamProfiles,
-            });
-          },
-          showTeamSelectors: false,
-        })
-      : null;
-    this.rosterPreviewPanel = this.showRosterPreview
-      ? new RosterPreviewPanel(this.settings)
-      : null;
-    this.root.className = 'game-setup-screen settings-panel';
-    this.root.append(this.createContent());
-    this.syncControls();
+    this.root.className = 'settings-panel';
+    this.root.setAttribute('aria-label', 'Settings');
+    this.render();
   }
 
   getSettings(): GameExperienceSettings {
-    return { ...this.settings };
+    return {
+      ...this.settings,
+      teamProfiles: this.settings.teamProfiles,
+    };
+  }
+
+  setContext(context: SettingsPanelContext): void {
+    this.context = context;
+    this.render();
   }
 
   setSettings(settings: GameExperienceSettings): void {
     this.settings = normalizeGameExperienceSettings(settings);
-    this.syncControls();
+    this.render();
   }
 
-  private createContent(): HTMLElement {
+  setVariant(variant: SettingsPanelVariant): void {
+    this.variant = variant;
+    if (variant === 'pause') {
+      this.activeCategory = 'audio';
+    }
+    this.render();
+  }
+
+  private render(): void {
+    this.root.dataset.variant = this.variant;
+    this.root.dataset.context = this.context;
+    this.root.replaceChildren(
+      this.variant === 'pause' ? this.createPauseContent() : this.createFullContent(),
+    );
+  }
+
+  private createFullContent(): HTMLElement {
+    const shell = document.createElement('div');
+    shell.className = 'settings-shell';
+    shell.append(this.createHeader('Settings', 'Game preferences and presentation options.'));
+
+    const body = document.createElement('div');
+    body.className = 'settings-body';
+    body.append(
+      createSettingsNavigation({
+        activeCategory: this.activeCategory,
+        onSelect: (category) => {
+          this.activeCategory = category;
+          this.render();
+        },
+      }),
+      this.createActiveSection(),
+    );
+
+    shell.append(body, this.createFooter(true));
+    return shell;
+  }
+
+  private createPauseContent(): HTMLElement {
+    const shell = document.createElement('div');
+    shell.className = 'settings-shell settings-shell-quick';
+    shell.append(this.createHeader('Quick Settings', 'Safe changes for the current play state.'));
+
     const content = document.createElement('div');
-    content.className = 'game-setup-grid';
-
-    const primary = document.createElement('div');
-    primary.className = 'game-setup-primary';
-    primary.append(
-      this.createSelectRow('Presentation preset', this.presetSelect, [
-        ['broadcast', 'Broadcast'],
-        ['performance', 'Performance'],
-        ['custom', 'Custom'],
-      ]),
-      this.createSelectRow('Quality mode', this.qualityModeSelect, [
-        ['adaptive60', 'Adaptive 60 FPS'],
-        ['lockedBroadcast', 'Broadcast Quality Locked'],
-        ['lockedPerformance', 'Performance Quality Locked'],
-      ]),
-      this.createCheckboxRow('Debug tools', this.debugToolsInput, false),
+    content.className = 'settings-quick-grid';
+    content.append(
+      createRangeSetting({
+        description: 'Overall game audio level.',
+        label: 'Master volume',
+        onChange: (value) => this.patch({ masterVolume: value }),
+        value: this.settings.masterVolume,
+      }),
+      createRangeSetting({
+        description: 'Menu and transition music level.',
+        label: 'Music volume',
+        onChange: (value) => this.patch({ musicVolume: value }),
+        value: this.settings.musicVolume,
+      }),
+      createToggleSetting({
+        checked: this.settings.announcerEnabled,
+        description: 'Play broadcast commentary when available.',
+        label: 'Announcer',
+        onChange: (checked) => this.patch({ announcerEnabled: checked }),
+      }),
+      createToggleSetting({
+        checked: this.settings.captionsEnabled,
+        description: 'Show captions for presentation speech.',
+        label: 'Captions',
+        onChange: (checked) => this.patch({ captionsEnabled: checked }),
+      }),
+      createSelectSetting<ExperienceCameraMode>({
+        description: 'Choose the normal camera used during plays.',
+        label: 'Gameplay camera',
+        onChange: (value) => this.patch({ gameplayCamera: value }, true),
+        options: [
+          { label: 'Offense', value: 'offense' },
+          { label: 'Tactical', value: 'tactical' },
+          { label: 'Cinematic', value: 'cinematic' },
+        ],
+        value: this.settings.gameplayCamera,
+      }),
+      createSelectSetting<CinematicsSetting>({
+        description: 'Control post-play camera presentation.',
+        label: 'Cinematics',
+        onChange: (value) => this.patch({ cinematics: value }, true),
+        options: [
+          { label: 'Off', value: 'off' },
+          { label: 'Brief', value: 'brief' },
+          { label: 'Full', value: 'full' },
+        ],
+        value: this.settings.cinematics,
+      }),
+      createToggleSetting({
+        checked: this.settings.routeArtEnabled,
+        description: 'Show route and blocking guides before the snap.',
+        label: 'Route art',
+        onChange: (checked) => this.patch({ routeArtEnabled: checked }, true),
+      }),
     );
 
-    if (this.showGameMode) {
-      primary.append(
-        this.createSelectRow('Game mode', this.gameModeSelect, [
-          ['exhibition', 'Exhibition - Offense Only'],
-          ['scoreAttack', 'Development Score Attack'],
-        ]),
-        this.createSelectRow(
-          'Regression playbook',
-          this.playbookSelect,
-          getPlaybookOptions().map((option) => [option.id, option.displayName]),
-        ),
-      );
+    shell.append(content, this.createFooter(false));
+    return shell;
+  }
+
+  private createHeader(titleText: string, description: string): HTMLElement {
+    const header = document.createElement('header');
+    header.className = 'settings-header';
+    const title = document.createElement('h2');
+    title.textContent = titleText;
+    const copy = document.createElement('p');
+    copy.textContent = description;
+    header.append(title, copy);
+    return header;
+  }
+
+  private createActiveSection(): HTMLElement {
+    const context = this.createSectionContext();
+    if (this.activeCategory === 'presentation') {
+      return createPresentationSettingsSection(context);
     }
-    primary.append(
-      this.createSelectRow('Quarter length', this.quarterLengthSelect, [
-        ['60', '1 minute'],
-        ['180', '3 minutes'],
-        ['300', '5 minutes'],
-        ['600', '10 minutes'],
-      ]),
-      this.createSelectRow('Difficulty', this.difficultySelect, [
-        ['rookie', 'Rookie'],
-        ['pro', 'Pro'],
-        ['allPro', 'All-Pro'],
-      ]),
-    );
-
-    const custom = document.createElement('div');
-    custom.className = 'game-setup-custom';
-    const customTitle = document.createElement('h3');
-    customTitle.textContent = 'Custom Settings';
-    const cameraRow = this.createSelectRow('Gameplay camera', this.cameraSelect, [
-      ['offense', 'Offense'],
-      ['tactical', 'Tactical'],
-      ['cinematic', 'Cinematic'],
-    ]);
-    this.cameraDescription.className = 'settings-note';
-    custom.append(
-      customTitle,
-      cameraRow,
-      this.cameraDescription,
-      this.createSelectRow('Cinematics', this.cinematicsSelect, [
-        ['off', 'Off'],
-        ['brief', 'Brief'],
-        ['full', 'Full'],
-      ]),
-      this.createCheckboxRow('Crowd visuals', this.crowdVisualsInput),
-      this.createCheckboxRow('Stadium', this.stadiumInput),
-      this.createSelectRow('Crowd fullness', this.crowdDensitySelect, [
-        ['sparse', 'Sparse'],
-        ['standard', 'Standard'],
-        ['full', 'Full'],
-      ]),
-      this.createCheckboxRow('Crowd reactions', this.crowdReactionsInput),
-      this.createCheckboxRow('Sideline teams', this.sidelinePlayersInput),
-      this.createCheckboxRow('Head coaches', this.coachesInput),
-      this.createSelectRow('Sideline density', this.sidelineDensitySelect, [
-        ['low', 'Low'],
-        ['medium', 'Medium'],
-        ['high', 'High'],
-      ]),
-      this.createCheckboxRow('Tunnel tableau', this.tunnelTableauInput),
-      this.createCheckboxRow('Master audio', this.audioEnabledInput),
-      this.createCheckboxRow('Muted', this.mutedInput),
-      this.createRangeRow('Master volume', this.masterVolumeInput),
-      this.createCheckboxRow('Music', this.musicEnabledInput),
-      this.createRangeRow('Music volume', this.musicVolumeInput),
-      this.createSelectRow('Menu playlist', this.menuPlaylistOrderSelect, [
-        ['sequential', 'Sequential'],
-        ['shuffle', 'Shuffle'],
-      ]),
-      this.createCheckboxRow('Crowd audio', this.crowdAudioInput),
-      this.createRangeRow('Crowd volume', this.crowdVolumeInput),
-      this.createCheckboxRow('Announcer', this.announcerInput),
-      this.createRangeRow('Announcer volume', this.announcerVolumeInput),
-      this.createCheckboxRow('Captions', this.captionsInput),
-      this.createCheckboxRow('Route art', this.routeArtInput),
-      this.createCheckboxRow('Controlled player label', this.controlledPlayerLabelInput),
-      this.createCheckboxRow('Selected receiver label', this.selectedReceiverLabelInput),
-      this.createCheckboxRow('Player motion', this.playerMotionInput),
-      this.createCheckboxRow('Officials', this.officialsInput),
-    );
-
-    content.append(primary, custom);
-    if (this.teamCustomizationPanel) {
-      const teamWrapper = document.createElement('div');
-      teamWrapper.className = 'game-setup-team';
-      teamWrapper.append(this.teamCustomizationPanel.root);
-      if (this.rosterPreviewPanel) {
-        teamWrapper.append(this.rosterPreviewPanel.root);
-      }
-      content.append(teamWrapper);
+    if (this.activeCategory === 'audio') {
+      return createAudioSettingsSection(context);
     }
-    this.installHandlers();
-    return content;
-  }
-
-  private createSelectRow(
-    labelText: string,
-    select: HTMLSelectElement,
-    options: Array<readonly [string, string]>,
-  ): HTMLElement {
-    const label = document.createElement('label');
-    label.className = 'settings-row';
-    const span = document.createElement('span');
-    span.textContent = labelText;
-    for (const [value, text] of options) {
-      const option = document.createElement('option');
-      option.value = value;
-      option.textContent = text;
-      select.append(option);
+    if (this.activeCategory === 'accessibility') {
+      return createAccessibilitySettingsSection(context);
     }
-    label.append(span, select);
-    this.customControls.push(select);
-    return label;
+    return createGameSettingsSection(context);
   }
 
-  private createCheckboxRow(
-    labelText: string,
-    input: HTMLInputElement,
-    customControl = true,
-  ): HTMLElement {
-    const label = document.createElement('label');
-    label.className = 'settings-row settings-row-checkbox';
-    input.type = 'checkbox';
-    const span = document.createElement('span');
-    span.textContent = labelText;
-    label.append(span, input);
-    if (customControl) {
-      this.customControls.push(input);
+  private createSectionContext(): SettingsSectionContext {
+    return {
+      context: this.context,
+      onPatch: (patch, custom) => this.patch(patch, custom),
+      onPresetChange: (preset) => this.applyPreset(preset),
+      settings: this.settings,
+    };
+  }
+
+  private createFooter(full: boolean): HTMLElement {
+    const footer = document.createElement('footer');
+    footer.className = 'settings-footer';
+    if (!full) {
+      const fullSettings = document.createElement('button');
+      fullSettings.type = 'button';
+      fullSettings.className = 'settings-secondary-action';
+      fullSettings.textContent = 'Full Settings';
+      fullSettings.addEventListener('click', () => {
+        this.root.dispatchEvent(new CustomEvent(SETTINGS_OPEN_FULL_EVENT, { bubbles: true }));
+      });
+      footer.append(fullSettings);
+    } else {
+      const restore = document.createElement('button');
+      restore.type = 'button';
+      restore.className = 'settings-secondary-action';
+      restore.textContent = 'Restore Defaults';
+      restore.addEventListener('click', () => this.restoreDefaults());
+      footer.append(restore);
     }
-    return label;
+
+    const categoryLabel = this.variant === 'full'
+      ? SETTINGS_CATEGORY_LABELS[this.activeCategory]
+      : 'Quick Settings';
+    const hint = document.createElement('span');
+    hint.className = 'settings-footer-hint';
+    hint.textContent = categoryLabel;
+
+    const done = document.createElement('button');
+    done.type = 'button';
+    done.className = 'settings-done-action';
+    done.textContent = 'Done';
+    done.addEventListener('click', () => {
+      this.root.dispatchEvent(new CustomEvent(SETTINGS_DONE_EVENT, { bubbles: true }));
+    });
+    footer.append(hint, done);
+    return footer;
   }
 
-  private createRangeRow(labelText: string, input: HTMLInputElement): HTMLElement {
-    const label = document.createElement('label');
-    label.className = 'settings-row settings-row-range';
-    const span = document.createElement('span');
-    span.textContent = labelText;
-    input.type = 'range';
-    input.min = '0';
-    input.max = '1';
-    input.step = '0.01';
-    label.append(span, input);
-    this.customControls.push(input);
-    return label;
+  private applyPreset(preset: ExperiencePreset): void {
+    if (preset === 'custom') {
+      this.update({ ...this.settings, preset: 'custom' });
+      return;
+    }
+
+    const defaults = preset === 'performance'
+      ? PERFORMANCE_EXPERIENCE_SETTINGS
+      : BROADCAST_EXPERIENCE_SETTINGS;
+    this.update(normalizeGameExperienceSettings({
+      ...defaults,
+      gameMode: this.settings.gameMode,
+      matchDifficulty: this.settings.matchDifficulty,
+      playbookId: this.settings.playbookId,
+      quarterLengthSeconds: this.settings.quarterLengthSeconds,
+      teamProfiles: this.settings.teamProfiles,
+    }));
   }
 
-  private installHandlers(): void {
-    this.presetSelect.addEventListener('change', () => {
-      const preset = this.presetSelect.value as ExperiencePreset;
-      const playbookId = this.settings.playbookId;
-      const debugToolsEnabled = this.settings.debugToolsEnabled;
-      const gameMode = this.settings.gameMode;
-      const matchDifficulty = this.settings.matchDifficulty;
-      const quarterLengthSeconds = this.settings.quarterLengthSeconds;
-      const teamProfiles = this.settings.teamProfiles;
-      const next =
-        preset === 'broadcast'
-          ? {
-              ...BROADCAST_EXPERIENCE_SETTINGS,
-              debugToolsEnabled,
-              gameMode,
-              matchDifficulty,
-              playbookId,
-              quarterLengthSeconds,
-              teamProfiles,
-            }
-          : preset === 'performance'
-            ? {
-                ...PERFORMANCE_EXPERIENCE_SETTINGS,
-                debugToolsEnabled,
-                gameMode,
-                matchDifficulty,
-                playbookId,
-                quarterLengthSeconds,
-                teamProfiles,
-              }
-            : { ...this.settings, preset: 'custom' as const };
-      this.updateSettings(next);
-    });
-
-    this.gameModeSelect.addEventListener('change', () => {
-      const gameMode = this.gameModeSelect.value as ExhibitionGameMode;
-      this.updateSettings({
-        ...this.settings,
-        gameMode,
-        playbookId: gameMode === 'exhibition' ? '11v11' : this.settings.playbookId,
-      });
-    });
-    this.playbookSelect.addEventListener('change', () => {
-      this.updateSettings({
-        ...this.settings,
-        playbookId: this.playbookSelect.value as PlaybookId,
-      });
-    });
-    this.quarterLengthSelect.addEventListener('change', () => {
-      this.updateSettings({
-        ...this.settings,
-        quarterLengthSeconds: Number(this.quarterLengthSelect.value),
-      });
-    });
-    this.difficultySelect.addEventListener('change', () => {
-      this.updateSettings({
-        ...this.settings,
-        matchDifficulty: this.difficultySelect.value as MatchDifficulty,
-      });
-    });
-    this.qualityModeSelect.addEventListener('change', () => {
-      this.updateSettings({
-        ...this.settings,
-        qualityMode: this.qualityModeSelect.value as QualityMode,
-      });
-    });
-    this.debugToolsInput.addEventListener('change', () => {
-      this.updateSettings({
-        ...this.settings,
-        debugToolsEnabled: this.debugToolsInput.checked,
-      });
-    });
-    this.cameraSelect.addEventListener('change', () => {
-      this.updateCustomSettings({ gameplayCamera: this.cameraSelect.value as ExperienceCameraMode });
-    });
-    this.cinematicsSelect.addEventListener('change', () => {
-      this.updateCustomSettings({ cinematics: this.cinematicsSelect.value as CinematicsSetting });
-    });
-    this.crowdVisualsInput.addEventListener('change', () => {
-      this.updateCustomSettings({ crowdVisualsEnabled: this.crowdVisualsInput.checked });
-    });
-    this.stadiumInput.addEventListener('change', () => {
-      this.updateCustomSettings({ stadiumEnabled: this.stadiumInput.checked });
-    });
-    this.crowdDensitySelect.addEventListener('change', () => {
-      const crowdFullness = this.crowdDensitySelect.value as CrowdFullness;
-      this.updateCustomSettings({
-        crowdDensity: toLegacyCrowdDensity(crowdFullness),
-        crowdFullness,
-      });
-    });
-    this.crowdReactionsInput.addEventListener('change', () => {
-      this.updateCustomSettings({ crowdReactionsEnabled: this.crowdReactionsInput.checked });
-    });
-    this.sidelinePlayersInput.addEventListener('change', () => {
-      this.updateCustomSettings({ sidelinePlayersEnabled: this.sidelinePlayersInput.checked });
-    });
-    this.coachesInput.addEventListener('change', () => {
-      this.updateCustomSettings({ coachesEnabled: this.coachesInput.checked });
-    });
-    this.sidelineDensitySelect.addEventListener('change', () => {
-      this.updateCustomSettings({ sidelineDensity: this.sidelineDensitySelect.value as SidelineDensity });
-    });
-    this.tunnelTableauInput.addEventListener('change', () => {
-      this.updateCustomSettings({ tunnelTableauEnabled: this.tunnelTableauInput.checked });
-    });
-    this.audioEnabledInput.addEventListener('change', () => {
-      this.updateCustomSettings({ audioEnabled: this.audioEnabledInput.checked });
-    });
-    this.mutedInput.addEventListener('change', () => {
-      this.updateCustomSettings({ muted: this.mutedInput.checked });
-    });
-    this.masterVolumeInput.addEventListener('input', () => {
-      this.updateCustomSettings({ masterVolume: Number(this.masterVolumeInput.value) });
-    });
-    this.musicEnabledInput.addEventListener('change', () => {
-      this.updateCustomSettings({ musicEnabled: this.musicEnabledInput.checked });
-    });
-    this.musicVolumeInput.addEventListener('input', () => {
-      this.updateCustomSettings({ musicVolume: Number(this.musicVolumeInput.value) });
-    });
-    this.menuPlaylistOrderSelect.addEventListener('change', () => {
-      this.updateCustomSettings({
-        menuPlaylistOrder: this.menuPlaylistOrderSelect.value as GameExperienceSettings['menuPlaylistOrder'],
-      });
-    });
-    this.crowdAudioInput.addEventListener('change', () => {
-      this.updateCustomSettings({ crowdAudioEnabled: this.crowdAudioInput.checked });
-    });
-    this.crowdVolumeInput.addEventListener('input', () => {
-      this.updateCustomSettings({ crowdVolume: Number(this.crowdVolumeInput.value) });
-    });
-    this.announcerInput.addEventListener('change', () => {
-      this.updateCustomSettings({ announcerEnabled: this.announcerInput.checked });
-    });
-    this.announcerVolumeInput.addEventListener('input', () => {
-      this.updateCustomSettings({ announcerVolume: Number(this.announcerVolumeInput.value) });
-    });
-    this.captionsInput.addEventListener('change', () => {
-      this.updateCustomSettings({ captionsEnabled: this.captionsInput.checked });
-    });
-    this.routeArtInput.addEventListener('change', () => {
-      this.updateCustomSettings({ routeArtEnabled: this.routeArtInput.checked });
-    });
-    this.controlledPlayerLabelInput.addEventListener('change', () => {
-      this.updateCustomSettings({
-        controlledPlayerLabelEnabled: this.controlledPlayerLabelInput.checked,
-      });
-    });
-    this.selectedReceiverLabelInput.addEventListener('change', () => {
-      this.updateCustomSettings({
-        selectedReceiverLabelEnabled: this.selectedReceiverLabelInput.checked,
-      });
-    });
-    this.playerMotionInput.addEventListener('change', () => {
-      this.updateCustomSettings({ playerMotionEnabled: this.playerMotionInput.checked });
-    });
-    this.officialsInput.addEventListener('change', () => {
-      this.updateCustomSettings({ officialsEnabled: this.officialsInput.checked });
-    });
-  }
-
-  private updateCustomSettings(patch: Partial<GameExperienceSettings>): void {
-    this.updateSettings({
+  private patch(patch: Partial<GameExperienceSettings>, custom = false): void {
+    this.update({
       ...this.settings,
       ...patch,
-      preset: 'custom',
+      preset: custom ? 'custom' : this.settings.preset,
     });
   }
 
-  private updateSettings(settings: GameExperienceSettings): void {
-    this.settings = normalizeGameExperienceSettings(settings);
-    this.syncControls();
-    this.onSettingsChange?.(this.getSettings());
-  }
-
-  private syncControls(): void {
-    this.presetSelect.value = this.settings.preset;
-    this.gameModeSelect.value = this.settings.gameMode;
-    this.playbookSelect.value = this.settings.playbookId;
-    this.quarterLengthSelect.value = getQuarterLengthOptionValue(this.settings.quarterLengthSeconds);
-    this.difficultySelect.value = this.settings.matchDifficulty;
-    this.qualityModeSelect.value = this.settings.qualityMode;
-    this.debugToolsInput.checked = this.settings.debugToolsEnabled;
-    this.cameraSelect.value = this.settings.gameplayCamera;
-    this.cameraDescription.textContent = getGameplayCameraDescription(this.settings.gameplayCamera);
-    this.cinematicsSelect.value = this.settings.cinematics;
-    this.crowdVisualsInput.checked = this.settings.crowdVisualsEnabled;
-    this.stadiumInput.checked = this.settings.stadiumEnabled;
-    this.crowdDensitySelect.value = this.settings.crowdFullness;
-    this.crowdReactionsInput.checked = this.settings.crowdReactionsEnabled;
-    this.sidelinePlayersInput.checked = this.settings.sidelinePlayersEnabled;
-    this.coachesInput.checked = this.settings.coachesEnabled;
-    this.sidelineDensitySelect.value = this.settings.sidelineDensity;
-    this.tunnelTableauInput.checked = this.settings.tunnelTableauEnabled;
-    this.audioEnabledInput.checked = this.settings.audioEnabled;
-    this.mutedInput.checked = this.settings.muted;
-    this.masterVolumeInput.value = String(this.settings.masterVolume);
-    this.musicEnabledInput.checked = this.settings.musicEnabled;
-    this.musicVolumeInput.value = String(this.settings.musicVolume);
-    this.menuPlaylistOrderSelect.value = this.settings.menuPlaylistOrder;
-    this.crowdAudioInput.checked = this.settings.crowdAudioEnabled;
-    this.crowdVolumeInput.value = String(this.settings.crowdVolume);
-    this.announcerInput.checked = this.settings.announcerEnabled;
-    this.announcerVolumeInput.value = String(this.settings.announcerVolume);
-    this.captionsInput.checked = this.settings.captionsEnabled;
-    this.routeArtInput.checked = this.settings.routeArtEnabled;
-    this.controlledPlayerLabelInput.checked = this.settings.controlledPlayerLabelEnabled;
-    this.selectedReceiverLabelInput.checked = this.settings.selectedReceiverLabelEnabled;
-    this.playerMotionInput.checked = this.settings.playerMotionEnabled;
-    this.officialsDebugLabelsInput.checked = this.settings.officialsDebugLabels;
-    this.officialsInput.checked = this.settings.officialsEnabled;
-    this.teamCustomizationPanel?.setSettings(this.settings.teamProfiles);
-    this.rosterPreviewPanel?.setSettings(this.settings);
-
-    const customEnabled = this.settings.preset === 'custom';
-    for (const control of this.customControls) {
-      if (
-        control === this.presetSelect ||
-        control === this.gameModeSelect ||
-        control === this.playbookSelect ||
-        control === this.quarterLengthSelect ||
-        control === this.difficultySelect ||
-        control === this.qualityModeSelect
-      ) {
-        control.removeAttribute('disabled');
-      } else {
-        control.toggleAttribute('disabled', !customEnabled);
-      }
+  private restoreDefaults(): void {
+    if (!globalThis.confirm?.('Restore default game, presentation, audio, and accessibility settings? Team colors and selected teams will be preserved.')) {
+      return;
     }
-    this.playbookSelect.toggleAttribute('disabled', this.settings.gameMode === 'exhibition');
-    this.root.dataset.preset = this.settings.preset;
-    this.root.dataset.gameMode = this.settings.gameMode;
-  }
-}
 
-function getQuarterLengthOptionValue(value: number): string {
-  if ([60, 180, 300, 600].includes(value)) {
-    return String(value);
+    this.update(normalizeGameExperienceSettings({
+      ...BROADCAST_EXPERIENCE_SETTINGS,
+      teamProfiles: this.settings.teamProfiles,
+    }));
   }
 
-  return '180';
-}
-
-function getGameplayCameraDescription(mode: ExperienceCameraMode): string {
-  if (mode === 'tactical') {
-    return 'Fixed tactical overview; cinematic camera cuts disabled.';
+  private update(settings: GameExperienceSettings): void {
+    this.settings = normalizeGameExperienceSettings(settings);
+    this.onSettingsChange?.(this.getSettings());
+    this.render();
   }
-
-  if (mode === 'cinematic') {
-    return 'Broadcast gameplay and full presentation camera language.';
-  }
-
-  return 'Behind-offense gameplay camera; post-score presentation optional.';
-}
-
-function toLegacyCrowdDensity(fullness: CrowdFullness): CrowdDensity {
-  if (fullness === 'full') {
-    return 'high';
-  }
-
-  if (fullness === 'standard') {
-    return 'medium';
-  }
-
-  return 'low';
 }

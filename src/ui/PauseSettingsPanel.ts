@@ -1,4 +1,10 @@
+import {
+  SETTINGS_DONE_EVENT,
+  SETTINGS_OPEN_FULL_EVENT,
+} from './SettingsPanel';
+
 export interface PauseSettingsPanelOptions {
+  onFullSettings?: () => void;
   setupElement: HTMLElement;
   onClose: () => void;
   onReturnToTitle: () => void;
@@ -7,7 +13,6 @@ export interface PauseSettingsPanelOptions {
 export class PauseSettingsPanel {
   readonly root = document.createElement('div');
 
-  private readonly closeButton = document.createElement('button');
   private readonly returnToTitleButton = document.createElement('button');
 
   constructor(options: PauseSettingsPanelOptions) {
@@ -17,6 +22,8 @@ export class PauseSettingsPanel {
     this.root.setAttribute('aria-modal', 'true');
     this.root.addEventListener('wheel', (event) => event.stopPropagation(), { passive: true });
     this.root.addEventListener('touchmove', (event) => event.stopPropagation(), { passive: true });
+    options.setupElement.addEventListener(SETTINGS_DONE_EVENT, () => options.onClose());
+    options.setupElement.addEventListener(SETTINGS_OPEN_FULL_EVENT, () => options.onFullSettings?.());
 
     const panel = document.createElement('div');
     panel.className = 'pause-settings-card';
@@ -24,15 +31,11 @@ export class PauseSettingsPanel {
     const header = document.createElement('header');
     const title = document.createElement('h2');
     title.textContent = 'Settings';
-    this.closeButton.type = 'button';
-    this.closeButton.className = 'pause-close-button';
-    this.closeButton.textContent = 'Close';
-    this.closeButton.addEventListener('click', options.onClose);
-    header.append(title, this.closeButton);
+    header.append(title);
 
     const note = document.createElement('p');
     note.className = 'settings-note';
-    note.textContent = 'Volume, captions, crowd, and camera presentation changes apply immediately. Change game mode, teams, or uniforms from the title screen.';
+    note.textContent = 'Quick changes apply immediately. Use Full Settings for safe presentation and audio details.';
 
     this.returnToTitleButton.type = 'button';
     this.returnToTitleButton.className = 'return-title-button';
@@ -51,7 +54,8 @@ export class PauseSettingsPanel {
   setVisible(visible: boolean): void {
     this.root.hidden = !visible;
     if (visible) {
-      this.closeButton.focus({ preventScroll: true });
+      const firstControl = this.root.querySelector<HTMLElement>('button, select, input');
+      firstControl?.focus({ preventScroll: true });
     }
   }
 }

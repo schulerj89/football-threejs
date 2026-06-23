@@ -7,6 +7,10 @@ import {
 } from './crowd/CrowdConfiguration';
 import { CrowdFrameMetrics, createPerInstanceStorageSnapshot } from './crowd/CrowdMetrics';
 import { CrowdResourceOwner } from './crowd/CrowdResourceOwner';
+import {
+  resolveCrowdAttendanceProfile,
+  resolveCrowdFullnessForVisualAttendance,
+} from './crowd/CrowdReactionModel';
 import type {
   CrowdPreviewBenchmarkReport,
   CrowdPreviewCameraView,
@@ -77,7 +81,12 @@ export class CrowdPreviewController {
     this.cameraView = view;
     this.benchmarkDurationSeconds = benchmarkDurationSeconds;
     this.requestedCount = benchmarkEnabled ? BENCHMARK_COUNTS[0] : clampRequestedCrowdCount(requestedCount);
-    this.resourceOwner = new CrowdResourceOwner(this.requestedCount, 'crowd-preview');
+    this.resourceOwner = new CrowdResourceOwner(
+      this.requestedCount,
+      'crowd-preview',
+      [],
+      createCrowdOwnerOptionsForVisualAttendance(this.requestedCount),
+    );
     this.group.add(this.resourceOwner.group);
     this.resize(width, height);
 
@@ -98,7 +107,11 @@ export class CrowdPreviewController {
   setCount(requestedCount: number): void {
     this.group.remove(this.resourceOwner.group);
     this.requestedCount = clampRequestedCrowdCount(requestedCount);
-    const resources = this.resourceOwner.rebuild(this.requestedCount, 'crowd-preview');
+    const resources = this.resourceOwner.rebuild(
+      this.requestedCount,
+      'crowd-preview',
+      createCrowdOwnerOptionsForVisualAttendance(this.requestedCount),
+    );
     this.group.add(resources.group);
     this.frameMetrics.reset();
   }
@@ -161,6 +174,27 @@ export class CrowdPreviewController {
       rendererRender: frame.rendererRender,
     };
   }
+}
+
+function createCrowdOwnerOptionsForVisualAttendance(requestedCount: number): {
+  crowdFullness: ReturnType<typeof resolveCrowdFullnessForVisualAttendance>;
+  density: 'high' | 'low' | 'medium';
+  nearCount: number;
+  reactingSpectatorLimit: number;
+} {
+  const crowdFullness = resolveCrowdFullnessForVisualAttendance(requestedCount);
+  const density = crowdFullness === 'full'
+    ? 'high'
+    : crowdFullness === 'standard'
+      ? 'medium'
+      : 'low';
+  const profile = resolveCrowdAttendanceProfile(crowdFullness, density);
+  return {
+    crowdFullness,
+    density,
+    nearCount: profile.activeNearSpectators,
+    reactingSpectatorLimit: profile.reactingSpectatorLimit,
+  };
 }
 
 export function resolveCrowdPreviewEnabled(searchParams: URLSearchParams): boolean {

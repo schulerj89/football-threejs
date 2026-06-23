@@ -1,0 +1,52 @@
+{
+  "candidateId": "candidate-a",
+  "createdAt": "2026-06-22T18:25:10.639Z",
+  "creditCost": null,
+  "generatedGlbHash": "24ad2791334fc8554565db1ab2cbb5a1b1da741c15cd01ca559c6d7689b60667",
+  "generatedGlbPath": "art-source/meshy/player-base/generated/candidate-a.glb",
+  "riggingRequest": {
+    "height_meters": 1.85,
+    "input_task_id": "019ef091-2cbd-7ae2-89c4-e381710c23e6"
+  },
+  "taskId": "019ef094-32ac-7bc2-98ea-b3ca1b8b1a98",
+  "animationPaths": [
+    "art-source/meshy/player-base/rigged/candidate-a-animation-1.glb",
+    "art-source/meshy/player-base/rigged/candidate-a-animation-2.fbx",
+    "art-source/meshy/player-base/rigged/candidate-a-animation-3.glb",
+    "art-source/meshy/player-base/rigged/candidate-a-animation-4.glb",
+    "art-source/meshy/player-base/rigged/candidate-a-animation-5.fbx",
+    "art-source/meshy/player-base/rigged/candidate-a-animation-6.glb"
+  ],
+  "downloadedAt": "2026-06-22T18:28:38.086Z",
+  "fbxOutputBytes": 4726412,
+  "fbxOutputHash": "95dc62bb3004c9952de127aebde8118be4311efecb2d2fc1be4e8b15653b47f3",
+  "fbxOutputPath": "art-source/meshy/player-base/rigged/candidate-a.fbx",
+  "glbOutputBytes": 1099680,
+  "glbOutputHash": "c3a867e5f8dbaeee50596176de28c54c0f3cbb1070729ef93f10407ff185ad67",
+  "glbOutputPath": "art-source/meshy/player-base/rigged/candidate-a.glb",
+  "taskPayload": {
+    "id": "019ef094-32ac-7bc2-98ea-b3ca1b8b1a98",
+    "type": "rig",
+    "name": "",
+    "status": "SUCCEEDED",
+    "created_at": 1782152710599,
+    "progress": 100,
+    "started_at": 1782152710642,
+    "finished_at": 1782152732469,
+    "expires_at": 1782411932469,
+    "task_error": null,
+    "result": {
+      "rigged_character_fbx_url": "[redacted signed asset URL]",
+      "rigged_character_glb_url": "[redacted signed asset URL]",
+      "basic_animations": {
+        "walking_glb_url": "[redacted signed asset URL]",
+        "walking_fbx_url": "[redacted signed asset URL]",
+        "walking_armature_glb_url": "[redacted signed asset URL]",
+        "running_glb_url": "[redacted signed asset URL]",
+        "running_fbx_url": "[redacted signed asset URL]",
+        "running_armature_glb_url": "[redacted signed asset URL]"
+      }
+    },
+    "consumed_credits": 5
+  }
+}

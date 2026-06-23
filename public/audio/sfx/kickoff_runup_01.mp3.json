@@ -1,0 +1,17 @@
+{
+  "assetId": "kickoff_runup_01",
+  "category": "sfx",
+  "compressedBytes": 18434,
+  "contentHash": "2b98d7dc6f60bbcc669783d1e49f356d7358129cadcd855e7ca197eaf80a991d",
+  "durationSeconds": 1.08,
+  "generatedAt": "2026-06-22T14:13:43.948Z",
+  "kind": "oneShot",
+  "metadata": {
+    "semanticCategory": "kickoff"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Short cleated kickoff run-up on synthetic turf. A few quick approach steps with pad movement, isolated close perspective. No speech, no crowd, no music.",
+  "requestedDurationSeconds": 1.1,
+  "runtimeLoadingStrategy": "buffer"
+}

@@ -1,6 +1,7 @@
 import { FOOTBALL_AUDIO_PLAN } from './audioPlan';
 import { writeAnnouncerArtifacts } from './announcerArtifacts';
 import { ensureAnnouncerVoice } from './announcerVoice';
+import { ensureQuarterbackCadenceVoice } from './quarterbackCadenceVoice';
 import {
   createElevenLabsClient,
   type ElevenLabsClientInstance,
@@ -14,7 +15,6 @@ import {
   parseGenerateOptions,
   readAudioDurationSeconds,
   requireElevenLabsApiKey,
-  selectAssetsForGeneration,
   writeAudioStreamToFile,
   writeProvenanceSidecar,
   type AudioAssetPlan,
@@ -32,12 +32,14 @@ export async function generateSpeech(
   dependencies: SpeechGenerationDependencies = {},
 ): Promise<GenerateSummary> {
   assertValidAudioPlan(plan);
-  const allSpeechAssets = plan.filter((asset) => asset.category === 'announcer' && asset.kind === 'speech');
-  const selectedAssets = selectAssetsForGeneration(plan, 'announcer', options)
-    .filter((asset) => asset.kind === 'speech');
+  const allSpeechAssets = plan.filter((asset) => asset.kind === 'speech');
+  const allAnnouncerSpeechAssets = allSpeechAssets.filter((asset) => asset.category === 'announcer');
+  const selectedAssets = allSpeechAssets
+    .filter((asset) => !options.onlyAssetId || asset.assetId === options.onlyAssetId)
+    .slice(0, options.maxFiles);
 
   if (!options.execute) {
-    writeAnnouncerArtifacts(allSpeechAssets);
+    writeAnnouncerArtifactsIfNeeded(allAnnouncerSpeechAssets);
     return {
       dryRun: true,
       generated: [],
@@ -49,12 +51,23 @@ export async function generateSpeech(
   const client = dependencies.clientFactory
     ? await dependencies.clientFactory(apiKey)
     : await createElevenLabsClient(apiKey);
-  const announcerVoice = await ensureAnnouncerVoice(client, { execute: options.execute });
+  const selectedAssetIds = new Set(selectedAssets.map((asset) => asset.assetId));
+  const needsAnnouncerVoice = allAnnouncerSpeechAssets.some((asset) => selectedAssetIds.has(asset.assetId));
+  const needsCadenceVoice = allSpeechAssets.some(
+    (asset) => selectedAssetIds.has(asset.assetId) && asset.metadata?.voiceCategory === 'quarterbackCadence',
+  );
+  const announcerVoice = needsAnnouncerVoice
+    ? await ensureAnnouncerVoice(client, { execute: options.execute })
+    : null;
+  const cadenceVoice = needsCadenceVoice
+    ? await ensureQuarterbackCadenceVoice(client, { execute: options.execute })
+    : null;
   const allMaterializedSpeechAssets = allSpeechAssets.map((asset) => ({
     ...asset,
-    voiceId: announcerVoice?.selectedVoiceId ?? asset.voiceId,
+    voiceId: asset.metadata?.voiceCategory === 'quarterbackCadence'
+      ? cadenceVoice?.selectedVoiceId ?? asset.voiceId
+      : announcerVoice?.selectedVoiceId ?? asset.voiceId,
   }));
-  const selectedAssetIds = new Set(selectedAssets.map((asset) => asset.assetId));
   const assets = allMaterializedSpeechAssets.filter((asset) => selectedAssetIds.has(asset.assetId));
   const skipped = assets
     .filter((asset) => !options.force && assetOutputMatchesProvenance(asset))
@@ -68,7 +81,7 @@ export async function generateSpeech(
   }
 
   if (assetsToGenerate.length === 0) {
-    writeAnnouncerArtifacts(allMaterializedSpeechAssets);
+    writeAnnouncerArtifactsIfNeeded(allMaterializedSpeechAssets.filter((asset) => asset.category === 'announcer'));
     return {
       dryRun: false,
       generated: [],
@@ -98,13 +111,19 @@ export async function generateSpeech(
       generated.push(asset.assetId);
     });
   }
-  writeAnnouncerArtifacts(allMaterializedSpeechAssets);
+  writeAnnouncerArtifactsIfNeeded(allMaterializedSpeechAssets.filter((asset) => asset.category === 'announcer'));
 
   return {
     dryRun: false,
     generated,
     skipped,
   };
+}
+
+function writeAnnouncerArtifactsIfNeeded(assets: readonly AudioAssetPlan[]): void {
+  if (assets.length > 0) {
+    writeAnnouncerArtifacts(assets);
+  }
 }
 
 async function withSingleRetry(retryCount: number, action: () => Promise<void>): Promise<void> {

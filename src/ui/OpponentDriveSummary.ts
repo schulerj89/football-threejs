@@ -2,6 +2,7 @@ import {
   getDriveSummaryTitle,
 } from '../match/DriveSummary';
 import type { MatchSnapshot } from '../match/MatchTypes';
+import { formatPossessionFieldPosition } from '../match/FieldPositionModel';
 import { formatMatchClock } from './MatchScorebug';
 
 export interface OpponentDriveSummaryOptions {
@@ -36,12 +37,22 @@ export class OpponentDriveSummaryPanel {
 
     this.title.textContent = `Opponent Drive: ${getDriveSummaryTitle(summary)}`;
     this.description.textContent = summary.description;
+    const transitionText = summary.possessionTransition
+      ? ` | Drive ended at ${formatPossessionFieldPosition(summary.endingFieldPosition)}; ${formatTeam(
+          summary.possessionTransition.toTeam,
+          match,
+        )} ball at ${formatPossessionFieldPosition(summary.possessionTransition.nextOffenseStartingPosition)}`
+      : ` | Drive ended at ${formatPossessionFieldPosition(summary.endingFieldPosition)}`;
     this.details.textContent = `${summary.plays} plays, ${summary.yards} yards, ${formatMatchClock(
       summary.elapsedSeconds,
-    )} elapsed | ${match.userTeam.abbreviation} ${match.userScore} - ${match.opponentTeam.abbreviation} ${match.opponentScore}`;
+    )} elapsed${transitionText} | ${match.userTeam.abbreviation} ${match.userScore} - ${match.opponentTeam.abbreviation} ${match.opponentScore}`;
   }
 
   dispose(): void {
     this.root.remove();
   }
+}
+
+function formatTeam(team: MatchSnapshot['possession'], match: MatchSnapshot): string {
+  return team === 'user' ? match.userTeam.shortName : match.opponentTeam.shortName;
 }

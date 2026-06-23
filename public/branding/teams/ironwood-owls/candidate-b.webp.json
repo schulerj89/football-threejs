@@ -1,0 +1,19 @@
+{
+  "assetId": "ironwood-owls-logo-b",
+  "background": "opaque",
+  "candidateId": "candidate-b",
+  "compressedBytes": 118974,
+  "contentHash": "1795d300f481e61d27c4d1dc3d3373f13beec56b499d6bea04c79bfb6d48793a",
+  "generatedAt": "2026-06-22T19:41:20.869Z",
+  "generationMetadata": {
+    "apiEndpoint": "images/generations",
+    "revisedPrompt": null
+  },
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "outputPath": "public/branding/teams/ironwood-owls/candidate-b.webp",
+  "prompt": "Create an original fictional American-football team logo badge for Football JS. Use a centered square composition suitable for a menu badge and scorebug crop. Style: bold low-poly vector-like sports identity, clean silhouette, premium broadcast-game presentation, opaque background. No words, no text, no letters, no numbers, no watermark, no real professional or college marks, no league logos, no trademarked mascots. Team: Ironwood Owls. Mascot concept: a strong low-poly owl head with focused copper eyes and ironwood-inspired angular feather shapes. Team colors: primary #16233A, secondary #F1E7D0, accent #B86B3D. Candidate direction: compact owl shield mark with ironwood feather facets, copper eye glow, and cream contrast planes. Keep the badge readable at small UI sizes, avoid complex fine detail, preserve crop-safe margins.",
+  "quality": "high",
+  "requestedSize": "1024x1024",
+  "teamId": "ironwood-owls"
+}

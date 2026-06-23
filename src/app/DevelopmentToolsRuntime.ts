@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import type {
+  JerseyNumberDebugSnapshot,
+  StageVisualMatrixSnapshot,
+} from './ApplicationDiagnostics';
 import type { RuntimeAudioDebugSnapshot } from '../audio/AudioDebugOverlay';
 import {
   createAudioDebugOverlay,
@@ -13,8 +17,11 @@ import {
 import type { GameplayCameraDebugSnapshot } from '../camera/GameplayCameraController';
 import type { GameExperienceDebugSnapshot } from '../config/GameExperienceSettings';
 import type { MatchSnapshot } from '../match/MatchTypes';
+import { formatPossessionFieldPosition } from '../match/FieldPositionModel';
 import type { CoinTossDebugSnapshot } from '../presentation/coinToss/CoinTossTypes';
 import type { KickoffFrameSnapshot } from '../specialTeams/KickoffTypes';
+import type { PlaceKickFrameSnapshot } from '../specialTeams/PlaceKickTypes';
+import type { PreSnapCadenceSnapshot } from '../gameplay/PreSnapCadenceModel';
 import {
   createCrowdPreviewOverlay,
   syncCrowdPreviewOverlay,
@@ -46,6 +53,8 @@ import {
   syncPregameDebugOverlay,
 } from '../presentation/pregame/PregameLowerThird';
 import type { PregamePresentationSnapshot } from '../presentation/pregame/PregamePresentationTypes';
+import type { KeysToGameOverlaySnapshot } from '../presentation/pregame/KeysToGameOverlay';
+import type { HalftimePresentationSnapshot } from '../presentation/halftime/HalftimePresentationTypes';
 import { DebugOverlay, type RenderMetricsSnapshot } from '../debugOverlay';
 import { createFieldAuditOverlay } from '../field/FieldAuditOverlay';
 import {
@@ -130,6 +139,14 @@ import {
   type SevenAuditSnapshot,
 } from '../sevenOnSevenAudit';
 import { getHelmetAssetSnapshot, type HelmetAssetSnapshot } from '../helmetVisual';
+import {
+  createWeatherDebugOverlay,
+  syncWeatherDebugOverlay,
+} from '../weather/WeatherPresentationController';
+import type { WeatherPresentationSnapshot } from '../weather/WeatherTypes';
+import type { PlayerVisualMode } from '../presentation/players/PlayerVisualMode';
+import type { LeagueInitializationSnapshot } from '../league/LeagueTypes';
+import { formatGameStatsDebugSnapshot } from '../stats/GameStatsSnapshot';
 
 declare global {
   interface Window {
@@ -144,6 +161,9 @@ export interface SevenAuditResetCycleResourceSnapshot {
   debugOverlayCount: number;
   footballMeshCount: number;
   geometryCount: number;
+  jerseyNumberAtlasCreated: boolean;
+  jerseyNumberMaterialCount: number;
+  jerseyNumberMeshCount: number;
   materialCount: number;
   officialMeshCount: number;
   presentationHistoryCount: number;
@@ -197,6 +217,12 @@ export interface FootballDebugApi {
   getGamePresentationRuntimeSnapshot: () => GamePresentationRuntimeSnapshot;
   getHelmetAssetSnapshot: () => HelmetAssetSnapshot;
   getKickoffSnapshot: () => KickoffFrameSnapshot;
+  getKeysToGameOverlaySnapshot: () => KeysToGameOverlaySnapshot;
+  getLeagueSnapshot: () => LeagueInitializationSnapshot;
+  getJerseyNumberDebugSnapshot: () => JerseyNumberDebugSnapshot;
+  getPlaceKickSnapshot: () => PlaceKickFrameSnapshot;
+  getPreSnapCadenceSnapshot: () => PreSnapCadenceSnapshot;
+  getStageVisualMatrixSnapshot: () => StageVisualMatrixSnapshot;
   getOfficialsSnapshot: () => OfficialsPresentationSnapshot;
   getSidelineTeamSnapshot: () => SidelineTeamControllerSnapshot;
   getCrowdCapacityBenchmarkSnapshot: () => CrowdCapacityBenchmarkSnapshot;
@@ -213,6 +239,7 @@ export interface FootballDebugApi {
   getPresentationAuditSnapshot: () => PresentationAuditSnapshot | null;
   getSevenAuditSnapshot: () => SevenAuditSnapshot | null;
   getStadiumSnapshot: () => StadiumControllerSnapshot;
+  getWeatherSnapshot: () => WeatherPresentationSnapshot;
   getPlayerBodyVisualSnapshots: () => PlayerBodyVisualSnapshot[];
   getPlayerPoseSnapshots: () => PlayerPoseSnapshot[];
   getPregamePresentationSnapshot: () => PregamePresentationSnapshot;
@@ -224,6 +251,7 @@ export interface FootballDebugApi {
   cancelCrowdCapacityBenchmark: () => CrowdCapacityBenchmarkSnapshot;
   exportCrowdCapacityReport: () => CrowdCapacityReport | null;
   runCrowdCapacityBenchmark: () => CrowdCapacityBenchmarkSnapshot;
+  resetLeagueData: () => Promise<void>;
   runElevenAuditResetCycles: (cycles?: number) => ElevenAuditResetCycleResult | null;
   runSevenAuditResetCycles: (cycles?: number) => SevenAuditResetCycleResult | null;
   setPerformanceScenario: (scenario: PerformanceScenarioName) => PerformanceScenarioSnapshot | null;
@@ -263,6 +291,7 @@ export interface DevelopmentToolsRuntimeOptions {
   onDevelopmentCameraToggle: (event: KeyboardEvent) => void;
   onFormationPreviewLaneControls: (event: KeyboardEvent) => void;
   onPauseSettingsShortcut: (event: KeyboardEvent) => void;
+  onPlayerVisualModeChange: (mode: PlayerVisualMode) => void;
   onPresentationAuditControls: (event: KeyboardEvent) => void;
 }
 
@@ -271,7 +300,11 @@ export interface DevelopmentOverlayFrame {
   cameraSnapshot: GameplayCameraDebugSnapshot;
   controlledPlayerLabelSnapshot: ControlledPlayerLabelSnapshot;
   coinTossSnapshot: CoinTossDebugSnapshot;
+  placeKickSnapshot: PlaceKickFrameSnapshot;
   kickoffSnapshot: KickoffFrameSnapshot;
+  matchSnapshot: MatchSnapshot | null;
+  keysToGameSnapshot: KeysToGameOverlaySnapshot;
+  jerseyNumberSnapshot: JerseyNumberDebugSnapshot;
   crowdPresentationSnapshot: CrowdPresentationSnapshot | null;
   crowdPreviewSnapshot: CrowdPreviewSnapshot | null;
   deltaSeconds: number;
@@ -282,7 +315,9 @@ export interface DevelopmentOverlayFrame {
   gameplaySnapshot: GameplaySnapshot;
   playerBodyVisual: THREE.Group | undefined;
   playerPoseSnapshots: PlayerPoseSnapshot[];
+  preSnapCadenceSnapshot: PreSnapCadenceSnapshot;
   pregamePresentationSnapshot: PregamePresentationSnapshot | null;
+  halftimePresentationSnapshot: HalftimePresentationSnapshot;
   presentationAuditSnapshot: PresentationAuditSnapshot | null;
   emptyPresentationAuditSnapshot: PresentationAuditSnapshot;
   presentationHardeningAuditSnapshot: PresentationHardeningAuditSnapshot | null;
@@ -295,11 +330,13 @@ export interface DevelopmentOverlayFrame {
   sidelineTeamsSnapshot: SidelineTeamControllerSnapshot;
   sevenAuditSnapshot: SevenAuditSnapshot | null;
   playerVisuals: Map<string, THREE.Group>;
+  weatherSnapshot: WeatherPresentationSnapshot;
 }
 
 export class DevelopmentToolsRuntime {
   private appearanceAuditOverlay: HTMLDivElement | null = null;
   private audioDebugOverlay: HTMLDivElement | null = null;
+  private cadenceDebugOverlay: HTMLDivElement | null = null;
   private crowdPresentationOverlay: HTMLDivElement | null = null;
   private crowdPreviewOverlay: HTMLDivElement | null = null;
   private controlledPlayerLabelOverlay: HTMLDivElement | null = null;
@@ -307,16 +344,25 @@ export class DevelopmentToolsRuntime {
   private elevenAuditOverlay: HTMLDivElement | null = null;
   private formationAuditOverlay: HTMLDivElement | null = null;
   private passAuditOverlay: HTMLDivElement | null = null;
+  private placeKickDebugOverlay: HTMLDivElement | null = null;
   private memoryDebugPanel: MemoryDebugPanel | null = null;
   private officialsDebugOverlay: HTMLDivElement | null = null;
   private sidelineTeamsDebugOverlay: HTMLDivElement | null = null;
+  private statsDebugOverlay: HTMLDivElement | null = null;
   private performanceDebugOverlay: HTMLDivElement | null = null;
   private poseDebugOverlay: HTMLDivElement | null = null;
   private presentationAuditOverlay: HTMLDivElement | null = null;
+  private introKeysDebugOverlay: HTMLDivElement | null = null;
+  private jerseyNumberDebugOverlay: HTMLDivElement | null = null;
+  private leagueDebugOverlay: HTMLDivElement | null = null;
+  private kickoffReturnDebugOverlay: HTMLDivElement | null = null;
+  private matchTransitionDebugOverlay: HTMLDivElement | null = null;
+  private halftimeDebugOverlay: HTMLDivElement | null = null;
   private pregameDebugOverlay: HTMLDivElement | null = null;
   private presentationHardeningAuditOverlay: HTMLDivElement | null = null;
   private routeAuditOverlay: HTMLDivElement | null = null;
   private sevenAuditOverlay: HTMLDivElement | null = null;
+  private weatherDebugOverlay: HTMLDivElement | null = null;
   private readonly debugFeatureRegistry = new DebugFeatureRegistry();
   private readonly debugPanel: DebugPanel;
   private readonly listeners: Array<[EventTarget, string, EventListener]> = [];
@@ -362,13 +408,22 @@ export class DevelopmentToolsRuntime {
       !!this.memoryDebugPanel ||
       !!this.officialsDebugOverlay ||
       !!this.sidelineTeamsDebugOverlay ||
+      !!this.statsDebugOverlay ||
       !!this.controlledPlayerLabelOverlay ||
       !!this.performanceDebugOverlay ||
       !!this.pregameDebugOverlay ||
+      !!this.halftimeDebugOverlay ||
       !!this.sevenAuditOverlay ||
       !!this.elevenAuditOverlay ||
       !!this.appearanceAuditOverlay ||
+      !!this.cadenceDebugOverlay ||
       !!this.crowdPresentationOverlay ||
+      !!this.placeKickDebugOverlay ||
+      !!this.introKeysDebugOverlay ||
+      !!this.jerseyNumberDebugOverlay ||
+      !!this.leagueDebugOverlay ||
+      !!this.kickoffReturnDebugOverlay ||
+      !!this.weatherDebugOverlay ||
       !!this.presentationHardeningAuditOverlay;
   }
 
@@ -421,6 +476,38 @@ export class DevelopmentToolsRuntime {
         frame.kickoffSnapshot,
       );
     }
+    if (this.placeKickDebugOverlay) {
+      syncPlaceKickDebugOverlay(this.placeKickDebugOverlay, frame.placeKickSnapshot);
+    }
+    if (this.kickoffReturnDebugOverlay) {
+      syncKickoffReturnDebugOverlay(this.kickoffReturnDebugOverlay, frame.kickoffSnapshot);
+    }
+    if (this.matchTransitionDebugOverlay) {
+      syncMatchTransitionDebugOverlay(
+        this.matchTransitionDebugOverlay,
+        frame.matchSnapshot,
+        frame.gameplaySnapshot,
+      );
+    }
+    if (this.halftimeDebugOverlay) {
+      syncHalftimeDebugOverlay(this.halftimeDebugOverlay, frame.halftimePresentationSnapshot);
+    }
+    if (this.cadenceDebugOverlay) {
+      syncCadenceDebugOverlay(this.cadenceDebugOverlay, frame.preSnapCadenceSnapshot);
+    }
+    if (this.jerseyNumberDebugOverlay) {
+      syncJerseyNumberDebugOverlay(this.jerseyNumberDebugOverlay, frame.jerseyNumberSnapshot);
+    }
+    if (this.leagueDebugOverlay) {
+      syncLeagueDebugOverlay(this.leagueDebugOverlay, this.options.debugApi.getLeagueSnapshot());
+    }
+    if (this.introKeysDebugOverlay) {
+      syncIntroKeysDebugOverlay(
+        this.introKeysDebugOverlay,
+        frame.keysToGameSnapshot,
+        frame.pregamePresentationSnapshot,
+      );
+    }
     if (this.memoryDebugPanel && frame.memoryDebugSnapshot) {
       this.memoryDebugPanel.sync(frame.memoryDebugSnapshot);
     }
@@ -429,6 +516,9 @@ export class DevelopmentToolsRuntime {
     }
     if (this.sidelineTeamsDebugOverlay) {
       syncSidelineDebugOverlay(this.sidelineTeamsDebugOverlay, frame.sidelineTeamsSnapshot);
+    }
+    if (this.statsDebugOverlay) {
+      this.statsDebugOverlay.textContent = formatGameStatsDebugSnapshot(frame.matchSnapshot?.stats ?? null);
     }
     if (this.controlledPlayerLabelOverlay) {
       syncControlledPlayerLabelOverlay(
@@ -465,6 +555,9 @@ export class DevelopmentToolsRuntime {
         this.presentationHardeningAuditOverlay,
         frame.presentationHardeningAuditSnapshot,
       );
+    }
+    if (this.weatherDebugOverlay) {
+      syncWeatherDebugOverlay(this.weatherDebugOverlay, frame.weatherSnapshot);
     }
 
     const renderMetrics = this.isDebugOverlayVisible()
@@ -583,6 +676,20 @@ export class DevelopmentToolsRuntime {
         this.appearanceAuditOverlay = element;
       },
     );
+    this.debugFeatureRegistry.register({
+      create: () => {
+        options.onPlayerVisualModeChange('meshyRigged');
+        return {
+          dispose: () => {
+            options.onPlayerVisualModeChange('procedural');
+          },
+        };
+      },
+      enabled: false,
+      id: 'playerVisualMode',
+      label: 'Meshy rigged players',
+      description: 'Switch active gameplay player visuals between procedural fallback and the optional Meshy rigged body.',
+    });
     registerElementFeature(
       'officials',
       'Officials',
@@ -599,6 +706,15 @@ export class DevelopmentToolsRuntime {
       createSidelineDebugOverlay,
       (element) => {
         this.sidelineTeamsDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'stats',
+      'Stats',
+      queryEnabled('statsDebug'),
+      () => createPlainDebugOverlay('stats-debug-overlay'),
+      (element) => {
+        this.statsDebugOverlay = element;
       },
     );
     registerElementFeature(
@@ -657,6 +773,87 @@ export class DevelopmentToolsRuntime {
       createPregameDebugOverlay,
       (element) => {
         this.pregameDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'introKeys',
+      'Intro keys',
+      queryEnabled('introKeysDebug') || queryEnabled('keysDebug'),
+      () => createPlainDebugOverlay('intro-keys-debug-overlay'),
+      (element) => {
+        this.introKeysDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'placeKick',
+      'Place kick',
+      queryEnabled('placeKickDebug'),
+      () => createPlainDebugOverlay('place-kick-debug-overlay'),
+      (element) => {
+        this.placeKickDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'kickoffReturn',
+      'Kickoff return',
+      queryEnabled('kickoffReturnDebug'),
+      () => createPlainDebugOverlay('kickoff-return-debug-overlay'),
+      (element) => {
+        this.kickoffReturnDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'matchTransition',
+      'Match transition',
+      queryEnabled('matchDebug') || queryEnabled('transitionDebug'),
+      () => createPlainDebugOverlay('match-transition-debug-overlay'),
+      (element) => {
+        this.matchTransitionDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'halftime',
+      'Halftime',
+      queryEnabled('halftimeDebug'),
+      () => createPlainDebugOverlay('halftime-debug-overlay'),
+      (element) => {
+        this.halftimeDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'cadence',
+      'Cadence',
+      queryEnabled('cadenceDebug'),
+      () => createPlainDebugOverlay('cadence-debug-overlay'),
+      (element) => {
+        this.cadenceDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'jerseyNumbers',
+      'Jersey numbers',
+      queryEnabled('jerseyDebug') || queryEnabled('jerseyNumbersDebug'),
+      () => createPlainDebugOverlay('jersey-number-debug-overlay'),
+      (element) => {
+        this.jerseyNumberDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'weather',
+      'Weather',
+      queryEnabled('weatherDebug'),
+      createWeatherDebugOverlay,
+      (element) => {
+        this.weatherDebugOverlay = element;
+      },
+    );
+    registerElementFeature(
+      'league',
+      'League',
+      queryEnabled('leagueDebug'),
+      () => createLeagueDebugOverlay(options.debugApi),
+      (element) => {
+        this.leagueDebugOverlay = element;
       },
     );
     registerElementFeature(
@@ -809,9 +1006,227 @@ export class DevelopmentToolsRuntime {
       options.elevenAuditEnabled ||
       options.audioDebugEnabled ||
       options.performanceDebugEnabled ||
+      options.searchParams.has('weatherDebug') ||
+      options.searchParams.has('leagueDebug') ||
+      options.searchParams.has('placeKickDebug') ||
+      options.searchParams.has('kickoffReturnDebug') ||
+      options.searchParams.has('halftimeDebug') ||
+      options.searchParams.has('statsDebug') ||
+      options.searchParams.has('cadenceDebug') ||
+      options.searchParams.has('jerseyDebug') ||
+      options.searchParams.has('jerseyNumbersDebug') ||
+      options.searchParams.has('introKeysDebug') ||
+      options.searchParams.has('keysDebug') ||
       options.searchParams.has('memoryDebug') ||
       options.commentaryDebugEnabled ||
       options.crowdPresentationDebugEnabled ||
       options.crowdPreviewEnabled;
   }
+}
+
+function createPlainDebugOverlay(className: string): HTMLDivElement {
+  const element = document.createElement('div');
+  element.className = className;
+  document.body.append(element);
+  return element;
+}
+
+function createLeagueDebugOverlay(debugApi: FootballDebugApi): HTMLDivElement {
+  const element = createPlainDebugOverlay('league-debug-overlay');
+  const pre = document.createElement('pre');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = 'Reset League Data';
+  button.addEventListener('click', () => {
+    void debugApi.resetLeagueData();
+  });
+  element.append(pre, button);
+  return element;
+}
+
+function syncLeagueDebugOverlay(
+  element: HTMLElement,
+  snapshot: LeagueInitializationSnapshot,
+): void {
+  const pre = element.querySelector('pre');
+  if (!pre) {
+    return;
+  }
+  pre.textContent = [
+    'LEAGUE',
+    `status: ${snapshot.status}`,
+    `stage: ${snapshot.stage}`,
+    `source: ${snapshot.source}`,
+    `schema: ${snapshot.schemaVersion}`,
+    `generator: ${snapshot.generatorVersion}`,
+    `seed: ${snapshot.seed}`,
+    `teams: ${snapshot.teamCount}`,
+    `players: ${snapshot.playerCount}`,
+    `encodedBytes: ${snapshot.encodedBytes}`,
+    `decodedEstimateBytes: ${snapshot.decodedEstimateBytes}`,
+    `hash: ${snapshot.contentHash ?? 'none'}`,
+    `durationMs: ${snapshot.initializationDurationMs.toFixed(1)}`,
+    `error: ${snapshot.error ?? 'none'}`,
+  ].join('\n');
+}
+
+function syncPlaceKickDebugOverlay(
+  element: HTMLElement,
+  snapshot: PlaceKickFrameSnapshot,
+): void {
+  element.textContent = [
+    'PLACE KICK',
+    `phase: ${snapshot.phase}`,
+    `sequence: ${snapshot.sequenceIndex ?? 'none'}`,
+    `teams: ${snapshot.kickingTeam ?? 'none'} vs ${snapshot.defendingTeam ?? 'none'}`,
+    `kicker: ${snapshot.kickerRosterId ?? 'none'}`,
+    `holder: ${snapshot.holderRosterId ?? 'none'}`,
+    `participants: ${snapshot.participantCount} protect ${snapshot.kickingParticipantCount} rush ${snapshot.defendingParticipantCount}`,
+    `helmets: ${snapshot.helmetReadyCount}/${snapshot.participantCount}`,
+    `meter: ${snapshot.meterActive ? 'active' : 'inactive'}`,
+    `result: ${snapshot.good === null ? 'none' : snapshot.good ? 'good' : snapshot.result?.reason ?? 'miss'}`,
+    `ball: ${formatVector(snapshot.ballPosition)}`,
+    `validation: ${snapshot.formationValidation.join('; ') || 'none'}`,
+    `next: ${snapshot.nextStage ?? 'none'}`,
+  ].join('\n');
+}
+
+function syncKickoffReturnDebugOverlay(
+  element: HTMLElement,
+  snapshot: KickoffFrameSnapshot,
+): void {
+  const assigned = snapshot.assignedReturner;
+  element.textContent = [
+    'KICKOFF RETURN',
+    `phase: ${snapshot.phase}`,
+    `sequence: ${snapshot.sequenceIndex ?? 'none'}`,
+    `teams: ${snapshot.kickingTeam ?? 'none'} -> ${snapshot.receivingTeam ?? 'none'}`,
+    `landing: ${snapshot.landingType ?? 'none'}`,
+    `returner: ${assigned?.returnerRosterId ?? 'none'} visual ${assigned?.returnerVisualId ?? 'none'}`,
+    `carrier: ${snapshot.carrierRosterId ?? 'none'} visual ${snapshot.carrierVisualId ?? 'none'}`,
+    `clock: ${snapshot.clockRunning ? 'running' : 'stopped'} ${snapshot.clockStartReason ?? 'none'}`,
+    `lane: ${snapshot.returnLane ?? 'none'}`,
+    `blockers: ${snapshot.blockerAssignments.length}`,
+    `outcome: ${snapshot.returnResult?.type ?? 'none'}`,
+    `spot: ${formatFieldPosition(snapshot.returnResult?.receivingStartPosition ?? snapshot.receivingStartPosition)}`,
+    `validation: ${snapshot.formationValidation.join('; ') || 'none'}`,
+  ].join('\n');
+}
+
+function syncMatchTransitionDebugOverlay(
+  element: HTMLElement,
+  match: MatchSnapshot | null,
+  gameplay: GameplaySnapshot,
+): void {
+  const transition = match?.previousDriveSummary?.possessionTransition ?? null;
+  element.textContent = [
+    'MATCH TRANSITION',
+    `possession: ${match?.possession ?? 'none'}`,
+    `previous: ${transition?.fromTeam ?? match?.previousDriveSummary?.possession ?? 'none'}`,
+    `driveEnd: ${formatFieldPosition(match?.previousDriveSummary?.endingFieldPosition ?? null)}`,
+    `reason: ${transition?.reason ?? 'none'}`,
+    `next: ${transition?.toTeam ?? 'none'} ${formatFieldPosition(transition?.nextOffenseStartingPosition ?? null)}`,
+    `gameplaySpot: ${formatSpot(gameplay.currentBallSpot)}`,
+    `snapLane: ${gameplay.drive.snapLane}`,
+    `touchback: ${transition?.reason.includes('Touchback') ? 'yes' : 'no'}`,
+  ].join('\n');
+}
+
+function syncHalftimeDebugOverlay(
+  element: HTMLElement,
+  snapshot: HalftimePresentationSnapshot,
+): void {
+  const story = snapshot.selectedStory;
+  const active = snapshot.activeLine;
+  element.textContent = [
+    'HALFTIME',
+    `phase: ${snapshot.phase}`,
+    `story: ${story?.category ?? 'none'} team=${story?.supportingTeam ?? 'none'}`,
+    `supporting: ${story?.supportingStatKeys.join(',') || 'none'}`,
+    `voicePack: ${snapshot.activeVoicePack ?? 'none'}`,
+    `line: ${active?.lineId ?? 'none'} script=${active?.scriptId ?? 'none'}`,
+    `playback: ${active?.playbackState ?? 'idle'} remaining=${(active?.remainingSeconds ?? 0).toFixed(2)}`,
+    `shotProgress: ${snapshot.shotProgress.toFixed(2)}`,
+    `gameplayVisible: ${snapshot.gameplayPlayerVisibleCount}`,
+    `sidelineVisible: ${snapshot.sidelineVisibleCount}`,
+    `nextPossession: ${snapshot.nextPossession}`,
+    `canContinue: ${snapshot.canContinue ? 'yes' : 'no'}`,
+  ].join('\n');
+}
+
+function syncCadenceDebugOverlay(
+  element: HTMLElement,
+  snapshot: PreSnapCadenceSnapshot,
+): void {
+  element.textContent = [
+    'CADENCE',
+    `phase: ${snapshot.phase}`,
+    `sequence: ${snapshot.sequence}`,
+    `selectedPlay: ${snapshot.selectedPlayId ?? 'none'}`,
+    `hud: ${snapshot.hudText || 'hidden'}`,
+    `ready: ${snapshot.readyAssetId ?? 'none'}`,
+    `hut: ${snapshot.hutAssetId ?? 'none'}`,
+    `selectionLocked: ${snapshot.playSelectionLocked ? 'yes' : 'no'}`,
+    `earlySnapWarning: ${snapshot.earlySnapWarningVisible ? 'yes' : 'no'}`,
+  ].join('\n');
+}
+
+function syncJerseyNumberDebugOverlay(
+  element: HTMLElement,
+  snapshot: JerseyNumberDebugSnapshot,
+): void {
+  const visiblePreview = snapshot.visuals
+    .slice(0, 12)
+    .map((visual) =>
+      `${visual.visualId} roster=${visual.rosterPlayerId} #${visual.jerseyNumber ?? 'none'} visible=${visual.visible ? 'yes' : 'no'} material=${visual.materialId ?? 'none'}`)
+    .join('\n');
+  element.textContent = [
+    'JERSEY NUMBERS',
+    `atlas: ${snapshot.atlas.atlasCreated ? 'created' : 'not-created'} ${snapshot.atlas.textureSize}px cells ${snapshot.atlas.cellCount}`,
+    `materials: ${snapshot.materialCache.materialCount}`,
+    `visuals: ${snapshot.visualCount} visible ${snapshot.visibleCount} hidden ${snapshot.hiddenCount}`,
+    `missingBindings: ${snapshot.missingBindingCount}`,
+    `unreadableContrast: ${snapshot.unreadableContrastCount}`,
+    visiblePreview || 'no numbered visuals',
+  ].join('\n');
+}
+
+function syncIntroKeysDebugOverlay(
+  element: HTMLElement,
+  overlaySnapshot: KeysToGameOverlaySnapshot,
+  pregameSnapshot: PregamePresentationSnapshot | null,
+): void {
+  const keys = pregameSnapshot?.keysToGame ?? [];
+  element.textContent = [
+    'INTRO KEYS',
+    `overlay: ${overlaySnapshot.mode} visible ${overlaySnapshot.visible ? 'yes' : 'no'}`,
+    `keyCount: ${overlaySnapshot.keyCount}`,
+    `pregamePhase: ${pregameSnapshot?.phase ?? 'inactive'}`,
+    `shot: ${pregameSnapshot?.currentShot ?? 'none'}`,
+    `weather: ${pregameSnapshot?.weatherCondition ?? 'none'}`,
+    ...keys.slice(0, 3).map((key, index) => `${index + 1}. ${key.text} [${key.source}]`),
+  ].join('\n');
+}
+
+function formatVector(vector: { x: number; y: number; z: number } | null): string {
+  if (!vector) {
+    return 'none';
+  }
+  return `${vector.x.toFixed(1)},${vector.y.toFixed(1)},${vector.z.toFixed(1)}`;
+}
+
+function formatSpot(spot: { x: number; z: number } | null): string {
+  if (!spot) {
+    return 'none';
+  }
+  return `${spot.x.toFixed(1)},${spot.z.toFixed(1)}`;
+}
+
+function formatFieldPosition(
+  position: { lateralX: number; yardsFromOwnGoalLine: number } | null,
+): string {
+  if (!position) {
+    return 'none';
+  }
+  return `${formatPossessionFieldPosition(position)} x=${position.lateralX.toFixed(1)}`;
 }

@@ -1,0 +1,66 @@
+{
+  "baseUrl": "http://127.0.0.1:5174",
+  "capturedAt": "2026-06-22T23:55:08.106Z",
+  "captures": [
+    {
+      "fileName": "01-title.png",
+      "label": "Football JS title screen",
+      "notes": ""
+    },
+    {
+      "fileName": "02-settings.png",
+      "label": "Concise Settings panel",
+      "notes": ""
+    },
+    {
+      "fileName": "03-roster-browser.png",
+      "label": "Football Hub roster browser",
+      "notes": ""
+    },
+    {
+      "fileName": "04-match-setup.png",
+      "label": "Match Setup screen",
+      "notes": ""
+    },
+    {
+      "fileName": "05-helmet-preview.png",
+      "label": "Cropped 3D helmet preview",
+      "notes": "Captured from the user-team Match Setup helmet preview."
+    },
+    {
+      "fileName": "06-pregame-broadcast-imagery.png",
+      "label": "Pregame broadcast imagery",
+      "notes": ""
+    },
+    {
+      "fileName": "07-qb-intro.png",
+      "label": "Quarterback intro spotlight",
+      "notes": ""
+    },
+    {
+      "fileName": "08-broadcast-scorebug-presnap.png",
+      "label": "Broadcast scorebug and pre-snap gameplay",
+      "notes": ""
+    },
+    {
+      "fileName": "09-touchdown-presentation.png",
+      "label": "Touchdown presentation",
+      "notes": ""
+    },
+    {
+      "fileName": "10-halftime-report.png",
+      "label": "Halftime report",
+      "notes": "Rendered from the actual HalftimeStatsOverlay component with a representative halftime MatchSnapshot."
+    },
+    {
+      "fileName": "11-game-over-final.png",
+      "label": "Game over final screen",
+      "notes": "Rendered from the actual QuarterTransitionPanel component with a representative final MatchSnapshot."
+    }
+  ],
+  "viewport": {
+    "width": 1600,
+    "height": 900,
+    "deviceScaleFactor": 1
+  }
+}

@@ -24,8 +24,8 @@ describe('game experience settings', () => {
       crowdAudioEnabled: true,
     });
     expect(resolved.crowdPresentationSettings).toMatchObject({
-      crowdDensity: 'low',
-      crowdFullness: 'full',
+      crowdDensity: 'medium',
+      crowdFullness: 'standard',
       crowdReactionsEnabled: true,
       crowdVisualsEnabled: true,
     });
@@ -35,6 +35,8 @@ describe('game experience settings', () => {
     expect(resolved.settings.sidelineDensity).toBe('medium');
     expect(resolved.settings.tunnelTableauEnabled).toBe(true);
     expect(resolved.settings.stadiumEnabled).toBe(true);
+    expect(resolved.settings.officialsEnabled).toBe(false);
+    expect(resolved.settings.playerVisualMode).toBe('procedural');
     expect(toGameplayCameraMode(resolved.settings.gameplayCamera)).toBe('offensePerspective');
   });
 
@@ -122,7 +124,7 @@ describe('game experience settings', () => {
     const storedBefore = storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY);
 
     const resolved = resolveGameExperienceSettings({
-      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&sidelinePlayers=0&sidelineDensity=high&coaches=1&tunnelTableau=0&announcer=0&captions=1&playbook=5v5&stadium=0&musicVolume=0.33'),
+      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&sidelinePlayers=0&sidelineDensity=high&coaches=1&tunnelTableau=0&announcer=0&captions=1&playbook=5v5&stadium=0&musicVolume=0.33&playerVisual=meshyRigged'),
       storage,
     });
 
@@ -137,6 +139,7 @@ describe('game experience settings', () => {
       gameplayCamera: 'cinematic',
       gameMode: 'scoreAttack',
       musicVolume: 0.33,
+      playerVisualMode: 'meshyRigged',
       playbookId: '5v5',
       preset: 'performance',
       sidelineDensity: 'high',
@@ -155,6 +158,7 @@ describe('game experience settings', () => {
       gameplayCamera: 'cinematic',
       gameMode: 'scoreAttack',
       musicVolume: 0.33,
+      playerVisualMode: 'meshyRigged',
       playbookId: '5v5',
       sidelineDensity: 'high',
       sidelinePlayersEnabled: false,

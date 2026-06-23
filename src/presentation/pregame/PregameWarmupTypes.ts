@@ -3,6 +3,7 @@ import type { PlayerTeam } from '../../playerModel';
 import type { QuarterbackScoutingProfile } from '../../roster/QuarterbackScoutingProfile';
 import type { RosterPlayer } from '../../roster/RosterPlayer';
 import type { SidelineTeamSide } from '../teams/SidelineTeamTypes';
+import type { FootballPlayerVisualReadiness } from '../players/FootballPlayerVisualFactory';
 
 export type PregameWarmupGroupId =
   | 'offensiveLineStance'
@@ -116,7 +117,9 @@ export interface PregameWarmupSnapshot {
   propCount: number;
   quarterback: {
     archetype: QuarterbackScoutingProfile['archetype'];
+    appearance: PregameWarmupQuarterbackAppearanceAudit;
     bounds: PregameWarmupSubjectBounds;
+    facingRadians: number;
     formattedName: string;
     jerseyNumber: number;
     ratings: QuarterbackScoutingProfile['ratings'];
@@ -130,4 +133,8 @@ export interface PregameWarmupSnapshot {
   updateFrequencyHz: number;
   userReady: boolean;
   zones: readonly PregameWarmupZone[];
+}
+
+export interface PregameWarmupQuarterbackAppearanceAudit extends FootballPlayerVisualReadiness {
+  rosterPlayerId: string | null;
 }

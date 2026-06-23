@@ -247,7 +247,6 @@ function createSubsystemLookup(
     } else if (
       object.userData.stadium ||
       name.includes('stadium') ||
-      name.includes('stand') ||
       name.includes('seating')
     ) {
       assignSubsystem(object, 'stadium', lookup);
@@ -300,7 +299,6 @@ function classifyObject(object: THREE.Object3D): MemorySubsystemId {
   if (
     object.userData.stadium ||
     name.includes('stadium') ||
-    name.includes('stand') ||
     name.includes('seating')
   ) {
     return 'stadium';

@@ -14,6 +14,8 @@ import {
   type PresentationAudioEventType,
 } from './PresentationEventBridge';
 import type { AudioSettings } from './AudioSettings';
+import type { VoicePackAssetResolver } from './voicePacks/VoicePackAssetResolver';
+import type { VoicePackAssetResolverSnapshot } from './voicePacks/VoicePackTypes';
 
 export interface BroadcastCommentaryAudioPort {
   getCurrentTime(): number;
@@ -32,6 +34,7 @@ export interface BroadcastCommentaryConfig {
   eventHistoryLimit: number;
   enabled: boolean;
   queueLimit: number;
+  voicePackResolver?: VoicePackAssetResolver;
 }
 
 export interface BroadcastCommentaryHistoryEntry {
@@ -104,6 +107,7 @@ export interface BroadcastCommentarySnapshot {
   playback: BroadcastCommentaryPlaybackState;
   queue: BroadcastCommentaryQueueEntry[];
   remainingCooldowns: BroadcastCommentaryCooldownEntry[];
+  voicePack: VoicePackAssetResolverSnapshot | null;
 }
 
 interface CommentaryQueueItem extends BroadcastCommentaryQueueEntry {
@@ -138,14 +142,17 @@ export class BroadcastCommentaryDirector {
   private pageActive = true;
   private previousSnapshot: GameplaySnapshot | null = null;
   private queue: CommentaryQueueItem[] = [];
+  private readonly voicePackResolver: VoicePackAssetResolver | null;
 
   constructor(
     private readonly mixer: BroadcastCommentaryAudioPort,
     config: Partial<BroadcastCommentaryConfig> = {},
   ) {
+    const { voicePackResolver, ...commentaryConfig } = config;
+    this.voicePackResolver = voicePackResolver ?? null;
     this.config = {
       ...DEFAULT_BROADCAST_COMMENTARY_CONFIG,
-      ...config,
+      ...commentaryConfig,
     };
   }
 
@@ -231,6 +238,12 @@ export class BroadcastCommentaryDirector {
         }))
         .filter((entry) => entry.remainingSeconds > 0.001)
         .sort((a, b) => a.category.localeCompare(b.category)),
+      voicePack: this.voicePackResolver
+        ? this.voicePackResolver.getSnapshot(
+            mixerSnapshot.decodedBufferBytes,
+            mixerSnapshot.lastEvictedAudioAssetId,
+          )
+        : null,
     };
   }
 
@@ -418,9 +431,26 @@ export class BroadcastCommentaryDirector {
       now,
     );
 
-    const task = this.mixer.playOneShot(item.assetId)
+    const task = this.resolvePlayableItem(item)
+      .then((playable) => {
+        if (!playable) {
+          return false;
+        }
+
+        if (this.currentClip?.eventId === item.eventId) {
+          const resolvedAt = this.mixer.getCurrentTime();
+          this.currentClip.assetId = playable.assetId;
+          this.currentClip.caption = playable.caption;
+          this.currentClip.startedAtSeconds = resolvedAt;
+          this.currentClip.endsAtSeconds =
+            resolvedAt + playable.durationSeconds + this.config.activeSpeechPaddingSeconds;
+        }
+
+        return this.mixer.playOneShot(playable.assetId);
+      })
       .then((played) => {
-        if (!played && this.currentClip?.assetId === item.assetId) {
+        if (!played && this.currentClip?.eventId === item.eventId) {
+          const failedAssetId = this.currentClip.assetId;
           this.recordHistory(
             {
               id: item.eventId,
@@ -428,7 +458,7 @@ export class BroadcastCommentaryDirector {
               score: 0,
               type: item.eventType,
             },
-            item.assetId,
+            failedAssetId,
             'suppressed',
             'missingAsset',
             item.category,
@@ -447,7 +477,7 @@ export class BroadcastCommentaryDirector {
               score: 0,
               type: item.eventType,
             },
-            item.assetId,
+            this.currentClip?.assetId ?? item.assetId,
             'played',
             null,
             item.category,
@@ -455,6 +485,30 @@ export class BroadcastCommentaryDirector {
         }
       });
     this.pendingAudioTasks.push(task);
+  }
+
+  private async resolvePlayableItem(
+    item: CommentaryQueueItem,
+  ): Promise<{ assetId: string; caption: string; durationSeconds: number } | null> {
+    if (!this.voicePackResolver) {
+      return {
+        assetId: item.assetId,
+        caption: item.caption,
+        durationSeconds: item.durationSeconds,
+      };
+    }
+
+    const resolved = await this.voicePackResolver.resolveClip(item.clip.scriptId);
+
+    if (!resolved) {
+      return null;
+    }
+
+    return {
+      assetId: resolved.asset.assetId,
+      caption: resolved.caption,
+      durationSeconds: resolved.clip.durationSeconds || item.durationSeconds,
+    };
   }
 
   private finishExpiredSpeech(): void {

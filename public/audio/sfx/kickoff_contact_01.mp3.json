@@ -1,0 +1,17 @@
+{
+  "assetId": "kickoff_contact_01",
+  "category": "sfx",
+  "compressedBytes": 15090,
+  "contentHash": "b529741808bd988b4b8374a5d010dd149e5f18db302f7b177ebc0665845630bd",
+  "durationSeconds": 0.88,
+  "generatedAt": "2026-06-22T14:13:45.589Z",
+  "kind": "oneShot",
+  "metadata": {
+    "semanticCategory": "kickoff"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Powerful isolated kickoff contact: cleat striking football with strong leather pop and air movement. No crowd ambience, no announcer, no music.",
+  "requestedDurationSeconds": 0.9,
+  "runtimeLoadingStrategy": "buffer"
+}

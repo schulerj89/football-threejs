@@ -165,9 +165,9 @@ describe('crowd capacity benchmark', () => {
 
   it('maps session recommendation to normal crowd density presets', () => {
     expect(resolveCrowdDensityForRecommendedCount(0)).toBe('low');
-    expect(resolveCrowdDensityForRecommendedCount(500)).toBe('low');
-    expect(resolveCrowdDensityForRecommendedCount(2_500)).toBe('medium');
-    expect(resolveCrowdDensityForRecommendedCount(10_000)).toBe('high');
+    expect(resolveCrowdDensityForRecommendedCount(5_000)).toBe('low');
+    expect(resolveCrowdDensityForRecommendedCount(15_000)).toBe('medium');
+    expect(resolveCrowdDensityForRecommendedCount(25_000)).toBe('high');
   });
 });
 
@@ -242,6 +242,7 @@ function createFakeCrowdOwner(
       nearPlacements: [],
       snapshotBase: {
         actualSpectatorCount: count,
+        activeNearSpectators: count,
         crowdDrawCalls: count > 0 ? 5 : 0,
         crowdFullness: 'sparse',
         crowdTriangles: count * 10,
@@ -249,10 +250,13 @@ function createFakeCrowdOwner(
         estimatedStaticBufferBytes: 0,
         farInstanceCount: 0,
         farMosaicSeatCount: 0,
+        farSeatOccupancy: 0,
         geometryCount: count > 0 ? 4 : 0,
         materialCount: count > 0 ? 3 : 0,
         nearInstanceCount: count,
+        reactingSpectatorLimit: count,
         textureCount: 0,
+        visualAttendance: count,
       },
     } as unknown as CrowdCapacityCrowdOwner['resources'],
   };

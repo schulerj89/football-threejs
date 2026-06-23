@@ -1,9 +1,9 @@
 import { FIELD_DIMENSIONS } from '../fieldSpec';
 
-export const CROWD_COUNT_DEFAULT = 500;
-export const CROWD_COUNT_MAX = 10_000;
+export const CROWD_COUNT_DEFAULT = 5_000;
+export const CROWD_COUNT_MAX = 25_000;
 export const CROWD_COUNT_MIN = 0;
-export const CROWD_BENCHMARK_COUNTS = [500, 2_000, 5_000, 10_000] as const;
+export const CROWD_BENCHMARK_COUNTS = [5_000, 15_000, 25_000] as const;
 export const DEFAULT_BENCHMARK_DURATION_SECONDS = 1.2;
 
 export const TRANSFORM_MATRIX_BYTES = 16 * Float32Array.BYTES_PER_ELEMENT;

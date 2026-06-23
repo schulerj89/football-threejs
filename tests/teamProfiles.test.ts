@@ -14,6 +14,8 @@ import {
   STARTER_TEAM_PROFILES,
   validateTeamProfile,
 } from '../src/teams/TeamRegistry';
+import { getTeamRosterOrDefault } from '../src/roster/RosterRegistry';
+import { isHexColor } from '../src/teams/UniformPalette';
 import {
   DEFAULT_TEAM_PROFILE_SETTINGS,
   updateTeamColorOverride,
@@ -26,16 +28,32 @@ import {
 
 describe('team profiles', () => {
   it('ships valid fictional starter profiles', () => {
-    expect(STARTER_TEAM_PROFILES).toHaveLength(4);
+    expect(STARTER_TEAM_PROFILES).toHaveLength(6);
     expect(STARTER_TEAM_PROFILES.map((profile) => profile.id)).toEqual([
       'metro-meteors',
       'lakefront-lights',
       'summit-forge',
       'bay-city-current',
+      'ironwood-owls',
+      'desert-ridge-scorpions',
     ]);
+    expect(new Set(STARTER_TEAM_PROFILES.map((profile) => profile.abbreviation)).size).toBe(6);
 
     for (const profile of STARTER_TEAM_PROFILES) {
       expect(validateTeamProfile(profile)).toEqual([]);
+      expect(profile.rosterId).toBe(profile.id);
+      expect(profile.rosterId).toBeTruthy();
+      expect(getTeamRosterOrDefault(profile.rosterId ?? '').teamId).toBe(profile.id);
+      expect(profile.logoAssetId).toBe(`${profile.id}-logo`);
+      expect(profile.logoUrl).toBe(`/branding/teams/${profile.id}/logo.webp`);
+      expect(profile.identity.length).toBeGreaterThan(8);
+      expect(isHexColor(profile.colors.primary)).toBe(true);
+      expect(isHexColor(profile.colors.secondary)).toBe(true);
+      expect(isHexColor(profile.colors.accent)).toBe(true);
+      expect(calculateHexColorDistance(profile.homeUniform.jersey, profile.homeUniform.number))
+        .toBeGreaterThan(90);
+      expect(calculateHexColorDistance(profile.awayUniform.jersey, profile.awayUniform.number))
+        .toBeGreaterThan(90);
     }
   });
 
@@ -69,6 +87,37 @@ describe('team profiles', () => {
     expect(theme.offense.uniform.helmetShell).toBe('#654321');
     expect(theme.offense.uniform.pants).toBe('#abcdef');
     expect(theme.offense.uniform.faceguard).toBe('#445566');
+  });
+
+  it('defaults helmet shell to primary and faceguard to secondary team colors', () => {
+    const teamProfiles = updateTeamColorOverride(
+      DEFAULT_TEAM_PROFILE_SETTINGS,
+      DEFAULT_USER_TEAM_ID,
+      {
+        primary: '#123456',
+        secondary: '#fedcba',
+      },
+    );
+    const theme = resolveTeamPresentationTheme(teamProfiles);
+
+    expect(theme.offense.uniform.helmetShell).toBe('#123456');
+    expect(theme.offense.uniform.faceguard).toBe('#fedcba');
+    expect(theme.offense.uniform.helmetShell).not.toBe(theme.offense.uniform.faceguard);
+  });
+
+  it('keeps helmet shell and faceguard visually distinct when custom colors collide', () => {
+    const teamProfiles = updateTeamColorOverride(
+      DEFAULT_TEAM_PROFILE_SETTINGS,
+      DEFAULT_USER_TEAM_ID,
+      {
+        faceguard: '#222222',
+        helmetShell: '#222222',
+      },
+    );
+    const theme = resolveTeamPresentationTheme(teamProfiles);
+
+    expect(theme.offense.uniform.helmetShell).toBe('#222222');
+    expect(theme.offense.uniform.faceguard).not.toBe('#222222');
   });
 
   it('migrates invalid persisted colors safely to profile defaults', () => {
@@ -106,7 +155,7 @@ describe('team profiles', () => {
     expect(theme.offense.profile.colors.secondary).toBe('#123456');
     expect(theme.offense.uniform.helmetShell).toBe('#2f66d8');
     expect(theme.offense.uniform.pants).toBe('#f2f4f6');
-    expect(theme.offense.uniform.faceguard).toBe('#f3f5f8');
+    expect(theme.offense.uniform.faceguard).toBe('#f2f4f6');
   });
 
   it('resolves home and away palettes to the correct active teams', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PLAYABLE_FIELD_BOUNDS } from '../src/field';
+import { PLAYABLE_FIELD_BOUNDS, PLAYER_MOVEMENT_BOUNDS } from '../src/field';
 import { normalizeMovementInput } from '../src/input';
 import {
   PLAYER_MOVEMENT_CONFIG,
@@ -98,13 +98,31 @@ describe('player movement simulation', () => {
       PLAYABLE_FIELD_BOUNDS.maxX,
     );
   });
+
+  it('allows player movement into the end zone while clamping before the end line', () => {
+    const player = createPlayerModel();
+    const maxCenterZ = PLAYER_MOVEMENT_BOUNDS.maxZ - player.collisionRadius;
+
+    stepForSeconds(player, { x: 0, z: 1 }, 9, PLAYER_MOVEMENT_BOUNDS);
+
+    expect(player.position.z).toBeGreaterThan(PLAYABLE_FIELD_BOUNDS.maxZ);
+    expect(player.position.z).toBeCloseTo(maxCenterZ);
+    expect(player.position.z + player.collisionRadius).toBeLessThanOrEqual(
+      PLAYER_MOVEMENT_BOUNDS.maxZ,
+    );
+  });
 });
 
-function stepForSeconds(player: PlayerModel, input: Vector2, seconds: number): void {
+function stepForSeconds(
+  player: PlayerModel,
+  input: Vector2,
+  seconds: number,
+  bounds = PLAYABLE_FIELD_BOUNDS,
+): void {
   const steps = Math.ceil(seconds / FRAME_DELTA);
 
   for (let step = 0; step < steps; step += 1) {
-    updatePlayerSimulation(player, input, FRAME_DELTA, PLAYABLE_FIELD_BOUNDS);
+    updatePlayerSimulation(player, input, FRAME_DELTA, bounds);
   }
 }
 

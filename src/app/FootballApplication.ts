@@ -48,6 +48,11 @@ import type { CoinFace } from '../match/CoinTossModel';
 import { MatchScorebug } from '../ui/MatchScorebug';
 import { OpponentDriveSummaryPanel } from '../ui/OpponentDriveSummary';
 import { QuarterTransitionPanel } from '../ui/QuarterTransition';
+import { CadenceAudioDirector } from '../audio/CadenceAudioDirector';
+import { createGameplayRosterBinding } from '../roster/GameplayRosterBinding';
+import { preloadFootballPlayerVisualAssets } from '../presentation/players/FootballPlayerVisualFactory';
+import type { PlayerVisualMode } from '../presentation/players/PlayerVisualMode';
+import { LeagueBootController } from '../league/LeagueBootController';
 
 export interface FootballApplicationOptions {
   mount: HTMLDivElement;
@@ -71,6 +76,7 @@ export class FootballApplication {
   private readonly quarterTransitionPanel: QuarterTransitionPanel;
   private readonly qualityController: AdaptiveQualityController;
   private readonly runtimePerformanceMonitor = new RuntimePerformanceMonitor();
+  private readonly leagueBoot: LeagueBootController;
   private readonly sceneResourceProfiler: SceneResourceProfiler;
   private readonly crowdCapacityBenchmark: CrowdCapacityBenchmark;
   private readonly loop: GameLoop;
@@ -83,6 +89,13 @@ export class FootballApplication {
   constructor({ mount, searchParams = new URLSearchParams(window.location.search) }: FootballApplicationOptions) {
     this.searchParams = searchParams;
     this.gameExperience = resolveGameExperienceSettings({ searchParams });
+    this.leagueBoot = new LeagueBootController();
+    this.leagueBoot.subscribe(() => this.lifecycle?.syncTitleLoadingState());
+    void this.leagueBoot.start().catch((error) => {
+      if (import.meta.env.DEV) {
+        console.warn(`League initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
     this.matchController = this.createMatchController();
     this.performanceProfiler = FramePerformanceProfiler.createFromSearchParams(searchParams);
     this.qualityController = new AdaptiveQualityController(this.gameExperience.settings.qualityMode);
@@ -91,6 +104,8 @@ export class FootballApplication {
       canStartPlay: (snapshot) => this.canStartPlay(snapshot),
       consumeSelectedPlayId: () => this.presentation.consumeSelectedPlayId(),
       gameMode: this.gameExperience.settings.gameMode,
+      onPassReleased: (gameplay, snapshot) => this.handlePassReleased(gameplay, snapshot),
+      onPlayStarted: (gameplay, snapshot) => this.handlePlayStarted(gameplay, snapshot),
       onPunt: (gameplay, snapshot) => this.handlePunt(gameplay, snapshot),
       playbookId: this.gameExperience.settings.playbookId,
       searchParams,
@@ -109,12 +124,15 @@ export class FootballApplication {
       renderer: this.sceneRuntime.renderer,
       scene: this.sceneRuntime.scene,
       searchParams,
+      getWeatherSnapshot: () => this.sceneRuntime.getWeatherSnapshot(),
+      onHalftimeContinue: () => this.continueMatchTransition(),
       warn: (message) => {
         if (import.meta.env.DEV) {
           console.warn(message);
         }
       },
     });
+    this.gameplay.setCadenceAudioDirector(new CadenceAudioDirector(this.presentation.audioMixer));
     this.applyCurrentQualityProfile();
     this.removeSceneResizeHandler = this.sceneRuntime.onResize((width, height) => {
       this.presentation.resize(width, height);
@@ -123,8 +141,10 @@ export class FootballApplication {
       bodyStyle: resolvePlayerBodyVisualStyle(searchParams.get('playerBody')),
       debugRoleColors: searchParams.has('debugRoleColors'),
       teamUniforms: resolveTeamPresentationTheme(this.gameExperience.settings.teamProfiles).uniforms,
-    });
+      visualMode: this.gameExperience.settings.playerVisualMode,
+    }, this.createGameplayRosterBinding());
     this.playerVisuals.reconcile(this.getActivePlayers());
+    this.preloadRequestedPlayerVisualMode();
     this.presentation.syncBall(
       this.gameplay.formationPreviewModel?.ball ?? this.gameplay.gameplayModel.ball,
     );
@@ -155,6 +175,9 @@ export class FootballApplication {
       runCrowdCapacityBenchmark: () => this.runCrowdCapacityBenchmark(),
       exportCrowdCapacityReport: () => this.crowdCapacityBenchmark.exportReport(),
       getQualityDebugSnapshot: () => this.createQualityDebugSnapshot(),
+      getWeatherSnapshot: () => this.sceneRuntime.getWeatherSnapshot(),
+      getLeagueSnapshot: () => this.leagueBoot.getSnapshot(),
+      resetLeagueData: () => this.resetLeagueData(),
       presentation: this.presentation,
       sceneRuntime: this.sceneRuntime,
       searchParams,
@@ -162,6 +185,7 @@ export class FootballApplication {
     this.lifecycle = new ApplicationLifecycle({
       crowdPreviewEnabled: !!this.presentation.crowdPreviewController,
       formationPreviewActive: !!this.gameplay.formationPreviewModel,
+      getLeagueData: () => this.leagueBoot.data,
       initialSettings: this.gameExperience.settings,
       searchParams,
       createTitleLoadingState: () => this.diagnostics.createTitleLoadingState(),
@@ -217,6 +241,7 @@ export class FootballApplication {
           event,
           this.gameplay.gameplayModel.playState,
         ),
+      onPlayerVisualModeChange: (mode) => this.setPlayerVisualMode(mode),
       onPresentationAuditControls: (event) =>
         this.gameplay.handlePresentationAuditControls(
           event,
@@ -263,6 +288,7 @@ export class FootballApplication {
     window.removeEventListener('focus', this.syncAudioPageActivity);
     this.removeSceneResizeHandler();
     this.crowdCapacityBenchmark.dispose();
+    this.leagueBoot.dispose();
     this.developmentTools.dispose();
     this.lifecycle.dispose();
     this.matchScorebug.dispose();
@@ -298,9 +324,30 @@ export class FootballApplication {
       return;
     }
 
+    if (this.leagueBoot.getSnapshot().status !== 'ready') {
+      this.presentation.updateMenuMusicChrome(
+        this.lifecycle.phase,
+        this.lifecycle.isPauseSettingsVisible(),
+        delta,
+      );
+      const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
+      this.playerVisuals.setVisible(false);
+      this.sceneRuntime.setDriveLinesVisible(false);
+      this.presentation.syncPlayCallUi(
+        gameplaySnapshot,
+        false,
+        this.gameplay.getPreSnapCadenceSnapshot(),
+      );
+      this.sceneRuntime.render(this.presentation.camera);
+      this.lifecycle.syncTitleLoadingState();
+      this.lifecycle.syncChrome();
+      return;
+    }
+
     const pauseSettingsVisible = this.lifecycle.isPauseSettingsVisible();
     const menuPhaseActive =
       this.lifecycle.phase === 'title' ||
+      this.lifecycle.phase === 'footballHub' ||
       this.lifecycle.phase === 'matchSetup';
     const matchActive = this.isExhibitionMatchActive();
     const matchSnapshotBefore = this.getMatchSnapshot();
@@ -334,15 +381,40 @@ export class FootballApplication {
     if (
       matchActive &&
       this.lifecycle.phase === 'gameplay' &&
+      matchSnapshot?.phase === 'extraPoint' &&
+      !pauseSettingsVisible
+    ) {
+      this.startExtraPointPresentation();
+    }
+    if (
+      matchActive &&
+      this.lifecycle.phase === 'gameplay' &&
       matchSnapshot?.phase === 'kickoff' &&
       !pauseSettingsVisible
     ) {
       this.startKickoffPresentation();
     }
+    if (
+      matchActive &&
+      this.lifecycle.phase === 'gameplay' &&
+      matchSnapshot?.phase === 'halftime' &&
+      !pauseSettingsVisible
+    ) {
+      this.presentation.startHalftimePresentation(matchSnapshot);
+    }
+    const extraPointActive =
+      this.lifecycle.phase === 'extraPoint' &&
+      !pauseSettingsVisible &&
+      matchActive;
     const kickoffActive =
       this.lifecycle.phase === 'kickoff' &&
       !pauseSettingsVisible &&
       matchActive;
+    const halftimeActive =
+      this.lifecycle.phase === 'gameplay' &&
+      !pauseSettingsVisible &&
+      matchActive &&
+      matchSnapshot?.phase === 'halftime';
     this.updateAdaptiveQuality(delta, gameplaySnapshot);
     if (this.performanceProfiler.enabled) {
       this.performanceProfiler.measure('stadiumUpdate', () => {
@@ -361,6 +433,17 @@ export class FootballApplication {
       );
       this.playerVisuals.sync(this.getActivePlayers());
     }
+    const gameplayStageVisible =
+      this.lifecycle.phase === 'gameplay' &&
+      !menuPhaseActive &&
+      !pregameActive &&
+      !coinTossActive &&
+      !extraPointActive &&
+      !kickoffActive &&
+      !halftimeActive &&
+      (!matchActive || matchSnapshot?.phase === 'userPossession');
+    this.playerVisuals.setVisible(gameplayStageVisible);
+    this.sceneRuntime.setDriveLinesVisible(gameplayStageVisible);
     if (menuPhaseActive) {
       this.presentation.updateMenuFrame({
         appPhase: this.lifecycle.phase,
@@ -393,6 +476,20 @@ export class FootballApplication {
       if (result.completed) {
         this.finishCoinTossAndStartGameplay();
       }
+    } else if (extraPointActive) {
+      const result = this.presentation.updateExtraPointFrame({
+        deltaSeconds: presentationDelta,
+        gameplaySnapshot,
+        matchSnapshot,
+        playerVisuals: this.playerVisuals.visuals,
+        profiler: this.performanceProfiler,
+      });
+      if (result.timingInput) {
+        this.matchController.resolveExtraPointKick(result.timingInput);
+      }
+      if (result.completed) {
+        this.finishExtraPointAndContinue();
+      }
     } else if (kickoffActive) {
       const result = this.presentation.updateKickoffFrame({
         deltaSeconds: presentationDelta,
@@ -401,9 +498,18 @@ export class FootballApplication {
         playerVisuals: this.playerVisuals.visuals,
         profiler: this.performanceProfiler,
       });
+      this.matchController.updateKickoffClock(presentationDelta, result.clockRunning);
       if (result.completed) {
-        this.finishKickoffAndContinue();
+        this.finishKickoffAndContinue(result.returnResult);
       }
+    } else if (halftimeActive) {
+      this.presentation.updateHalftimeFrame({
+        deltaSeconds: presentationDelta,
+        gameplaySnapshot,
+        matchSnapshot,
+        playerVisuals: this.playerVisuals.visuals,
+        profiler: this.performanceProfiler,
+      });
     } else {
       this.presentation.updateGameplayFrame({
         active: gameplayActive,
@@ -413,19 +519,41 @@ export class FootballApplication {
         deltaSeconds: presentationDelta,
         gameplaySnapshot,
         playerVisuals: this.playerVisuals.visuals,
+        preSnapCadence: this.gameplay.getPreSnapCadenceSnapshot(),
         profiler: this.performanceProfiler,
         selectedPlay: this.gameplay.gameplayModel.selectedPlay,
       });
+      this.maybeStartPendingExtraPointPresentation();
     }
+    const preSnapCadenceSnapshot = this.gameplay.getPreSnapCadenceSnapshot();
+    const finalMatchSnapshot = this.getMatchSnapshot();
+    const finalMenuPhaseActive =
+      this.lifecycle.phase === 'title' ||
+      this.lifecycle.phase === 'footballHub' ||
+      this.lifecycle.phase === 'matchSetup';
+    const finalGameplayStageVisible =
+      this.lifecycle.phase === 'gameplay' &&
+      !finalMenuPhaseActive &&
+      (!this.isExhibitionMatchActive() || finalMatchSnapshot?.phase === 'userPossession');
+    this.playerVisuals.setVisible(finalGameplayStageVisible);
+    this.sceneRuntime.setDriveLinesVisible(finalGameplayStageVisible);
     if (this.performanceProfiler.enabled) {
       this.performanceProfiler.measure('hudDomUpdate', () => {
-        this.presentation.syncPlayCallUi(gameplaySnapshot, gameplayActive);
+        this.presentation.syncPlayCallUi(
+          gameplaySnapshot,
+          this.shouldShowPlayCallUi(gameplayActive),
+          preSnapCadenceSnapshot,
+        );
       });
       this.performanceProfiler.measure('rendererRender', () => {
         this.sceneRuntime.render(this.presentation.camera);
       });
     } else {
-      this.presentation.syncPlayCallUi(gameplaySnapshot, gameplayActive);
+      this.presentation.syncPlayCallUi(
+        gameplaySnapshot,
+        this.shouldShowPlayCallUi(gameplayActive),
+        preSnapCadenceSnapshot,
+      );
       this.sceneRuntime.render(this.presentation.camera);
     }
     this.crowdCapacityBenchmark.update(delta);
@@ -501,7 +629,11 @@ export class FootballApplication {
       activePrimaryPlayer,
       cameraSnapshot: this.presentation.cameraDebugSnapshot,
       coinTossSnapshot: this.presentation.getCoinTossSnapshot(this.getMatchSnapshot()),
+      placeKickSnapshot: this.presentation.getPlaceKickSnapshot(),
       kickoffSnapshot: this.presentation.getKickoffSnapshot(),
+      matchSnapshot: this.getMatchSnapshot(),
+      keysToGameSnapshot: this.presentation.getKeysToGameOverlaySnapshot(),
+      jerseyNumberSnapshot: this.diagnostics.getJerseyNumberDebugSnapshot(),
       controlledPlayerLabelSnapshot: this.presentation.getControlledPlayerLabelSnapshot(),
       crowdPresentationSnapshot: this.presentation.getCrowdPresentationSnapshot(),
       crowdPreviewSnapshot: this.presentation.getCrowdPreviewSnapshot(),
@@ -515,9 +647,14 @@ export class FootballApplication {
       playerBodyVisual: this.playerVisuals.get(activePrimaryPlayer.id),
       playerPoseSnapshots: this.presentation.getPlayerPoseSnapshots(),
       playerVisuals: this.playerVisuals.visuals,
+      preSnapCadenceSnapshot: this.gameplay.getPreSnapCadenceSnapshot(),
       presentationAuditSnapshot: this.diagnostics.getPresentationAuditSnapshot(),
       presentationHardeningAuditSnapshot: this.diagnostics.getPresentationHardeningAuditSnapshot(),
       pregamePresentationSnapshot: this.presentation.getPregamePresentationSnapshot(),
+      halftimePresentationSnapshot: this.presentation.getHalftimePresentationSnapshot(
+        this.getMatchSnapshot(),
+        this.playerVisuals.visuals,
+      ),
       renderMetrics: this.diagnostics.latestRenderMetrics,
       routeArtSnapshot: this.presentation.getRouteArtSnapshot(),
       runtimeAudioSnapshot: this.presentation.getRuntimeAudioSnapshot(),
@@ -531,6 +668,7 @@ export class FootballApplication {
       officialsSnapshot: this.presentation.getOfficialsSnapshot(),
       sidelineTeamsSnapshot: this.presentation.getSidelineTeamSnapshot(),
       sevenAuditSnapshot: this.diagnostics.getSevenAuditSnapshot(),
+      weatherSnapshot: this.sceneRuntime.getWeatherSnapshot(),
     });
   }
 
@@ -588,6 +726,11 @@ export class FootballApplication {
     const teamTheme = resolveTeamPresentationTheme(this.gameExperience.settings.teamProfiles);
     this.sceneRuntime.applyTeamTheme(teamTheme);
     this.playerVisuals.setTeamUniforms(teamTheme.uniforms);
+    this.playerVisuals.setVisualMode(this.gameExperience.settings.playerVisualMode);
+    this.preloadRequestedPlayerVisualMode();
+    const rosterBinding = this.createGameplayRosterBinding();
+    this.matchController.setRosterBinding(rosterBinding);
+    this.playerVisuals.setRosterBinding(rosterBinding);
     this.presentation.applyExperience(this.gameExperience);
     if (
       previousGameMode !== this.gameExperience.settings.gameMode ||
@@ -617,8 +760,48 @@ export class FootballApplication {
     this.lifecycle.syncChrome();
   }
 
+  private setPlayerVisualMode(mode: PlayerVisualMode): void {
+    if (this.gameExperience.settings.playerVisualMode === mode) {
+      return;
+    }
+
+    this.gameExperience = {
+      ...this.gameExperience,
+      settings: {
+        ...this.gameExperience.settings,
+        playerVisualMode: mode,
+      },
+    };
+    this.playerVisuals.setVisualMode(mode);
+    this.playerVisuals.reconcile(this.getActivePlayers());
+    this.preloadRequestedPlayerVisualMode();
+  }
+
+  private preloadRequestedPlayerVisualMode(): void {
+    const visualMode = this.gameExperience.settings.playerVisualMode;
+    if (visualMode !== 'meshyRigged') {
+      return;
+    }
+
+    void preloadFootballPlayerVisualAssets(visualMode)
+      .then(() => {
+        if (this.gameExperience.settings.playerVisualMode !== visualMode) {
+          return;
+        }
+        this.playerVisuals.setVisualMode('procedural');
+        this.playerVisuals.setVisualMode(visualMode);
+        this.playerVisuals.reconcile(this.getActivePlayers());
+      })
+      .catch(() => {
+        // Optional art path: leave procedural visuals active when the GLB is absent or invalid.
+      });
+  }
+
   private syncAfterGameplayRebuild(): void {
     this.presentation.setPlays(this.gameplay.availablePlays);
+    const binding = this.createGameplayRosterBinding();
+    this.matchController.setRosterBinding(binding);
+    this.playerVisuals.setRosterBinding(binding);
     this.playerVisuals.reconcile(this.getActivePlayers());
     this.presentation.syncBall(this.gameplay.gameplayModel.ball);
     this.presentation.resetCameraPresentation();
@@ -630,8 +813,16 @@ export class FootballApplication {
       difficulty: settings.matchDifficulty,
       opponentTeamId: settings.teamProfiles.opponentTeamId,
       quarterDurationSeconds: settings.quarterLengthSeconds,
+      rosterBinding: this.createGameplayRosterBinding(),
       userTeamId: settings.teamProfiles.userTeamId,
     });
+  }
+
+  private createGameplayRosterBinding() {
+    return createGameplayRosterBinding(
+      this.gameExperience.settings.playbookId,
+      this.gameExperience.settings.teamProfiles,
+    );
   }
 
   private isExhibitionMatchActive(): boolean {
@@ -656,6 +847,22 @@ export class FootballApplication {
     return this.isExhibitionMatchActive() && this.matchController.canPunt(snapshot);
   }
 
+  private handlePlayStarted(gameplay: GameplayModel, snapshot: GameplaySnapshot): void {
+    if (!this.isExhibitionMatchActive()) {
+      return;
+    }
+
+    this.matchController.recordPlayStarted(gameplay, snapshot);
+  }
+
+  private handlePassReleased(gameplay: GameplayModel, snapshot: GameplaySnapshot): void {
+    if (!this.isExhibitionMatchActive()) {
+      return;
+    }
+
+    this.matchController.recordPassRelease(gameplay, snapshot);
+  }
+
   private handlePunt(gameplay: GameplayModel, snapshot: GameplaySnapshot): boolean {
     if (!this.isExhibitionMatchActive()) {
       return false;
@@ -670,6 +877,12 @@ export class FootballApplication {
       return;
     }
 
+    const wasHalftime = this.matchController.getSnapshot().phase === 'halftime';
+    if (wasHalftime) {
+      this.presentation.finishHalftimePresentation(
+        this.gameplay.getActivePresentationSnapshot(false),
+      );
+    }
     this.matchController.continue(this.gameplay.gameplayModel);
     this.syncAfterGameplayRebuild();
     if (this.matchController.getSnapshot().phase === 'kickoff') {
@@ -702,7 +915,7 @@ export class FootballApplication {
     const visible = this.lifecycle.phase === 'gameplay' && this.isExhibitionMatchActive();
     this.matchScorebug.sync(matchSnapshot, gameplaySnapshot, visible);
     this.opponentDriveSummary.sync(matchSnapshot, visible);
-    this.quarterTransitionPanel.sync(matchSnapshot, visible);
+    this.quarterTransitionPanel.sync(matchSnapshot, visible && matchSnapshot?.phase !== 'halftime');
     document.body.dataset.gameMode = this.gameExperience.settings.gameMode;
   }
 
@@ -757,7 +970,7 @@ export class FootballApplication {
       event.ctrlKey ||
       event.metaKey ||
       event.altKey ||
-      event.key !== 'Enter' ||
+      (event.key !== 'Enter' && event.key !== ' ') ||
       !this.isExhibitionMatchActive() ||
       this.lifecycle.phase !== 'gameplay'
     ) {
@@ -768,6 +981,10 @@ export class FootballApplication {
     if (phase === 'gameOver') {
       this.rematch();
       event.preventDefault();
+      return;
+    }
+
+    if (event.key === ' ' && phase !== 'halftime') {
       return;
     }
 
@@ -852,15 +1069,81 @@ export class FootballApplication {
     this.lifecycle.startKickoff();
   }
 
-  private finishKickoffAndContinue(): void {
+  private startExtraPointPresentation(): void {
+    if (!this.isExhibitionMatchActive()) {
+      this.lifecycle.startGameplay();
+      return;
+    }
+
+    this.presentation.startExtraPoint(this.matchController.getSnapshot());
+    this.lifecycle.startExtraPoint();
+  }
+
+  private maybeStartPendingExtraPointPresentation(): void {
+    if (
+      !this.isExhibitionMatchActive() ||
+      this.lifecycle.phase !== 'gameplay' ||
+      !this.matchController.hasPendingExtraPoint() ||
+      this.presentation.shouldHoldDeadPlayReset()
+    ) {
+      return;
+    }
+
+    if (this.matchController.beginPreparedExtraPoint()) {
+      this.startExtraPointPresentation();
+    }
+  }
+
+  private shouldShowPlayCallUi(gameplayActive: boolean): boolean {
+    if (!gameplayActive || this.lifecycle.phase !== 'gameplay') {
+      return false;
+    }
+
+    const matchSnapshot = this.getMatchSnapshot();
+    return !matchSnapshot || matchSnapshot.phase === 'userPossession';
+  }
+
+  private finishExtraPointAndContinue(): void {
+    if (!this.isExhibitionMatchActive() || this.lifecycle.phase !== 'extraPoint') {
+      return;
+    }
+
+    const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
+    this.presentation.finishExtraPoint(gameplaySnapshot);
+    this.matchController.completeExtraPointAndScheduleKickoff(this.gameplay.gameplayModel);
+    this.syncAfterGameplayRebuild();
+    if (this.matchController.getSnapshot().phase === 'kickoff') {
+      this.startKickoffPresentation();
+    } else {
+      this.lifecycle.startGameplay();
+    }
+  }
+
+  private finishKickoffAndContinue(
+    returnResult: NonNullable<ReturnType<PresentationRuntime['updateKickoffFrame']>['returnResult']> | null = null,
+  ): void {
     if (!this.isExhibitionMatchActive() || this.lifecycle.phase !== 'kickoff') {
       return;
     }
 
     const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
     this.presentation.finishKickoff(gameplaySnapshot);
-    this.matchController.completeKickoff(this.gameplay.gameplayModel);
+    this.matchController.completeKickoff(this.gameplay.gameplayModel, returnResult);
     this.syncAfterGameplayRebuild();
+    if (this.matchController.getSnapshot().phase === 'kickoff') {
+      this.startKickoffPresentation();
+      return;
+    }
+    if (this.matchController.getSnapshot().phase === 'extraPoint') {
+      this.startExtraPointPresentation();
+      return;
+    }
+    if (this.matchController.hasPendingExtraPoint()) {
+      this.matchController.beginPreparedExtraPoint();
+      this.syncAfterGameplayRebuild();
+      this.startExtraPointPresentation();
+      return;
+    }
     this.lifecycle.startGameplay();
   }
 
@@ -913,6 +1196,15 @@ export class FootballApplication {
       pixelRatio: this.sceneRuntime.getPixelRatio(),
       quality: this.qualityController.getSnapshot(),
     };
+  }
+
+  private async resetLeagueData(): Promise<void> {
+    await this.leagueBoot.resetLeagueData();
+    void this.leagueBoot.start().catch((error) => {
+      if (import.meta.env.DEV) {
+        console.warn(`League initialization failed after reset: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
   }
 
   private createMemoryProfileSnapshot(): SceneResourceProfileSnapshot {

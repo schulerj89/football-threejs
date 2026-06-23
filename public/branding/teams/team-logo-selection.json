@@ -1,0 +1,59 @@
+{
+  "selectedAt": "2026-06-22T19:48:16.470Z",
+  "teams": [
+    {
+      "assetId": "bay-city-current-logo-b",
+      "candidateId": "candidate-b",
+      "contentHash": "437a483db9229732fe4f1761adaf4807cfc54a5a208fd00ba675de863eec86c8",
+      "outputPath": "public/branding/teams/bay-city-current/candidate-b.webp",
+      "runtimeImageUrl": "/branding/teams/bay-city-current/logo.webp",
+      "runtimePath": "public/branding/teams/bay-city-current/logo.webp",
+      "teamId": "bay-city-current"
+    },
+    {
+      "assetId": "desert-ridge-scorpions-logo-b",
+      "candidateId": "candidate-b",
+      "contentHash": "9cf76984811dd41dc3db9f21faa19fe5bcf0015b34f170117f1766124955c705",
+      "outputPath": "public/branding/teams/desert-ridge-scorpions/candidate-b.webp",
+      "runtimeImageUrl": "/branding/teams/desert-ridge-scorpions/logo.webp",
+      "runtimePath": "public/branding/teams/desert-ridge-scorpions/logo.webp",
+      "teamId": "desert-ridge-scorpions"
+    },
+    {
+      "assetId": "ironwood-owls-logo-b",
+      "candidateId": "candidate-b",
+      "contentHash": "1795d300f481e61d27c4d1dc3d3373f13beec56b499d6bea04c79bfb6d48793a",
+      "outputPath": "public/branding/teams/ironwood-owls/candidate-b.webp",
+      "runtimeImageUrl": "/branding/teams/ironwood-owls/logo.webp",
+      "runtimePath": "public/branding/teams/ironwood-owls/logo.webp",
+      "teamId": "ironwood-owls"
+    },
+    {
+      "assetId": "lakefront-lights-logo-b",
+      "candidateId": "candidate-b",
+      "contentHash": "62b7432c24f43d8e3e0570fffc9bb874a2d42eb8abcc2c9ab4a70f4f124a2b02",
+      "outputPath": "public/branding/teams/lakefront-lights/candidate-b.webp",
+      "runtimeImageUrl": "/branding/teams/lakefront-lights/logo.webp",
+      "runtimePath": "public/branding/teams/lakefront-lights/logo.webp",
+      "teamId": "lakefront-lights"
+    },
+    {
+      "assetId": "metro-meteors-logo-b",
+      "candidateId": "candidate-b",
+      "contentHash": "b050220ae0a4df6f50e5c8624dc0d5868020d22c6388b4a30b4d5335d7848cd3",
+      "outputPath": "public/branding/teams/metro-meteors/candidate-b.webp",
+      "runtimeImageUrl": "/branding/teams/metro-meteors/logo.webp",
+      "runtimePath": "public/branding/teams/metro-meteors/logo.webp",
+      "teamId": "metro-meteors"
+    },
+    {
+      "assetId": "summit-forge-logo-b",
+      "candidateId": "candidate-b",
+      "contentHash": "f306c785092211eebb4b18e400266985638d7050a14faa36181df517d2947c86",
+      "outputPath": "public/branding/teams/summit-forge/candidate-b.webp",
+      "runtimeImageUrl": "/branding/teams/summit-forge/logo.webp",
+      "runtimePath": "public/branding/teams/summit-forge/logo.webp",
+      "teamId": "summit-forge"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "assetId": "coin_toss_spin_01",
+  "category": "sfx",
+  "compressedBytes": 24703,
+  "contentHash": "87022d41f37545612f0d155d36b706cc128880ac033e8bfd8a2e0eef0df01c68",
+  "durationSeconds": 1.48,
+  "generatedAt": "2026-06-22T14:13:34.532Z",
+  "kind": "oneShot",
+  "metadata": {
+    "semanticCategory": "coin"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Clean isolated metallic ceremonial coin flipping rapidly through the air. Fast rotating metal flutter and bright rim shimmer, approximately 1.2 to 1.8 seconds. No speech, no crowd, no music, no room tone.",
+  "requestedDurationSeconds": 1.5,
+  "runtimeLoadingStrategy": "buffer"
+}

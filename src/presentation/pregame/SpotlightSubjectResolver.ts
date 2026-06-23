@@ -24,6 +24,7 @@ export interface QuarterbackSpotlightSubject {
     | 'missingRosterPlayer'
     | 'missingWarmupSubject'
     | null;
+  facingRadians: number;
   footballPosition: FootballPosition;
   formattedName: string;
   fullName: string;
@@ -71,6 +72,7 @@ export function resolveQuarterbackSpotlightSubject(
   return {
     appearanceId: rosterPlayer?.appearanceId ?? lineupBinding?.rosterPlayerId ?? FALLBACK_GAMEPLAY_QB_ID,
     fallbackReason,
+    facingRadians: warmupQuarterback?.facingRadians ?? gameplayPlayer?.facingRadians ?? 0,
     footballPosition: rosterPlayer?.footballPosition ?? 'QB',
     formattedName: rosterPlayer ? formatRosterInitialName(rosterPlayer) : FALLBACK_QB_NAME,
     fullName: rosterPlayer?.displayName ?? FALLBACK_QB_NAME,

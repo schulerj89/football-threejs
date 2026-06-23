@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { AudioAssetLoader } from '../src/audio/AudioAssetLoader';
-import type { LocalAudioAsset } from '../src/audio/AudioAssetManifest';
+import { LOCAL_AUDIO_ASSET_MANIFEST, type LocalAudioAsset } from '../src/audio/AudioAssetManifest';
 import { AudioMixer } from '../src/audio/AudioMixer';
 import { TitleMusicController } from '../src/audio/TitleMusicController';
 import { GameAudioDirector } from '../src/audio/GameAudioDirector';
@@ -51,6 +51,45 @@ const MUSIC_TEST_ASSET: LocalAudioAsset = {
 };
 
 describe('runtime audio mixer', () => {
+  it('registers special-teams and cadence assets as short buffered optional clips', () => {
+    const requiredAssets = [
+      'coin_toss_spin_01',
+      'coin_toss_land_01',
+      'place_kick_snap_01',
+      'place_kick_set_01',
+      'place_kick_contact_01',
+      'kick_upright_hit_01',
+      'kickoff_runup_01',
+      'kickoff_contact_01',
+      'kickoff_catch_01',
+      'qb_ready_01',
+      'qb_ready_02',
+      'qb_hut_01',
+      'qb_hut_02',
+      'qb_hut_03',
+    ];
+
+    for (const assetId of requiredAssets) {
+      const asset = LOCAL_AUDIO_ASSET_MANIFEST.find((entry) => entry.assetId === assetId);
+      expect(asset).toMatchObject({
+        category: 'gameplaySfx',
+        loadingStrategy: 'buffer',
+        loop: false,
+        optional: true,
+      });
+    }
+    expect(
+      LOCAL_AUDIO_ASSET_MANIFEST
+        .filter((entry) => entry.semanticCategory === 'cadence')
+        .every((entry) => entry.maxSimultaneousInstances === 1),
+    ).toBe(true);
+    expect(new Set(
+      LOCAL_AUDIO_ASSET_MANIFEST
+        .filter((entry) => requiredAssets.includes(entry.assetId))
+        .map((entry) => entry.semanticCategory),
+    )).toEqual(new Set(['cadence', 'coin', 'kickoff', 'placeKick']));
+  });
+
   it('creates one AudioContext and routes category buses into master', () => {
     const fakeContext = new FakeAudioContext('suspended');
     let factoryCalls = 0;

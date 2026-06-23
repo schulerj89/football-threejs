@@ -3,6 +3,8 @@ import {
   createRosterPreviewRows,
 } from '../roster/GameplayRosterBinding';
 import type { GameExperienceSettings } from '../config/GameExperienceSettings';
+import type { RosterPlayer } from '../roster/RosterPlayer';
+import type { TeamRoster } from '../roster/TeamRoster';
 
 export class RosterPreviewPanel {
   readonly root = document.createElement('section');
@@ -42,15 +44,38 @@ export class RosterPreviewPanel {
 
     this.body.replaceChildren(
       this.createRosterTable('User Offense', userRows),
+      this.createRosterTable('User Specialists', createRosterRows(binding.userRoster, 'User', [
+        binding.userRoster.kickerId,
+        binding.userRoster.punterId,
+        binding.userRoster.longSnapperId,
+      ]), true),
+      this.createRosterTable('User Reserves', createRosterRows(binding.userRoster, 'User', binding.userRoster.reserveIds), true),
       this.createRosterTable('Opponent Defense', opponentRows),
+      this.createRosterTable('Opponent Specialists', createRosterRows(binding.opponentRoster, 'Opponent', [
+        binding.opponentRoster.kickerId,
+        binding.opponentRoster.punterId,
+        binding.opponentRoster.longSnapperId,
+      ]), true),
+      this.createRosterTable(
+        'Opponent Reserves',
+        createRosterRows(binding.opponentRoster, 'Opponent', binding.opponentRoster.reserveIds),
+        true,
+      ),
     );
   }
 
-  private createRosterTable(titleText: string, rows: ReturnType<typeof createRosterPreviewRows>): HTMLElement {
-    const section = document.createElement('section');
+  private createRosterTable(
+    titleText: string,
+    rows: ReturnType<typeof createRosterPreviewRows>,
+    collapsible = false,
+  ): HTMLElement {
+    const section = collapsible ? document.createElement('details') : document.createElement('section');
     section.className = 'roster-preview-table';
+    if (collapsible && section instanceof HTMLDetailsElement) {
+      section.open = false;
+    }
 
-    const title = document.createElement('h4');
+    const title = document.createElement(collapsible ? 'summary' : 'h4');
     title.textContent = titleText;
 
     const list = document.createElement('div');
@@ -79,4 +104,22 @@ export class RosterPreviewPanel {
     section.append(title, list);
     return section;
   }
+}
+
+function createRosterRows(
+  roster: TeamRoster,
+  teamLabel: 'Opponent' | 'User',
+  playerIds: readonly string[],
+): ReturnType<typeof createRosterPreviewRows> {
+  return playerIds
+    .map((id) => roster.players.find((player) => player.id === id) ?? null)
+    .filter((player): player is RosterPlayer => Boolean(player))
+    .map((player) => ({
+      footballPosition: player.footballPosition,
+      gameplayPlayerId: player.id,
+      jerseyNumber: player.jerseyNumber,
+      name: player.displayName,
+      rosterPlayerId: player.id,
+      teamLabel,
+    }));
 }

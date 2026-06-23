@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { CROWD_PREVIEW_CONFIG } from './CrowdConfiguration';
 import { createCrowdPlacements } from './CrowdLayout';
 import {
+  resolveCrowdAttendanceProfile,
+  type CrowdDensity,
+} from './CrowdReactionModel';
+import {
   countCrowdDrawCalls,
   countCrowdTriangles,
   estimateInstanceBufferBytes,
@@ -12,14 +16,23 @@ import type { CrowdPreviewPlacement, CrowdResources } from './CrowdTypes';
 export interface CrowdColorOptions {
   accentColors?: readonly number[];
   crowdFullness?: CrowdResources['snapshotBase']['crowdFullness'];
+  density?: CrowdDensity;
   nearCount?: number;
+  reactingSpectatorLimit?: number;
 }
 
 export function createCrowdResources(
   requestedCount: number,
   options: CrowdColorOptions = {},
 ): CrowdResources {
-  const placements = createCrowdPlacements(requestedCount, { nearCount: options.nearCount });
+  const attendanceProfile = resolveCrowdAttendanceProfile(
+    options.crowdFullness ?? 'sparse',
+    options.density,
+  );
+  const nearCount = options.nearCount ?? attendanceProfile.activeNearSpectators;
+  const reactingSpectatorLimit =
+    options.reactingSpectatorLimit ?? attendanceProfile.reactingSpectatorLimit;
+  const placements = createCrowdPlacements(requestedCount, { nearCount });
   const nearPlacements = placements.filter((placement) => placement.lod === 'near');
   const farPlacements = placements.filter((placement) => placement.lod === 'far');
   const group = new THREE.Group();
@@ -75,6 +88,7 @@ export function createCrowdResources(
     nearPlacements,
     snapshotBase: {
       actualSpectatorCount: placements.length,
+      activeNearSpectators: nearPlacements.length,
       crowdDrawCalls: countCrowdDrawCalls(group),
       crowdFullness: options.crowdFullness ?? 'sparse',
       crowdTriangles: countCrowdTriangles(group),
@@ -82,10 +96,13 @@ export function createCrowdResources(
       estimatedStaticBufferBytes: estimateStaticCrowdBufferBytes(farPlacements.length),
       farInstanceCount: 0,
       farMosaicSeatCount: farPlacements.length,
+      farSeatOccupancy: farPlacements.length,
       geometryCount: ownedGeometries.length,
       materialCount: ownedMaterials.length,
       nearInstanceCount: nearPlacements.length,
+      reactingSpectatorLimit,
       textureCount: 0,
+      visualAttendance: placements.length,
     },
   };
 }

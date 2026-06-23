@@ -13,6 +13,7 @@ import {
 } from './MatchSetupModel';
 
 export interface MatchSetupScreenOptions {
+  helmetPreview?: MatchSetupHelmetPreviewRenderer;
   initialSettings: GameExperienceSettings;
   onBack: () => void;
   onConfirm: (settings: GameExperienceSettings) => void;
@@ -25,6 +26,7 @@ export class MatchSetupScreen {
   private readonly userCard: TeamSelectionCard;
   private readonly opponentCard: TeamSelectionCard;
   private readonly helmetPreview: MatchSetupHelmetPreviewRenderer;
+  private readonly ownsHelmetPreview: boolean;
   private readonly summary = new MatchupSummary();
   private readonly confirmButton = document.createElement('button');
   private readonly correctionButton = document.createElement('button');
@@ -69,7 +71,8 @@ export class MatchSetupScreen {
     this.root.setAttribute('aria-labelledby', 'match-setup-heading');
     this.root.tabIndex = -1;
     this.root.append(this.createContent());
-    this.helmetPreview = new MatchSetupHelmetPreviewRenderer(this.root);
+    this.helmetPreview = options.helmetPreview ?? new MatchSetupHelmetPreviewRenderer(this.root);
+    this.ownsHelmetPreview = !options.helmetPreview;
     this.helmetPreview.registerPreview(
       'user',
       this.userCard.getHelmetPreviewHost(),
@@ -120,7 +123,9 @@ export class MatchSetupScreen {
   }
 
   dispose(): void {
-    this.helmetPreview.dispose();
+    if (this.ownsHelmetPreview) {
+      this.helmetPreview.dispose();
+    }
     this.root.remove();
   }
 

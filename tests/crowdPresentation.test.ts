@@ -14,21 +14,32 @@ import type { GameplaySnapshot, PlayResult } from '../src/playState';
 describe('crowd presentation controller', () => {
   it('maps normal-game density presets to measured benchmark counts', () => {
     expect(CROWD_DENSITY_PRESETS).toEqual({
-      high: 5000,
-      low: 500,
-      medium: 2000,
+      high: 25000,
+      low: 5000,
+      medium: 15000,
     });
     expect(CROWD_FULLNESS_PROFILES).toMatchObject({
+      adaptive: {
+        activeNearSpectators: 1250,
+        farSeatOccupancy: 23750,
+        reactingSpectatorLimit: 750,
+        visualAttendance: 25000,
+      },
       full: {
-        nearSpectatorCount: 500,
-        visualSeatCount: 5000,
+        activeNearSpectators: 2500,
+        farSeatOccupancy: 22500,
+        reactingSpectatorLimit: 1000,
+        visualAttendance: 25000,
       },
       sparse: {
-        visualSeatCount: 500,
+        activeNearSpectators: 500,
+        farSeatOccupancy: 4500,
+        visualAttendance: 5000,
       },
       standard: {
-        nearSpectatorCount: 500,
-        visualSeatCount: 2000,
+        activeNearSpectators: 1250,
+        farSeatOccupancy: 13750,
+        visualAttendance: 15000,
       },
     });
   });
@@ -67,15 +78,19 @@ describe('crowd presentation controller', () => {
     const controller = createController();
     const snapshot = controller.getSnapshot();
 
-    expect(snapshot.actualSpectatorCount).toBe(5000);
+    expect(snapshot.actualSpectatorCount).toBe(25000);
     expect(snapshot.crowdDrawCalls).toBe(5);
     expect(snapshot.geometryCount).toBe(4);
     expect(snapshot.materialCount).toBe(3);
     expect(snapshot.noPerSpectatorObject3D).toBe(true);
     expect(snapshot.crowdFullness).toBe('full');
-    expect(snapshot.nearInstanceCount).toBe(500);
+    expect(snapshot.visualAttendance).toBe(25000);
+    expect(snapshot.activeNearSpectators).toBe(2500);
+    expect(snapshot.nearInstanceCount).toBe(2500);
     expect(snapshot.farInstanceCount).toBe(0);
-    expect(snapshot.farMosaicSeatCount).toBe(4500);
+    expect(snapshot.farSeatOccupancy).toBe(22500);
+    expect(snapshot.farMosaicSeatCount).toBe(22500);
+    expect(snapshot.reactingSpectatorLimit).toBe(1000);
     expect(snapshot.estimatedStaticBufferBytes).toBeGreaterThan(0);
     expect(countObjects(controller.group)).toBeLessThan(20);
 
@@ -160,7 +175,7 @@ describe('crowd presentation controller', () => {
 function createController(): CrowdPresentationController {
   return new CrowdPresentationController({
     settings: {
-      crowdDensity: 'low',
+      crowdDensity: 'high',
       crowdFullness: 'full',
       crowdReactionsEnabled: true,
       crowdVisualsEnabled: true,

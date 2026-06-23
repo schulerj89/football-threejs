@@ -23,12 +23,12 @@ describe('game settings facade', () => {
       audioEnabled: true,
       cinematics: 'brief',
       coachesEnabled: true,
-      crowdDensity: 'low',
-      crowdFullness: 'full',
+      crowdDensity: 'medium',
+      crowdFullness: 'standard',
       crowdVisualsEnabled: true,
       debugToolsEnabled: false,
       officialsDebugLabels: false,
-      officialsEnabled: true,
+      officialsEnabled: false,
       playerMotionEnabled: true,
       playbookId: '11v11',
       preset: 'broadcast',
@@ -51,7 +51,7 @@ describe('game settings facade', () => {
       musicVolume: 0.4,
       muted: true,
       officialsDebugLabels: true,
-      officialsEnabled: true,
+      officialsEnabled: false,
       stadiumEnabled: false,
       preset: 'custom',
     }, storage);
@@ -67,7 +67,7 @@ describe('game settings facade', () => {
         musicVolume: 0.4,
         muted: true,
         officialsDebugLabels: true,
-        officialsEnabled: true,
+        officialsEnabled: false,
         stadiumEnabled: false,
       },
     });
@@ -78,7 +78,7 @@ describe('game settings facade', () => {
       settings: {
         debugToolsEnabled: true,
         officialsDebugLabels: true,
-        officialsEnabled: true,
+        officialsEnabled: false,
         stadiumEnabled: false,
       },
     });
@@ -107,6 +107,7 @@ describe('game settings facade', () => {
       captionsEnabled: true,
       debugToolsEnabled: false,
       officialsDebugLabels: false,
+      officialsEnabled: false,
       preset: 'custom',
     });
   });
@@ -139,12 +140,12 @@ describe('game settings facade', () => {
     expect(resolved.settings).toMatchObject({
       audioEnabled: false,
       crowdDensity: 'high',
-      crowdFullness: 'full',
+      crowdFullness: 'standard',
       debugToolsEnabled: false,
       gameplayCamera: 'cinematic',
       masterVolume: 0.37,
       officialsDebugLabels: false,
-      officialsEnabled: true,
+      officialsEnabled: false,
       preset: 'custom',
       stadiumEnabled: false,
     });

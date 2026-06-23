@@ -1,23 +1,35 @@
-import type { FootballSpot } from '../fieldScale';
-import { PLAYABLE_FIELD_BOUNDS } from '../fieldSpec';
 import {
   createDriveSummary,
 } from './DriveSummary';
+import {
+  calculatePossessionYardsGained,
+  changePossessionFieldPosition,
+  clonePossessionFieldPosition,
+  createOwnYardLinePosition,
+  type PossessionFieldPosition,
+} from './FieldPositionModel';
+import {
+  simulateAbstractPunt,
+  type SimulatedPuntResult,
+} from './AbstractPuntSimulation';
 import type {
   DriveSummary,
   DriveSummaryResult,
   MatchDifficulty,
+  PossessionTransition,
   ScoringEvent,
 } from './MatchTypes';
+import type { KickerRatings } from '../specialTeams/KickerRatings';
 
 export interface OpponentDriveInput {
   difficulty: MatchDifficulty;
   driveNumber: number;
   opponentOffensiveRating: number;
+  opponentKickerRatings?: KickerRatings;
   quarter: number;
   remainingSeconds: number;
   seed: number;
-  startingFieldPosition: FootballSpot;
+  startingFieldPosition: PossessionFieldPosition;
   userDefensiveRating: number;
 }
 
@@ -26,7 +38,7 @@ export function simulateOpponentDrive(input: OpponentDriveInput): DriveSummary {
     input.seed +
       input.driveNumber * 1009 +
       input.quarter * 917 +
-      Math.round((input.startingFieldPosition.z + 60) * 31),
+      Math.round(input.startingFieldPosition.yardsFromOwnGoalLine * 31),
   );
   const ratingDelta =
     input.opponentOffensiveRating -
@@ -59,36 +71,83 @@ export function simulateOpponentDrive(input: OpponentDriveInput): DriveSummary {
   }
 
   const yards = estimateYards(result, rng, input.startingFieldPosition);
-  const endingFieldPosition = clampSpot({
-    x: input.startingFieldPosition.x,
-    z: input.startingFieldPosition.z + yards,
+  const endingFieldPosition = clampPosition({
+    lateralX: input.startingFieldPosition.lateralX,
+    yardsFromOwnGoalLine: input.startingFieldPosition.yardsFromOwnGoalLine + yards,
   });
-  const scoringEvents = createScoringEvents(result);
+  const punt = result === 'punt'
+    ? simulateAbstractPunt({
+        driveNumber: input.driveNumber,
+        kickOrigin: endingFieldPosition,
+        matchSeed: input.seed,
+        punterRatings: input.opponentKickerRatings,
+      })
+    : null;
+  const driveEndingPosition = punt?.kickOrigin ?? endingFieldPosition;
+  const possessionTransition = createOpponentPossessionTransition(
+    result,
+    driveEndingPosition,
+    punt,
+  );
+  const scoringEvents = createScoringEvents(result, rng, input.difficulty, input.opponentKickerRatings);
 
   return createDriveSummary({
-    description: createOpponentDescription(result, plays, yards),
+    description: createOpponentDescription(result, plays, yards, punt),
     driveNumber: input.driveNumber,
     elapsedSeconds,
-    endingFieldPosition,
+    endingFieldPosition: driveEndingPosition,
     plays,
+    possessionTransition,
     possession: 'opponent',
     quarter: input.quarter,
     result,
     scoringEvents,
     startedAtSeconds: input.remainingSeconds,
-    startingFieldPosition: input.startingFieldPosition,
-    yards,
+    startingFieldPosition: clonePossessionFieldPosition(input.startingFieldPosition),
+    yards: calculatePossessionYardsGained(input.startingFieldPosition, driveEndingPosition),
   });
+}
+
+function createOpponentPossessionTransition(
+  result: DriveSummaryResult,
+  endingFieldPosition: PossessionFieldPosition,
+  punt: SimulatedPuntResult | null,
+): PossessionTransition | null {
+  if (punt) {
+    return {
+      fromTeam: 'opponent',
+      nextOffenseStartingPosition: clonePossessionFieldPosition(punt.receivingStartPosition),
+      previousOffenseEndingPosition: clonePossessionFieldPosition(punt.kickOrigin),
+      reason: punt.result === 'touchback'
+        ? 'puntTouchback'
+        : punt.result === 'downed'
+          ? 'puntDowned'
+          : 'puntReturn',
+      toTeam: 'user',
+    };
+  }
+
+  if (result === 'turnover' || result === 'turnoverOnDowns') {
+    return {
+      fromTeam: 'opponent',
+      nextOffenseStartingPosition: changePossessionFieldPosition(endingFieldPosition),
+      previousOffenseEndingPosition: clonePossessionFieldPosition(endingFieldPosition),
+      reason: result,
+      toTeam: 'user',
+    };
+  }
+
+  return null;
 }
 
 function estimateYards(
   result: DriveSummaryResult,
   rng: () => number,
-  startingFieldPosition: FootballSpot,
+  startingFieldPosition: PossessionFieldPosition,
 ): number {
   switch (result) {
     case 'touchdown':
-      return Math.max(1, Math.round(PLAYABLE_FIELD_BOUNDS.maxZ - startingFieldPosition.z));
+      return Math.max(1, Math.round(100 - startingFieldPosition.yardsFromOwnGoalLine));
     case 'fieldGoal':
       return 28 + Math.round(rng() * 28);
     case 'turnover':
@@ -104,11 +163,17 @@ function estimateYards(
   }
 }
 
-function createScoringEvents(result: DriveSummaryResult): ScoringEvent[] {
+function createScoringEvents(
+  result: DriveSummaryResult,
+  rng: () => number,
+  difficulty: MatchDifficulty,
+  kickerRatings?: KickerRatings,
+): ScoringEvent[] {
   if (result === 'touchdown') {
+    const extraPointGood = simulateOpponentExtraPoint(rng, difficulty, kickerRatings);
     return [
       { points: 6, team: 'opponent', type: 'touchdown' },
-      { points: 1, team: 'opponent', type: 'extraPoint' },
+      ...(extraPointGood ? [{ points: 1, team: 'opponent' as const, type: 'extraPoint' as const }] : []),
     ];
   }
 
@@ -119,7 +184,29 @@ function createScoringEvents(result: DriveSummaryResult): ScoringEvent[] {
   return [];
 }
 
-function createOpponentDescription(result: DriveSummaryResult, plays: number, yards: number): string {
+function simulateOpponentExtraPoint(
+  rng: () => number,
+  difficulty: MatchDifficulty,
+  kickerRatings?: KickerRatings,
+): boolean {
+  const accuracy = clamp((kickerRatings?.kickAccuracy ?? 76) / 99, 0, 1);
+  const power = clamp((kickerRatings?.kickPower ?? 78) / 99, 0, 1);
+  const difficultyModifier = difficulty === 'allPro'
+    ? -0.025
+    : difficulty === 'rookie'
+      ? 0.025
+      : 0;
+  const successChance = clamp(0.88 + accuracy * 0.08 + power * 0.025 + difficultyModifier, 0.82, 0.985);
+
+  return rng() <= successChance;
+}
+
+function createOpponentDescription(
+  result: DriveSummaryResult,
+  plays: number,
+  yards: number,
+  punt: SimulatedPuntResult | null,
+): string {
   switch (result) {
     case 'touchdown':
       return `The opponent strings together ${plays} plays and finishes the drive in the end zone.`;
@@ -134,6 +221,13 @@ function createOpponentDescription(result: DriveSummaryResult, plays: number, ya
     case 'endOfGame':
       return `The final possession drains the remaining clock.`;
     case 'punt':
+      if (punt?.result === 'touchback') {
+        return `The defense forces a punt after ${plays} plays, and the kick carries into the end zone.`;
+      }
+      if (punt?.result === 'return') {
+        return `The defense forces a punt after ${plays} plays, and the return sets up the offense.`;
+      }
+      return `The defense forces a punt after ${plays} plays, and the coverage team downs it.`;
     default:
       return `The defense forces a punt after ${plays} plays.`;
   }
@@ -151,11 +245,8 @@ function difficultyRatingModifier(difficulty: MatchDifficulty): number {
   return 0;
 }
 
-function clampSpot(spot: FootballSpot): FootballSpot {
-  return {
-    x: Math.max(PLAYABLE_FIELD_BOUNDS.minX, Math.min(PLAYABLE_FIELD_BOUNDS.maxX, spot.x)),
-    z: Math.max(PLAYABLE_FIELD_BOUNDS.minZ, Math.min(PLAYABLE_FIELD_BOUNDS.maxZ, spot.z)),
-  };
+function clampPosition(position: PossessionFieldPosition): PossessionFieldPosition {
+  return createOwnYardLinePosition(position.yardsFromOwnGoalLine, position.lateralX);
 }
 
 function createSeededRng(seed: number): () => number {

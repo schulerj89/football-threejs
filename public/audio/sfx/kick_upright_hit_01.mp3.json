@@ -1,0 +1,17 @@
+{
+  "assetId": "kick_upright_hit_01",
+  "category": "sfx",
+  "compressedBytes": 18434,
+  "contentHash": "845b652cfd1f9c7e59a0cfd2706cce421651793b0822e6d293fb286c932d6226",
+  "durationSeconds": 1.08,
+  "generatedAt": "2026-06-22T14:13:42.289Z",
+  "kind": "oneShot",
+  "metadata": {
+    "semanticCategory": "placeKick"
+  },
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_44100_128",
+  "prompt": "Football striking a metal goalpost upright with brief metallic resonance. Short impact, metal ring, natural quick decay, isolated from crowd. No speech, no music.",
+  "requestedDurationSeconds": 1.1,
+  "runtimeLoadingStrategy": "buffer"
+}

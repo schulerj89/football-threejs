@@ -2,9 +2,9 @@ import type {
   PresentationAudioEvent,
   PresentationAudioEventType,
 } from '../audio/PresentationEventBridge';
-import { CROWD_BENCHMARK_COUNTS } from './CrowdConfiguration';
 import { stableHash } from './CrowdLayout';
 import type {
+  CrowdAttendanceProfile,
   CrowdFullness,
   CrowdFullnessProfile,
   CrowdPreviewPlacement,
@@ -49,26 +49,47 @@ export interface ActiveCrowdReaction {
 }
 
 export const CROWD_DENSITY_PRESETS: Record<CrowdDensity, number> = {
-  high: CROWD_BENCHMARK_COUNTS[2],
-  low: CROWD_BENCHMARK_COUNTS[0],
-  medium: CROWD_BENCHMARK_COUNTS[1],
+  high: 25_000,
+  low: 5_000,
+  medium: 15_000,
 } as const;
 
 export const CROWD_FULLNESS_PROFILES: Readonly<Record<CrowdFullness, CrowdFullnessProfile>> = {
+  adaptive: {
+    activeNearSpectators: 1_250,
+    crowdFullness: 'adaptive',
+    farSeatOccupancy: 23_750,
+    nearSpectatorCount: 1_250,
+    reactingSpectatorLimit: 750,
+    visualAttendance: 25_000,
+    visualSeatCount: 25_000,
+  },
   full: {
+    activeNearSpectators: 2_500,
     crowdFullness: 'full',
-    nearSpectatorCount: CROWD_BENCHMARK_COUNTS[0],
-    visualSeatCount: CROWD_BENCHMARK_COUNTS[2],
+    farSeatOccupancy: 22_500,
+    nearSpectatorCount: 2_500,
+    reactingSpectatorLimit: 1_000,
+    visualAttendance: 25_000,
+    visualSeatCount: 25_000,
   },
   sparse: {
+    activeNearSpectators: 500,
     crowdFullness: 'sparse',
-    nearSpectatorCount: Math.floor(CROWD_BENCHMARK_COUNTS[0] * 0.58),
-    visualSeatCount: CROWD_BENCHMARK_COUNTS[0],
+    farSeatOccupancy: 4_500,
+    nearSpectatorCount: 500,
+    reactingSpectatorLimit: 350,
+    visualAttendance: 5_000,
+    visualSeatCount: 5_000,
   },
   standard: {
+    activeNearSpectators: 1_250,
     crowdFullness: 'standard',
-    nearSpectatorCount: CROWD_BENCHMARK_COUNTS[0],
-    visualSeatCount: CROWD_BENCHMARK_COUNTS[1],
+    farSeatOccupancy: 13_750,
+    nearSpectatorCount: 1_250,
+    reactingSpectatorLimit: 750,
+    visualAttendance: 15_000,
+    visualSeatCount: 15_000,
   },
 } as const;
 
@@ -79,14 +100,15 @@ export const CROWD_DENSITY_TO_FULLNESS: Readonly<Record<CrowdDensity, CrowdFulln
 } as const;
 
 export const CROWD_FULLNESS_TO_DENSITY: Readonly<Record<CrowdFullness, CrowdDensity>> = {
+  adaptive: 'medium',
   full: 'high',
   sparse: 'low',
   standard: 'medium',
 } as const;
 
 export const DEFAULT_CROWD_PRESENTATION_SETTINGS: CrowdPresentationSettings = {
-  crowdDensity: 'low',
-  crowdFullness: 'full',
+  crowdDensity: 'medium',
+  crowdFullness: 'standard',
   crowdReactionsEnabled: true,
   crowdVisualsEnabled: false,
 };
@@ -279,6 +301,50 @@ export function resolveCrowdFullnessProfile(
   return CROWD_FULLNESS_PROFILES[fullness];
 }
 
+export function resolveCrowdAttendanceProfile(
+  fullness: CrowdFullness,
+  density?: CrowdDensity,
+): CrowdAttendanceProfile {
+  const profile = resolveCrowdFullnessProfile(fullness);
+  const activeNearSpectators = Math.min(
+    profile.activeNearSpectators,
+    density ? resolveActiveNearLimitForDensity(density) : profile.activeNearSpectators,
+  );
+  const visualAttendance = profile.visualAttendance;
+
+  return {
+    ...profile,
+    activeNearSpectators,
+    farSeatOccupancy: Math.max(0, visualAttendance - activeNearSpectators),
+    nearSpectatorCount: activeNearSpectators,
+    visualSeatCount: visualAttendance,
+  };
+}
+
+export function resolveCrowdFullnessForVisualAttendance(count: number): CrowdFullness {
+  if (count >= CROWD_FULLNESS_PROFILES.full.visualAttendance) {
+    return 'full';
+  }
+
+  if (count >= CROWD_FULLNESS_PROFILES.standard.visualAttendance) {
+    return 'standard';
+  }
+
+  return 'sparse';
+}
+
+export function resolveActiveNearLimitForDensity(density: CrowdDensity): number {
+  if (density === 'high') {
+    return 2_500;
+  }
+
+  if (density === 'medium') {
+    return 1_250;
+  }
+
+  return 500;
+}
+
 export function calculateCrowdPose(options: {
   activeReaction: ActiveCrowdReaction | null;
   index: number;
@@ -439,7 +505,7 @@ function isCrowdDensity(value: unknown): value is CrowdDensity {
 }
 
 export function isCrowdFullness(value: unknown): value is CrowdFullness {
-  return value === 'sparse' || value === 'standard' || value === 'full';
+  return value === 'adaptive' || value === 'sparse' || value === 'standard' || value === 'full';
 }
 
 function hashToUnit(value: string): number {

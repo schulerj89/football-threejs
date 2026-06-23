@@ -36,11 +36,15 @@ import {
   resolveQuarterbackSpotlightSubject,
 } from '../src/presentation/pregame/SpotlightSubjectResolver';
 import {
+  resolveKeysToGame,
+} from '../src/presentation/pregame/KeysToGameResolver';
+import {
   createQuarterbackScoutingProfile,
 } from '../src/roster/QuarterbackScoutingProfile';
 import type {
   PregameCommentaryLineId,
   PregamePresentationContext,
+  PregameShotId,
 } from '../src/presentation/pregame/PregamePresentationTypes';
 
 describe('pregame presentation sequence', () => {
@@ -75,7 +79,7 @@ describe('pregame presentation sequence', () => {
     }
 
     expect(director.getSnapshot()).toMatchObject({
-      currentShot: 'stadiumEstablish',
+      currentShot: 'stadiumCenterOrbit',
       phase: 'running',
     });
     expect(audio.startedLines).toEqual(['welcome']);
@@ -83,7 +87,11 @@ describe('pregame presentation sequence', () => {
     audio.completedLineIds.add('welcome');
     director.update(0, context);
 
-    expect(director.getSnapshot().currentShot).toBe('matchupWide');
+    expect(director.getSnapshot()).toMatchObject({
+      currentShot: 'stadiumCenterOrbit',
+      introOverlay: 'matchup',
+    });
+    expect(audio.startedLines).toEqual(['welcome', 'matchup']);
   });
 
   it('clears commentary and marks the sequence skipped', () => {
@@ -115,24 +123,34 @@ describe('pregame presentation sequence', () => {
     expect(shot.position.y).toBeGreaterThan(4);
   });
 
-  it('includes the quarterback spotlight in brief and full sequences but not off', () => {
+  it('uses the calmer center-orbit sequence in brief and full modes but not off', () => {
     expect(createPregameSequence('brief').map((step) => step.shotId)).toEqual([
-      'stadiumEstablish',
-      'matchupWide',
-      'weatherAndField',
-      'quarterbackSpotlight',
-      'transitionToGameplay',
+      'stadiumCenterOrbit',
+      'quarterbackFrontSpotlight',
+      'transitionToCoinToss',
     ]);
     expect(createPregameSequence('full').map((step) => step.shotId)).toEqual([
-      'stadiumEstablish',
-      'matchupWide',
-      'userWarmupPan',
-      'opponentWarmupPan',
-      'weatherAndField',
-      'quarterbackSpotlight',
-      'transitionToGameplay',
+      'stadiumCenterOrbit360',
+      'quarterbackFrontSpotlight',
+      'transitionToCoinToss',
     ]);
-    expect(createPregameSequence('off').some((step) => step.shotId === 'quarterbackSpotlight')).toBe(false);
+    expect(createPregameSequence('off').some((step) => step.shotId === 'quarterbackFrontSpotlight')).toBe(false);
+  });
+
+  it('keeps the center orbit looking at field center with a stable elevated radius', () => {
+    const context = createContext();
+    const step = createPregameSequence('full')[0];
+    const early = createPregameCameraShot(step, context, 0.1);
+    const late = createPregameCameraShot(step, context, 0.85);
+    const earlyRadius = Math.hypot(early.position.x, early.position.z);
+    const lateRadius = Math.hypot(late.position.x, late.position.z);
+
+    expect(early.lookTarget.x).toBeCloseTo(0, 6);
+    expect(early.lookTarget.z).toBeCloseTo(0, 6);
+    expect(late.lookTarget.x).toBeCloseTo(0, 6);
+    expect(late.lookTarget.z).toBeCloseTo(0, 6);
+    expect(early.position.y).toBeCloseTo(late.position.y, 6);
+    expect(earlyRadius).toBeCloseTo(lateRadius, 6);
   });
 
   it('resolves the user-team starting quarterback through the active lineup', () => {
@@ -159,19 +177,11 @@ describe('pregame presentation sequence', () => {
     const context = createContext();
 
     director.start(context);
-    advancePregameFrames(director, context, 30);
-    audio.completedLineIds.add('welcome');
-    director.update(0, context);
-    advancePregameFrames(director, context, 43);
-    audio.completedLineIds.add('matchup');
-    director.update(0, context);
-    advancePregameFrames(director, context, 36);
-    audio.completedLineIds.add('weather');
-    director.update(0, context);
+    advanceToQuarterbackFrontSpotlight(director, audio, context);
     director.update(0.1, context);
 
     expect(director.getSnapshot()).toMatchObject({
-      currentShot: 'quarterbackSpotlight',
+      currentShot: 'quarterbackFrontSpotlight',
       spotlight: {
         cloneStatus: 'usingWarmupClone',
         gameplayPlayerId: 'offense-qb',
@@ -188,6 +198,43 @@ describe('pregame presentation sequence', () => {
     });
   });
 
+  it('does not start the quarterback spotlight before the helmeted subject is ready', () => {
+    const audio = createFakePregameAudioCoordinator();
+    const lowerThird = createFakeLowerThird();
+    const director = new PregamePresentationDirector({
+      audioCoordinator: audio as unknown as PregameAudioCoordinator,
+      lowerThird: lowerThird as unknown as PregameLowerThird,
+      settings: { cinematics: 'brief' },
+    });
+    const context = createContextWithQuarterbackReadiness({
+      fallbackReason: 'helmetLoading',
+      helmetReady: false,
+      subjectReady: false,
+      subjectVisible: false,
+    });
+
+    director.start(context);
+    advanceToQuarterbackFrontSpotlight(director, audio, context);
+    const result = director.update(0.1, context);
+
+    expect(result.shot).toBeNull();
+    expect(audio.startedLines).not.toContain('quarterback');
+    expect(lowerThird.getSnapshot().displayName).not.toBe('J. CARTER');
+    expect(director.getSnapshot()).toMatchObject({
+      currentShot: 'quarterbackFrontSpotlight',
+      quarterbackAppearance: {
+        fallbackReason: 'helmetLoading',
+        helmetReady: false,
+        subjectReady: false,
+      },
+      subjectReady: false,
+    });
+
+    advancePregameFrames(director, context, 25);
+    expect(director.getSnapshot().currentShot).toBe('transitionToCoinToss');
+    expect(audio.startedLines).not.toContain('quarterback');
+  });
+
   it('does not replay the quarterback spotlight later in the same match', () => {
     const audio = createFakePregameAudioCoordinator();
     const director = new PregamePresentationDirector({
@@ -198,25 +245,15 @@ describe('pregame presentation sequence', () => {
     const context = createContext();
 
     director.start(context);
-    advancePregameFrames(director, context, 30);
-    audio.completedLineIds.add('welcome');
-    director.update(0, context);
-    advancePregameFrames(director, context, 43);
-    audio.completedLineIds.add('matchup');
-    director.update(0, context);
-    advancePregameFrames(director, context, 36);
-    audio.completedLineIds.add('weather');
-    director.update(0, context);
+    advanceToQuarterbackFrontSpotlight(director, audio, context);
     director.update(0.1, context);
-    expect(director.getSnapshot().currentShot).toBe('quarterbackSpotlight');
+    expect(director.getSnapshot().currentShot).toBe('quarterbackFrontSpotlight');
 
     director.start(context);
 
     expect(director.getSnapshot().sequence).toEqual([
-      'stadiumEstablish',
-      'matchupWide',
-      'weatherAndField',
-      'transitionToGameplay',
+      'stadiumCenterOrbit',
+      'transitionToCoinToss',
     ]);
   });
 
@@ -230,22 +267,14 @@ describe('pregame presentation sequence', () => {
     const context = createContext();
 
     director.start(context);
-    advancePregameFrames(director, context, 30);
-    audio.completedLineIds.add('welcome');
-    director.update(0, context);
-    advancePregameFrames(director, context, 43);
-    audio.completedLineIds.add('matchup');
-    director.update(0, context);
-    advancePregameFrames(director, context, 36);
-    audio.completedLineIds.add('weather');
-    director.update(0, context);
+    advanceToQuarterbackFrontSpotlight(director, audio, context);
     director.update(0.1, context);
-    expect(director.getSnapshot().currentShot).toBe('quarterbackSpotlight');
+    expect(director.getSnapshot().currentShot).toBe('quarterbackFrontSpotlight');
 
     director.resetPresentationIdentity();
     director.start(context);
 
-    expect(director.getSnapshot().sequence).toContain('quarterbackSpotlight');
+    expect(director.getSnapshot().sequence).toContain('quarterbackFrontSpotlight');
   });
 
   it('falls back safely when quarterback roster data is unavailable', () => {
@@ -269,7 +298,7 @@ describe('pregame presentation sequence', () => {
     expect(subject.fallbackReason).toBe('missingLineup');
   });
 
-  it('keeps matchup commentary on one continuous wide shot', () => {
+  it('keeps matchup and weather commentary on one continuous center orbit', () => {
     const audio = createFakePregameAudioCoordinator();
     const director = new PregamePresentationDirector({
       audioCoordinator: audio as unknown as PregameAudioCoordinator,
@@ -279,24 +308,31 @@ describe('pregame presentation sequence', () => {
     const context = createContext();
 
     director.start(context);
-    advancePregameFrames(director, context, 30);
+    director.update(0.1, context);
     audio.completedLineIds.add('welcome');
     director.update(0, context);
 
     expect(director.getSnapshot()).toMatchObject({
-      activeSubject: 'matchupWide',
+      activeSubject: 'stadiumCenterOrbit360',
       activeTeam: null,
-      currentShot: 'matchupWide',
-      nextShot: 'userWarmupPan',
+      currentShot: 'stadiumCenterOrbit360',
+      introOverlay: 'matchup',
+      nextShot: 'quarterbackFrontSpotlight',
       subjectReady: true,
     });
+    expect(audio.startedLines).toEqual(['welcome', 'matchup']);
 
-    advancePregameFrames(director, context, 60);
+    audio.completedLineIds.add('matchup');
+    director.update(0, context);
 
-    expect(director.getSnapshot().currentShot).toBe('matchupWide');
+    expect(director.getSnapshot()).toMatchObject({
+      currentShot: 'stadiumCenterOrbit360',
+      introOverlay: 'keys',
+    });
+    expect(audio.startedLines).toEqual(['welcome', 'matchup', 'weather']);
   });
 
-  it('uses a stable field shot instead of an empty team pan when team zones are unavailable', () => {
+  it('keeps the center-field orbit stable when team zones are unavailable', () => {
     const audio = createFakePregameAudioCoordinator();
     const director = new PregamePresentationDirector({
       audioCoordinator: audio as unknown as PregameAudioCoordinator,
@@ -313,14 +349,28 @@ describe('pregame presentation sequence', () => {
     };
 
     director.start(context);
-    advancePregameFrames(director, context, 30);
-    audio.completedLineIds.add('welcome');
-    director.update(0, context);
+    director.update(0.1, context);
 
     const snapshot = director.getSnapshot();
-    expect(snapshot.currentShot).toBe('matchupWide');
+    expect(snapshot.currentShot).toBe('stadiumCenterOrbit');
     expect(snapshot.subjectBounds?.source).toBe('field');
-    expect(snapshot.subjectReady).toBe(false);
+    expect(snapshot.subjectReady).toBe(true);
+  });
+
+  it('derives exactly three keys to the game from roster and rating data', () => {
+    const context = createContext();
+    const keys = resolveKeysToGame({
+      rosterBinding: context.rosterBinding,
+      teamTheme: context.teamTheme,
+    });
+
+    expect(keys).toHaveLength(3);
+    expect(keys.map((key) => key.source)).toEqual([
+      'userStrength',
+      'opponentThreat',
+      'matchupPriority',
+    ]);
+    expect(keys.every((key) => key.text.length > 0 && !/\d/.test(key.text))).toBe(true);
   });
 });
 
@@ -607,9 +657,24 @@ function createWarmupSnapshot(
     playerCount: layout.placements.length,
     propCount: layout.props.length,
     quarterback: quarterback
-      ? {
+        ? {
+          appearance: {
+            bodyReady: true,
+            faceguardMaterialName: 'football-helmet-kit-offense-faceguard',
+            fallbackReason: null,
+            headBounds: null,
+            helmetAssetId: 'football-helmet-kit',
+            helmetBounds: null,
+            helmetReady: true,
+            playerAssetStatus: 'idle',
+            rosterPlayerId: profile.rosterPlayerId,
+            shellMaterialName: 'football-helmet-kit-offense-shell',
+            subjectReady: true,
+            subjectVisible: true,
+          },
           archetype: profile.archetype,
           bounds: warmupPlacementToBounds(quarterback),
+          facingRadians: quarterback.facingRadians,
           formattedName: profile.formattedName,
           jerseyNumber: profile.jerseyNumber,
           ratings: profile.ratings,
@@ -624,6 +689,30 @@ function createWarmupSnapshot(
     updateFrequencyHz: 10,
     userReady: Boolean(layout.userQuarterback),
     zones: layout.zones,
+  };
+}
+
+function createContextWithQuarterbackReadiness(
+  readiness: Partial<NonNullable<PregameWarmupSnapshot['quarterback']>['appearance']>,
+): PregamePresentationContext {
+  const context = createContext();
+  const quarterback = context.warmupSnapshot.quarterback;
+  if (!quarterback) {
+    return context;
+  }
+
+  return {
+    ...context,
+    warmupSnapshot: {
+      ...context.warmupSnapshot,
+      quarterback: {
+        ...quarterback,
+        appearance: {
+          ...quarterback.appearance,
+          ...readiness,
+        },
+      },
+    },
   };
 }
 
@@ -684,6 +773,36 @@ function advancePregameFrames(
   for (let frame = 0; frame < frames; frame += 1) {
     director.update(0.1, context);
   }
+}
+
+function advanceToQuarterbackFrontSpotlight(
+  director: PregamePresentationDirector,
+  audio: ReturnType<typeof createFakePregameAudioCoordinator>,
+  context: PregamePresentationContext,
+): void {
+  director.update(0.1, context);
+  audio.completedLineIds.add('welcome');
+  director.update(0, context);
+  audio.completedLineIds.add('matchup');
+  director.update(0, context);
+  audio.completedLineIds.add('weather');
+  director.update(0, context);
+  advanceUntilCurrentShot(director, context, 'quarterbackFrontSpotlight');
+}
+
+function advanceUntilCurrentShot(
+  director: PregamePresentationDirector,
+  context: PregamePresentationContext,
+  shotId: PregameShotId,
+): void {
+  for (let frame = 0; frame < 220; frame += 1) {
+    if (director.getSnapshot().currentShot === shotId) {
+      return;
+    }
+    director.update(0.1, context);
+  }
+
+  throw new Error(`Pregame shot ${shotId} was not reached`);
 }
 
 function createFakeLowerThird() {
@@ -842,7 +961,9 @@ class FakePregameMixer implements PregameAudioPort {
       crowdDuckingGain: 1,
       decodedAssetIds: [],
       decodedBufferBytes: 0,
+      decodedBufferBudgetBytes: 8 * 1024 * 1024,
       enabled: true,
+      lastEvictedAudioAssetId: null,
       lastUnlockError: null,
       loadedAssetIds: [],
       loadedCompressedBytes: 0,

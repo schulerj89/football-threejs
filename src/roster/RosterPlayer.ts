@@ -1,4 +1,9 @@
 import type { KickerRatings } from '../specialTeams/KickerRatings';
+import {
+  createDeterministicPlayerRatings,
+  type PlayerRatings,
+} from '../ratings/PlayerRatings';
+import { validatePlayerRatings } from '../ratings/RatingValidation';
 
 export type FootballPosition =
   | 'C'
@@ -8,6 +13,7 @@ export type FootballPosition =
   | 'ILB'
   | 'K'
   | 'LG'
+  | 'LS'
   | 'LT'
   | 'OLB'
   | 'P'
@@ -41,6 +47,7 @@ export interface RosterPlayer {
   jerseyNumber: number;
   kickerRatings?: KickerRatings;
   lastName: string;
+  ratings: PlayerRatings;
   teamId: string;
 }
 
@@ -59,16 +66,25 @@ export function createRosterPlayer(
   archetype: PlayerArchetype,
   kickerRatings?: KickerRatings,
 ): RosterPlayer {
+  const playerId = `${teamId}-${position.toLowerCase()}-${jerseyNumber}`;
+
   return {
     appearanceId: `${teamId}-${position.toLowerCase()}-${jerseyNumber}`,
     archetype,
     displayName: `${firstName} ${lastName}`,
     firstName,
     footballPosition: position,
-    id: `${teamId}-${position.toLowerCase()}-${jerseyNumber}`,
+    id: playerId,
     jerseyNumber,
     ...(kickerRatings ? { kickerRatings: { ...kickerRatings } } : {}),
     lastName,
+    ratings: createDeterministicPlayerRatings({
+      archetype,
+      kickerRatings,
+      playerId,
+      position,
+      teamId,
+    }),
     teamId,
   };
 }
@@ -105,6 +121,11 @@ export function validateRosterPlayer(player: RosterPlayer): RosterValidationIssu
     });
   }
 
+  issues.push(...validatePlayerRatings(player).map((issue) => ({
+    ...issue,
+    playerIds: [...issue.playerIds],
+  })));
+
   return issues;
 }
 
@@ -121,6 +142,8 @@ export function numberMatchesPositionConvention(
     case 'K':
     case 'P':
       return jerseyNumber <= 19;
+    case 'LS':
+      return jerseyNumber >= 40 && jerseyNumber <= 79;
     case 'RB':
     case 'WR':
     case 'TE':
