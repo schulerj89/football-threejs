@@ -23,8 +23,20 @@ describe('stadium geometry builder', () => {
     expect(build.metrics.triangles).toBeGreaterThan(1000);
     expect(build.metrics.materialCount).toBeLessThanOrEqual(7);
     expect(build.metrics.geometryCount).toBeLessThanOrEqual(12);
+    expect(build.group.getObjectByName('stadium-inner-apron-floor')).toBeInstanceOf(THREE.Mesh);
+    expect(build.group.getObjectByName('stadium-inner-bowl-wall')).toBeInstanceOf(THREE.Mesh);
 
     disposeBuild(build, materials);
+  });
+
+  it('uses double-sided stadium shell materials so the sky cannot show through back-facing bowl surfaces', () => {
+    const materials = createStadiumMaterialLibrary({ imageMaterialsEnabled: false });
+
+    for (const material of materials.allMaterials) {
+      expect(material.side).toBe(THREE.DoubleSide);
+    }
+
+    materials.dispose();
   });
 
   it('keeps stadium vertices outside the protected field and apron bounds', () => {

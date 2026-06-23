@@ -44,6 +44,22 @@ export function buildStadiumGeometry({
   geometries.push(lowerSeating);
   group.add(createMesh('stadium-lower-seating', lowerSeating, materials.seating));
 
+  const innerBowlWall = createVerticalPathRibbonGeometry(
+    spec,
+    spec.tiers[0].baseOffset + 0.18,
+    0,
+    spec.tiers[0].baseElevation + spec.rowRise * 3.1,
+    false,
+  );
+  innerBowlWall.name = 'stadium-inner-bowl-wall-geometry';
+  geometries.push(innerBowlWall);
+  group.add(createMesh('stadium-inner-bowl-wall', innerBowlWall, materials.concrete));
+
+  const innerApronFloor = createInnerApronFloorGeometry(spec);
+  innerApronFloor.name = 'stadium-inner-apron-floor-geometry';
+  geometries.push(innerApronFloor);
+  group.add(createMesh('stadium-inner-apron-floor', innerApronFloor, materials.concrete));
+
   if (upperTierEnabled) {
     const upperRows = createStadiumRows(spec, true).filter((row) => row.tier > 0);
     const upperSeating = createSeatingBowlGeometry(spec, upperRows);
@@ -132,6 +148,42 @@ export function createStadiumGeometryMetrics(
     textureCount: 0,
     triangles,
   };
+}
+
+function createInnerApronFloorGeometry(spec: StadiumSpec): THREE.BufferGeometry {
+  const halfWidth = spec.innerBowlWidth / 2;
+  const halfDepth = spec.innerBowlDepth / 2;
+  const bounds = spec.protectedFieldBounds;
+  const padding = 0.08;
+  const y = -0.012;
+  const builder = new GeometryBuilder();
+
+  builder.addQuad(
+    { x: bounds.maxX + padding, y, z: -halfDepth },
+    { x: halfWidth, y, z: -halfDepth },
+    { x: halfWidth, y, z: halfDepth },
+    { x: bounds.maxX + padding, y, z: halfDepth },
+  );
+  builder.addQuad(
+    { x: -halfWidth, y, z: -halfDepth },
+    { x: bounds.minX - padding, y, z: -halfDepth },
+    { x: bounds.minX - padding, y, z: halfDepth },
+    { x: -halfWidth, y, z: halfDepth },
+  );
+  builder.addQuad(
+    { x: bounds.minX - padding, y, z: bounds.maxZ + padding },
+    { x: bounds.maxX + padding, y, z: bounds.maxZ + padding },
+    { x: bounds.maxX + padding, y, z: halfDepth },
+    { x: bounds.minX - padding, y, z: halfDepth },
+  );
+  builder.addQuad(
+    { x: bounds.minX - padding, y, z: -halfDepth },
+    { x: bounds.maxX + padding, y, z: -halfDepth },
+    { x: bounds.maxX + padding, y, z: bounds.minZ - padding },
+    { x: bounds.minX - padding, y, z: bounds.minZ - padding },
+  );
+
+  return builder.toGeometry();
 }
 
 function createSeatingBowlGeometry(

@@ -31,9 +31,9 @@ export function createStadiumMaterialLibrary({
   anisotropy = 1,
   imageMaterialsEnabled,
 }: StadiumMaterialLibraryOptions): StadiumMaterialLibrary {
-  const concrete = new THREE.MeshLambertMaterial({ color: 0x596069 });
-  const seating = new THREE.MeshLambertMaterial({ color: 0x2a3338 });
-  const exteriorWall = new THREE.MeshLambertMaterial({ color: 0x3b4247 });
+  const concrete = new THREE.MeshLambertMaterial({ color: 0x596069, side: THREE.DoubleSide });
+  const seating = new THREE.MeshLambertMaterial({ color: 0x2a3338, side: THREE.DoubleSide });
+  const exteriorWall = new THREE.MeshLambertMaterial({ color: 0x3b4247, side: THREE.DoubleSide });
   const concourseWall = createTexturedMaterial({
     anisotropy,
     color: 0x48525a,
@@ -112,7 +112,7 @@ function createTexturedMaterial({
   repeat: { x: number; y: number };
   role: StadiumTextureRole;
 }): THREE.MeshLambertMaterial {
-  const material = new THREE.MeshLambertMaterial({ color });
+  const material = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });
   material.name = `stadium-${role}`;
 
   if (!enabled) {

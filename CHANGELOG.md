@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.10] - 2026-06-23
+
+### Changed
+
+- Made stadium shell materials double-sided and added a low-cost inner apron floor/backing wall so the clear blue sky no longer shows through the lower bowl from field-facing cameras.
+
+### Tests
+
+- Verified `npx vitest run tests/stadium/stadiumGeometry.test.ts tests/weather/weatherPresentation.test.ts` and `npm run build`.
+
 ## [1.21.9] - 2026-06-23
 
 ### Changed
