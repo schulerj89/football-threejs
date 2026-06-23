@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.11] - 2026-06-23
+
+### Changed
+
+- Staged kickoff-return blockers in deterministic lanes outside the returner catch bubble so receiving blockers no longer converge on the exact catch point before the ball is fielded.
+
+### Tests
+
+- Verified `npx vitest run tests/specialTeams/kickoff.test.ts tests/specialTeams/placeKick.test.ts` and `npm run build`.
+
 ## [1.21.10] - 2026-06-23
 
 ### Changed

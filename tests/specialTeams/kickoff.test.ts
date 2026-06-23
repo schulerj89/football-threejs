@@ -412,6 +412,36 @@ describe('kickoff match flow', () => {
     expect(escortingBlockers.length).toBeGreaterThanOrEqual(8);
   });
 
+  it('stages receiving blockers outside the returner catch bubble before the fielded catch', () => {
+    const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
+    const kickoff = createKickoffStateForTeam('opponent', 154, { kickPower: 20 });
+    const layout = createKickoffFormation(kickoff, binding);
+    const state = createKickoffReturnState({ kickoff, layout, matchSeed: 154 });
+
+    startKickoffRunUp(state);
+    for (
+      let frame = 0;
+      frame < 600 && state.phase !== 'fielding' && state.phase !== 'dead';
+      frame += 1
+    ) {
+      updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+    }
+
+    const carrier = state.participants.find((participant) =>
+      participant.visualId === state.carrierVisualId);
+    const receivingBlockers = state.participants.filter((participant) =>
+      participant.phase === 'receiving' && participant.visualId !== state.carrierVisualId);
+    const crowdingBlockers = receivingBlockers.filter((participant) =>
+      carrier &&
+      Math.hypot(participant.position.x - carrier.position.x, participant.position.z - carrier.position.z) <
+        KICKOFF_RETURN_CONFIG.returnerCatchClearanceYards);
+
+    expect(state.phase).toBe('fielding');
+    expect(carrier).toBeDefined();
+    expect(receivingBlockers).toHaveLength(10);
+    expect(crowdingBlockers).toEqual([]);
+  });
+
   it('starts the clock on legal touch and resolves a fielded return to the exact dead-ball spot', () => {
     const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
     const kickoff = createKickoffStateForTeam('opponent', 1, { kickPower: 20 });

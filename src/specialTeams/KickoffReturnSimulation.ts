@@ -138,6 +138,7 @@ export const KICKOFF_RETURN_CONFIG = {
   receivingBlockerEngageDistanceYards: 5.25,
   receivingBlockerProtectCarrierDistanceYards: 8.5,
   receivingBlockerSpeedYardsPerSecond: 9.5,
+  returnerCatchClearanceYards: 2.85,
   returnEscortFrontDepthYards: 8,
   returnEscortSecondDepthYards: 5.5,
   returnEscortWidthYards: 4.25,
@@ -566,6 +567,10 @@ function resolveReceivingSupportTarget(
   state: KickoffReturnState,
   participant: KickoffReturnParticipantState,
 ): FootballSpot {
+  if (participant.visualId === state.assignedReturner?.returnerVisualId) {
+    return state.result.target;
+  }
+
   const receivingDirection = invertDirection(state.direction);
   if (participant.visualId === state.nonAssignedReturnerVisualId) {
     const lateralOffset = state.returnLane === 'left'
@@ -579,7 +584,7 @@ function resolveReceivingSupportTarget(
     };
   }
 
-  return state.result.target;
+  return resolvePreCatchStagingTarget(state, participant, receivingDirection);
 }
 
 function resolveReceivingBlockerTarget(
@@ -614,12 +619,33 @@ function shouldEngageAssignedCoverageBeforeCatch(
   coverage: KickoffReturnParticipantState,
   landingSpot: FootballSpot,
 ): boolean {
+  if (distanceBetween(coverage.position, landingSpot) <= KICKOFF_RETURN_CONFIG.returnerCatchClearanceYards) {
+    return false;
+  }
+
   return (
     distanceBetween(blocker.position, coverage.position) <=
       KICKOFF_RETURN_CONFIG.receivingBlockerEngageDistanceYards ||
     distanceBetween(landingSpot, coverage.position) <=
       KICKOFF_RETURN_CONFIG.receivingBlockerProtectCarrierDistanceYards
   );
+}
+
+function resolvePreCatchStagingTarget(
+  state: KickoffReturnState,
+  participant: KickoffReturnParticipantState,
+  receivingDirection: KickoffDirection,
+): FootballSpot {
+  const slotOffset = resolveReceivingEscortSlotOffset(participant.slotId);
+  const depth = Math.max(
+    resolveReceivingEscortDepth(participant.slotId),
+    KICKOFF_RETURN_CONFIG.returnerCatchClearanceYards,
+  );
+
+  return {
+    x: clampX(state.result.target.x + slotOffset, state.fieldBounds),
+    z: clampZ(state.result.target.z + receivingDirection * depth, state.fieldBounds),
+  };
 }
 
 function shouldEngageAssignedCoverage(
