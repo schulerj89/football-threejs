@@ -190,6 +190,7 @@ export interface PresentationRuntimeOptions {
   warn?: (message: string) => void;
   getWeatherSnapshot?: () => WeatherSnapshot;
   onHalftimeContinue?: () => void;
+  onPunt?: () => void;
 }
 
 export interface PresentationFrameOptions {
@@ -298,6 +299,7 @@ export class PresentationRuntime {
   private postgameCaptionUntilSeconds = 0;
   private postgameKey: string | null = null;
   private readonly onHalftimeContinue: () => void;
+  private readonly onPunt: () => void;
   private presentationHoldDirector: PresentationHoldDirector;
   private readonly voicePackResolver: VoicePackAssetResolver;
   private readonly searchParams: URLSearchParams;
@@ -318,10 +320,12 @@ export class PresentationRuntime {
     warn,
     getWeatherSnapshot,
     onHalftimeContinue,
+    onPunt,
   }: PresentationRuntimeOptions) {
     this.scene = scene;
     this.searchParams = searchParams;
     this.onHalftimeContinue = onHalftimeContinue ?? (() => undefined);
+    this.onPunt = onPunt ?? (() => undefined);
     this.getWeatherSnapshot = getWeatherSnapshot ?? createClearWeatherSnapshot;
     this.gameExperience = gameExperience;
     this.teamTheme = resolveTeamPresentationTheme(gameExperience.settings.teamProfiles);
@@ -526,7 +530,7 @@ export class PresentationRuntime {
     });
     this.playCallUi = formationPreviewActive || this.crowdPreviewController
       ? null
-      : createPlayCallUi(initialPlays, this.teamTheme);
+      : createPlayCallUi(initialPlays, this.teamTheme, this.onPunt);
     this.playerPoseController = new PlayerPoseController(undefined, {
       enabled: gameExperience.settings.playerMotionEnabled,
     });
@@ -1089,9 +1093,11 @@ export class PresentationRuntime {
     gameplaySnapshot: GameplaySnapshot,
     visible: boolean,
     preSnapCadence: PreSnapCadenceSnapshot | null = null,
+    options: { canPunt?: boolean } = {},
   ): void {
     if (this.playCallUi && visible) {
       syncPlayCallUi(this.playCallUi, gameplaySnapshot, {
+        canPunt: options.canPunt ?? false,
         selectionLocked: preSnapCadence?.playSelectionLocked ?? false,
       });
     } else {

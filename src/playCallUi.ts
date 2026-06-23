@@ -19,10 +19,13 @@ const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 export class PlayCallUi {
   readonly root: HTMLDivElement;
   private enabled = false;
+  private readonly actions: HTMLDivElement;
   private readonly grid: HTMLDivElement;
   private readonly hint: HTMLSpanElement;
+  private readonly puntButton: HTMLButtonElement;
   private lastRenderKey = '';
   private pendingSelectedPlayId: string | null = null;
+  private puntAvailable = false;
   private selectionLocked = false;
   private currentPreSnapKey: string | null = null;
   private dismissedForPreSnapKey: string | null = null;
@@ -30,6 +33,7 @@ export class PlayCallUi {
   constructor(
     private plays: PlayDefinition[] = PLAYS,
     private teamTheme: TeamPresentationTheme | null = null,
+    private readonly onPunt: (() => void) | null = null,
   ) {
     this.root = document.createElement('div');
     this.root.className = 'play-call-ui';
@@ -47,6 +51,18 @@ export class PlayCallUi {
     this.grid = document.createElement('div');
     this.grid.className = 'play-call-grid';
     this.root.appendChild(this.grid);
+
+    this.actions = document.createElement('div');
+    this.actions.className = 'play-call-actions';
+    this.puntButton = document.createElement('button');
+    this.puntButton.className = 'play-call-punt-button';
+    this.puntButton.type = 'button';
+    this.puntButton.textContent = 'PUNT';
+    this.puntButton.setAttribute('aria-label', 'Punt');
+    this.puntButton.addEventListener('click', this.handlePuntClick);
+    this.actions.append(this.puntButton);
+    this.root.appendChild(this.actions);
+
     this.root.addEventListener('pointerdown', this.handlePointerDown);
     this.root.addEventListener('pointerup', this.handlePointerUp);
     document.body.appendChild(this.root);
@@ -93,12 +109,14 @@ export class PlayCallUi {
   dispose(): void {
     this.root.removeEventListener('pointerdown', this.handlePointerDown);
     this.root.removeEventListener('pointerup', this.handlePointerUp);
+    this.puntButton.removeEventListener('click', this.handlePuntClick);
     this.root.remove();
     this.pendingSelectedPlayId = null;
   }
 
-  sync(gameplay: GameplaySnapshot, options: { selectionLocked?: boolean } = {}): void {
+  sync(gameplay: GameplaySnapshot, options: { canPunt?: boolean; selectionLocked?: boolean } = {}): void {
     this.enabled = gameplay.playState === 'preSnap';
+    this.puntAvailable = this.enabled && Boolean(options.canPunt);
     this.selectionLocked = Boolean(options.selectionLocked);
     const preSnapKey = this.enabled ? createPreSnapDisplayKey(gameplay) : null;
     if (preSnapKey !== this.currentPreSnapKey) {
@@ -108,6 +126,8 @@ export class PlayCallUi {
     const dismissed = preSnapKey !== null && this.dismissedForPreSnapKey === preSnapKey;
     this.root.hidden = !this.enabled || dismissed;
     this.root.dataset.selectionLocked = this.selectionLocked ? 'true' : 'false';
+    this.actions.hidden = !this.puntAvailable || this.selectionLocked;
+    this.puntButton.disabled = !this.puntAvailable || this.selectionLocked;
 
     if (!this.enabled) {
       this.currentPreSnapKey = null;
@@ -150,6 +170,17 @@ export class PlayCallUi {
     if (target.closest('.play-card')) {
       event.preventDefault();
     }
+  };
+
+  private readonly handlePuntClick = (event: MouseEvent): void => {
+    if (!this.enabled || this.selectionLocked || !this.puntAvailable || !this.onPunt) {
+      return;
+    }
+
+    this.dismissAfterSelection();
+    this.onPunt();
+    this.puntButton.blur();
+    event.preventDefault();
   };
 
   private renderCards(gameplay: GameplaySnapshot): void {
@@ -224,14 +255,15 @@ export class PlayCallUi {
 export function createPlayCallUi(
   plays: PlayDefinition[] = PLAYS,
   teamTheme: TeamPresentationTheme | null = null,
+  onPunt: (() => void) | null = null,
 ): PlayCallUi {
-  return new PlayCallUi(plays, teamTheme);
+  return new PlayCallUi(plays, teamTheme, onPunt);
 }
 
 export function syncPlayCallUi(
   ui: PlayCallUi,
   gameplay: GameplaySnapshot,
-  options: { selectionLocked?: boolean } = {},
+  options: { canPunt?: boolean; selectionLocked?: boolean } = {},
 ): void {
   ui.sync(gameplay, options);
 }

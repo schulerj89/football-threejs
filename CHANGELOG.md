@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.44] - 2026-06-23
+
+### Changed
+
+- Moved the voluntary punt control out of the broadcast scorebug and into the pre-snap play-call tray as a simple `PUNT` action.
+
+### Tests
+
+- Verified `npx vitest run tests/broadcastScorebug.test.ts tests/playCallDiagram.test.ts tests/matchModel.test.ts` and `npm run build`.
+
 ## [1.21.43] - 2026-06-23
 
 ### Added

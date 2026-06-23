@@ -132,6 +132,11 @@ export class FootballApplication {
       searchParams,
       getWeatherSnapshot: () => this.sceneRuntime.getWeatherSnapshot(),
       onHalftimeContinue: () => this.continueMatchTransition(),
+      onPunt: () =>
+        this.handlePunt(
+          this.gameplay.gameplayModel,
+          this.gameplay.getActiveGameplaySnapshot(false),
+        ),
       warn: (message) => {
         if (import.meta.env.DEV) {
           console.warn(message);
@@ -204,13 +209,7 @@ export class FootballApplication {
       onTitleSettingsChange: (settings) => this.applyExperienceSettings(settings, { persist: true }),
       syncChrome: (phase) => this.presentation.syncApplicationChrome(phase),
     });
-    this.matchScorebug = new MatchScorebug({
-      onPunt: () =>
-        this.handlePunt(
-          this.gameplay.gameplayModel,
-          this.gameplay.getActiveGameplaySnapshot(false),
-        ),
-    });
+    this.matchScorebug = new MatchScorebug();
     this.opponentDriveSummary = new OpponentDriveSummaryPanel({
       onContinue: () => this.continueMatchTransition(),
     });
@@ -341,11 +340,12 @@ export class FootballApplication {
       const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
       this.playerVisuals.setVisible(false);
       this.sceneRuntime.setDriveLinesVisible(false);
-      this.presentation.syncPlayCallUi(
-        gameplaySnapshot,
-        false,
-        this.gameplay.getPreSnapCadenceSnapshot(),
-      );
+        this.presentation.syncPlayCallUi(
+          gameplaySnapshot,
+          false,
+          this.gameplay.getPreSnapCadenceSnapshot(),
+          { canPunt: false },
+        );
       this.sceneRuntime.render(this.presentation.camera);
       this.lifecycle.syncTitleLoadingState();
       this.lifecycle.syncChrome();
@@ -551,6 +551,7 @@ export class FootballApplication {
           gameplaySnapshot,
           this.shouldShowPlayCallUi(gameplayActive),
           preSnapCadenceSnapshot,
+          { canPunt: Boolean(finalMatchSnapshot?.canPunt) },
         );
       });
       this.performanceProfiler.measure('rendererRender', () => {
@@ -561,6 +562,7 @@ export class FootballApplication {
         gameplaySnapshot,
         this.shouldShowPlayCallUi(gameplayActive),
         preSnapCadenceSnapshot,
+        { canPunt: Boolean(finalMatchSnapshot?.canPunt) },
       );
       this.sceneRuntime.render(this.presentation.camera);
     }

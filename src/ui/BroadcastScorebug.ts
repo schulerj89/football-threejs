@@ -10,10 +10,6 @@ import {
 } from './ScorebugViewModel';
 import { createTeamLogoBadge, type TeamLogoBadge } from './TeamLogoBadge';
 
-export interface BroadcastScorebugOptions {
-  onPunt: () => void;
-}
-
 export class BroadcastScorebug {
   readonly root = document.createElement('div');
 
@@ -32,12 +28,11 @@ export class BroadcastScorebug {
   private readonly downDistance = document.createElement('span');
   private readonly ballLocation = document.createElement('span');
   private readonly liveRegion = document.createElement('div');
-  private readonly puntButton = document.createElement('button');
   private previousQuarterText: string | null = null;
   private previousScoreKey: string | null = null;
   private warnedShellFailure = false;
 
-  constructor(options: BroadcastScorebugOptions) {
+  constructor() {
     this.root.className = 'match-scorebug broadcast-scorebug';
     this.root.setAttribute('role', 'group');
     this.root.setAttribute('aria-label', 'Game score');
@@ -66,11 +61,6 @@ export class BroadcastScorebug {
     this.liveRegion.className = 'broadcast-scorebug-live-region';
     this.liveRegion.setAttribute('aria-live', 'polite');
     this.liveRegion.setAttribute('aria-atomic', 'true');
-
-    this.puntButton.className = 'match-punt-button broadcast-scorebug-punt';
-    this.puntButton.type = 'button';
-    this.puntButton.textContent = 'Punt';
-    this.puntButton.addEventListener('click', options.onPunt);
 
     this.applyZone(this.userLogo.root, 'userLogo');
     this.applyZone(this.userAbbreviation, 'userAbbreviation');
@@ -101,7 +91,6 @@ export class BroadcastScorebug {
       this.possession,
       this.downDistance,
       this.ballLocation,
-      this.puntButton,
       this.liveRegion,
     );
     document.body.append(this.root);
@@ -114,7 +103,6 @@ export class BroadcastScorebug {
     }
 
     this.syncViewModel(createBroadcastScorebugViewModel(match, gameplay));
-    this.puntButton.disabled = !(match.canPunt && gameplay.playState === 'preSnap');
   }
 
   dispose(): void {
