@@ -2349,10 +2349,10 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-play-team {
   display: grid;
-  grid-template-rows: auto minmax(180px, 1fr) auto auto;
-  gap: 14px;
-  min-height: clamp(430px, 54vh, 570px);
-  padding: clamp(16px, 2vw, 24px);
+  grid-template-rows: auto minmax(150px, 1fr) auto auto;
+  gap: 12px;
+  min-height: clamp(350px, 45vh, 470px);
+  padding: clamp(14px, 1.6vw, 20px);
   border-color: color-mix(in srgb, var(--play-team-primary, var(--hub-accent, #2f66d8)) 62%, rgba(255, 255, 255, 0.22));
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.025)),
@@ -2379,8 +2379,8 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-play-team-logo {
-  width: clamp(180px, 24vw, 300px);
-  height: clamp(180px, 24vw, 300px);
+  width: clamp(150px, 18vw, 220px);
+  height: clamp(150px, 18vw, 220px);
   max-width: 82%;
   max-height: calc(100% - 16px);
   background:
@@ -2394,7 +2394,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-play-team-logo-stage {
   display: grid;
   place-items: center;
-  min-height: clamp(190px, 28vw, 330px);
+  min-height: clamp(160px, 20vw, 230px);
   border-radius: 8px;
   background:
     radial-gradient(ellipse at center, color-mix(in srgb, var(--play-team-primary, #2f66d8) 16%, transparent), transparent 62%),

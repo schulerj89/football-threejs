@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.1] - 2026-06-23
+
+### Added
+
+- Added a repeatable `npm run artifacts:game-screens` capture flow for the current title, Dynasty shell, settings, Play Now team choose, pregame, coin toss, touchback, touchdown, opponent field-goal summary, halftime, and end-of-game artifacts.
+- Added a fresh screenshot artifact manifest documenting which screens are captured from live app flow and which representative transition overlays are rendered from current UI components.
+
+### Fixed
+
+- Tightened the Play Now matchup card and logo sizing so the `Play Game` action remains visible beside the persistent music widget at the artifact viewport.
+
+### Tests
+
+- Verified `npm run artifacts:game-screens` and `npm run build`.
+
 ## [1.22.0] - 2026-06-23
 
 ### Added
