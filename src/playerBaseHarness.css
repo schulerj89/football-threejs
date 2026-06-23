@@ -1,0 +1,213 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #08100d;
+  color: #eef5ef;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+}
+
+.player-base-harness {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: minmax(360px, 1fr) minmax(400px, 500px);
+  background:
+    linear-gradient(135deg, rgba(10, 23, 17, 0.98), rgba(9, 11, 13, 0.98)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 2px, transparent 2px 48px);
+}
+
+.player-base-harness__viewport {
+  position: relative;
+  min-width: 0;
+}
+
+.player-base-harness__viewport canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.player-base-harness__toolbar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.player-base-harness__panel {
+  display: flex;
+  max-height: 100vh;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+  padding: 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(8, 14, 12, 0.95);
+}
+
+.player-base-harness__panel h1,
+.player-base-harness__panel h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.player-base-harness__panel h1 {
+  font-size: 24px;
+}
+
+.player-base-harness__panel h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  color: #bac9c0;
+}
+
+.player-base-harness__note {
+  color: #a8b8ae;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.player-base-harness__card {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.player-base-harness__toolbar button,
+.player-base-harness__panel button,
+.player-base-harness__panel select {
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(18, 30, 25, 0.9);
+  color: #f4f8f2;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.player-base-harness__panel select {
+  width: 100%;
+}
+
+.player-base-harness__toolbar button:focus-visible,
+.player-base-harness__panel button:focus-visible,
+.player-base-harness__panel select:focus-visible,
+.player-base-harness__panel input:focus-visible {
+  outline: 2px solid #f1d86a;
+  outline-offset: 2px;
+}
+
+.player-base-harness__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.player-base-harness__row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(170px, 1.1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.player-base-harness__row label {
+  color: #cbd8d0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.player-base-harness__row input[type="range"] {
+  width: 100%;
+}
+
+.player-base-harness__row output {
+  display: inline-block;
+  min-width: 58px;
+  color: #f1d86a;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.player-base-harness__slider-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.player-base-harness__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  color: #dce7df;
+  font-size: 13px;
+}
+
+.player-base-harness__metrics span {
+  color: #91a39a;
+}
+
+.player-base-harness__status {
+  min-height: 20px;
+  color: #f1d86a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.player-base-harness__joint-label-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.player-base-harness__joint-label {
+  position: absolute;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(5, 9, 8, 0.84);
+  color: #f7fbf8;
+  font-size: 11px;
+  font-weight: 800;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  body {
+    overflow: auto;
+  }
+
+  .player-base-harness {
+    grid-template-columns: 1fr;
+  }
+
+  .player-base-harness__viewport {
+    height: 58vh;
+    min-height: 430px;
+  }
+
+  .player-base-harness__panel {
+    max-height: none;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+  }
+}

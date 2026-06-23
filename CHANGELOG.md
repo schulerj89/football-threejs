@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.6] - 2026-06-23
+
+### Added
+
+- Added a rigged player base visual harness at `/player-base-harness.html` that loads the `art-source` player-base GLB, exposes editable bone-angle sliders, and includes offensive lineman, defensive lineman, quarterback, and running back stance presets.
+- Added a Playwright smoke test and saved a visual QA capture for the new harness.
+
+### Tests
+
+- Verified `npm run build` and `npx playwright test tests/player-base-harness.spec.ts`.
+
 ## [1.22.5] - 2026-06-23
 
 ### Changed
