@@ -2,9 +2,9 @@
   "assetId": "candidate-a",
   "background": "opaque",
   "candidateId": "candidate-a",
-  "compressedBytes": 53834,
-  "contentHash": "cf71b69d339ba43a2936f260a1097e9085079cce4d3a73ba707f6ad65498a558",
-  "generatedAt": "2026-06-22T22:42:53.237Z",
+  "compressedBytes": 64664,
+  "contentHash": "7b0aa19a44dad99cea83db5dc258a8ce1d751cb1e9ca163d7e8a4ae2f39238ff",
+  "generatedAt": "2026-06-23T05:45:44.307Z",
   "generationMetadata": {
     "apiEndpoint": "images/generations",
     "revisedPrompt": null
@@ -12,7 +12,7 @@
   "model": "gpt-image-2",
   "outputFormat": "webp",
   "outputPath": "public/branding/scorebug/candidate-a.webp",
-  "prompt": "Create an original broadcast scorebug shell for a fictional low-poly college-football video game named Football JS. Format: wide horizontal 3:1 graphic designed for the top or bottom of a game screen. Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, polished modern sports-broadcast presentation, two symmetrical team sections, clear square or circular wells for team logos, large score areas beside each logo, central area for quarter and game clock, and a lower strip for possession, down, distance, and ball location. Keep restrained highlight edges and high readability over a bright football field. Make the shell flexible enough for any team colors. Straight-on 2D presentation, no perspective, opaque background. Candidate A variation: clean contemporary angular package with crisp beveled panels, subtle metallic layering, and neutral broadcast polish. Do not include words, letters, numbers, scores, clock text, team logos, team colors, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable. The final runtime will overlay all text and logos through HTML, so leave every label and score area blank.",
+  "prompt": "Create an original broadcast scorebug shell for a fictional low-poly college-football video game named Football JS. Format: wide horizontal 3:1 source image designed for a top-of-screen football broadcast scorebug; the visible scorebug shell should be a centered, low-height band with minimal black padding. Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, and polished modern sports-broadcast presentation. Build the shell on a strict symmetrical grid from left to right: one circular logo well, one abbreviation panel, one large score well, one small central quarter/clock panel, one large score well, one abbreviation panel, and one circular logo well. The left and right halves must be mirror-balanced with equal logo-well sizes, equal score-well sizes, equal abbreviation-panel sizes, and equal vertical alignment. Leave clean blank horizontal timeout/status rails below each score well; do not draw pips, hashes, bars, or placeholder marks inside those timeout rails. Add one clean lower context strip with three blank readable compartments for possession, down and distance, and ball location. Keep restrained highlight edges and high readability over a bright football field. Make the shell flexible enough for any team colors. Straight-on 2D presentation, no perspective, opaque background. Candidate A variation: clean contemporary angular package with crisp beveled panels, subtle metallic layering, high symmetry, and neutral broadcast polish. Do not include words, letters, numbers, scores, clock text, team logos, team colors, timeout dots, timeout bars, decorative pips, possession arrows, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable. The final runtime will overlay all text and logos through HTML, so leave every label and score area blank.",
   "quality": "high",
   "requestedSize": "1536x512"
 }

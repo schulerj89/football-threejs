@@ -6,100 +6,118 @@
     {
       "id": "userLogo",
       "normalized": {
-        "height": 0.3,
-        "width": 0.075,
-        "x": 0.035,
-        "y": 0.18
+        "height": 0.547,
+        "width": 0.086,
+        "x": 0.024,
+        "y": 0.119
       }
     },
     {
       "id": "userAbbreviation",
       "normalized": {
-        "height": 0.22,
-        "width": 0.11,
-        "x": 0.12,
-        "y": 0.23
+        "height": 0.2,
+        "width": 0.08,
+        "x": 0.135,
+        "y": 0.29
       }
     },
     {
       "id": "userScore",
       "normalized": {
-        "height": 0.35,
-        "width": 0.1,
-        "x": 0.24,
-        "y": 0.17
+        "height": 0.45,
+        "width": 0.085,
+        "x": 0.3,
+        "y": 0.1
+      }
+    },
+    {
+      "id": "userTimeouts",
+      "normalized": {
+        "height": 0.085,
+        "width": 0.12,
+        "x": 0.2825,
+        "y": 0.58
       }
     },
     {
       "id": "opponentScore",
       "normalized": {
-        "height": 0.35,
-        "width": 0.1,
-        "x": 0.6,
-        "y": 0.17
+        "height": 0.45,
+        "width": 0.085,
+        "x": 0.615,
+        "y": 0.1
       }
     },
     {
-      "id": "opponentLogo",
+      "id": "opponentTimeouts",
       "normalized": {
-        "height": 0.3,
-        "width": 0.075,
-        "x": 0.7,
-        "y": 0.18
+        "height": 0.085,
+        "width": 0.12,
+        "x": 0.5975,
+        "y": 0.58
       }
     },
     {
       "id": "opponentAbbreviation",
       "normalized": {
-        "height": 0.22,
-        "width": 0.12,
+        "height": 0.2,
+        "width": 0.08,
         "x": 0.785,
-        "y": 0.23
+        "y": 0.29
+      }
+    },
+    {
+      "id": "opponentLogo",
+      "normalized": {
+        "height": 0.547,
+        "width": 0.086,
+        "x": 0.89,
+        "y": 0.119
       }
     },
     {
       "id": "quarter",
       "normalized": {
-        "height": 0.18,
+        "height": 0.13,
         "width": 0.06,
-        "x": 0.435,
-        "y": 0.18
+        "x": 0.47,
+        "y": 0.17
       }
     },
     {
       "id": "gameClock",
       "normalized": {
-        "height": 0.18,
-        "width": 0.08,
-        "x": 0.505,
-        "y": 0.18
+        "height": 0.14,
+        "width": 0.1,
+        "x": 0.45,
+        "y": 0.31
       }
     },
     {
       "id": "possession",
       "normalized": {
-        "height": 0.18,
-        "width": 0.08,
-        "x": 0.045,
-        "y": 0.67
+        "height": 0.17,
+        "width": 0.12,
+        "x": 0.209,
+        "y": 0.768
       }
     },
     {
       "id": "downDistance",
       "normalized": {
-        "height": 0.2,
-        "width": 0.2,
-        "x": 0.15,
-        "y": 0.65
+        "height": 0.17,
+        "width": 0.18,
+        "x": 0.395,
+        "y": 0.775
       }
     },
     {
       "id": "ballLocation",
       "normalized": {
-        "height": 0.2,
-        "width": 0.18,
-        "x": 0.37,
-        "y": 0.65
+        "height": 0.17,
+        "width": 0.16,
+        "x": 0.64,
+        "y": 0.765
       }
     }
   ]

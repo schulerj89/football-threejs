@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.21] - 2026-06-23
+
+### Added
+
+- Added a scorebug layout preview harness at `public/branding/scorebug/scorebug-layout-preview.html` with mirrored safe-zone measurements and dynamic timeout pips.
+- Added roster-driven front jersey-number anchors and decals that share the existing jersey-number atlas/material pipeline with back numbers.
+
+### Changed
+
+- Generated and selected a new GPT Image 2 broadcast scorebug shell, then retuned HTML overlay safe zones for larger team logos, centered scores/timeouts, stacked quarter/time, and aligned lower-strip context.
+- Updated Play Now team cards to emphasize larger centered team logos, stronger team-color accents, and rating chips while removing quarterback-specific text from that matchup screen.
+
+### Fixed
+
+- Removed the old procedural front jersey-number texture block so front numbers no longer show a square panel behind them.
+- Preserved transparent scorebug shell runtime rendering so the generated opaque image background does not show around the broadcast package.
+
+### Tests
+
+- Verified `npx vitest run tests/broadcastScorebug.test.ts tests/brandAssets.test.ts tests/playerVisual.test.ts tests/presentation/players/footballPlayerVisualFactory.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.20] - 2026-06-23
 
 ### Added

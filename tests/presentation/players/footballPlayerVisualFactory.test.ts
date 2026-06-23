@@ -13,6 +13,7 @@ import {
   getRiggedPlayerSkeletonSnapshot,
 } from '../../../src/presentation/players/RiggedPlayerVisualFactory';
 import {
+  FRONT_JERSEY_NUMBER_MESH_NAME,
   JERSEY_NUMBER_MESH_NAME,
   getJerseyNumberMaterialSnapshot,
 } from '../../../src/presentation/players/JerseyNumberVisual';
@@ -124,27 +125,37 @@ describe('FootballPlayerVisualFactory', () => {
     resource.dispose();
   });
 
-  it('attaches a roster-driven back jersey number through the shared atlas', async () => {
+  it('attaches roster-driven front and back jersey numbers through the shared atlas', async () => {
     const resource = createFootballPlayerVisual(createDescriptor({ jerseyNumber: 12 }), {
       attachHelmet: attachMockHelmet,
     });
 
     await resource.ready;
 
-    const numberMesh = resource.root.getObjectByName(JERSEY_NUMBER_MESH_NAME);
+    const backNumberMesh = resource.root.getObjectByName(JERSEY_NUMBER_MESH_NAME);
+    const frontNumberMesh = resource.root.getObjectByName(FRONT_JERSEY_NUMBER_MESH_NAME);
     const snapshot = resource.getSnapshot().jerseyNumber;
 
-    expect(numberMesh).toBeInstanceOf(THREE.Mesh);
-    expect(numberMesh?.userData.excludeFromPlayerBodyBounds).toBe(true);
+    expect(backNumberMesh).toBeInstanceOf(THREE.Mesh);
+    expect(frontNumberMesh).toBeInstanceOf(THREE.Mesh);
+    expect(backNumberMesh?.userData.excludeFromPlayerBodyBounds).toBe(true);
+    expect(frontNumberMesh?.userData.excludeFromPlayerBodyBounds).toBe(true);
+    expect(backNumberMesh?.userData.jerseyNumberSide).toBe('back');
+    expect(frontNumberMesh?.userData.jerseyNumberSide).toBe('front');
     expect(snapshot).toMatchObject({
+      backVisible: true,
+      frontVisible: true,
       jerseyNumber: 12,
       materialId: 'jersey-number:#f2f4f6',
       missingBindingReason: null,
       rosterPlayerId: 'roster-qb-1',
       visible: true,
+      visibleMeshCount: 2,
       visualId: 'offense-qb',
     });
     expect(snapshot.atlasCell).toMatchObject({ column: 2, row: 1 });
+    expect(snapshot.backAnchorPosition).not.toBeNull();
+    expect(snapshot.frontAnchorPosition).not.toBeNull();
     expect(getJerseyNumberAtlasSnapshot()).toMatchObject({
       atlasCreated: true,
       cellCount: 100,
@@ -190,11 +201,15 @@ describe('FootballPlayerVisualFactory', () => {
 
     const firstMesh = first.root.getObjectByName(JERSEY_NUMBER_MESH_NAME);
     const secondMesh = second.root.getObjectByName(JERSEY_NUMBER_MESH_NAME);
+    const firstFrontMesh = first.root.getObjectByName(FRONT_JERSEY_NUMBER_MESH_NAME);
 
     expect(firstMesh).toBeInstanceOf(THREE.Mesh);
     expect(secondMesh).toBeInstanceOf(THREE.Mesh);
+    expect(firstFrontMesh).toBeInstanceOf(THREE.Mesh);
     expect((firstMesh as THREE.Mesh).geometry).toBe((secondMesh as THREE.Mesh).geometry);
+    expect((firstMesh as THREE.Mesh).geometry).toBe((firstFrontMesh as THREE.Mesh).geometry);
     expect((firstMesh as THREE.Mesh).material).toBe((secondMesh as THREE.Mesh).material);
+    expect((firstMesh as THREE.Mesh).material).toBe((firstFrontMesh as THREE.Mesh).material);
     expect(getJerseyNumberGeometrySnapshot().cachedNumbers).toContain(12);
     expect(getJerseyNumberMaterialSnapshot().materialCount).toBeGreaterThanOrEqual(1);
     expect(getJerseyNumberMaterialSnapshot().materialIds).toContain('jersey-number:#f2f4f6');
@@ -203,7 +218,7 @@ describe('FootballPlayerVisualFactory', () => {
     second.dispose();
   });
 
-  it('hides the back number when no roster number is bound', async () => {
+  it('hides jersey numbers when no roster number is bound', async () => {
     const resource = createFootballPlayerVisual(createDescriptor({
       jerseyNumber: null,
       rosterPlayerId: 'anonymous-full-player',
@@ -215,11 +230,15 @@ describe('FootballPlayerVisualFactory', () => {
     await resource.ready;
 
     expect(resource.root.getObjectByName(JERSEY_NUMBER_MESH_NAME)).toBeUndefined();
+    expect(resource.root.getObjectByName(FRONT_JERSEY_NUMBER_MESH_NAME)).toBeUndefined();
     expect(resource.getSnapshot().jerseyNumber).toMatchObject({
+      backVisible: false,
+      frontVisible: false,
       jerseyNumber: null,
       missingBindingReason: 'missingNumber',
       rosterPlayerId: 'anonymous-full-player',
       visible: false,
+      visibleMeshCount: 0,
       visualId: 'anonymous-full-player',
     });
 
@@ -259,6 +278,7 @@ describe('FootballPlayerVisualFactory', () => {
     expect(firstSnapshot.body.minimumBodyY).toBeGreaterThanOrEqual(-0.001);
     expect(firstSnapshot.helmetAttached).toBe(true);
     expect(first.root.getObjectByName(JERSEY_NUMBER_MESH_NAME)).toBeInstanceOf(THREE.Mesh);
+    expect(first.root.getObjectByName(FRONT_JERSEY_NUMBER_MESH_NAME)).toBeInstanceOf(THREE.Mesh);
     expect(first.getReadiness()).toMatchObject({
       bodyReady: true,
       helmetReady: true,

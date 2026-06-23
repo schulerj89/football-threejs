@@ -133,6 +133,31 @@ describe('broadcast scorebug', () => {
     }
     expect(getScorebugSafeZone('userScore').normalized.width).toBeGreaterThan(0);
     expect(getScorebugSafeZone('opponentScore').normalized.width).toBeGreaterThan(0);
+    expect(getScorebugSafeZone('userTimeouts').normalized.width).toBeGreaterThan(0);
+    expect(getScorebugSafeZone('opponentTimeouts').normalized.width).toBeGreaterThan(0);
+  });
+
+  it('keeps paired scorebug zones dimensionally matched and mirrored', () => {
+    const pairs = [
+      ['userLogo', 'opponentLogo'],
+      ['userAbbreviation', 'opponentAbbreviation'],
+      ['userScore', 'opponentScore'],
+      ['userTimeouts', 'opponentTimeouts'],
+    ] as const;
+
+    for (const [userId, opponentId] of pairs) {
+      const user = getScorebugSafeZone(userId).normalized;
+      const opponent = getScorebugSafeZone(opponentId).normalized;
+      const userCenterX = user.x + user.width / 2;
+      const opponentCenterX = opponent.x + opponent.width / 2;
+      const userCenterY = user.y + user.height / 2;
+      const opponentCenterY = opponent.y + opponent.height / 2;
+
+      expect(opponent.width).toBeCloseTo(user.width, 6);
+      expect(opponent.height).toBeCloseTo(user.height, 6);
+      expect(userCenterX + opponentCenterX).toBeCloseTo(1, 6);
+      expect(opponentCenterY).toBeCloseTo(userCenterY, 6);
+    }
   });
 
   it('keeps clock formatting stable and non-negative', () => {

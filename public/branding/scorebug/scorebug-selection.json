@@ -1,11 +1,11 @@
 {
   "selected": {
     "assetId": "candidate-a",
-    "contentHash": "cf71b69d339ba43a2936f260a1097e9085079cce4d3a73ba707f6ad65498a558",
+    "contentHash": "7b0aa19a44dad99cea83db5dc258a8ce1d751cb1e9ca163d7e8a4ae2f39238ff",
     "outputPath": "public/branding/scorebug/candidate-a.webp",
     "runtimeImageUrl": "/branding/scorebug/football-js-scorebug-shell.webp",
     "runtimePath": "public/branding/scorebug/football-js-scorebug-shell.webp"
   },
-  "selectedAt": "2026-06-22T22:45:50.311Z",
+  "selectedAt": "2026-06-23T05:45:52.344Z",
   "selectedCandidateId": "candidate-a"
 }

@@ -9,6 +9,8 @@ import { getJerseyNumberGeometry } from './JerseyNumberGeometryCache';
 
 export const JERSEY_NUMBER_ANCHOR_NAME = 'backNumberAnchor';
 export const JERSEY_NUMBER_MESH_NAME = 'backJerseyNumber';
+export const FRONT_JERSEY_NUMBER_ANCHOR_NAME = 'frontNumberAnchor';
+export const FRONT_JERSEY_NUMBER_MESH_NAME = 'frontJerseyNumber';
 
 export type JerseyNumberMissingBindingReason =
   | 'invalidNumber'
@@ -25,13 +27,18 @@ export interface JerseyNumberVisualController {
 export interface JerseyNumberVisualSnapshot {
   anchorPosition: { x: number; y: number; z: number } | null;
   atlasCell: { column: number; row: number } | null;
+  backAnchorPosition: { x: number; y: number; z: number } | null;
+  backVisible: boolean;
   contrastRatio: number | null;
   contrastReadable: boolean | null;
+  frontAnchorPosition: { x: number; y: number; z: number } | null;
+  frontVisible: boolean;
   jerseyNumber: number | null;
   materialId: string | null;
   missingBindingReason: JerseyNumberMissingBindingReason;
   rosterPlayerId: string;
   visible: boolean;
+  visibleMeshCount: number;
   visualId: string;
 }
 
@@ -56,17 +63,17 @@ export function attachJerseyNumberVisual(
     visualId: string;
   },
 ): JerseyNumberVisualController {
-  const anchor = root.getObjectByName(JERSEY_NUMBER_ANCHOR_NAME);
+  const backAnchor = root.getObjectByName(JERSEY_NUMBER_ANCHOR_NAME);
+  const frontAnchor = root.getObjectByName(FRONT_JERSEY_NUMBER_ANCHOR_NAME);
   let jerseyNumber = normalizeJerseyNumber(options.jerseyNumber);
   let rosterPlayerId = options.rosterPlayerId;
   let uniform = options.uniform;
-  let mesh: THREE.Mesh | null = null;
-  let missingBindingReason = resolveMissingBindingReason(jerseyNumber, anchor);
+  let backMesh: THREE.Mesh | null = null;
+  let frontMesh: THREE.Mesh | null = null;
+  let missingBindingReason = resolveMissingBindingReason(jerseyNumber, [backAnchor, frontAnchor]);
 
-  if (anchor && jerseyNumber !== null) {
-    mesh = createNumberMesh(jerseyNumber, uniform);
-    anchor.add(mesh);
-  }
+  backMesh = syncNumberMesh(backAnchor, backMesh, JERSEY_NUMBER_MESH_NAME, 'back');
+  frontMesh = syncNumberMesh(frontAnchor, frontMesh, FRONT_JERSEY_NUMBER_MESH_NAME, 'front');
 
   syncRootSnapshot();
 
@@ -78,49 +85,72 @@ export function attachJerseyNumberVisual(
     jerseyNumber = normalizeJerseyNumber(nextJerseyNumber);
     rosterPlayerId = nextRosterPlayerId;
     uniform = nextUniform;
-    missingBindingReason = resolveMissingBindingReason(jerseyNumber, anchor);
-
-    if (!anchor || jerseyNumber === null) {
-      if (mesh) {
-        mesh.visible = false;
-      }
-      syncRootSnapshot();
-      return;
-    }
-
-    if (!mesh) {
-      mesh = createNumberMesh(jerseyNumber, uniform);
-      anchor.add(mesh);
-    } else {
-      mesh.geometry = getJerseyNumberGeometry(jerseyNumber);
-      mesh.material = getJerseyNumberMaterial(uniform.number);
-      mesh.visible = true;
-    }
-    mesh.userData.jerseyNumber = jerseyNumber;
-    mesh.userData.rosterPlayerId = rosterPlayerId;
-    mesh.userData.visualId = options.visualId;
+    missingBindingReason = resolveMissingBindingReason(jerseyNumber, [backAnchor, frontAnchor]);
+    backMesh = syncNumberMesh(backAnchor, backMesh, JERSEY_NUMBER_MESH_NAME, 'back');
+    frontMesh = syncNumberMesh(frontAnchor, frontMesh, FRONT_JERSEY_NUMBER_MESH_NAME, 'front');
     syncRootSnapshot();
   }
 
   function getSnapshot(): JerseyNumberVisualSnapshot {
-    const anchorPosition = anchor
-      ? vectorToPlain(anchor.getWorldPosition(scratchWorldPosition))
+    const backAnchorPosition = backAnchor
+      ? vectorToPlain(backAnchor.getWorldPosition(scratchWorldPosition))
       : null;
+    const frontAnchorPosition = frontAnchor
+      ? vectorToPlain(frontAnchor.getWorldPosition(scratchWorldPosition))
+      : null;
+    const anchorPosition = backAnchorPosition ?? frontAnchorPosition;
     const cell = jerseyNumber === null ? null : resolveJerseyNumberAtlasCell(jerseyNumber);
     const contrastRatio = calculateContrastRatio(uniform.number, uniform.jersey);
+    const backVisible = Boolean(backMesh?.visible && root.visible && !missingBindingReason);
+    const frontVisible = Boolean(frontMesh?.visible && root.visible && !missingBindingReason);
+    const visibleMeshCount = Number(backVisible) + Number(frontVisible);
+    const material = backMesh?.material ?? frontMesh?.material ?? null;
 
     return {
       anchorPosition,
       atlasCell: cell ? { column: cell.column, row: cell.row } : null,
+      backAnchorPosition,
+      backVisible,
       contrastRatio,
       contrastReadable: contrastRatio >= JERSEY_NUMBER_VISUAL_CONFIG.readableContrastRatio,
+      frontAnchorPosition,
+      frontVisible,
       jerseyNumber,
-      materialId: mesh ? getMaterialName(mesh.material) : null,
+      materialId: material ? getMaterialName(material) : null,
       missingBindingReason,
       rosterPlayerId,
-      visible: Boolean(mesh?.visible && root.visible && !missingBindingReason),
+      visible: visibleMeshCount > 0,
+      visibleMeshCount,
       visualId: options.visualId,
     };
+  }
+
+  function syncNumberMesh(
+    anchor: THREE.Object3D | undefined,
+    currentMesh: THREE.Mesh | null,
+    meshName: string,
+    side: 'back' | 'front',
+  ): THREE.Mesh | null {
+    if (!anchor || jerseyNumber === null) {
+      if (currentMesh) {
+        currentMesh.visible = false;
+      }
+      return currentMesh;
+    }
+
+    const mesh = currentMesh ?? createNumberMesh(jerseyNumber, uniform, meshName, side);
+    if (!currentMesh) {
+      anchor.add(mesh);
+    }
+
+    mesh.geometry = getJerseyNumberGeometry(jerseyNumber);
+    mesh.material = getJerseyNumberMaterial(uniform.number);
+    mesh.visible = true;
+    mesh.userData.jerseyNumber = jerseyNumber;
+    mesh.userData.rosterPlayerId = rosterPlayerId;
+    mesh.userData.visualId = options.visualId;
+    mesh.userData.jerseyNumberSide = side;
+    return mesh;
   }
 
   function syncRootSnapshot(): void {
@@ -129,9 +159,13 @@ export function attachJerseyNumberVisual(
 
   return {
     dispose: () => {
-      if (mesh) {
-        mesh.removeFromParent();
-        mesh = null;
+      if (backMesh) {
+        backMesh.removeFromParent();
+        backMesh = null;
+      }
+      if (frontMesh) {
+        frontMesh.removeFromParent();
+        frontMesh = null;
       }
       root.userData.jerseyNumberVisual = getSnapshot();
     },
@@ -160,16 +194,22 @@ export function calculateContrastRatio(foregroundHex: string, backgroundHex: str
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-function createNumberMesh(jerseyNumber: number, uniform: UniformPalette): THREE.Mesh {
+function createNumberMesh(
+  jerseyNumber: number,
+  uniform: UniformPalette,
+  meshName: string,
+  side: 'back' | 'front',
+): THREE.Mesh {
   const mesh = new THREE.Mesh(
     getJerseyNumberGeometry(jerseyNumber),
     getJerseyNumberMaterial(uniform.number),
   );
-  mesh.name = JERSEY_NUMBER_MESH_NAME;
+  mesh.name = meshName;
   mesh.renderOrder = 3;
   mesh.userData.excludeFromPlayerBodyBounds = true;
   mesh.userData.jerseyNumberVisual = true;
   mesh.userData.jerseyNumber = jerseyNumber;
+  mesh.userData.jerseyNumberSide = side;
   return mesh;
 }
 
@@ -200,9 +240,9 @@ function getJerseyNumberMaterial(numberColor: string): THREE.MeshBasicMaterial {
 
 function resolveMissingBindingReason(
   jerseyNumber: number | null,
-  anchor: THREE.Object3D | undefined,
+  anchors: readonly (THREE.Object3D | undefined)[],
 ): JerseyNumberMissingBindingReason {
-  if (!anchor) {
+  if (!anchors.some(Boolean)) {
     return 'missingAnchor';
   }
 

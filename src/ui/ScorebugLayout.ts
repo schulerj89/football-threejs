@@ -5,11 +5,13 @@ export type ScorebugSafeZoneId =
   | 'opponentAbbreviation'
   | 'opponentLogo'
   | 'opponentScore'
+  | 'opponentTimeouts'
   | 'possession'
   | 'quarter'
   | 'userAbbreviation'
   | 'userLogo'
-  | 'userScore';
+  | 'userScore'
+  | 'userTimeouts';
 
 export interface ScorebugSafeZone {
   readonly id: ScorebugSafeZoneId;
@@ -35,17 +37,19 @@ export const BROADCAST_SCOREBUG_LAYOUT: ScorebugLayoutDefinition = {
   imageWidth: 1536,
   shellUrl: BROADCAST_SCOREBUG_SHELL_URL,
   safeZones: [
-    safeZone('userLogo', 0.035, 0.18, 0.075, 0.30),
-    safeZone('userAbbreviation', 0.12, 0.23, 0.11, 0.22),
-    safeZone('userScore', 0.24, 0.17, 0.10, 0.35),
-    safeZone('opponentScore', 0.60, 0.17, 0.10, 0.35),
-    safeZone('opponentLogo', 0.70, 0.18, 0.075, 0.30),
-    safeZone('opponentAbbreviation', 0.785, 0.23, 0.12, 0.22),
-    safeZone('quarter', 0.435, 0.18, 0.06, 0.18),
-    safeZone('gameClock', 0.505, 0.18, 0.08, 0.18),
-    safeZone('possession', 0.045, 0.67, 0.08, 0.18),
-    safeZone('downDistance', 0.15, 0.65, 0.20, 0.20),
-    safeZone('ballLocation', 0.37, 0.65, 0.18, 0.20),
+    safeZone('userLogo', 0.024, 0.119, 0.086, 0.547),
+    safeZone('userAbbreviation', 0.135, 0.29, 0.080, 0.20),
+    safeZone('userScore', 0.300, 0.10, 0.085, 0.45),
+    safeZone('userTimeouts', 0.2825, 0.58, 0.120, 0.085),
+    safeZone('opponentScore', 0.615, 0.10, 0.085, 0.45),
+    safeZone('opponentTimeouts', 0.5975, 0.58, 0.120, 0.085),
+    safeZone('opponentAbbreviation', 0.785, 0.29, 0.080, 0.20),
+    safeZone('opponentLogo', 0.890, 0.119, 0.086, 0.547),
+    safeZone('quarter', 0.470, 0.17, 0.060, 0.13),
+    safeZone('gameClock', 0.450, 0.31, 0.100, 0.14),
+    safeZone('possession', 0.209, 0.768, 0.120, 0.17),
+    safeZone('downDistance', 0.395, 0.775, 0.180, 0.17),
+    safeZone('ballLocation', 0.640, 0.765, 0.160, 0.17),
   ],
 };
 

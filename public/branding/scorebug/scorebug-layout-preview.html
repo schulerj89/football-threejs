@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Football JS Scorebug Layout Preview</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0b1115;
+        color: #f4f7f2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 28px;
+        background:
+          linear-gradient(180deg, rgba(89, 149, 211, 0.36), transparent 280px),
+          #050708;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+      }
+
+      p {
+        margin: 0 0 22px;
+        color: #b8c3c9;
+      }
+
+      .preview-stage {
+        display: grid;
+        gap: 18px;
+      }
+
+      .scorebug-preview {
+        position: relative;
+        width: min(1140px, calc(100vw - 56px));
+        aspect-ratio: 1536 / 238;
+        overflow: visible;
+        --scorebug-user-accent: #285945;
+        --scorebug-opponent-accent: #b83737;
+      }
+
+      .scorebug-shell {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 44.5%;
+        filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.42));
+        pointer-events: none;
+      }
+
+      .zone {
+        position: absolute;
+        box-sizing: border-box;
+        display: grid;
+        place-items: center;
+        min-width: 0;
+        overflow: hidden;
+        color: #f7fbff;
+        line-height: 1;
+        text-align: center;
+        text-shadow:
+          0 1px 2px rgba(0, 0, 0, 0.9),
+          0 0 12px rgba(0, 0, 0, 0.5);
+      }
+
+      .show-zones .zone {
+        outline: 1px solid rgba(125, 213, 255, 0.74);
+        background: rgba(28, 147, 220, 0.08);
+      }
+
+      .logo {
+        overflow: hidden;
+        border-radius: 999px;
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 255, 255, 0.26),
+          0 0 0 2px rgba(0, 0, 0, 0.25);
+      }
+
+      .logo img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 2%;
+      }
+
+      .abbr {
+        padding: 0 0.35em;
+        font-size: clamp(14px, 1.55vw, 28px);
+        font-weight: 950;
+        white-space: nowrap;
+      }
+
+      .score {
+        position: absolute;
+        padding: 0;
+        font-size: clamp(36px, 4.25vw, 70px);
+        font-weight: 950;
+        font-variant-numeric: tabular-nums;
+        line-height: 0.9;
+      }
+
+      .score::after {
+        position: absolute;
+        right: 14%;
+        bottom: 3%;
+        left: 14%;
+        height: 2px;
+        border-radius: 999px;
+        background: currentColor;
+        content: "";
+      }
+
+      .user-score::after {
+        background: var(--scorebug-user-accent);
+      }
+
+      .opponent-score::after {
+        background: var(--scorebug-opponent-accent);
+      }
+
+      .center {
+        color: #f2d94b;
+        font-size: clamp(10px, 0.95vw, 17px);
+        font-weight: 950;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .strip {
+        font-size: clamp(10px, 1.05vw, 18px);
+        font-weight: 950;
+        white-space: nowrap;
+      }
+
+      .timeouts {
+        box-sizing: border-box;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 9%;
+        align-items: center;
+        justify-items: stretch;
+        padding: 0;
+      }
+
+      .timeout-pip {
+        display: block;
+        height: 38%;
+        min-height: 3px;
+        border-radius: 999px;
+        background: color-mix(in srgb, currentColor 80%, #ffffff 20%);
+        box-shadow:
+          0 0 0 1px rgba(0, 0, 0, 0.42),
+          0 0 9px color-mix(in srgb, currentColor 35%, transparent);
+      }
+
+      .user-timeouts {
+        color: var(--scorebug-user-accent);
+      }
+
+      .opponent-timeouts {
+        color: var(--scorebug-opponent-accent);
+      }
+
+      .controls {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        color: #dce5ea;
+        font-size: 14px;
+      }
+
+      .report {
+        width: min(1140px, calc(100vw - 56px));
+        border-collapse: collapse;
+        background: rgba(14, 19, 23, 0.92);
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        padding: 8px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        text-align: left;
+      }
+
+      th {
+        color: #f4f7f2;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .ok {
+        color: #95e0a5;
+      }
+
+      .warn {
+        color: #ffd35a;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="preview-stage">
+      <header>
+        <h1>Football JS Scorebug Layout Preview</h1>
+        <p>Live HTML overlay preview with mirrored safe-zone measurements. Text, logos, scores, clock, and timeout pips are not baked into the shell image.</p>
+      </header>
+
+      <label class="controls">
+        <input id="showZones" type="checkbox" checked>
+        Show safe-zone outlines
+      </label>
+
+      <section id="scorebug" class="scorebug-preview show-zones" aria-label="Scorebug layout preview">
+        <img class="scorebug-shell" src="/branding/scorebug/football-js-scorebug-shell.webp" alt="">
+      </section>
+
+      <table class="report">
+        <thead>
+          <tr>
+            <th>Pair</th>
+            <th>Width Delta</th>
+            <th>Height Delta</th>
+            <th>Mirror Center Error</th>
+            <th>Vertical Center Delta</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+    </main>
+
+    <script type="module">
+      const sampleContent = {
+        userLogo: '<img src="/branding/teams/summit-forge/logo.webp" alt="">',
+        userAbbreviation: 'SUM',
+        userScore: '0',
+        userTimeouts: '<span class="timeout-pip"></span><span class="timeout-pip"></span><span class="timeout-pip"></span>',
+        opponentScore: '0',
+        opponentTimeouts: '<span class="timeout-pip"></span><span class="timeout-pip"></span><span class="timeout-pip"></span>',
+        opponentAbbreviation: 'LFL',
+        opponentLogo: '<img src="/branding/teams/lakefront-lights/logo.webp" alt="">',
+        quarter: 'Q1',
+        gameClock: '2:42',
+        possession: 'USER BALL',
+        downDistance: '2ND & 1',
+        ballLocation: 'OWN 34',
+      };
+
+      const classById = {
+        ballLocation: 'strip',
+        downDistance: 'strip',
+        gameClock: 'center',
+        opponentAbbreviation: 'abbr',
+        opponentLogo: 'logo',
+        opponentScore: 'score opponent-score',
+        opponentTimeouts: 'timeouts opponent-timeouts',
+        possession: 'strip',
+        quarter: 'center',
+        userAbbreviation: 'abbr',
+        userLogo: 'logo',
+        userScore: 'score user-score',
+        userTimeouts: 'timeouts user-timeouts',
+      };
+
+      const mirrorPairs = [
+        ['userLogo', 'opponentLogo'],
+        ['userAbbreviation', 'opponentAbbreviation'],
+        ['userScore', 'opponentScore'],
+        ['userTimeouts', 'opponentTimeouts'],
+      ];
+
+      const scorebug = document.getElementById('scorebug');
+      const reportBody = document.getElementById('reportBody');
+      const showZones = document.getElementById('showZones');
+      const layout = await fetch('/branding/scorebug/scorebug-layout.json').then((response) => response.json());
+
+      for (const zone of layout.safeZones) {
+        const node = document.createElement('div');
+        node.className = `zone ${classById[zone.id] ?? ''}`;
+        node.dataset.zone = zone.id;
+        node.innerHTML = sampleContent[zone.id] ?? zone.id;
+        applyZone(node, zone.normalized);
+        scorebug.append(node);
+      }
+
+      showZones.addEventListener('change', () => {
+        scorebug.classList.toggle('show-zones', showZones.checked);
+      });
+
+      window.addEventListener('resize', renderReport);
+      renderReport();
+
+      function applyZone(node, bounds) {
+        node.style.left = `${bounds.x * 100}%`;
+        node.style.top = `${bounds.y * 100}%`;
+        node.style.width = `${bounds.width * 100}%`;
+        node.style.height = `${bounds.height * 100}%`;
+      }
+
+      function renderReport() {
+        const rootRect = scorebug.getBoundingClientRect();
+        reportBody.replaceChildren(...mirrorPairs.map(([leftId, rightId]) => {
+          const left = scorebug.querySelector(`[data-zone="${leftId}"]`).getBoundingClientRect();
+          const right = scorebug.querySelector(`[data-zone="${rightId}"]`).getBoundingClientRect();
+          const widthDelta = Math.abs(left.width - right.width);
+          const heightDelta = Math.abs(left.height - right.height);
+          const leftCenterX = left.left + left.width / 2 - rootRect.left;
+          const rightCenterX = right.left + right.width / 2 - rootRect.left;
+          const mirrorError = Math.abs(rootRect.width - (leftCenterX + rightCenterX));
+          const verticalDelta = Math.abs(
+            (left.top + left.height / 2) - (right.top + right.height / 2),
+          );
+          const pass = widthDelta <= 0.5 && heightDelta <= 0.5 && mirrorError <= 0.75 && verticalDelta <= 0.5;
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${leftId} / ${rightId}</td>
+            <td>${widthDelta.toFixed(2)} px</td>
+            <td>${heightDelta.toFixed(2)} px</td>
+            <td>${mirrorError.toFixed(2)} px</td>
+            <td>${verticalDelta.toFixed(2)} px</td>
+            <td class="${pass ? 'ok' : 'warn'}">${pass ? 'centered' : 'check'}</td>
+          `;
+          return row;
+        }));
+      }
+    </script>
+  </body>
+</html>

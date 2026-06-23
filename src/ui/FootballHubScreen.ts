@@ -63,10 +63,6 @@ export class FootballHubScreen {
     opponent: document.createElement('select'),
     user: document.createElement('select'),
   };
-  private readonly playNowQuarterbacks = {
-    opponent: document.createElement('div'),
-    user: document.createElement('div'),
-  };
   private readonly playNowValidation = document.createElement('div');
   private readonly playNowCorrectionButton = document.createElement('button');
   private readonly playNowPlayButton = document.createElement('button');
@@ -251,6 +247,9 @@ export class FootballHubScreen {
     panel.dataset.side = side;
     const logo = side === 'user' ? this.userLogo : this.opponentLogo;
     logo.root.classList.add('football-hub-play-team-logo');
+    const logoStage = document.createElement('div');
+    logoStage.className = 'football-hub-play-team-logo-stage';
+    logoStage.append(logo.root);
     const title = document.createElement('div');
     title.className = 'football-hub-play-team-title';
     title.dataset.role = side;
@@ -258,9 +257,7 @@ export class FootballHubScreen {
     ratings.className = 'football-hub-rating-grid';
     ratings.dataset.role = `${side}-ratings`;
     const controls = this.createPlayTeamControls(side);
-    this.playNowQuarterbacks[side].className = 'football-hub-play-team-qb';
-    this.playNowQuarterbacks[side].dataset.role = `${side}-quarterback`;
-    panel.append(logo.root, title, controls, ratings, this.playNowQuarterbacks[side]);
+    panel.append(title, logoStage, ratings, controls);
     return panel;
   }
 
@@ -495,8 +492,6 @@ export class FootballHubScreen {
     this.syncPlayTeamTitle('opponent', theme.defense.profile, teamProfiles.opponentUniform);
     this.syncPlayTeamRatings('user', userSummary);
     this.syncPlayTeamRatings('opponent', opponentSummary);
-    this.syncPlayTeamQuarterback('user', userSummary?.startingQuarterback ?? null);
-    this.syncPlayTeamQuarterback('opponent', opponentSummary?.startingQuarterback ?? null);
     this.syncPlayNowValidation();
     this.playNowSummary.className = 'football-hub-match-summary';
     this.playNowSummary.textContent = `${theme.offense.profile.displayName} ${theme.offense.profile.abbreviation} vs ${theme.defense.profile.displayName} ${theme.defense.profile.abbreviation} | ${formatGameSummary(this.settings)}`;
@@ -524,6 +519,15 @@ export class FootballHubScreen {
     if (!element) {
       return;
     }
+    const panel = this.playNowView.querySelector<HTMLElement>(`.football-hub-play-team[data-side="${side}"]`);
+    panel?.style.setProperty('--play-team-primary', profile.colors.primary);
+    panel?.style.setProperty('--play-team-secondary', profile.colors.secondary);
+    panel?.style.setProperty('--play-team-accent', profile.colors.accent);
+    panel?.style.setProperty('--play-team-readable', getReadableTextColor(profile.colors.primary));
+    panel?.setAttribute(
+      'aria-label',
+      `${side === 'user' ? 'User matchup card' : 'Opponent matchup card'}: ${profile.displayName}, ${profile.abbreviation}, ${capitalize(uniform)} uniform`,
+    );
     element.replaceChildren();
     const name = document.createElement('strong');
     name.textContent = profile.displayName;
@@ -538,13 +542,6 @@ export class FootballHubScreen {
       return;
     }
     element.replaceChildren(...createRatingPills(summary));
-  }
-
-  private syncPlayTeamQuarterback(side: 'opponent' | 'user', quarterback: RosterPlayer | null): void {
-    const element = this.playNowQuarterbacks[side];
-    element.textContent = quarterback
-      ? `QB #${quarterback.jerseyNumber} ${quarterback.displayName}`
-      : 'QB unavailable';
   }
 
   private syncPlayNowValidation(): void {

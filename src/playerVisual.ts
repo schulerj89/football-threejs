@@ -20,6 +20,7 @@ const PLAYER_FORWARD_Z = 1;
 
 export const PLAYER_HEAD_ANCHOR_NAME = 'placeholder-player-head-anchor';
 export const PLAYER_BACK_NUMBER_ANCHOR_NAME = 'backNumberAnchor';
+export const PLAYER_FRONT_NUMBER_ANCHOR_NAME = 'frontNumberAnchor';
 export const PLAYER_BODY_ROOT_NAME = 'bodyRoot';
 
 export type PlayerBodyVisualStyle = 'box' | 'mannequin' | 'meshyRigged';
@@ -142,6 +143,7 @@ export const PLAYER_BODY_DIMENSIONS: PlayerBodyDimensions = {
 
 const BODY_PART_NAMES = {
   backNumberAnchor: PLAYER_BACK_NUMBER_ANCHOR_NAME,
+  frontNumberAnchor: PLAYER_FRONT_NUMBER_ANCHOR_NAME,
   head: 'head',
   headAnchor: PLAYER_HEAD_ANCHOR_NAME,
   jerseyTexturePanel: 'jerseyTexturePanel',
@@ -419,6 +421,7 @@ function createMannequinBodyRoot(
   );
   torso.position.set(0, PLAYER_BODY_DIMENSIONS.torsoCenterY, 0);
   torso.add(createBackNumberAnchor('mannequin'));
+  torso.add(createFrontNumberAnchor('mannequin'));
   bodyRoot.add(torso);
 
   const jerseyTexturePanel = createBodyMesh(
@@ -475,6 +478,7 @@ function createBoxBodyRoot(player: PlayerModel | undefined, debugRoleColors: boo
   const geometry = player?.role === 'defender' ? sharedGeometry.boxDefenderBody : sharedGeometry.boxBody;
   const body = createBodyMesh('placeholder-player-body', geometry, 'jersey', player, debugRoleColors);
   body.add(createBackNumberAnchor('box'));
+  body.add(createFrontNumberAnchor('box'));
   bodyRoot.add(body);
 
   const facingStripe = new THREE.Mesh(sharedGeometry.boxFacingStripe, getBasicMaterial('box-facing', 0xf3f5f8));
@@ -582,6 +586,21 @@ function createBackNumberAnchor(bodyStyle: PlayerBodyVisualStyle): THREE.Group {
       0,
       0.03,
       -PLAYER_BODY_DIMENSIONS.jerseyPanelForwardOffset - 0.018,
+    );
+  }
+  return anchor;
+}
+
+function createFrontNumberAnchor(bodyStyle: PlayerBodyVisualStyle): THREE.Group {
+  const anchor = new THREE.Group();
+  anchor.name = BODY_PART_NAMES.frontNumberAnchor;
+  if (bodyStyle === 'box') {
+    anchor.position.set(0, 0.14, 0.712);
+  } else {
+    anchor.position.set(
+      0,
+      0.03,
+      PLAYER_BODY_DIMENSIONS.jerseyPanelForwardOffset + 0.018,
     );
   }
   return anchor;
@@ -727,35 +746,19 @@ function getJerseyTextureMaterial(
 }
 
 function createJerseyTexture(
-  team: PlayerTeam,
-  debugRoleColors: boolean,
-  teamUniforms: PlayerTeamUniforms,
+  _team: PlayerTeam,
+  _debugRoleColors: boolean,
+  _teamUniforms: PlayerTeamUniforms,
 ): THREE.DataTexture {
   const width = 64;
   const height = 64;
   const data = new Uint8Array(width * height * 4);
-  const palette = teamUniforms[team] ?? DEFAULT_PLAYER_TEAM_UNIFORMS[team];
-  const accent = debugRoleColors
-    ? [246, 250, 255, 220]
-    : hexToRgba(palette.number, 220);
-  const trim = debugRoleColors
-    ? [18, 45, 98, 180]
-    : hexToRgba(palette.stripe, 190);
-
-  paintRect(data, width, 7, 8, 50, 5, accent);
-  paintRect(data, width, 7, 51, 50, 4, accent);
-  paintRect(data, width, 7, 13, 5, 38, trim);
-  paintRect(data, width, 52, 13, 5, 38, trim);
-  paintRect(data, width, 25, 22, 5, 22, accent);
-  paintRect(data, width, 36, 22, 5, 22, accent);
-  paintRect(data, width, 23, 20, 8, 4, accent);
-  paintRect(data, width, 34, 20, 8, 4, accent);
 
   const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.magFilter = THREE.NearestFilter;
   texture.minFilter = THREE.NearestFilter;
-  texture.name = `jersey-panel-${debugRoleColors ? 'debug' : team}`;
+  texture.name = 'jersey-panel-transparent';
   texture.needsUpdate = true;
   return texture;
 }
@@ -781,37 +784,6 @@ function createUniformThemeKey(teamUniforms: PlayerTeamUniforms): string {
     serializeUniformPalette(teamUniforms.offense),
     serializeUniformPalette(teamUniforms.defense),
   ].join('::');
-}
-
-function hexToRgba(hex: string, alpha: number): readonly number[] {
-  const value = getUniformColorNumber(hex);
-
-  return [
-    (value >> 16) & 0xff,
-    (value >> 8) & 0xff,
-    value & 0xff,
-    alpha,
-  ];
-}
-
-function paintRect(
-  data: Uint8Array,
-  textureWidth: number,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  rgba: readonly number[],
-): void {
-  for (let row = y; row < y + height; row += 1) {
-    for (let column = x; column < x + width; column += 1) {
-      const index = (row * textureWidth + column) * 4;
-      data[index] = rgba[0];
-      data[index + 1] = rgba[1];
-      data[index + 2] = rgba[2];
-      data[index + 3] = rgba[3];
-    }
-  }
 }
 
 function getSkinToneMaterial(skinToneId: SkinToneId): THREE.MeshLambertMaterial {

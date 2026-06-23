@@ -10,6 +10,7 @@ import { createPlayerModel } from '../src/playerModel';
 import {
   PLAYER_BODY_DIMENSIONS,
   PLAYER_BODY_ROOT_NAME,
+  PLAYER_FRONT_NUMBER_ANCHOR_NAME,
   PLAYER_HEAD_ANCHOR_NAME,
   createPlaceholderPlayerVisual,
   getPlayerBodyVisualSnapshot,
@@ -45,6 +46,7 @@ describe('player visual', () => {
     expect(bodyRoot?.parent).toBe(playerVisual);
     expect(bodyRoot?.getObjectByName('torso')).toBeInstanceOf(THREE.Mesh);
     expect(bodyRoot?.getObjectByName('jerseyTexturePanel')).toBeInstanceOf(THREE.Mesh);
+    expect(bodyRoot?.getObjectByName(PLAYER_FRONT_NUMBER_ANCHOR_NAME)).toBeInstanceOf(THREE.Group);
     expect(bodyRoot?.getObjectByName('shoulderPads')).toBeInstanceOf(THREE.Mesh);
     expect(bodyRoot?.getObjectByName('leftArmPivot')).toBeInstanceOf(THREE.Group);
     expect(bodyRoot?.getObjectByName('rightArmPivot')).toBeInstanceOf(THREE.Group);
@@ -326,7 +328,7 @@ describe('player visual', () => {
     expect(materialIds.size).toBeLessThanOrEqual(18);
   });
 
-  it('binds gameplay visual back numbers from roster identities', () => {
+  it('binds gameplay visual front and back numbers from roster identities', () => {
     const scene = new THREE.Scene();
     const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
     const binding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
@@ -346,9 +348,12 @@ describe('player visual', () => {
     expect(quarterbackRoster).not.toBeNull();
     expect(numberSnapshot).toMatchObject({
       jerseyNumber: quarterbackRoster?.jerseyNumber,
+      backVisible: true,
+      frontVisible: true,
       missingBindingReason: null,
       rosterPlayerId: quarterbackRoster?.id,
       visible: true,
+      visibleMeshCount: 2,
       visualId: 'offense-qb',
     });
     expect(quarterbackVisual ? getPlayerBodyVisualSnapshot(quarterbackVisual).appearance : null).toEqual(

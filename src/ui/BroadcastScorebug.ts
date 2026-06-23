@@ -24,6 +24,8 @@ export class BroadcastScorebug {
   private readonly opponentAbbreviation = document.createElement('span');
   private readonly userScore = document.createElement('span');
   private readonly opponentScore = document.createElement('span');
+  private readonly userTimeouts = createTimeoutPips('user');
+  private readonly opponentTimeouts = createTimeoutPips('opponent');
   private readonly quarter = document.createElement('span');
   private readonly gameClock = document.createElement('span');
   private readonly possession = document.createElement('span');
@@ -54,6 +56,8 @@ export class BroadcastScorebug {
     this.opponentAbbreviation.className = 'broadcast-scorebug-abbreviation broadcast-scorebug-opponent-abbreviation';
     this.userScore.className = 'broadcast-scorebug-score broadcast-scorebug-user-score';
     this.opponentScore.className = 'broadcast-scorebug-score broadcast-scorebug-opponent-score';
+    this.userTimeouts.className = 'broadcast-scorebug-timeouts broadcast-scorebug-user-timeouts';
+    this.opponentTimeouts.className = 'broadcast-scorebug-timeouts broadcast-scorebug-opponent-timeouts';
     this.quarter.className = 'broadcast-scorebug-center broadcast-scorebug-quarter';
     this.gameClock.className = 'broadcast-scorebug-center broadcast-scorebug-game-clock';
     this.possession.className = 'broadcast-scorebug-strip broadcast-scorebug-possession';
@@ -71,7 +75,9 @@ export class BroadcastScorebug {
     this.applyZone(this.userLogo.root, 'userLogo');
     this.applyZone(this.userAbbreviation, 'userAbbreviation');
     this.applyZone(this.userScore, 'userScore');
+    this.applyZone(this.userTimeouts, 'userTimeouts');
     this.applyZone(this.opponentScore, 'opponentScore');
+    this.applyZone(this.opponentTimeouts, 'opponentTimeouts');
     this.applyZone(this.opponentLogo.root, 'opponentLogo');
     this.applyZone(this.opponentAbbreviation, 'opponentAbbreviation');
     this.applyZone(this.quarter, 'quarter');
@@ -85,7 +91,9 @@ export class BroadcastScorebug {
       this.userLogo.root,
       this.userAbbreviation,
       this.userScore,
+      this.userTimeouts,
       this.opponentScore,
+      this.opponentTimeouts,
       this.opponentLogo.root,
       this.opponentAbbreviation,
       this.quarter,
@@ -173,6 +181,18 @@ function pulseElement(element: HTMLElement, className: string): void {
   element.classList.remove(className);
   void element.offsetWidth;
   element.classList.add(className);
+}
+
+function createTimeoutPips(side: 'opponent' | 'user'): HTMLDivElement {
+  const root = document.createElement('div');
+  root.setAttribute('aria-hidden', 'true');
+  root.dataset.side = side;
+  for (let index = 0; index < 3; index += 1) {
+    const pip = document.createElement('span');
+    pip.className = 'broadcast-scorebug-timeout-pip';
+    root.append(pip);
+  }
+  return root;
 }
 
 function createFallbackScorebugTeamProfile(side: 'opponent' | 'user') {

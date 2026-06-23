@@ -1193,6 +1193,14 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('DEF');
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('ST');
   await expect(page.locator('.football-hub-play-team-logo')).toHaveCount(2);
+  await expect(page.locator('.football-hub-play-team-logo-stage')).toHaveCount(2);
+  await expect(page.locator('.football-hub-play-team').first()).toContainText(/\w+ \w+/);
+  await expect(page.locator('.football-hub-play-team').first()).toContainText(/[A-Z]{3}/);
+  const playNowLogoBox = await page.locator('.football-hub-play-team-logo').first().boundingBox();
+  expect(playNowLogoBox?.width ?? 0).toBeGreaterThanOrEqual(170);
+  expect(playNowLogoBox?.height ?? 0).toBeGreaterThanOrEqual(170);
+  await expect(page.locator('.football-hub-play-team').filter({ hasText: /QB #\d+/ })).toHaveCount(0);
+  await expect(page.locator('.football-hub-play-team-qb')).toHaveCount(0);
   await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(0);
   await page.getByRole('button', { name: 'Rosters' }).click();
   await expect(page.locator('.football-hub-team-row')).toHaveCount(0);
@@ -1212,8 +1220,8 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.getByLabel('Opponent team')).toBeVisible();
   await expect(page.getByLabel('Your uniform')).toBeVisible();
   await expect(page.getByLabel('Opponent uniform')).toBeVisible();
-  await expect(page.locator('.football-hub-play-team[data-side="user"] .football-hub-play-team-qb')).toContainText(/^QB #\d+ .+/);
-  await expect(page.locator('.football-hub-play-team[data-side="opponent"] .football-hub-play-team-qb')).toContainText(/^QB #\d+ .+/);
+  await expect(page.locator('.football-hub-play-team[data-side="user"]').filter({ hasText: /QB #\d+/ })).toHaveCount(0);
+  await expect(page.locator('.football-hub-play-team[data-side="opponent"]').filter({ hasText: /QB #\d+/ })).toHaveCount(0);
   await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(0);
   await expect.poll(() => getStageVisualMatrixSnapshot(page)).toMatchObject({
     activePrimaryGroups: [],
@@ -2170,7 +2178,7 @@ extendedSmokeTest('runs seven-on-seven audit and reset-cycle resource stability 
   expect(resetCycles.after.activePlayerRootCount).toBe(14);
   expect(resetCycles.after.visualRootCount).toBe(14);
   expect(resetCycles.after.jerseyNumberAtlasCreated).toBe(true);
-  expect(resetCycles.after.jerseyNumberMeshCount).toBe(14);
+  expect(resetCycles.after.jerseyNumberMeshCount).toBe(28);
   expect(resetCycles.after.jerseyNumberMaterialCount).toBe(resetCycles.before.jerseyNumberMaterialCount);
   expect(resetCycles.after.geometryCount).toBeLessThanOrEqual(resetCycles.before.geometryCount);
   expect(resetCycles.after.materialCount).toBe(resetCycles.before.materialCount);
@@ -2238,7 +2246,7 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   expect(resetCycles.after.visualRootCount).toBe(22);
   expect(resetCycles.after.helmetInstanceCount).toBe(22);
   expect(resetCycles.after.jerseyNumberAtlasCreated).toBe(true);
-  expect(resetCycles.after.jerseyNumberMeshCount).toBe(22);
+  expect(resetCycles.after.jerseyNumberMeshCount).toBe(44);
   expect(resetCycles.after.jerseyNumberMaterialCount).toBe(resetCycles.before.jerseyNumberMaterialCount);
   expect(resetCycles.after.footballMeshCount).toBe(resetCycles.before.footballMeshCount);
   expect(resetCycles.after.officialCount).toBe(0);
@@ -2272,7 +2280,7 @@ test('runs eleven-on-eleven audit matrix and reset-cycle resource stability chec
   expect(integratedResetCycles.after.visualRootCount).toBe(22);
   expect(integratedResetCycles.after.helmetInstanceCount).toBe(22);
   expect(integratedResetCycles.after.jerseyNumberAtlasCreated).toBe(true);
-  expect(integratedResetCycles.after.jerseyNumberMeshCount).toBe(22);
+  expect(integratedResetCycles.after.jerseyNumberMeshCount).toBe(44);
   expect(integratedResetCycles.after.jerseyNumberMaterialCount).toBe(
     integratedResetCycles.before.jerseyNumberMaterialCount,
   );

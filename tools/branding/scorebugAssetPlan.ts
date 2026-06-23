@@ -18,15 +18,19 @@ export interface ScorebugImageAssetPlan {
 
 const SCOREBUG_SHARED_DIRECTION = [
   'Create an original broadcast scorebug shell for a fictional low-poly college-football video game named Football JS.',
-  'Format: wide horizontal 3:1 graphic designed for the top or bottom of a game screen.',
-  'Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, polished modern sports-broadcast presentation, two symmetrical team sections, clear square or circular wells for team logos, large score areas beside each logo, central area for quarter and game clock, and a lower strip for possession, down, distance, and ball location.',
+  'Format: wide horizontal 3:1 source image designed for a top-of-screen football broadcast scorebug; the visible scorebug shell should be a centered, low-height band with minimal black padding.',
+  'Use a dark charcoal and metallic-neutral base, subtle angular low-poly geometry, and polished modern sports-broadcast presentation.',
+  'Build the shell on a strict symmetrical grid from left to right: one circular logo well, one abbreviation panel, one large score well, one small central quarter/clock panel, one large score well, one abbreviation panel, and one circular logo well.',
+  'The left and right halves must be mirror-balanced with equal logo-well sizes, equal score-well sizes, equal abbreviation-panel sizes, and equal vertical alignment.',
+  'Leave clean blank horizontal timeout/status rails below each score well; do not draw pips, hashes, bars, or placeholder marks inside those timeout rails.',
+  'Add one clean lower context strip with three blank readable compartments for possession, down and distance, and ball location.',
   'Keep restrained highlight edges and high readability over a bright football field.',
   'Make the shell flexible enough for any team colors.',
   'Straight-on 2D presentation, no perspective, opaque background.',
 ].join(' ');
 
 const SCOREBUG_NEGATIVE_DIRECTION = [
-  'Do not include words, letters, numbers, scores, clock text, team logos, team colors, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable.',
+  'Do not include words, letters, numbers, scores, clock text, team logos, team colors, timeout dots, timeout bars, decorative pips, possession arrows, network logo, television-brand mark, ESPN, FOX, CBS, NBC, EA, Madden, NCAA, CFB references, mock player data, perspective tilt, watermark, or busy gradients that make overlay text unreadable.',
   'The final runtime will overlay all text and logos through HTML, so leave every label and score area blank.',
 ].join(' ');
 
@@ -37,12 +41,12 @@ export const FOOTBALL_JS_SCOREBUG_ASSET_PLAN: readonly ScorebugImageAssetPlan[] 
     candidateId: 'candidate-a',
     generationStatus: 'planned',
     model: 'gpt-image-2',
-    notes: 'Clean contemporary angular package.',
+    notes: 'Clean symmetric angular package with blank timeout rails.',
     outputFormat: 'webp',
     outputPath: 'public/branding/scorebug/candidate-a.webp',
     prompt: [
       SCOREBUG_SHARED_DIRECTION,
-      'Candidate A variation: clean contemporary angular package with crisp beveled panels, subtle metallic layering, and neutral broadcast polish.',
+      'Candidate A variation: clean contemporary angular package with crisp beveled panels, subtle metallic layering, high symmetry, and neutral broadcast polish.',
       SCOREBUG_NEGATIVE_DIRECTION,
     ].join(' '),
     quality: 'high',
@@ -54,12 +58,12 @@ export const FOOTBALL_JS_SCOREBUG_ASSET_PLAN: readonly ScorebugImageAssetPlan[] 
     candidateId: 'candidate-b',
     generationStatus: 'planned',
     model: 'gpt-image-2',
-    notes: 'Slightly retro 1990s-console influence with modern polish.',
+    notes: 'Retro-console influence with symmetric blank wells.',
     outputFormat: 'webp',
     outputPath: 'public/branding/scorebug/candidate-b.webp',
     prompt: [
       SCOREBUG_SHARED_DIRECTION,
-      'Candidate B variation: slightly retro 1990s-console influence with modern polish, chunky panel rhythm, restrained scanline-inspired details, and clean modern material finish.',
+      'Candidate B variation: slightly retro 1990s-console influence with modern polish, chunky but symmetric panel rhythm, restrained scanline-inspired details, and clean modern material finish.',
       SCOREBUG_NEGATIVE_DIRECTION,
     ].join(' '),
     quality: 'high',
@@ -71,7 +75,7 @@ export const FOOTBALL_JS_SCOREBUG_ASSET_PLAN: readonly ScorebugImageAssetPlan[] 
     candidateId: 'candidate-c',
     generationStatus: 'planned',
     model: 'gpt-image-2',
-    notes: 'Minimal stadium-board design.',
+    notes: 'Minimal stadium-board design with maximum overlay clarity.',
     outputFormat: 'webp',
     outputPath: 'public/branding/scorebug/candidate-c.webp',
     prompt: [

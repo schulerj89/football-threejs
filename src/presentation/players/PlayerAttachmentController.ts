@@ -1,15 +1,18 @@
 import * as THREE from 'three';
 import {
   PLAYER_BACK_NUMBER_ANCHOR_NAME,
+  PLAYER_FRONT_NUMBER_ANCHOR_NAME,
   PLAYER_HEAD_ANCHOR_NAME,
 } from '../../playerVisual';
 
 export interface PlayerAttachmentAnchors {
   backNumberAnchor: THREE.Object3D;
+  frontNumberAnchor: THREE.Object3D;
   headAnchor: THREE.Object3D;
 }
 
 const BACK_NUMBER_OFFSET = new THREE.Vector3(0, -0.08, -0.32);
+const FRONT_NUMBER_OFFSET = new THREE.Vector3(0, -0.08, 0.32);
 
 export function createRiggedPlayerAttachmentAnchors(root: THREE.Object3D): PlayerAttachmentAnchors {
   const helmetSocket = findSocket(root, 'socket_helmet') ?? root;
@@ -25,13 +28,21 @@ export function createRiggedPlayerAttachmentAnchors(root: THREE.Object3D): Playe
     BACK_NUMBER_OFFSET,
   );
   backNumberAnchor.rotation.y = Math.PI;
+  const frontNumberAnchor = ensureChildAnchor(
+    shoulderSocket,
+    PLAYER_FRONT_NUMBER_ANCHOR_NAME,
+    FRONT_NUMBER_OFFSET,
+  );
+  frontNumberAnchor.rotation.y = 0;
   root.userData.riggedAttachmentSockets = {
     backNumber: shoulderSocket.name,
+    frontNumber: shoulderSocket.name,
     helmet: helmetSocket.name,
   };
 
   return {
     backNumberAnchor,
+    frontNumberAnchor,
     headAnchor,
   };
 }
