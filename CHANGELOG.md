@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.5] - 2026-06-23
+
+### Changed
+
+- Changed in-game controlled player labels to show only the player name, removing the jersey number line from the on-field marker.
+
+### Tests
+
+- Verified `npx vitest run tests/controlledPlayerLabel.test.ts` and `npm run build`.
+
 ## [1.22.4] - 2026-06-23
 
 ### Changed

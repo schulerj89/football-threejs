@@ -63,7 +63,7 @@ export function createAdvancedPresentationSettings(context: SettingsSectionConte
     }),
     createToggleSetting({
       checked: context.settings.controlledPlayerLabelEnabled,
-      description: 'Show the controlled player name and number marker.',
+      description: 'Show the controlled player name marker.',
       label: 'Controlled-player label',
       onChange: (checked) => context.onPatch({ controlledPlayerLabelEnabled: checked }, true),
     }),

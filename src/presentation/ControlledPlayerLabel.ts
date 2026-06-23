@@ -422,7 +422,6 @@ function createLabelTexture(
   const foreground = getReadableTextColor(background);
   const accent = team.uniform.stripe;
   const name = formatRosterInitialName(rosterPlayer);
-  const number = `#${rosterPlayer.jerseyNumber}`;
 
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.fillStyle = 'rgba(8, 11, 14, 0.62)';
@@ -439,10 +438,8 @@ function createLabelTexture(
   context.fillStyle = foreground;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  context.font = 'bold 30px monospace';
-  context.fillText(name, canvas.width / 2, 48, canvas.width - 44);
-  context.font = 'bold 34px monospace';
-  context.fillText(number, canvas.width / 2, 86, canvas.width - 44);
+  context.font = 'bold 36px monospace';
+  context.fillText(name, canvas.width / 2, canvas.height / 2, canvas.width - 44);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
