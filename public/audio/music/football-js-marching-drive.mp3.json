@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-marching-drive",
+  "category": "music",
+  "compressedBytes": 2016621,
+  "contentHash": "ff1ce67a4d4367c833c59b02b40128d5a15445ad3426ac38021b75b6ba0878ec",
+  "durationSeconds": 84.024,
+  "generatedAt": "2026-06-23T08:31:13.821Z",
+  "kind": "music",
+  "metadata": {
+    "catalogCategory": "menu",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Marching Drive",
+    "energyLevel": "peak",
+    "transitionPurpose": "menu-playlist"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. The track should share a cohesive stadium-sports identity with the main Football JS title theme while being a distinct composition. Use marching percussion, snare cadence, bass drum, brass or cinematic orchestra, bold low brass, cymbal swells, tom fills, heroic competitive energy, and polished modern game-menu production. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no crowd chants, no announcers, no real fight-song melodies, no real team references, no artist references, no song-title references, no copyrighted motifs. Track identity: Marching Drive. Up-tempo college stadium instrumental, drumline groove, snare rolls, tenor tom fills, bold original horn motif, low brass support, energetic but polished game-menu mix, approximately 84 seconds.",
+  "requestedDurationSeconds": 84,
+  "runtimeLoadingStrategy": "stream",
+  "songId": "ZRRkYJKGvmxY0ScwSbmn"
+}

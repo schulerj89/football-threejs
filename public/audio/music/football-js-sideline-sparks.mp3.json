@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-sideline-sparks",
+  "category": "music",
+  "compressedBytes": 1872621,
+  "contentHash": "028b0f3577c8eface1f23b9da6055d438e16ff9d19f28c626c339c53ff0077bd",
+  "durationSeconds": 78.024,
+  "generatedAt": "2026-06-23T08:31:42.132Z",
+  "kind": "music",
+  "metadata": {
+    "catalogCategory": "menu",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Sideline Sparks",
+    "energyLevel": "high",
+    "transitionPurpose": "menu-playlist"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. Use upbeat pop-punk and indie-rock sports-menu energy: bright rhythm guitars, tight live drums, driving bass, hooky original lead melody, clean power-chord motion, occasional melodic string-like lead color, and a polished optimistic game-menu mix. Blend the rock band with subtle stadium percussion accents so it still belongs in the Football JS soundtrack. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no artist references, no band references, no song-title references, no copyrighted motifs, no real fight-song melodies, no real team references, no crowd chants, no announcers, no excessive distortion. Track identity: Sideline Sparks. Energetic, bright, youthful, competitive, approximately 78 seconds.",
+  "requestedDurationSeconds": 78,
+  "runtimeLoadingStrategy": "stream",
+  "songId": "3Ppp7gJMuZ7AiahbwZVj"
+}

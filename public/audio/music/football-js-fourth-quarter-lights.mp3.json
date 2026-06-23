@@ -1,0 +1,22 @@
+{
+  "assetId": "football-js-fourth-quarter-lights",
+  "category": "music",
+  "compressedBytes": 1968813,
+  "contentHash": "d677570f73d175d60d0ec1b2e4670e95958ff5aacd57b2710cec890234069633",
+  "durationSeconds": 82.032,
+  "generatedAt": "2026-06-23T08:31:53.514Z",
+  "kind": "music",
+  "metadata": {
+    "catalogCategory": "menu",
+    "composerDisplay": "Football JS Original Soundtrack",
+    "displayTitle": "Fourth Quarter Lights",
+    "energyLevel": "peak",
+    "transitionPurpose": "menu-playlist"
+  },
+  "modelId": "music_v2",
+  "outputFormat": "mp3_48000_192",
+  "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. Use high-energy indie rock and pop-punk sports-anthem ingredients: fast clean drums, punchy bass, layered bright guitars, open-chord lift, memorable original lead hook, controlled melodic string-like accent, and a polished arcade-football menu mix. Keep it energetic and emotional without imitating any specific band, artist, or existing song. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no artist references, no band references, no song-title references, no copyrighted motifs, no real team references, no real fight-song melodies, no crowd chants, no announcers. Track identity: Fourth Quarter Lights. Fast, hopeful, competitive, stadium-ready, approximately 82 seconds.",
+  "requestedDurationSeconds": 82,
+  "runtimeLoadingStrategy": "stream",
+  "songId": "wcYAfEi5cq937pKqIOJk"
+}

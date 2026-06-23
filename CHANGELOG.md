@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.46] - 2026-06-23
+
+### Added
+
+- Generated five additional Football JS menu music tracks: three college-stadium instrumentals and two original pop-punk/indie-rock instrumentals without artist imitation.
+- Expanded the runtime menu playlist from four to nine tracks and refreshed the music catalog, report, and audition page.
+
+### Changed
+
+- Updated the offline music pipeline validation to support the larger menu playlist while preserving stinger and chant catalog checks.
+
+### Tests
+
+- Verified `npx vitest run tests/musicPipeline.test.ts tests/musicRuntime.test.ts` and `npm run build`.
+
 ## [1.21.45] - 2026-06-23
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "football-threejs",
-  "version": "1.21.45",
+  "version": "1.21.46",
   "private": true,
   "type": "module",
   "description": "Low-poly 3D American football prototype built with Three.js.",

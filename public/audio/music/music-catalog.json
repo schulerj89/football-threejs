@@ -81,6 +81,106 @@
       "transitionPurpose": "menu-playlist"
     },
     {
+      "assetId": "football-js-campus-kickoff",
+      "category": "menu",
+      "composerDisplay": "Football JS Original Soundtrack",
+      "contentHash": "f6b95e96ff2ec137753161c6323e8c0a9a6495637e0e67bd297d4db7e6eb9f5e",
+      "displayTitle": "Campus Kickoff",
+      "durationSeconds": 80.04,
+      "energyLevel": "high",
+      "generationMetadata": {
+        "generatedAt": "2026-06-23T08:31:02.342Z",
+        "modelId": "music_v2",
+        "outputFormat": "mp3_48000_192",
+        "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. The track should share a cohesive stadium-sports identity with the main Football JS title theme while being a distinct composition. Use marching percussion, snare cadence, bass drum, brass or cinematic orchestra, bold low brass, cymbal swells, tom fills, heroic competitive energy, and polished modern game-menu production. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no crowd chants, no announcers, no real fight-song melodies, no real team references, no artist references, no song-title references, no copyrighted motifs. Track identity: Campus Kickoff. Original college-football game-day energy, bright brass section, marching snare cadence, bass drum hits, cymbal lifts, clean pep-band-inspired momentum without copying any real fight song, approximately 80 seconds.",
+        "songId": "AGFiXwgjtYtvB6VAiO4A"
+      },
+      "looping": true,
+      "outputPath": "public/audio/music/football-js-campus-kickoff.mp3",
+      "runtimeAudioUrl": "/audio/music/football-js-campus-kickoff.mp3",
+      "transitionPurpose": "menu-playlist"
+    },
+    {
+      "assetId": "football-js-marching-drive",
+      "category": "menu",
+      "composerDisplay": "Football JS Original Soundtrack",
+      "contentHash": "ff1ce67a4d4367c833c59b02b40128d5a15445ad3426ac38021b75b6ba0878ec",
+      "displayTitle": "Marching Drive",
+      "durationSeconds": 84.024,
+      "energyLevel": "peak",
+      "generationMetadata": {
+        "generatedAt": "2026-06-23T08:31:13.821Z",
+        "modelId": "music_v2",
+        "outputFormat": "mp3_48000_192",
+        "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. The track should share a cohesive stadium-sports identity with the main Football JS title theme while being a distinct composition. Use marching percussion, snare cadence, bass drum, brass or cinematic orchestra, bold low brass, cymbal swells, tom fills, heroic competitive energy, and polished modern game-menu production. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no crowd chants, no announcers, no real fight-song melodies, no real team references, no artist references, no song-title references, no copyrighted motifs. Track identity: Marching Drive. Up-tempo college stadium instrumental, drumline groove, snare rolls, tenor tom fills, bold original horn motif, low brass support, energetic but polished game-menu mix, approximately 84 seconds.",
+        "songId": "ZRRkYJKGvmxY0ScwSbmn"
+      },
+      "looping": true,
+      "outputPath": "public/audio/music/football-js-marching-drive.mp3",
+      "runtimeAudioUrl": "/audio/music/football-js-marching-drive.mp3",
+      "transitionPurpose": "menu-playlist"
+    },
+    {
+      "assetId": "football-js-victory-march",
+      "category": "menu",
+      "composerDisplay": "Football JS Original Soundtrack",
+      "contentHash": "a2452f12c0a60c14ba6668a17409adcc610671c75e992cb3d0f4becfe6e2969c",
+      "displayTitle": "Victory March",
+      "durationSeconds": 76.032,
+      "energyLevel": "high",
+      "generationMetadata": {
+        "generatedAt": "2026-06-23T08:31:24.139Z",
+        "modelId": "music_v2",
+        "outputFormat": "mp3_48000_192",
+        "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. The track should share a cohesive stadium-sports identity with the main Football JS title theme while being a distinct composition. Use marching percussion, snare cadence, bass drum, brass or cinematic orchestra, bold low brass, cymbal swells, tom fills, heroic competitive energy, and polished modern game-menu production. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no crowd chants, no announcers, no real fight-song melodies, no real team references, no artist references, no song-title references, no copyrighted motifs. Track identity: Victory March. Ceremonial college-style sports instrumental, confident original brass melody, steady marching percussion, handoff-ready loop ending, heroic but not bombastic, no real school or fight-song reference, approximately 76 seconds.",
+        "songId": "09lBTZZz9gtNm6HGiZN7"
+      },
+      "looping": true,
+      "outputPath": "public/audio/music/football-js-victory-march.mp3",
+      "runtimeAudioUrl": "/audio/music/football-js-victory-march.mp3",
+      "transitionPurpose": "menu-playlist"
+    },
+    {
+      "assetId": "football-js-sideline-sparks",
+      "category": "menu",
+      "composerDisplay": "Football JS Original Soundtrack",
+      "contentHash": "028b0f3577c8eface1f23b9da6055d438e16ff9d19f28c626c339c53ff0077bd",
+      "displayTitle": "Sideline Sparks",
+      "durationSeconds": 78.024,
+      "energyLevel": "high",
+      "generationMetadata": {
+        "generatedAt": "2026-06-23T08:31:42.132Z",
+        "modelId": "music_v2",
+        "outputFormat": "mp3_48000_192",
+        "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. Use upbeat pop-punk and indie-rock sports-menu energy: bright rhythm guitars, tight live drums, driving bass, hooky original lead melody, clean power-chord motion, occasional melodic string-like lead color, and a polished optimistic game-menu mix. Blend the rock band with subtle stadium percussion accents so it still belongs in the Football JS soundtrack. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no artist references, no band references, no song-title references, no copyrighted motifs, no real fight-song melodies, no real team references, no crowd chants, no announcers, no excessive distortion. Track identity: Sideline Sparks. Energetic, bright, youthful, competitive, approximately 78 seconds.",
+        "songId": "3Ppp7gJMuZ7AiahbwZVj"
+      },
+      "looping": true,
+      "outputPath": "public/audio/music/football-js-sideline-sparks.mp3",
+      "runtimeAudioUrl": "/audio/music/football-js-sideline-sparks.mp3",
+      "transitionPurpose": "menu-playlist"
+    },
+    {
+      "assetId": "football-js-fourth-quarter-lights",
+      "category": "menu",
+      "composerDisplay": "Football JS Original Soundtrack",
+      "contentHash": "d677570f73d175d60d0ec1b2e4670e95958ff5aacd57b2710cec890234069633",
+      "displayTitle": "Fourth Quarter Lights",
+      "durationSeconds": 82.032,
+      "energyLevel": "peak",
+      "generationMetadata": {
+        "generatedAt": "2026-06-23T08:31:53.514Z",
+        "modelId": "music_v2",
+        "outputFormat": "mp3_48000_192",
+        "prompt": "Create original instrumental menu music for Football JS, a stylized low-poly American-football video game. Use high-energy indie rock and pop-punk sports-anthem ingredients: fast clean drums, punchy bass, layered bright guitars, open-chord lift, memorable original lead hook, controlled melodic string-like accent, and a polished arcade-football menu mix. Keep it energetic and emotional without imitating any specific band, artist, or existing song. Design the ending so it can loop or transition cleanly back to the opening. No vocals, no spoken words, no artist references, no band references, no song-title references, no copyrighted motifs, no real team references, no real fight-song melodies, no crowd chants, no announcers. Track identity: Fourth Quarter Lights. Fast, hopeful, competitive, stadium-ready, approximately 82 seconds.",
+        "songId": "wcYAfEi5cq937pKqIOJk"
+      },
+      "looping": true,
+      "outputPath": "public/audio/music/football-js-fourth-quarter-lights.mp3",
+      "runtimeAudioUrl": "/audio/music/football-js-fourth-quarter-lights.mp3",
+      "transitionPurpose": "menu-playlist"
+    },
+    {
       "assetId": "football-js-stinger-matchup-reveal",
       "category": "stinger",
       "composerDisplay": "Football JS Original Soundtrack",

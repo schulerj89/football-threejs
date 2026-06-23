@@ -338,8 +338,8 @@ function validateMusicCatalog(
   if (!catalog.some((entry) => entry.assetId === RUNTIME_TITLE_CATALOG_ID)) {
     errors.push('music catalog: missing stable football-js-title menu track');
   }
-  if (catalog.filter((entry) => entry.category === 'menu').length !== 4) {
-    errors.push('music catalog: menu playlist must contain exactly four tracks');
+  if (catalog.filter((entry) => entry.category === 'menu').length < 4) {
+    errors.push('music catalog: menu playlist must contain at least four tracks');
   }
   if (catalog.filter((entry) => entry.category === 'stinger').length !== 6) {
     errors.push('music catalog: transition stinger catalog must contain exactly six tracks');

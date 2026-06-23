@@ -80,10 +80,10 @@ describe('Football JS title music production pipeline', () => {
   it('validates the expanded menu, stinger, and chant music pack plan', () => {
     expect(validateFootballExpandedMusicPlan()).toEqual([]);
     expect(validateAudioPlan(FOOTBALL_EXPANDED_MUSIC_PLAN)).toEqual([]);
-    expect(FOOTBALL_MENU_PLAYLIST_PLAN).toHaveLength(3);
+    expect(FOOTBALL_MENU_PLAYLIST_PLAN).toHaveLength(8);
     expect(FOOTBALL_TRANSITION_STINGER_PLAN).toHaveLength(6);
     expect(FOOTBALL_STADIUM_CHANT_PLAN).toHaveLength(3);
-    expect(FOOTBALL_EXPANDED_MUSIC_PLAN).toHaveLength(15);
+    expect(FOOTBALL_EXPANDED_MUSIC_PLAN).toHaveLength(20);
     expect(FOOTBALL_MENU_PLAYLIST_PLAN.every((asset) => asset.modelId === 'music_v2')).toBe(true);
     expect(FOOTBALL_TRANSITION_STINGER_PLAN.every((asset) => asset.modelId === 'music_v2')).toBe(true);
     expect(FOOTBALL_STADIUM_CHANT_PLAN.every((asset) => asset.modelId === 'eleven_text_to_sound_v2')).toBe(true);
@@ -286,7 +286,14 @@ describe('Football JS title music production pipeline', () => {
         tracks: Array<{ assetId: string; category: string; displayTitle: string; outputPath: string }>;
       };
 
-      expect(catalog.tracks.filter((entry) => entry.category === 'menu')).toHaveLength(4);
+      expect(catalog.tracks.filter((entry) => entry.category === 'menu')).toHaveLength(9);
+      expect(catalog.tracks.map((entry) => entry.assetId)).toEqual(expect.arrayContaining([
+        'football-js-campus-kickoff',
+        'football-js-marching-drive',
+        'football-js-victory-march',
+        'football-js-sideline-sparks',
+        'football-js-fourth-quarter-lights',
+      ]));
       expect(catalog.tracks.filter((entry) => entry.category === 'stinger')).toHaveLength(6);
       expect(catalog.tracks.filter((entry) => entry.category === 'chant')).toHaveLength(3);
       expect(catalog.tracks[0]).toMatchObject({
