@@ -50,7 +50,7 @@ describe('eleven-on-eleven hardening matrix', () => {
   it('covers every requested play, formation, presentation, resource, and update-rate dimension', () => {
     const matrix = createElevenOnElevenScenarioMatrix();
 
-    expect(matrix).toHaveLength(6 * 3 * 2 * 3 * 3 * 2 * 2 * 2);
+    expect(matrix).toHaveLength(7 * 3 * 2 * 3 * 3 * 2 * 2 * 2);
     expect(new Set(matrix.map((scenario) => scenario.playId))).toEqual(
       new Set([
         'inside-zone-11',
@@ -59,6 +59,7 @@ describe('eleven-on-eleven hardening matrix', () => {
         'off-tackle-11',
         'twin-slants-11',
         'curl-flat-11',
+        'four-verts-out-flat-11',
       ]),
     );
     expect(new Set(matrix.map((scenario) => scenario.snapLane))).toEqual(new Set(SNAP_LANES));

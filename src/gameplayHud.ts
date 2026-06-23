@@ -47,6 +47,8 @@ export function createGameplayHud(): GameplayHud {
 
   const driveStatus = document.createElement('div');
   driveStatus.className = 'drive-status';
+  driveStatus.hidden = true;
+  driveStatus.setAttribute('aria-hidden', 'true');
   root.appendChild(driveStatus);
 
   const cadenceStatus = document.createElement('div');
@@ -56,6 +58,8 @@ export function createGameplayHud(): GameplayHud {
 
   const playCall = document.createElement('div');
   playCall.className = 'play-call';
+  playCall.hidden = true;
+  playCall.setAttribute('aria-hidden', 'true');
   root.appendChild(playCall);
 
   const targetLabel = document.createElement('div');
@@ -146,7 +150,11 @@ export function syncGameplayHud(
   hud.driveStatus.textContent = `${formatDown(gameplay.drive.currentDown)} & ${formatDistance(
     gameplay.drive.yardsToFirstDown,
   )} | Ball ${formatWholeFootballYards(gameplay.drive.lineOfScrimmage.z)}`;
+  hud.driveStatus.hidden = true;
+  hud.driveStatus.setAttribute('aria-hidden', 'true');
   hud.playCall.textContent = gameplay.selectedPlay.displayName;
+  hud.playCall.hidden = true;
+  hud.playCall.setAttribute('aria-hidden', 'true');
   hud.targetLabel.hidden = !gameplay.selectedReceiver;
   hud.targetLabel.textContent = gameplay.selectedReceiver
     ? `Target ${formatTargetLabel(gameplay.selectedReceiver, rosterBinding)}`

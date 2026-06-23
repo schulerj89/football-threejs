@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.34] - 2026-06-23
+
+### Changed
+
+- Hid the legacy gameplay HUD drive-status and selected-play labels so the broadcast scorebug is the visible source for down, distance, ball location, and game context.
+- Added HUD coverage for the hidden legacy labels and aligned stale unit expectations with the current seven-play 11v11 playbook.
+
+### Tests
+
+- Verified `npx vitest run tests/gameplayHud.test.ts`, `npx vitest run tests/playState.test.ts tests/elevenOnElevenAudit.test.ts tests/gameplayHud.test.ts`, `npm run test:unit`, and `npm run build`.
+
 ## [1.21.33] - 2026-06-23
 
 ### Added

@@ -711,6 +711,10 @@ body[data-game-mode="exhibition"] .score-counter {
   text-align: center;
 }
 
+.drive-status[hidden] {
+  display: none;
+}
+
 .play-call {
   position: absolute;
   top: 132px;
@@ -724,6 +728,10 @@ body[data-game-mode="exhibition"] .score-counter {
   font-size: 13px;
   font-weight: 800;
   text-align: center;
+}
+
+.play-call[hidden] {
+  display: none;
 }
 
 .target-label {

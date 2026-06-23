@@ -58,6 +58,7 @@ describe('play state transitions', () => {
       'off-tackle-11',
       'twin-slants-11',
       'curl-flat-11',
+      'four-verts-out-flat-11',
     ]);
     expect(gameplay.players).toHaveLength(22);
     expect(gameplay.players.filter((player) => player.team === 'offense')).toHaveLength(11);
@@ -79,6 +80,7 @@ describe('play state transitions', () => {
       'off-tackle-11',
       'twin-slants-11',
       'curl-flat-11',
+      'four-verts-out-flat-11',
     ]);
     expect(gameplay.selectedPlay).toMatchObject({
       displayName: 'Inside Zone 11',
