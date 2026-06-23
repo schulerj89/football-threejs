@@ -78,6 +78,20 @@ describe('halftime presentation', () => {
     expect(shot.orbitCenter?.z).toBeCloseTo(0);
   });
 
+  it('uses a slower elevated orbit pace for halftime camera movement', () => {
+    expect(createHalftimeCameraShot({
+      cinematics: 'full',
+      elapsedSeconds: 14,
+      restoreCamera: 'offensePerspective',
+    }).shotProgress).toBeCloseTo(0.5);
+
+    expect(createHalftimeCameraShot({
+      cinematics: 'brief',
+      elapsedSeconds: 9,
+      restoreCamera: 'offensePerspective',
+    }).shotProgress).toBeCloseTo(0.5);
+  });
+
   it('does not start the next halftime line until the active clip ends plus the quiet gap', async () => {
     const audio = new FakeHalftimeAudio();
     const resolver = createVoicePackResolver();

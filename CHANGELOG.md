@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.38] - 2026-06-23
+
+### Changed
+
+- Slowed the halftime elevated orbit camera by extending the full 360 sweep to 28 seconds and the brief sweep to 18 seconds.
+
+### Tests
+
+- Verified `npx vitest run tests/halftimePresentation.test.ts` and `npm run build`.
+
 ## [1.21.37] - 2026-06-23
 
 ### Changed

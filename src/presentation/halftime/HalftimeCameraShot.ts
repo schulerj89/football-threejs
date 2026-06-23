@@ -3,8 +3,8 @@ import type { CinematicsSetting, GameplayCameraMode } from '../../camera/CameraT
 import type { PresentationCameraShot } from '../../camera/PresentationShotDefinitions';
 
 const HALFTIME_SHOT_CONFIG = {
-  briefDurationSeconds: 12,
-  fullDurationSeconds: 16,
+  briefDurationSeconds: 18,
+  fullDurationSeconds: 28,
   height: 58,
   radius: 128,
   startAngleRadians: -Math.PI * 0.68,
@@ -55,4 +55,3 @@ function easeInOutCubic(value: number): number {
     ? 4 * value * value * value
     : 1 - Math.pow(-2 * value + 2, 3) / 2;
 }
-
