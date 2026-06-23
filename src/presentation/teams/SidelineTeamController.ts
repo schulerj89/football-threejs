@@ -1,14 +1,21 @@
 import * as THREE from 'three';
 import type { PresentationAudioEvent } from '../../audio/PresentationEventBridge';
 import type { GameplayRosterBinding } from '../../roster/GameplayRosterBinding';
+import type { FootballPosition, RosterPlayer } from '../../roster/RosterPlayer';
+import {
+  getRosterPlayer,
+  type TeamRoster,
+} from '../../roster/TeamRoster';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
+import type { PlayerRole } from '../../playerModel';
+import type { FootballPlayerVisualFactoryOptions } from '../players/FootballPlayerVisualFactory';
+import type { PlayerVisualMode } from '../players/PlayerVisualMode';
 import {
   createSidelineLayout,
 } from './SidelineLayout';
 import {
   createSidelineDebugOverlay,
-  createSidelineVisualResources,
-  syncSidelineVisualResources,
+  createSidelineFootballPlayerVisualResources,
   syncSidelineDebugOverlay,
   type SidelineVisualResources,
 } from './SidelineVisualFactory';
@@ -19,6 +26,7 @@ import type {
   SidelineLayout,
   SidelinePresentationSettings,
   SidelineReactionState,
+  SidelineRosterIdentity,
   SidelineTeamControllerSnapshot,
   SidelineTeamSide,
 } from './SidelineTeamTypes';
@@ -29,7 +37,12 @@ export interface SidelineTeamControllerOptions {
   coachesEnabled: boolean;
   enabled: boolean;
   density: SidelineDensity;
+  footballPlayerVisual?: Pick<
+    FootballPlayerVisualFactoryOptions,
+    'attachHelmet' | 'helmet' | 'playerVisualOptions'
+  >;
   rosterBinding: GameplayRosterBinding;
+  playerVisualMode?: PlayerVisualMode;
   sidelinePlayersEnabled: boolean;
   teamTheme: TeamPresentationTheme;
   tunnelTableauEnabled: boolean;
@@ -62,6 +75,11 @@ export class SidelineTeamController {
   private density: SidelineDensity;
   private sidelinePlayersEnabled: boolean;
   private tunnelTableauEnabled: boolean;
+  private playerVisualMode?: PlayerVisualMode;
+  private footballPlayerVisual?: Pick<
+    FootballPlayerVisualFactoryOptions,
+    'attachHelmet' | 'helmet' | 'playerVisualOptions'
+  >;
   private rosterBinding: GameplayRosterBinding;
   private teamTheme: TeamPresentationTheme;
   private layout: SidelineLayout | null = null;
@@ -80,6 +98,8 @@ export class SidelineTeamController {
     this.sidelinePlayersEnabled = options.sidelinePlayersEnabled;
     this.tunnelTableauEnabled = options.tunnelTableauEnabled;
     this.rosterBinding = options.rosterBinding;
+    this.playerVisualMode = options.playerVisualMode;
+    this.footballPlayerVisual = options.footballPlayerVisual;
     this.teamTheme = options.teamTheme;
     this.group.name = 'sideline-team-controller';
     this.group.userData.sidelinePresentation = true;
@@ -94,6 +114,8 @@ export class SidelineTeamController {
     this.sidelinePlayersEnabled = options.sidelinePlayersEnabled;
     this.tunnelTableauEnabled = options.tunnelTableauEnabled;
     this.rosterBinding = options.rosterBinding;
+    this.playerVisualMode = options.playerVisualMode;
+    this.footballPlayerVisual = options.footballPlayerVisual;
     this.teamTheme = options.teamTheme;
     this.group.visible = this.enabled;
 
@@ -151,9 +173,16 @@ export class SidelineTeamController {
         userCoach: cloneVec3(coachPlacements.find((coach) => coach.teamSide === 'user')?.position),
         userSidelineGroup: cloneVec3(this.findZoneCenter('user-sideline')),
       },
+      fullFootballPlayerVisualCount: countFullFootballPlayerVisuals(this.resources?.group ?? null),
+      sidelineRosterPlayerIds: this.layout?.sidelinePlacements
+        .map((placement) => placement.rosterPlayerId)
+        .filter((id): id is string => Boolean(id)) ?? [],
       sidelinePlayerCount: this.layout?.sidelinePlacements.length ?? 0,
       sidelinePlayersEnabled: this.sidelinePlayersEnabled,
       teamKey: this.teamTheme.teamKey,
+      tunnelRosterPlayerIds: this.layout?.tunnelPlacements
+        .map((placement) => placement.rosterPlayerId)
+        .filter((id): id is string => Boolean(id)) ?? [],
       tunnelPlayerCount: this.layout?.tunnelPlacements.length ?? 0,
       tunnelTableauEnabled: this.tunnelTableauEnabled,
       updateFrequencyHz: SIDELINE_UPDATE_FREQUENCY_HZ,
@@ -188,11 +217,14 @@ export class SidelineTeamController {
       density: this.density,
       featuredTunnelTeamSide: 'user',
       rosterAppearanceIds: createRosterAppearanceIds(this.rosterBinding),
+      rosterIdentities: createRosterIdentities(this.rosterBinding),
       sidelinePlayersEnabled: this.sidelinePlayersEnabled,
       tunnelTableauEnabled: this.tunnelTableauEnabled,
     });
-    this.resources = createSidelineVisualResources(this.layout.allPlacements, this.teamTheme, {
+    this.resources = createSidelineFootballPlayerVisualResources(this.layout.allPlacements, this.teamTheme, {
       coachPlacements: this.createCoachPlacements(),
+      footballPlayerVisual: this.footballPlayerVisual,
+      playerVisualMode: this.playerVisualMode,
       reactionState: this.reactionState,
     });
     this.group.add(this.resources.group);
@@ -268,8 +300,10 @@ export class SidelineTeamController {
       return;
     }
 
-    syncSidelineVisualResources(this.resources, this.layout.allPlacements, this.teamTheme, {
+    this.resources.sync(this.layout.allPlacements, this.teamTheme, {
       coachPlacements: this.createCoachPlacements(),
+      footballPlayerVisual: this.footballPlayerVisual,
+      playerVisualMode: this.playerVisualMode,
       reactionState: this.reactionState,
     });
     this.visualSyncDirty = false;
@@ -321,6 +355,102 @@ function createRosterAppearanceIds(
       .map((lineupBinding) => lineupBinding.rosterPlayerId)
       .slice(0, 11),
   };
+}
+
+function createRosterIdentities(
+  binding: GameplayRosterBinding,
+): Partial<Record<SidelineTeamSide, readonly SidelineRosterIdentity[]>> {
+  return {
+    opponent: createTeamRosterIdentities(binding.opponentRoster, 'opponent'),
+    user: createTeamRosterIdentities(binding.userRoster, 'user'),
+  };
+}
+
+function createTeamRosterIdentities(
+  roster: TeamRoster,
+  side: SidelineTeamSide,
+): SidelineRosterIdentity[] {
+  const inactiveStarterIds = side === 'user'
+    ? roster.defensiveStarterIds
+    : roster.offensiveStarterIds;
+  const lastResortStarterIds = side === 'user'
+    ? roster.offensiveStarterIds
+    : roster.defensiveStarterIds;
+  const orderedIds = uniqueIds([
+    ...roster.reserveIds,
+    roster.kickerId,
+    roster.punterId,
+    roster.longSnapperId,
+    ...inactiveStarterIds,
+    ...lastResortStarterIds,
+  ]);
+
+  return orderedIds
+    .map((id) => getRosterPlayer(roster, id))
+    .filter((player): player is RosterPlayer => Boolean(player))
+    .map((player) => ({
+      appearanceId: player.appearanceId,
+      footballPosition: player.footballPosition,
+      jerseyNumber: player.jerseyNumber,
+      role: resolveVisualRoleForFootballPosition(player.footballPosition),
+      rosterPlayerId: player.id,
+    }));
+}
+
+function resolveVisualRoleForFootballPosition(position: FootballPosition): PlayerRole {
+  switch (position) {
+    case 'QB':
+      return 'quarterback';
+    case 'RB':
+      return 'runner';
+    case 'SLOT':
+    case 'TE':
+    case 'WR':
+      return 'receiver';
+    case 'C':
+    case 'LG':
+    case 'LS':
+    case 'LT':
+    case 'P':
+    case 'RG':
+    case 'RT':
+      return 'blocker';
+    case 'CB':
+    case 'FS':
+    case 'SS':
+      return 'coverageDefender';
+    case 'DL':
+    case 'ILB':
+    case 'K':
+    case 'OLB':
+      return 'defender';
+  }
+}
+
+function uniqueIds(ids: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const id of ids) {
+    if (seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    unique.push(id);
+  }
+  return unique;
+}
+
+function countFullFootballPlayerVisuals(root: THREE.Object3D | null): number {
+  if (!root) {
+    return 0;
+  }
+  let count = 0;
+  root.traverse((object) => {
+    if (object.userData.fullFootballPlayerVisual === true) {
+      count += 1;
+    }
+  });
+  return count;
 }
 
 function resolveReactionStateFromEvent(

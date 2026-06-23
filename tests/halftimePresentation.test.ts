@@ -50,6 +50,19 @@ describe('halftime presentation', () => {
     });
   });
 
+  it('keeps halftime team identity color-only without logo payloads', () => {
+    const match = createMatchSnapshot({
+      opponentPoints: 10,
+      userPoints: 17,
+    });
+    const view = createHalftimeStatsViewModel(match);
+
+    expect(Object.hasOwn(view.teams[0], 'logoUrl')).toBe(false);
+    expect(Object.hasOwn(view.teams[1], 'logoUrl')).toBe(false);
+    expect(view.teams[0].primaryColor).toBe(match.userTeam.colors.primary);
+    expect(view.teams[1].primaryColor).toBe(match.opponentTeam.colors.primary);
+  });
+
   it('targets the exact field center for the continuous halftime orbit', () => {
     const shot = createHalftimeCameraShot({
       cinematics: 'full',

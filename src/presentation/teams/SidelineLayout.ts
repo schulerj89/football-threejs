@@ -10,6 +10,7 @@ import type {
   SidelineLayoutOptions,
   SidelinePlayerPlacement,
   SidelinePoseId,
+  SidelineRosterIdentity,
   SidelineTeamSide,
   SidelineVec3,
   SidelineZone,
@@ -46,8 +47,8 @@ export function createSidelineLayout(options: SidelineLayoutOptions): SidelineLa
   const sidelinePlacements = options.sidelinePlayersEnabled === false
     ? []
     : [
-        ...createSidelineTeamPlacements('user', options.density),
-        ...createSidelineTeamPlacements('opponent', options.density),
+        ...createSidelineTeamPlacements('user', options.density, options.rosterIdentities?.user),
+        ...createSidelineTeamPlacements('opponent', options.density, options.rosterIdentities?.opponent),
       ];
   const coachPlacements = options.coachesEnabled
     ? [
@@ -58,6 +59,7 @@ export function createSidelineLayout(options: SidelineLayoutOptions): SidelineLa
   const tunnelPlacements = options.tunnelTableauEnabled
     ? createTunnelTableauPlacements({
         appearanceIds: options.rosterAppearanceIds?.[options.featuredTunnelTeamSide ?? 'user'],
+        identities: options.rosterIdentities?.[options.featuredTunnelTeamSide ?? 'user'],
         teamSide: options.featuredTunnelTeamSide ?? 'user',
       })
     : [];
@@ -169,6 +171,7 @@ export function mirrorSidelinePlacementX(
 function createSidelineTeamPlacements(
   teamSide: SidelineTeamSide,
   density: SidelineDensity,
+  identities?: readonly SidelineRosterIdentity[],
 ): SidelinePlayerPlacement[] {
   const count = SIDELINE_DENSITY_COUNTS[density];
   const zoneId = teamSide === 'user' ? 'user-sideline' : 'opponent-sideline';
@@ -194,11 +197,16 @@ function createSidelineTeamPlacements(
       y: 0,
       z: zStart + column * SIDELINE_LAYOUT_CONFIG.spacing,
     };
+    const identity = identities?.[index % Math.max(1, identities.length)];
     return createPlacement({
-      appearanceId: `sideline-${teamSide}-${index}`,
-      id: `sideline-${teamSide}-${index}`,
+      appearanceId: identity?.appearanceId ?? `sideline-${teamSide}-${index}`,
+      footballPosition: identity?.footballPosition,
+      id: identity ? `sideline-${teamSide}-${identity.rosterPlayerId}` : `sideline-${teamSide}-${index}`,
       index,
+      jerseyNumber: identity?.jerseyNumber,
       position,
+      role: identity?.role,
+      rosterPlayerId: identity?.rosterPlayerId,
       team,
       teamSide,
       zoneId,
@@ -208,9 +216,11 @@ function createSidelineTeamPlacements(
 
 function createTunnelTableauPlacements({
   appearanceIds,
+  identities,
   teamSide,
 }: {
   appearanceIds?: readonly string[];
+  identities?: readonly SidelineRosterIdentity[];
   teamSide: SidelineTeamSide;
 }): SidelinePlayerPlacement[] {
   const zoneId = teamSide === 'user' ? 'user-tunnel' : 'opponent-tunnel';
@@ -229,16 +239,23 @@ function createTunnelTableauPlacements({
     const zStart = centerZ - ((rowSize - 1) * 1.55) / 2;
     for (let column = 0; column < rowSize; column += 1) {
       const index = placements.length;
-      const appearanceId = appearanceIds?.[index] ?? `tunnel-${teamSide}-starter-${index}`;
+      const identity = identities?.[index];
+      const appearanceId = identity?.appearanceId ??
+        appearanceIds?.[index] ??
+        `tunnel-${teamSide}-starter-${index}`;
       placements.push(createPlacement({
         appearanceId,
-        id: `tunnel-${teamSide}-${index}`,
+        footballPosition: identity?.footballPosition,
+        id: identity ? `tunnel-${teamSide}-${identity.rosterPlayerId}` : `tunnel-${teamSide}-${index}`,
         index,
+        jerseyNumber: identity?.jerseyNumber,
         position: {
           x: centerX - inwardSign * rowIndex * 1.45,
           y: 0,
           z: zStart + column * 1.55,
         },
+        role: identity?.role,
+        rosterPlayerId: identity?.rosterPlayerId,
         team,
         teamSide,
         zoneId,
@@ -252,17 +269,25 @@ function createTunnelTableauPlacements({
 
 function createPlacement({
   appearanceId,
+  footballPosition,
   id,
   index,
+  jerseyNumber,
   position,
+  role,
+  rosterPlayerId,
   team,
   teamSide,
   zoneId,
 }: {
   appearanceId: string;
+  footballPosition?: SidelineRosterIdentity['footballPosition'];
   id: string;
   index: number;
+  jerseyNumber?: number;
   position: SidelineVec3;
+  role?: SidelineRosterIdentity['role'];
+  rosterPlayerId?: string;
   team: PlayerTeam;
   teamSide: SidelineTeamSide;
   zoneId: SidelineZoneId;
@@ -271,9 +296,13 @@ function createPlacement({
   return {
     appearanceId,
     facingRadians: Math.atan2(inward, 0),
+    footballPosition,
     id,
+    jerseyNumber,
     position,
     pose: POSES[index % POSES.length],
+    role,
+    rosterPlayerId,
     scale: 0.86 + (stableHash(id) % 9) / 100,
     team,
     teamSide,

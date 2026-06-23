@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
+import { FIELD_DIMENSIONS } from '../../src/fieldSpec';
+import { PRESENTATION_CONFIG } from '../../src/field/FieldMarkingLayout';
 import { DEFAULT_STADIUM_SPEC } from '../../src/stadium/StadiumSpec';
 import {
   buildStadiumGeometry,
@@ -23,8 +25,24 @@ describe('stadium geometry builder', () => {
     expect(build.metrics.triangles).toBeGreaterThan(1000);
     expect(build.metrics.materialCount).toBeLessThanOrEqual(7);
     expect(build.metrics.geometryCount).toBeLessThanOrEqual(12);
-    expect(build.group.getObjectByName('stadium-inner-apron-floor')).toBeInstanceOf(THREE.Mesh);
-    expect(build.group.getObjectByName('stadium-inner-bowl-wall')).toBeInstanceOf(THREE.Mesh);
+    expect(build.group.getObjectByName('stadium-lower-bowl-closure')).toBeInstanceOf(THREE.Mesh);
+    expect(build.group.getObjectByName('stadium-inner-apron-floor')).toBeUndefined();
+    expect(build.group.getObjectByName('stadium-inner-bowl-wall')).toBeUndefined();
+
+    disposeBuild(build, materials);
+  });
+
+  it('keeps the stadium ground closure outside the visible field footprint', () => {
+    const materials = createStadiumMaterialLibrary({ imageMaterialsEnabled: false });
+    const build = buildStadiumGeometry({
+      materials,
+      spec: DEFAULT_STADIUM_SPEC,
+      upperTierEnabled: true,
+    });
+    const closure = build.group.getObjectByName('stadium-lower-bowl-closure');
+
+    expect(closure).toBeInstanceOf(THREE.Mesh);
+    expect(findClosureFieldFootprintViolations(closure as THREE.Mesh)).toEqual([]);
 
     disposeBuild(build, materials);
   });
@@ -139,6 +157,29 @@ function isOutsideProtectedBounds(point: THREE.Vector3): boolean {
     point.x >= bounds.maxX + epsilon ||
     point.z <= bounds.minZ - epsilon ||
     point.z >= bounds.maxZ + epsilon;
+}
+
+function findClosureFieldFootprintViolations(mesh: THREE.Mesh): string[] {
+  const fieldGroundHalfWidth = FIELD_DIMENSIONS.fieldWidth / 2 + PRESENTATION_CONFIG.groundMargin - 0.12;
+  const fieldGroundHalfDepth = FIELD_DIMENSIONS.fieldLength / 2 + PRESENTATION_CONFIG.groundMargin - 0.12;
+  const position = mesh.geometry.getAttribute('position');
+  const violations: string[] = [];
+
+  for (let index = 0; index < position.count; index += 1) {
+    const point = new THREE.Vector3(
+      position.getX(index),
+      position.getY(index),
+      position.getZ(index),
+    ).applyMatrix4(mesh.matrixWorld);
+    if (
+      Math.abs(point.x) < fieldGroundHalfWidth &&
+      Math.abs(point.z) < fieldGroundHalfDepth
+    ) {
+      violations.push(`${index}:${point.x.toFixed(2)},${point.z.toFixed(2)}`);
+    }
+  }
+
+  return violations;
 }
 
 function disposeBuild(

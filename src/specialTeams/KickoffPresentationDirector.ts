@@ -18,6 +18,7 @@ import type { GameplayRosterBinding } from '../roster/GameplayRosterBinding';
 import type { TeamPresentationTheme } from '../teams/TeamThemeApplier';
 import type { PlayerVisualMode } from '../presentation/players/PlayerVisualMode';
 import { createKickLandingReticle } from '../presentation/KickLandingReticle';
+import { updateRunAnimation } from '../presentation/RunAnimation';
 import {
   FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
   createFootballPlayerVisual,
@@ -181,7 +182,7 @@ export class KickoffPresentationDirector {
         this.phase = 'result';
       }
       this.syncBallFromReturnState();
-      this.syncDynamicKickoffVisuals();
+      this.syncDynamicKickoffVisuals(delta);
       this.reticle.sync(this.kickoffState.result, false);
       if (events.contact) {
         void this.options.sfxAudio?.playOneShot('kickoff_contact_01');
@@ -195,7 +196,7 @@ export class KickoffPresentationDirector {
       this.flightElapsedSeconds = this.returnState.flightElapsedSeconds;
       this.phase = normalizeReturnPhase(this.returnState.phase);
       this.syncBallFromReturnState();
-      this.syncDynamicKickoffVisuals();
+      this.syncDynamicKickoffVisuals(delta);
       this.reticle.sync(
         this.kickoffState.result,
         !events.catch && !events.touchback && this.returnState.phase === 'flight',
@@ -213,7 +214,7 @@ export class KickoffPresentationDirector {
       });
       this.phase = normalizeReturnPhase(this.returnState.phase);
       this.syncBallFromReturnState();
-      this.syncDynamicKickoffVisuals();
+      this.syncDynamicKickoffVisuals(delta);
       this.reticle.sync(this.kickoffState.result, false);
       if (events.clockStarted) {
         this.options.audioCoordinator.fadeTitleMusicToGameplay(0.8);
@@ -232,7 +233,7 @@ export class KickoffPresentationDirector {
         ? 'result'
         : normalizeReturnPhase(this.returnState.phase);
       this.syncBallFromReturnState();
-      this.syncDynamicKickoffVisuals();
+      this.syncDynamicKickoffVisuals(delta);
       this.reticle.sync(this.kickoffState.result, false);
     } else if (this.phase === 'result') {
       this.resultElapsedSeconds += delta;
@@ -487,12 +488,12 @@ export class KickoffPresentationDirector {
       void resource.ready
         .then(() => {
           if (this.kickoffVisuals.get(placement.visualId) === resource) {
-            this.syncDynamicKickoffVisuals();
+            this.syncDynamicKickoffVisuals(0);
           }
         })
         .catch(() => {
           if (this.kickoffVisuals.get(placement.visualId) === resource) {
-            this.syncDynamicKickoffVisuals();
+            this.syncDynamicKickoffVisuals(0);
           }
         });
     }
@@ -590,7 +591,7 @@ export class KickoffPresentationDirector {
     syncBallVisual(this.ballVisual, this.ballModel);
   }
 
-  private syncDynamicKickoffVisuals(): void {
+  private syncDynamicKickoffVisuals(deltaSeconds: number): void {
     if (!this.returnState) {
       return;
     }
@@ -608,7 +609,14 @@ export class KickoffPresentationDirector {
         this.options.teamTheme.uniforms[placement.gameplayTeam],
         this.options.teamTheme.uniforms,
       );
-      resource.setPose(resolveKickoffParticipantPose(this.phase, participant.visualId, this.returnState.carrierVisualId));
+      const poseIntent = resolveKickoffParticipantPose(
+        this.phase,
+        participant.visualId,
+        this.returnState.carrierVisualId,
+        participant.velocity,
+      );
+      resource.setPose(poseIntent);
+      syncKickoffParticipantRunAnimation(resource.root, participant.velocity, deltaSeconds);
       resource.root.scale.setScalar(placement.scale);
       resource.setVisible(this.group.visible && resource.getReadiness().subjectReady);
     }
@@ -718,12 +726,33 @@ function resolveKickoffParticipantPose(
   phase: KickoffPresentationPhase,
   visualId: string,
   carrierVisualId: string | null,
+  velocity: { x: number; z: number } = { x: 0, z: 0 },
 ): 'locomotion' | 'neutral' | 'readyDefense' | 'readyOffense' {
-  if (visualId === carrierVisualId || phase === 'returnLive' || phase === 'flight') {
+  if (
+    calculatePlanarSpeed(velocity) > 0.12 ||
+    visualId === carrierVisualId ||
+    phase === 'returnLive' ||
+    phase === 'flight'
+  ) {
     return 'locomotion';
   }
   if (phase === 'ready' || phase === 'runUp') {
     return 'readyOffense';
   }
   return 'neutral';
+}
+
+function syncKickoffParticipantRunAnimation(
+  root: THREE.Object3D,
+  velocity: { x: number; z: number },
+  deltaSeconds: number,
+): void {
+  const speed = calculatePlanarSpeed(velocity);
+  if (speed > 0.12 || root.userData.runAnimationInitialized === true) {
+    updateRunAnimation(root, deltaSeconds, speed);
+  }
+}
+
+function calculatePlanarSpeed(velocity: { x: number; z: number }): number {
+  return Math.hypot(velocity.x, velocity.z);
 }

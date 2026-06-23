@@ -5,12 +5,15 @@ import {
   snapshotGameplayModel,
 } from '../src/playState';
 import {
+  ControlledPlayerLabelRenderer,
   resolveControlledPlayerLabelStates,
+  resolveControlledPlayerLabelGroupVisibility,
 } from '../src/presentation/ControlledPlayerLabel';
 import {
   createGameplayRosterBinding,
   getRosterPlayerForGameplayId,
 } from '../src/roster/GameplayRosterBinding';
+import { resolveTeamPresentationTheme } from '../src/teams/TeamThemeApplier';
 import { DEFAULT_TEAM_PROFILE_SETTINGS } from '../src/teams/TeamProfileStore';
 
 const enabledSettings = {
@@ -139,5 +142,24 @@ describe('controlled player label state', () => {
       visible: false,
       visibilityReason: 'presentationShot',
     });
+  });
+
+  it('restores the parent label group after presentation stages hide it', () => {
+    const renderer = new ControlledPlayerLabelRenderer({
+      binding: createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS),
+      settings: enabledSettings,
+      teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
+    });
+
+    expect(resolveControlledPlayerLabelGroupVisibility('kickoff')).toBe(false);
+    renderer.setApplicationPhase('kickoff');
+    expect(renderer.group.visible).toBe(false);
+
+    renderer.group.visible = false;
+    renderer.setApplicationPhase('gameplay');
+
+    expect(resolveControlledPlayerLabelGroupVisibility('gameplay')).toBe(true);
+    expect(renderer.group.visible).toBe(true);
+    renderer.dispose();
   });
 });

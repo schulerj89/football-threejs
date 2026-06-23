@@ -12,6 +12,7 @@ import { SidelineTeamController } from '../../../src/presentation/teams/Sideline
 import {
   createSidelineVisualResources,
 } from '../../../src/presentation/teams/SidelineVisualFactory';
+import { FOOTBALL_PLAYER_VISUAL_PROFILE_ID } from '../../../src/presentation/players/FootballPlayerVisualFactory';
 import {
   resolveTunnelAnchor,
 } from '../../../src/presentation/teams/TunnelTableauLayout';
@@ -133,6 +134,7 @@ describe('sideline team visuals', () => {
       coachesEnabled: true,
       density: 'low',
       enabled: true,
+      footballPlayerVisual: { helmet: 'disabled' },
       rosterBinding: createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS),
       sidelinePlayersEnabled: true,
       teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
@@ -144,6 +146,7 @@ describe('sideline team visuals', () => {
         coachesEnabled: true,
         density: index % 2 === 0 ? 'low' : 'medium',
         enabled: true,
+        footballPlayerVisual: { helmet: 'disabled' },
         rosterBinding: createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS),
         sidelinePlayersEnabled: true,
         teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
@@ -157,6 +160,7 @@ describe('sideline team visuals', () => {
       coachesEnabled: false,
       density: 'low',
       enabled: false,
+      footballPlayerVisual: { helmet: 'disabled' },
       rosterBinding: createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS),
       sidelinePlayersEnabled: false,
       teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
@@ -189,6 +193,7 @@ describe('sideline team visuals', () => {
       coachesEnabled: true,
       density: 'low',
       enabled: true,
+      footballPlayerVisual: { helmet: 'disabled' },
       rosterBinding: createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS),
       sidelinePlayersEnabled: true,
       teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
@@ -223,6 +228,48 @@ describe('sideline team visuals', () => {
     ], 1 / 60);
     expect(controller.getSnapshot().reactionState).toBe('firstDown');
     expect(controller.getSnapshot().coachStates[0].state).toBe('firstDownApproval');
+
+    controller.dispose();
+  });
+
+  it('uses actual roster identities and full football-player visuals for sideline reserves', () => {
+    const binding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
+    const controller = new SidelineTeamController({
+      coachesEnabled: true,
+      density: 'low',
+      enabled: true,
+      footballPlayerVisual: { helmet: 'disabled' },
+      rosterBinding: binding,
+      sidelinePlayersEnabled: true,
+      teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
+      tunnelTableauEnabled: true,
+    });
+    const snapshot = controller.getSnapshot();
+    const userReserveIds = binding.userRoster.reserveIds.slice(0, SIDELINE_DENSITY_COUNTS.low);
+    const opponentReserveIds = binding.opponentRoster.reserveIds.slice(0, SIDELINE_DENSITY_COUNTS.low);
+    const allRosterIds = new Set([
+      ...binding.userRoster.players.map((player) => player.id),
+      ...binding.opponentRoster.players.map((player) => player.id),
+    ]);
+
+    expect(snapshot.sidelineRosterPlayerIds.slice(0, SIDELINE_DENSITY_COUNTS.low)).toEqual(userReserveIds);
+    expect(snapshot.sidelineRosterPlayerIds.slice(SIDELINE_DENSITY_COUNTS.low)).toEqual(opponentReserveIds);
+    expect(snapshot.fullFootballPlayerVisualCount).toBe(
+      snapshot.sidelinePlayerCount + snapshot.tunnelPlayerCount,
+    );
+
+    const fullPlayerRoots: THREE.Object3D[] = [];
+    controller.group.traverse((object) => {
+      if (object.userData.fullFootballPlayerVisual === true) {
+        fullPlayerRoots.push(object);
+      }
+    });
+    expect(fullPlayerRoots).toHaveLength(snapshot.fullFootballPlayerVisualCount);
+    for (const root of fullPlayerRoots) {
+      expect(root.userData.visualProfileId).toBe(FOOTBALL_PLAYER_VISUAL_PROFILE_ID);
+      expect(allRosterIds.has(String(root.userData.rosterPlayerId))).toBe(true);
+      expect(root.userData.jerseyNumber).not.toBeNull();
+    }
 
     controller.dispose();
   });

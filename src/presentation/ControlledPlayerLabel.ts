@@ -15,7 +15,7 @@ import {
 } from '../teams/TeamThemeApplier';
 
 export type PlayerLabelKind = 'controlled' | 'selectedReceiver';
-type LabelAppPhase =
+export type LabelAppPhase =
   | 'coinToss'
   | 'extraPoint'
   | 'footballHub'
@@ -89,12 +89,14 @@ export class ControlledPlayerLabelRenderer {
     this.teamTheme = options.teamTheme;
     this.teamKey = options.teamTheme.teamKey;
     this.group.name = 'controlled-player-labels';
+    this.group.visible = resolveControlledPlayerLabelGroupVisibility(this.appPhase);
     this.group.userData.controlledPlayerLabels = true;
     this.group.add(this.controlledSprite, this.selectedReceiverSprite);
   }
 
   setApplicationPhase(appPhase: LabelAppPhase): void {
     this.appPhase = appPhase;
+    this.group.visible = resolveControlledPlayerLabelGroupVisibility(appPhase);
   }
 
   setBinding(binding: GameplayRosterBinding): void {
@@ -119,6 +121,7 @@ export class ControlledPlayerLabelRenderer {
     cameraSnapshot: GameplayCameraDebugSnapshot,
     gameplayActive = true,
   ): void {
+    this.group.visible = resolveControlledPlayerLabelGroupVisibility(this.appPhase);
     const labels = resolveControlledPlayerLabelStates({
       activeShotName: cameraSnapshot.activeShotName ?? null,
       appPhase: this.appPhase,
@@ -232,6 +235,10 @@ export function resolveControlledPlayerLabelStates(options: {
   const selected = resolveLabelState('selectedReceiver', selectedReceiverId, options);
 
   return [controlled, selected];
+}
+
+export function resolveControlledPlayerLabelGroupVisibility(appPhase: LabelAppPhase): boolean {
+  return appPhase === 'gameplay';
 }
 
 export function createControlledPlayerLabelOverlay(): HTMLDivElement {

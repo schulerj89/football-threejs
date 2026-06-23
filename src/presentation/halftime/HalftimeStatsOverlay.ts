@@ -2,7 +2,6 @@ import type { MatchPossession, MatchSnapshot } from '../../match/MatchTypes';
 import { getRosterPlayer } from '../../roster/TeamRoster';
 import { getTeamRosterOrDefault } from '../../roster/RosterRegistry';
 import { getReadableTextColor } from '../../teams/TeamThemeApplier';
-import { createTeamLogoBadge, type TeamLogoBadge } from '../../ui/TeamLogoBadge';
 import type {
   HalftimeLeaderView,
   HalftimeStatsViewModel,
@@ -23,8 +22,6 @@ export class HalftimeStatsOverlay {
   private readonly statGrid = document.createElement('div');
   private readonly leaders = document.createElement('div');
   private readonly continueButton = document.createElement('button');
-  private userLogo: TeamLogoBadge | null = null;
-  private opponentLogo: TeamLogoBadge | null = null;
 
   constructor(options: HalftimeStatsOverlayOptions) {
     this.root.className = 'halftime-stats-overlay';
@@ -81,13 +78,8 @@ export class HalftimeStatsOverlay {
 
   private renderTeams(viewModel: HalftimeStatsViewModel, match: MatchSnapshot): void {
     const [user, opponent] = viewModel.teams;
-    this.userLogo ??= createTeamLogoBadge(match.userTeam, 'halftime-team-logo');
-    this.opponentLogo ??= createTeamLogoBadge(match.opponentTeam, 'halftime-team-logo');
-    this.userLogo.sync(match.userTeam);
-    this.opponentLogo.sync(match.opponentTeam);
-
-    const userPanel = createTeamPanel(user, this.userLogo.root);
-    const opponentPanel = createTeamPanel(opponent, this.opponentLogo.root);
+    const userPanel = createTeamPanel(user, match.userTeam.colors.secondary);
+    const opponentPanel = createTeamPanel(opponent, match.opponentTeam.colors.secondary);
     this.teamRow.replaceChildren(userPanel, opponentPanel);
   }
 
@@ -141,7 +133,6 @@ function createTeamStatsView(
   const stats = match.stats.teams[team];
   return {
     firstDowns: stats.firstDowns,
-    logoUrl: profile.logoUrl ?? null,
     name: profile.displayName,
     passingYards: stats.passingYards,
     possessionSeconds: match.stats.possessionSeconds[team],
@@ -198,16 +189,20 @@ function createLeader(
   };
 }
 
-function createTeamPanel(team: HalftimeTeamStatsView, logo: HTMLElement): HTMLDivElement {
+function createTeamPanel(team: HalftimeTeamStatsView, secondaryColor: string): HTMLDivElement {
   const panel = document.createElement('div');
+  const swatch = document.createElement('span');
   const name = document.createElement('strong');
   const score = document.createElement('span');
   panel.className = `halftime-team-panel halftime-team-panel-${team.team}`;
   panel.style.setProperty('--halftime-team-color', team.primaryColor);
+  panel.style.setProperty('--halftime-team-secondary', secondaryColor);
   panel.style.setProperty('--halftime-team-text', getReadableTextColor(team.primaryColor));
+  swatch.className = 'halftime-team-color-chip';
+  swatch.setAttribute('aria-hidden', 'true');
   name.textContent = team.name;
   score.textContent = String(team.score);
-  panel.append(logo, name, score);
+  panel.append(swatch, name, score);
   return panel;
 }
 

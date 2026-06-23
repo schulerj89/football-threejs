@@ -1,5 +1,6 @@
 import type { FieldBounds } from '../../fieldSpec';
-import type { PlayerTeam } from '../../playerModel';
+import type { PlayerRole, PlayerTeam } from '../../playerModel';
+import type { FootballPosition } from '../../roster/RosterPlayer';
 import type { TeamPresentationTheme } from '../../teams/TeamThemeApplier';
 
 export type SidelineDensity = 'high' | 'low' | 'medium';
@@ -55,9 +56,13 @@ export interface SidelineZone {
 export interface SidelinePlayerPlacement {
   appearanceId: string;
   facingRadians: number;
+  footballPosition?: FootballPosition;
   id: string;
+  jerseyNumber?: number;
   position: SidelineVec3;
   pose: SidelinePoseId;
+  role?: PlayerRole;
+  rosterPlayerId?: string;
   scale: number;
   team: PlayerTeam;
   teamSide: SidelineTeamSide;
@@ -85,11 +90,20 @@ export interface SidelineLayout {
   zones: readonly SidelineZone[];
 }
 
+export interface SidelineRosterIdentity {
+  appearanceId: string;
+  footballPosition: FootballPosition;
+  jerseyNumber: number;
+  role: PlayerRole;
+  rosterPlayerId: string;
+}
+
 export interface SidelineLayoutOptions {
   coachesEnabled?: boolean;
   density: SidelineDensity;
   featuredTunnelTeamSide?: SidelineTeamSide;
   rosterAppearanceIds?: Partial<Record<SidelineTeamSide, readonly string[]>>;
+  rosterIdentities?: Partial<Record<SidelineTeamSide, readonly SidelineRosterIdentity[]>>;
   sidelinePlayersEnabled?: boolean;
   tunnelTableauEnabled: boolean;
 }
@@ -123,9 +137,12 @@ export interface SidelineTeamControllerSnapshot extends SidelineVisualMetrics {
     userCoach: SidelineVec3 | null;
     userSidelineGroup: SidelineVec3 | null;
   };
+  sidelineRosterPlayerIds: readonly string[];
   sidelinePlayerCount: number;
   sidelinePlayersEnabled: boolean;
   teamKey: string;
+  fullFootballPlayerVisualCount: number;
+  tunnelRosterPlayerIds: readonly string[];
   tunnelPlayerCount: number;
   tunnelTableauEnabled: boolean;
   updateFrequencyHz: number;

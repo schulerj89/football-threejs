@@ -17,7 +17,6 @@ export interface HalftimeStory {
 
 export interface HalftimeTeamStatsView {
   readonly firstDowns: number;
-  readonly logoUrl: string | null;
   readonly name: string;
   readonly possessionSeconds: number;
   readonly primaryColor: string;
@@ -103,4 +102,3 @@ export interface HalftimePresentationUpdateResult {
 export interface HalftimePresentationStartOptions {
   readonly matchSnapshot: MatchSnapshot;
 }
-

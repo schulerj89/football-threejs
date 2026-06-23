@@ -1,5 +1,14 @@
 import * as THREE from 'three';
 import { resolvePlayerAppearance } from '../../playerAppearance';
+import type { PlayerRole } from '../../playerModel';
+import type { PlayerPoseIntent } from '../PlayerPoseController';
+import {
+  FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
+  createFootballPlayerVisual,
+  type FootballPlayerVisualFactoryOptions,
+  type FootballPlayerVisualResources,
+} from '../players/FootballPlayerVisualFactory';
+import type { PlayerVisualMode } from '../players/PlayerVisualMode';
 import {
   getUniformColorNumber,
   type TeamPresentationTheme,
@@ -40,15 +49,28 @@ interface SidelineVisualMeshes {
 }
 
 export interface SidelineVisualResources {
-  coachMeshes: SidelineCoachMeshes;
   dispose: () => void;
   group: THREE.Group;
   metrics: SidelineVisualMetrics;
+  sync: (
+    placements: readonly SidelinePlayerPlacement[],
+    theme: TeamPresentationTheme,
+    options?: SidelineVisualResourceOptions,
+  ) => void;
+}
+
+export interface SidelineInstancedVisualResources extends SidelineVisualResources {
+  coachMeshes: SidelineCoachMeshes;
   meshes: SidelineVisualMeshes;
 }
 
 export interface SidelineVisualResourceOptions {
   coachPlacements?: readonly SidelineCoachPlacement[];
+  footballPlayerVisual?: Pick<
+    FootballPlayerVisualFactoryOptions,
+    'attachHelmet' | 'helmet' | 'playerVisualOptions'
+  >;
+  playerVisualMode?: PlayerVisualMode;
   reactionState?: SidelineReactionState;
 }
 
@@ -140,7 +162,7 @@ export function createSidelineVisualResources(
   placements: readonly SidelinePlayerPlacement[],
   theme: TeamPresentationTheme,
   options: SidelineVisualResourceOptions = {},
-): SidelineVisualResources {
+): SidelineInstancedVisualResources {
   const group = new THREE.Group();
   group.name = 'sideline-team-presentation-root';
   group.userData.sidelinePresentation = true;
@@ -248,7 +270,185 @@ export function createSidelineVisualResources(
     group,
     metrics,
     meshes,
+    sync: (nextPlacements, nextTheme, nextOptions = {}) => {
+      syncSidelineVisualResources(
+        { coachMeshes, meshes },
+        nextPlacements,
+        nextTheme,
+        nextOptions,
+      );
+    },
   };
+}
+
+export function createSidelineFootballPlayerVisualResources(
+  placements: readonly SidelinePlayerPlacement[],
+  theme: TeamPresentationTheme,
+  options: SidelineVisualResourceOptions = {},
+): SidelineVisualResources {
+  const group = new THREE.Group();
+  group.name = 'sideline-team-full-player-root';
+  group.userData.sidelinePresentation = true;
+
+  const playerResources = new Map<string, FootballPlayerVisualResources>();
+  const coachResources = createSidelineVisualResources([], theme, {
+    coachPlacements: options.coachPlacements,
+    reactionState: options.reactionState,
+  });
+  if (coachResources.group.children.length > 0) {
+    group.add(coachResources.group);
+  }
+
+  for (const placement of placements) {
+    const uniform = theme.uniforms[placement.team];
+    const resource = createFootballPlayerVisual(
+      {
+        appearanceId: placement.appearanceId,
+        footballPosition: placement.footballPosition ?? 'UNKNOWN',
+        gameplayTeam: placement.team,
+        presentationOnly: true,
+        role: placement.role ?? resolveDefaultVisualRole(placement.team),
+        jerseyNumber: placement.jerseyNumber ?? null,
+        rosterPlayerId: placement.rosterPlayerId ?? placement.id,
+        teamSide: placement.teamSide,
+        uniform,
+        visualId: placement.id,
+      },
+      {
+        attachHelmet: options.footballPlayerVisual?.attachHelmet,
+        helmet: options.footballPlayerVisual?.helmet ?? 'required',
+        playerVisualOptions: {
+          ...options.footballPlayerVisual?.playerVisualOptions,
+          teamUniforms: theme.uniforms,
+          visualMode: options.playerVisualMode,
+        },
+        teamUniforms: theme.uniforms,
+      },
+    );
+    resource.root.name = `sideline-full-player-${placement.id}`;
+    resource.root.userData.sidelinePresentation = true;
+    resource.root.userData.sidelineTeamSide = placement.teamSide;
+    resource.root.userData.visualProfileId = FOOTBALL_PLAYER_VISUAL_PROFILE_ID;
+    playerResources.set(placement.id, resource);
+    group.add(resource.root);
+    syncFootballSidelinePlacement(resource, placement, theme, options.reactionState ?? 'idle');
+    void resource.ready
+      .then(() => {
+        if (playerResources.get(placement.id) === resource) {
+          syncFootballSidelinePlacement(resource, placement, theme, options.reactionState ?? 'idle');
+        }
+      })
+      .catch(() => {
+        if (playerResources.get(placement.id) === resource) {
+          resource.setVisible(false);
+        }
+      });
+  }
+
+  const resources: SidelineVisualResources = {
+    dispose: () => {
+      for (const resource of playerResources.values()) {
+        resource.dispose();
+      }
+      playerResources.clear();
+      coachResources.dispose();
+      group.clear();
+    },
+    group,
+    metrics: mergeSidelineVisualMetrics(
+      coachResources.metrics,
+      measureFootballPlayerResourceMetrics(playerResources),
+    ),
+    sync: (nextPlacements, nextTheme, nextOptions = {}) => {
+      for (const placement of nextPlacements) {
+        const resource = playerResources.get(placement.id);
+        if (!resource) {
+          continue;
+        }
+        syncFootballSidelinePlacement(
+          resource,
+          placement,
+          nextTheme,
+          nextOptions.reactionState ?? 'idle',
+        );
+      }
+      coachResources.sync([], nextTheme, {
+        coachPlacements: nextOptions.coachPlacements,
+        reactionState: nextOptions.reactionState,
+      });
+    },
+  };
+
+  return resources;
+}
+
+function syncFootballSidelinePlacement(
+  resource: FootballPlayerVisualResources,
+  placement: SidelinePlayerPlacement,
+  theme: TeamPresentationTheme,
+  reactionState: SidelineReactionState,
+): void {
+  const pose = resolveReactivePose(
+    placement.pose,
+    stableStringHash(placement.id),
+    reactionState,
+  );
+  resource.syncTransform(
+    { x: placement.position.x, z: placement.position.z },
+    placement.facingRadians,
+  );
+  resource.syncUniform(theme.uniforms[placement.team], theme.uniforms);
+  resource.setPose(resolveFootballSidelinePoseIntent(pose, placement.team));
+  resource.root.scale.setScalar(placement.scale);
+  applyFootballSidelinePose(resource.root, pose);
+  resource.setVisible(resource.getReadiness().subjectReady);
+}
+
+function resolveDefaultVisualRole(team: SidelinePlayerPlacement['team']): PlayerRole {
+  return team === 'offense' ? 'receiver' : 'defender';
+}
+
+function resolveFootballSidelinePoseIntent(
+  pose: SidelinePoseId,
+  team: SidelinePlayerPlacement['team'],
+): PlayerPoseIntent {
+  if (pose === 'crouched') {
+    return team === 'offense' ? 'readyOffense' : 'readyDefense';
+  }
+  return 'neutral';
+}
+
+function applyFootballSidelinePose(root: THREE.Object3D, pose: SidelinePoseId): void {
+  const leftArmPivot = getPosePart(root, 'leftArmPivot');
+  const rightArmPivot = getPosePart(root, 'rightArmPivot');
+  const leftLegPivot = getPosePart(root, 'leftLegPivot');
+  const rightLegPivot = getPosePart(root, 'rightLegPivot');
+  const torso = getPosePart(root, 'torso');
+  const shoulderPads = getPosePart(root, 'shoulderPads');
+  const resolved = resolvePose(pose);
+
+  setPoseRotation(leftArmPivot, -0.04, 0, resolved.leftArmRotationZ);
+  setPoseRotation(rightArmPivot, -0.04, 0, resolved.rightArmRotationZ);
+  setPoseRotation(leftLegPivot, 0, 0, resolved.leftLegRotationZ);
+  setPoseRotation(rightLegPivot, 0, 0, resolved.rightLegRotationZ);
+  setPoseRotation(torso, resolved.torsoLean, 0, 0);
+  setPoseRotation(shoulderPads, resolved.torsoLean, 0, 0);
+}
+
+function getPosePart(root: THREE.Object3D, name: string): THREE.Object3D | null {
+  const fromUserData = root.userData[name];
+  return fromUserData instanceof THREE.Object3D ? fromUserData : root.getObjectByName(name) ?? null;
+}
+
+function setPoseRotation(
+  object: THREE.Object3D | null,
+  x: number,
+  y: number,
+  z: number,
+): void {
+  if (object) {
+    object.rotation.set(x, y, z);
+  }
 }
 
 export function syncSidelineVisualResources(
@@ -355,6 +555,9 @@ export function syncSidelineDebugOverlay(
     triangleCount: number;
     tunnelPlayerCount: number;
     tunnelTableauEnabled: boolean;
+    fullFootballPlayerVisualCount?: number;
+    sidelineRosterPlayerIds?: readonly string[];
+    tunnelRosterPlayerIds?: readonly string[];
     updateFrequencyHz: number;
     zones: readonly {
       bounds: { maxX: number; maxZ: number; minX: number; minZ: number };
@@ -366,6 +569,7 @@ export function syncSidelineDebugOverlay(
     'SIDELINE TEAMS',
     `enabled ${snapshot.enabled ? 'yes' : 'no'} density ${snapshot.density} reserves ${snapshot.sidelinePlayersEnabled ? 'on' : 'off'} coaches ${snapshot.coachesEnabled ? 'on' : 'off'}`,
     `sideline ${snapshot.sidelinePlayerCount} coaches ${snapshot.coachCount} tunnel ${snapshot.tunnelPlayerCount} tableau ${snapshot.tunnelTableauEnabled ? 'on' : 'off'}`,
+    `fullPlayers ${snapshot.fullFootballPlayerVisualCount ?? 0} sidelineRoster ${snapshot.sidelineRosterPlayerIds?.length ?? 0} tunnelRoster ${snapshot.tunnelRosterPlayerIds?.length ?? 0}`,
     `reaction ${snapshot.reactionState} event ${snapshot.lastReactionEventId ?? 'none'}`,
     ...snapshot.coachStates.map((coach) => `${coach.id} ${coach.teamSide} ${coach.state}`),
     `calls ${snapshot.drawCalls} tris ${snapshot.triangleCount}`,
@@ -846,4 +1050,90 @@ function resolveCoachPose(state: SidelineCoachPlacement['state']): {
     rightArmRotationZ: 0.18,
     torsoLean: 0,
   };
+}
+
+function measureFootballPlayerResourceMetrics(
+  resources: ReadonlyMap<string, FootballPlayerVisualResources>,
+): SidelineVisualMetrics {
+  const geometries = new Set<string>();
+  const materials = new Set<string>();
+  const textures = new Set<string>();
+  let drawCalls = 0;
+  let triangleCount = 0;
+
+  for (const resource of resources.values()) {
+    resource.root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) {
+        return;
+      }
+      drawCalls += 1;
+      geometries.add(object.geometry.uuid);
+      triangleCount += countGeometryTriangles(object.geometry);
+      for (const material of getMaterials(object.material)) {
+        materials.add(material.uuid);
+        const map = (material as THREE.Material & { map?: THREE.Texture | null }).map;
+        if (map) {
+          textures.add(map.uuid);
+        }
+      }
+    });
+  }
+
+  return {
+    drawCalls,
+    geometryCount: geometries.size,
+    instanceBufferBytes: 0,
+    materialCount: materials.size,
+    meshCount: drawCalls,
+    textureCount: textures.size,
+    triangleCount,
+  };
+}
+
+function mergeSidelineVisualMetrics(
+  ...entries: readonly SidelineVisualMetrics[]
+): SidelineVisualMetrics {
+  return entries.reduce(
+    (sum, entry) => ({
+      drawCalls: sum.drawCalls + entry.drawCalls,
+      geometryCount: sum.geometryCount + entry.geometryCount,
+      instanceBufferBytes: sum.instanceBufferBytes + entry.instanceBufferBytes,
+      materialCount: sum.materialCount + entry.materialCount,
+      meshCount: sum.meshCount + entry.meshCount,
+      textureCount: sum.textureCount + entry.textureCount,
+      triangleCount: sum.triangleCount + entry.triangleCount,
+    }),
+    {
+      drawCalls: 0,
+      geometryCount: 0,
+      instanceBufferBytes: 0,
+      materialCount: 0,
+      meshCount: 0,
+      textureCount: 0,
+      triangleCount: 0,
+    },
+  );
+}
+
+function countGeometryTriangles(geometry: THREE.BufferGeometry): number {
+  if (geometry.index) {
+    return geometry.index.count / 3;
+  }
+  const position = geometry.getAttribute('position');
+  return position ? position.count / 3 : 0;
+}
+
+function getMaterials(material: THREE.Material | THREE.Material[]): THREE.Material[] {
+  return Array.isArray(material) ? material : [material];
+}
+
+function stableStringHash(value: string): number {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
 }

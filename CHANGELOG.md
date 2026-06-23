@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.15] - 2026-06-23
+
+### Changed
+
+- Replaced anonymous sideline reserve silhouettes in the normal sideline controller with roster-backed `football-player-v1` presentation clones using real team uniforms, jersey numbers, helmet colors, and faceguards.
+- Bound sideline rows to actual team reserve/specialist roster identities first, only falling back to non-field starters when higher sideline density needs more bodies.
+- Added sideline debug snapshot fields for roster IDs and full football-player visual counts.
+
+### Tests
+
+- Verified `npx vitest run tests/presentation/sideline/sidelineTeams.test.ts tests/pregamePresentation.test.ts`, `npx vitest run tests/specialTeams/kickoff.test.ts tests/halftimePresentation.test.ts`, `npx vitest run tests/stadium/stadiumGeometry.test.ts tests/weather/weatherPresentation.test.ts tests/controlledPlayerLabel.test.ts`, `npx tsc --noEmit`, and `npm run build`.
+
+## [1.21.14] - 2026-06-23
+
+### Fixed
+
+- Replaced the flashing stadium inner-apron workaround with a lower-bowl closure mesh that starts outside the field footprint and ties into the stadium path.
+- Closed lower-bowl seating gaps with deterministic riser geometry so the clear sky no longer shows through the bottom of the stadium shell.
+- Wired the stiff run animation into kickoff and kickoff-return presentation participants, including the kicker run-up and moving return blockers/coverage players.
+- Removed oversized halftime team logos from the stats overlay and kept team identity through compact primary/secondary color chips.
+
+### Tests
+
+- Verified `npx vitest run tests/stadium/stadiumGeometry.test.ts tests/weather/weatherPresentation.test.ts`, `npx vitest run tests/specialTeams/kickoff.test.ts`, `npx vitest run tests/halftimePresentation.test.ts`, and `npm run build`.
+
+## [1.21.13] - 2026-06-23
+
+### Fixed
+
+- Restored controlled-player roster labels after kickoff, PAT, coin toss, and halftime presentation stages by letting the label renderer re-enable its parent group whenever gameplay resumes.
+
+### Tests
+
+- Verified `npx vitest run tests/controlledPlayerLabel.test.ts` and `npm run build`.
+
 ## [1.21.12] - 2026-06-23
 
 ### Changed

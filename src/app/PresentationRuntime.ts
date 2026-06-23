@@ -374,6 +374,7 @@ export class PresentationRuntime {
         gameExperience.settings.coachesEnabled ||
         gameExperience.settings.tunnelTableauEnabled
       ),
+      playerVisualMode: gameExperience.settings.playerVisualMode,
       rosterBinding: this.rosterBinding,
       sidelinePlayersEnabled: gameExperience.settings.sidelinePlayersEnabled,
       teamTheme: this.teamTheme,
@@ -1164,6 +1165,7 @@ export class PresentationRuntime {
         gameExperience.settings.coachesEnabled ||
         gameExperience.settings.tunnelTableauEnabled
       ),
+      playerVisualMode: gameExperience.settings.playerVisualMode,
       rosterBinding: this.rosterBinding,
       sidelinePlayersEnabled: gameExperience.settings.sidelinePlayersEnabled,
       teamTheme: this.teamTheme,

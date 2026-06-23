@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { FIELD_DIMENSIONS } from '../fieldSpec';
+import { PRESENTATION_CONFIG } from '../field/FieldMarkingLayout';
 import { DEFAULT_STADIUM_SPEC } from './StadiumSpec';
 import { createStadiumRows } from './StadiumLayout';
 import {
@@ -27,6 +29,8 @@ export interface StadiumGeometryBuildResult {
 }
 
 const PATH_SAMPLE_SPACING = 3.4;
+const GROUND_SEAM_OVERLAP = 0.08;
+const STADIUM_GROUND_Y = -0.026;
 
 export function buildStadiumGeometry({
   materials,
@@ -44,21 +48,10 @@ export function buildStadiumGeometry({
   geometries.push(lowerSeating);
   group.add(createMesh('stadium-lower-seating', lowerSeating, materials.seating));
 
-  const innerBowlWall = createVerticalPathRibbonGeometry(
-    spec,
-    spec.tiers[0].baseOffset + 0.18,
-    0,
-    spec.tiers[0].baseElevation + spec.rowRise * 3.1,
-    false,
-  );
-  innerBowlWall.name = 'stadium-inner-bowl-wall-geometry';
-  geometries.push(innerBowlWall);
-  group.add(createMesh('stadium-inner-bowl-wall', innerBowlWall, materials.concrete));
-
-  const innerApronFloor = createInnerApronFloorGeometry(spec);
-  innerApronFloor.name = 'stadium-inner-apron-floor-geometry';
-  geometries.push(innerApronFloor);
-  group.add(createMesh('stadium-inner-apron-floor', innerApronFloor, materials.concrete));
+  const lowerBowlClosure = createLowerBowlClosureGeometry(spec);
+  lowerBowlClosure.name = 'stadium-lower-bowl-closure-geometry';
+  geometries.push(lowerBowlClosure);
+  group.add(createMesh('stadium-lower-bowl-closure', lowerBowlClosure, materials.concrete));
 
   if (upperTierEnabled) {
     const upperRows = createStadiumRows(spec, true).filter((row) => row.tier > 0);
@@ -150,38 +143,61 @@ export function createStadiumGeometryMetrics(
   };
 }
 
-function createInnerApronFloorGeometry(spec: StadiumSpec): THREE.BufferGeometry {
+function createLowerBowlClosureGeometry(spec: StadiumSpec): THREE.BufferGeometry {
   const halfWidth = spec.innerBowlWidth / 2;
   const halfDepth = spec.innerBowlDepth / 2;
-  const bounds = spec.protectedFieldBounds;
-  const padding = 0.08;
-  const y = -0.012;
+  const fieldGroundHalfWidth =
+    FIELD_DIMENSIONS.fieldWidth / 2 + PRESENTATION_CONFIG.groundMargin - GROUND_SEAM_OVERLAP;
+  const fieldGroundHalfDepth =
+    FIELD_DIMENSIONS.fieldLength / 2 + PRESENTATION_CONFIG.groundMargin - GROUND_SEAM_OVERLAP;
+  const lowerTier = spec.tiers[0];
+  const path = createStadiumPath(spec);
   const builder = new GeometryBuilder();
 
   builder.addQuad(
-    { x: bounds.maxX + padding, y, z: -halfDepth },
-    { x: halfWidth, y, z: -halfDepth },
-    { x: halfWidth, y, z: halfDepth },
-    { x: bounds.maxX + padding, y, z: halfDepth },
+    { x: fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: -halfDepth },
+    { x: halfWidth, y: STADIUM_GROUND_Y, z: -halfDepth },
+    { x: halfWidth, y: STADIUM_GROUND_Y, z: halfDepth },
+    { x: fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: halfDepth },
   );
   builder.addQuad(
-    { x: -halfWidth, y, z: -halfDepth },
-    { x: bounds.minX - padding, y, z: -halfDepth },
-    { x: bounds.minX - padding, y, z: halfDepth },
-    { x: -halfWidth, y, z: halfDepth },
+    { x: -halfWidth, y: STADIUM_GROUND_Y, z: -halfDepth },
+    { x: -fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: -halfDepth },
+    { x: -fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: halfDepth },
+    { x: -halfWidth, y: STADIUM_GROUND_Y, z: halfDepth },
   );
   builder.addQuad(
-    { x: bounds.minX - padding, y, z: bounds.maxZ + padding },
-    { x: bounds.maxX + padding, y, z: bounds.maxZ + padding },
-    { x: bounds.maxX + padding, y, z: halfDepth },
-    { x: bounds.minX - padding, y, z: halfDepth },
+    { x: -fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: fieldGroundHalfDepth },
+    { x: fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: fieldGroundHalfDepth },
+    { x: fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: halfDepth },
+    { x: -fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: halfDepth },
   );
   builder.addQuad(
-    { x: bounds.minX - padding, y, z: -halfDepth },
-    { x: bounds.maxX + padding, y, z: -halfDepth },
-    { x: bounds.maxX + padding, y, z: bounds.minZ - padding },
-    { x: bounds.minX - padding, y, z: bounds.minZ - padding },
+    { x: -fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: -halfDepth },
+    { x: fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: -halfDepth },
+    { x: fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: -fieldGroundHalfDepth },
+    { x: -fieldGroundHalfWidth, y: STADIUM_GROUND_Y, z: -fieldGroundHalfDepth },
   );
+
+  for (const segment of path.segments) {
+    const steps = Math.max(2, Math.ceil(segment.length / PATH_SAMPLE_SPACING));
+    for (let step = 0; step < steps; step += 1) {
+      const d0 = (step / steps) * segment.length;
+      const d1 = ((step + 1) / steps) * segment.length;
+      const sampleA = samplePathAtDistance(path, segment.startDistance + d0, spec);
+      const sampleB = samplePathAtDistance(path, segment.startDistance + d1, spec);
+      const innerA = offsetPathSample(sampleA, 0);
+      const innerB = offsetPathSample(sampleB, 0);
+      const frontA = offsetPathSample(sampleA, lowerTier.baseOffset);
+      const frontB = offsetPathSample(sampleB, lowerTier.baseOffset);
+      builder.addQuad(
+        { x: innerA.x, y: STADIUM_GROUND_Y, z: innerA.z },
+        { x: innerB.x, y: STADIUM_GROUND_Y, z: innerB.z },
+        { x: frontB.x, y: lowerTier.baseElevation, z: frontB.z },
+        { x: frontA.x, y: lowerTier.baseElevation, z: frontA.z },
+      );
+    }
+  }
 
   return builder.toGeometry();
 }
@@ -192,6 +208,7 @@ function createSeatingBowlGeometry(
 ): THREE.BufferGeometry {
   const path = createStadiumPath(spec);
   const builder = new GeometryBuilder();
+  const rowsByTierAndIndex = new Map(rows.map((row) => [`${row.tierId}:${row.row}`, row]));
 
   for (const row of rows) {
     for (const segment of path.segments) {
@@ -200,7 +217,7 @@ function createSeatingBowlGeometry(
         const d0 = (step / steps) * segment.length;
         const d1 = ((step + 1) / steps) * segment.length;
         const mid = (d0 + d1) / 2;
-        if (isInsideTunnel(spec, segment.id, mid) && row.tier === 0 && row.row < 9) {
+        if (shouldSkipRowSegment(spec, row, segment.id, mid)) {
           continue;
         }
         const sampleA = samplePathAtDistance(path, segment.startDistance + d0, spec);
@@ -215,11 +232,31 @@ function createSeatingBowlGeometry(
           { x: backB.x, y: row.elevation + spec.rowRise * 0.42, z: backB.z },
           { x: backA.x, y: row.elevation + spec.rowRise * 0.42, z: backA.z },
         );
+        const nextRow = rowsByTierAndIndex.get(`${row.tierId}:${row.row + 1}`);
+        if (nextRow && !shouldSkipRowSegment(spec, nextRow, segment.id, mid)) {
+          const nextFrontA = offsetPathSample(sampleA, nextRow.offset);
+          const nextFrontB = offsetPathSample(sampleB, nextRow.offset);
+          builder.addQuad(
+            { x: backA.x, y: row.elevation + spec.rowRise * 0.42, z: backA.z },
+            { x: backB.x, y: row.elevation + spec.rowRise * 0.42, z: backB.z },
+            { x: nextFrontB.x, y: nextRow.elevation, z: nextFrontB.z },
+            { x: nextFrontA.x, y: nextRow.elevation, z: nextFrontA.z },
+          );
+        }
       }
     }
   }
 
   return builder.toGeometry();
+}
+
+function shouldSkipRowSegment(
+  spec: StadiumSpec,
+  row: ReturnType<typeof createStadiumRows>[number],
+  sectionId: StadiumTunnelSpec['sectionId'],
+  distanceAlongSection: number,
+): boolean {
+  return isInsideTunnel(spec, sectionId, distanceAlongSection) && row.tier === 0 && row.row < 9;
 }
 
 function createVerticalPathRibbonGeometry(

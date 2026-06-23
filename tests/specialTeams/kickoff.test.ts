@@ -258,6 +258,52 @@ describe('kickoff presentation formation', () => {
     director.dispose();
   });
 
+  it('applies the stiff run animation to moving kickoff participants', async () => {
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
+    const kickoff = createKickoffStateForTeam('user', 8010);
+    const kickoffLayout = createKickoffFormation(kickoff, binding);
+    const kickerVisualId = kickoffLayout.participants.find((participant) =>
+      participant.slotId === 'kicker')?.visualId;
+    const audio = createFakeKickoffAudioCoordinator();
+    const director = new KickoffPresentationDirector({
+      audioCoordinator: audio as never,
+      ballVisualStyle: 'football',
+      footballPlayerVisual: {
+        attachHelmet: attachMockHelmet,
+      },
+      rosterBinding: binding,
+      teamTheme: resolveTeamPresentationTheme(BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+    });
+
+    if (!kickerVisualId) {
+      throw new Error('Missing kickoff kicker visual ID');
+    }
+
+    director.start({ deterministicSeed: 8010, kickoff });
+    await Promise.resolve();
+    await Promise.resolve();
+    audio.complete('kickoffReady');
+    updateKickoffFrames(
+      director,
+      gameplay,
+      { deterministicSeed: 8010, kickoff } as ReturnType<MatchFlowController['getSnapshot']>,
+      36,
+    );
+
+    const kickerRoot = director.group.getObjectByName(`kickoff-participant-${kickerVisualId}`);
+    const leftArmPivot = kickerRoot?.getObjectByName('leftArmPivot');
+    const leftLegPivot = kickerRoot?.getObjectByName('leftLegPivot');
+
+    expect(kickerRoot?.userData.poseIntent).toBe('locomotion');
+    expect(leftArmPivot).toBeInstanceOf(THREE.Group);
+    expect(leftLegPivot).toBeInstanceOf(THREE.Group);
+    expect(Math.abs(leftArmPivot?.rotation.x ?? 0)).toBeGreaterThan(0.01);
+    expect(Math.sign(leftArmPivot?.rotation.x ?? 0)).toBe(-Math.sign(leftLegPivot?.rotation.x ?? 0));
+
+    director.dispose();
+  });
+
   it('repeated kickoff stage entries do not retain kickoff roots or reticles', async () => {
     const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
     const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);

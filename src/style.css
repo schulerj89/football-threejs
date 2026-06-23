@@ -1305,11 +1305,20 @@ body[data-game-mode="exhibition"] .score-counter {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   min-width: 0;
-  gap: 10px;
+  gap: 12px;
   padding: 10px 12px;
   border-left: 6px solid var(--halftime-team-color);
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.06);
+}
+
+.halftime-team-color-chip {
+  width: 34px;
+  height: 18px;
+  border: 2px solid var(--halftime-team-secondary);
+  border-radius: 999px;
+  background: var(--halftime-team-color);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.28);
 }
 
 .halftime-team-panel strong {
@@ -1323,11 +1332,6 @@ body[data-game-mode="exhibition"] .score-counter {
   font-weight: 900;
   color: var(--halftime-team-text);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
-}
-
-.halftime-team-logo {
-  width: 42px;
-  height: 42px;
 }
 
 .halftime-stats-grid {
