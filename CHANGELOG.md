@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.20] - 2026-06-23
+
+### Added
+
+- Added a development-only `player-lab.html` entry for inspecting the shared football-player visual, editing procedural pose presets, previewing pose blends/clips, and exporting/importing pose JSON.
+- Added reusable `PlayerPoseApplier` pose data, validation, interpolation, and procedural visual application helpers for future animation integration.
+- Added lab-only visual helper toggles for pivots, bounds, foot contacts, joint labels, helmet bounds, number anchor, and optional football attachment.
+
+### Tests
+
+- Verified `npx tsc --noEmit --pretty false`, `npx vitest run tests/playerPoseLab.test.ts`, `npx playwright test tests/player-lab.spec.ts`, `npm run build`, and `npm run test:unit`.
+- Ran `npm run test:smoke`; the new player-lab route passed, while existing normal-game smoke failures remain in crowd-audit/cadence flows outside this lab change.
+
 ## [1.21.19] - 2026-06-23
 
 ### Changed

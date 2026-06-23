@@ -1,0 +1,218 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #07100e;
+  color: #ecf3ed;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+}
+
+.player-lab {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: minmax(320px, 1fr) minmax(360px, 460px);
+  background:
+    radial-gradient(circle at 18% 16%, rgba(48, 102, 216, 0.18), transparent 28%),
+    linear-gradient(135deg, #101915, #050908);
+}
+
+.player-lab-viewport {
+  position: relative;
+  min-width: 0;
+}
+
+.player-lab-viewport canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.player-lab-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.player-lab-toolbar button,
+.player-lab-panel button,
+.player-lab-panel select,
+.player-lab-panel input[type="file"]::file-selector-button {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(19, 29, 25, 0.86);
+  color: #f4f8f2;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.player-lab-toolbar button {
+  padding: 9px 11px;
+}
+
+.player-lab-panel button {
+  padding: 9px 11px;
+}
+
+.player-lab-toolbar button:focus-visible,
+.player-lab-panel button:focus-visible,
+.player-lab-panel select:focus-visible,
+.player-lab-panel input:focus-visible {
+  outline: 2px solid #f2d94b;
+  outline-offset: 2px;
+}
+
+.player-lab-panel {
+  display: flex;
+  max-height: 100vh;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+  padding: 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(8, 14, 12, 0.94);
+}
+
+.player-lab-panel h1,
+.player-lab-panel h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.player-lab-panel h1 {
+  font-size: 26px;
+}
+
+.player-lab-panel h2 {
+  font-size: 14px;
+  text-transform: uppercase;
+  color: #b9c8be;
+}
+
+.player-lab-card {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.player-lab-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(150px, 1.2fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.player-lab-row label {
+  color: #c7d3cc;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.player-lab-row input[type="range"] {
+  width: 100%;
+}
+
+.player-lab-row select,
+.player-lab-row input[type="number"],
+.player-lab-row input[type="color"] {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: #0f1714;
+}
+
+.player-lab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.player-lab-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  color: #d9e4dc;
+  font-size: 13px;
+}
+
+.player-lab-metrics span {
+  color: #8fa099;
+}
+
+.player-lab-helper-list {
+  display: grid;
+  gap: 6px;
+}
+
+.player-lab-helper-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.player-lab-status {
+  min-height: 20px;
+  color: #f2d94b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.player-lab-joint-label-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.player-lab-joint-label {
+  position: absolute;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(5, 9, 8, 0.82);
+  color: #f7fbf8;
+  font-size: 11px;
+  font-weight: 800;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  body {
+    overflow: auto;
+  }
+
+  .player-lab {
+    grid-template-columns: 1fr;
+  }
+
+  .player-lab-viewport {
+    height: 56vh;
+    min-height: 420px;
+  }
+
+  .player-lab-panel {
+    max-height: none;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+  }
+}
