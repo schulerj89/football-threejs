@@ -335,24 +335,6 @@ canvas[hidden] {
   color: var(--scorebug-opponent-accent, #b83737);
 }
 
-.broadcast-scorebug-possession {
-  gap: 0.35em;
-}
-
-.broadcast-scorebug-possession::before {
-  display: inline-block;
-  width: 0.58em;
-  height: 0.58em;
-  border-radius: 999px;
-  background: var(--scorebug-user-accent, #2f66d8);
-  box-shadow: 0 0 10px currentColor;
-  content: "";
-}
-
-.broadcast-scorebug[data-possession="opponent"] .broadcast-scorebug-possession::before {
-  background: var(--scorebug-opponent-accent, #b83737);
-}
-
 .broadcast-scorebug-punt.match-punt-button {
   position: absolute;
   right: 2%;

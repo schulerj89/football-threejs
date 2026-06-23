@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.22] - 2026-06-23
+
+### Fixed
+
+- Removed the extra circular possession marker from the broadcast scorebug lower strip now that timeout indicators render beneath the team scores.
+
+### Tests
+
+- Verified `npx vitest run tests/broadcastScorebug.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.21] - 2026-06-23
 
 ### Added
