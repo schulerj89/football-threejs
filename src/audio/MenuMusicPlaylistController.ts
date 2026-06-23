@@ -14,6 +14,9 @@ import type {
 export interface MenuMusicPlaylistControllerOptions {
   fadeInSeconds?: number;
   gain?: number;
+  initialTrackIndex?: number;
+  random?: () => number;
+  randomizeInitialTrack?: boolean;
   tracks?: readonly MenuMusicTrack[];
 }
 
@@ -57,6 +60,12 @@ export class MenuMusicPlaylistController {
     this.fadeInSeconds = options.fadeInSeconds ?? DEFAULT_MENU_MUSIC_CONFIG.fadeInSeconds;
     this.gain = options.gain ?? DEFAULT_MENU_MUSIC_CONFIG.gain;
     this.tracks = options.tracks ?? MENU_MUSIC_TRACKS;
+    this.currentIndex = resolveInitialTrackIndex(
+      this.tracks.length,
+      options.initialTrackIndex,
+      options.randomizeInitialTrack,
+      options.random,
+    );
   }
 
   startFromUserGesture(): Promise<boolean> {
@@ -269,6 +278,29 @@ export class MenuMusicPlaylistController {
 
 function wrapIndex(index: number, count: number): number {
   return ((index % count) + count) % count;
+}
+
+function resolveInitialTrackIndex(
+  trackCount: number,
+  initialTrackIndex: number | undefined,
+  randomizeInitialTrack: boolean | undefined,
+  random: (() => number) | undefined,
+): number {
+  if (trackCount <= 0) {
+    return 0;
+  }
+
+  if (initialTrackIndex !== undefined && Number.isInteger(initialTrackIndex)) {
+    return wrapIndex(initialTrackIndex, trackCount);
+  }
+
+  if (randomizeInitialTrack) {
+    const value = random?.() ?? Math.random();
+    const normalized = Number.isFinite(value) ? Math.max(0, Math.min(0.999999999, value)) : 0;
+    return Math.floor(normalized * trackCount);
+  }
+
+  return 0;
 }
 
 function clampDelta(deltaSeconds: number): number {

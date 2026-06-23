@@ -13,6 +13,24 @@ import type { PresentationAudioEvent } from '../src/audio/PresentationEventBridg
 import type { GameplaySnapshot } from '../src/playState';
 
 describe('menu music playlist controller', () => {
+  it('can randomize the first title/menu track before playback starts', async () => {
+    const mixer = new FakeMusicPort();
+    const playlist = new MenuMusicPlaylistController(mixer, {
+      random: () => 0.61,
+      randomizeInitialTrack: true,
+      tracks: MENU_MUSIC_TRACKS.slice(0, 4),
+    });
+
+    await expect(playlist.startFromUserGesture()).resolves.toBe(true);
+
+    expect(mixer.startedLoops).toEqual(['football-js-stadium-horizon']);
+    expect(playlist.getSnapshot()).toMatchObject({
+      assetId: 'football-js-stadium-horizon',
+      currentIndex: 2,
+      trackTitle: 'Stadium Horizon',
+    });
+  });
+
   it('streams menu tracks and auto-advances without decoding full songs', async () => {
     const mixer = new FakeMusicPort();
     const tracks = MENU_MUSIC_TRACKS.slice(0, 2).map((track, index) => ({

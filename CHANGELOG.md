@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.47] - 2026-06-23
+
+### Changed
+
+- Randomized the initial title/menu music track so the title screen no longer always starts with the same song.
+
+### Tests
+
+- Verified `npx vitest run tests/musicRuntime.test.ts tests/musicPipeline.test.ts` and `npm run build`.
+
 ## [1.21.46] - 2026-06-23
 
 ### Added

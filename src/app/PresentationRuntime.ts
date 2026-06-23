@@ -443,7 +443,9 @@ export class PresentationRuntime {
       settings: gameExperience.audioSettings,
       warn,
     });
-    this.titleMusicController = new MenuMusicPlaylistController(this.audioMixer);
+    this.titleMusicController = new MenuMusicPlaylistController(this.audioMixer, {
+      randomizeInitialTrack: true,
+    });
     this.gameAudioDirector = new GameAudioDirector(this.audioMixer);
     this.gameMusicDirector = new GameMusicDirector(this.audioMixer);
     this.stadiumChantDirector = new StadiumChantDirector(this.audioMixer);
