@@ -85,6 +85,7 @@ export class PregameAudioCoordinator {
   private readonly failedLineIds = new Set<PregameCommentaryLineId>();
   private readonly requestedLineIds = new Set<PregameCommentaryLineId>();
   private readonly startedLineIds = new Set<PregameCommentaryLineId>();
+  private playbackGeneration = 0;
 
   constructor(
     private readonly mixer: PregameAudioPort,
@@ -221,10 +222,16 @@ export class PregameAudioCoordinator {
         caption: selection.caption,
         durationSeconds: clip.durationSeconds,
       };
+    const generation = this.playbackGeneration;
     const task = staticPlayable
-      ? this.playResolvedLine(lineId, selection, staticPlayable)
+      ? this.playResolvedLine(lineId, selection, staticPlayable, generation)
       : this.resolvePlayableSelection(selection)
-        .then((playable) => this.playResolvedLine(lineId, selection, playable));
+        .then((playable) => this.playResolvedLine(
+          lineId,
+          selection,
+          playable,
+          generation,
+        ));
     this.pendingAudioTasks.push(task);
   }
 
@@ -232,10 +239,11 @@ export class PregameAudioCoordinator {
     lineId: PregameCommentaryLineId,
     selection: PregameCommentarySelection,
     playable: { assetId: string; caption: string; durationSeconds: number } | null,
+    generation: number,
   ): Promise<void> {
     if (!playable) {
-      if (this.activeLine?.lineId === lineId) {
-        const activeAssetId = this.activeLine.assetId;
+      if (this.isCurrentPlaybackLine(lineId, generation)) {
+        const activeAssetId = this.activeLine!.assetId;
         this.failedLineIds.add(lineId);
         this.completedLineIds.add(lineId);
         this.activeLine = null;
@@ -245,6 +253,10 @@ export class PregameAudioCoordinator {
         });
         this.startQueuedLineIfReady();
       }
+      return Promise.resolve();
+    }
+
+    if (!this.isCurrentPlaybackLine(lineId, generation)) {
       return Promise.resolve();
     }
 
@@ -262,8 +274,8 @@ export class PregameAudioCoordinator {
     return this.playTrackedOneShot(playable.assetId)
       .then((handle) => {
         if (!handle) {
-          if (this.activeLine?.lineId === lineId) {
-            const activeAssetId = this.activeLine.assetId;
+          if (this.isCurrentPlaybackLine(lineId, generation)) {
+            const activeAssetId = this.activeLine!.assetId;
             this.failedLineIds.add(lineId);
             this.completedLineIds.add(lineId);
             this.activeLine = null;
@@ -276,22 +288,23 @@ export class PregameAudioCoordinator {
           return;
         }
 
-        if (this.activeLine?.lineId !== lineId || this.activeLine.actualEndedAtSeconds !== null) {
+        if (!this.isCurrentPlaybackLine(lineId, generation)) {
           handle.stop(0.02);
           return;
         }
 
-        this.activeLine.handle = handle;
+        const activeLine = this.activeLine!;
+        activeLine.handle = handle;
         const expectedPlaybackSeconds = Math.max(
           playable.durationSeconds,
           handle.durationSeconds ?? playable.durationSeconds,
         );
-        this.activeLine.startedAtSeconds = handle.startedAt;
-        this.activeLine.safetyEndsAtSeconds =
+        activeLine.startedAtSeconds = handle.startedAt;
+        activeLine.safetyEndsAtSeconds =
           handle.startedAt + expectedPlaybackSeconds + this.safetyTimeoutPaddingSeconds;
-        this.activeLine.endsAtSeconds =
+        activeLine.endsAtSeconds =
           handle.startedAt + expectedPlaybackSeconds + this.quietGapSeconds;
-        this.activeLine.playbackState = 'playing';
+        activeLine.playbackState = 'playing';
         this.recordHistory(lineId, playable.assetId, 'played', null, {
           actualStartedAtSeconds: handle.startedAt,
           catalogDurationSeconds: playable.durationSeconds,
@@ -313,6 +326,7 @@ export class PregameAudioCoordinator {
   }
 
   skip(): void {
+    this.playbackGeneration += 1;
     if (this.activeLine) {
       this.recordHistory(this.activeLine.lineId, this.activeLine.assetId, 'skipped', 'skip');
       this.activeLine.handle?.stop(0.08);
@@ -329,6 +343,7 @@ export class PregameAudioCoordinator {
   }
 
   reset(): void {
+    this.playbackGeneration += 1;
     this.activeLine?.handle?.stop(0.08);
     this.activeLine = null;
     this.queuedLine = null;
@@ -400,6 +415,14 @@ export class PregameAudioCoordinator {
         });
       },
     };
+  }
+
+  private isCurrentPlaybackLine(lineId: PregameCommentaryLineId, generation: number): boolean {
+    return (
+      generation === this.playbackGeneration &&
+      this.activeLine?.lineId === lineId &&
+      this.activeLine.actualEndedAtSeconds === null
+    );
   }
 
   private async resolvePlayableSelection(

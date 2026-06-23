@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.24] - 2026-06-23
+
+### Fixed
+
+- Added pointer-click skipping for the pregame cinematic sequence, sending the match directly into the coin toss through the same lifecycle path as keyboard skip.
+- Prevented delayed voice-pack pregame announcer clips from starting after a skip or reset, so stale intro speech cannot bleed into coin toss audio.
+
+### Tests
+
+- Verified `npx vitest run tests/pregamePresentation.test.ts`, `npx tsc --noEmit --pretty false`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen"`.
+
 ## [1.21.23] - 2026-06-23
 
 ### Fixed

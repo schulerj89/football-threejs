@@ -269,6 +269,7 @@ export class FootballApplication {
     });
     document.addEventListener('visibilitychange', this.syncAudioPageActivity);
     window.addEventListener('keydown', this.handlePregameSkipKeyDown);
+    window.addEventListener('pointerdown', this.handlePregameSkipPointerDown);
     window.addEventListener('keydown', this.handleMatchTransitionKeyDown);
     window.addEventListener('blur', this.syncAudioPageActivity);
     window.addEventListener('focus', this.syncAudioPageActivity);
@@ -289,6 +290,7 @@ export class FootballApplication {
     this.loop.dispose();
     document.removeEventListener('visibilitychange', this.syncAudioPageActivity);
     window.removeEventListener('keydown', this.handlePregameSkipKeyDown);
+    window.removeEventListener('pointerdown', this.handlePregameSkipPointerDown);
     window.removeEventListener('keydown', this.handleMatchTransitionKeyDown);
     window.removeEventListener('blur', this.syncAudioPageActivity);
     window.removeEventListener('focus', this.syncAudioPageActivity);
@@ -1028,6 +1030,43 @@ export class FootballApplication {
     event.preventDefault();
     this.finishPregamePresentation(true);
   };
+
+  private readonly handlePregameSkipPointerDown = (event: PointerEvent): void => {
+    if (
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.button !== 0 ||
+      !event.isPrimary ||
+      this.lifecycle.phase !== 'pregamePresentation' ||
+      this.shouldIgnorePregameSkipPointerTarget(event.target)
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    this.finishPregamePresentation(true);
+  };
+
+  private shouldIgnorePregameSkipPointerTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof Element)) {
+      return false;
+    }
+
+    return !!target.closest([
+      'a',
+      'button',
+      'input',
+      'select',
+      'textarea',
+      '[contenteditable="true"]',
+      '.debug-panel',
+      '.debug-overlay',
+      '.memory-debug-panel',
+      '.pause-settings-panel',
+      '.settings-panel',
+    ].join(','));
+  }
 
   private finishPregamePresentation(skipped: boolean): void {
     if (this.lifecycle.phase !== 'pregamePresentation') {

@@ -14,6 +14,8 @@ import type {
 } from '../src/audio/AudioMixer';
 import type { TitleMusicController } from '../src/audio/TitleMusicController';
 import type { GameAudioDirector } from '../src/audio/GameAudioDirector';
+import type { VoicePackAssetResolver } from '../src/audio/voicePacks/VoicePackAssetResolver';
+import type { VoicePackResolvedClip } from '../src/audio/voicePacks/VoicePackTypes';
 import {
   PregamePresentationDirector,
 } from '../src/presentation/pregame/PregamePresentationDirector';
@@ -556,6 +558,36 @@ describe('pregame audio coordinator', () => {
     });
     expect(mixer.stoppedCategories).toEqual(['announcer']);
   });
+
+  it('does not start a stale voice-pack clip after pregame is skipped', async () => {
+    const mixer = new FakePregameMixer();
+    let resolveClip!: (clip: VoicePackResolvedClip) => void;
+    const resolver = {
+      resolveClip: () => new Promise<VoicePackResolvedClip>((resolve) => {
+        resolveClip = resolve;
+      }),
+    } as unknown as VoicePackAssetResolver;
+    const coordinator = new PregameAudioCoordinator(
+      mixer,
+      createFakeTitleMusicController() as unknown as TitleMusicController,
+      createFakeGameAudioDirector() as unknown as GameAudioDirector,
+      { voicePackResolver: resolver },
+    );
+
+    coordinator.startLine('welcome', createSelection('pregame_welcome_test', 0.5));
+    expect(coordinator.getSnapshot().playbackState).toBe('starting');
+
+    coordinator.skip();
+    resolveClip(createResolvedVoicePackClip('voice_pack_welcome_test', 0.5));
+    await waitForMicrotasks();
+
+    expect(mixer.playedAssetIds).toEqual([]);
+    expect(coordinator.getSnapshot()).toMatchObject({
+      activeLine: null,
+      playbackState: 'idle',
+      queuedLine: null,
+    });
+  });
 });
 
 function createContext(): PregamePresentationContext {
@@ -881,6 +913,32 @@ function createSelection(scriptId: string, durationSeconds = 4) {
     fallbackReason: null,
     script: scriptId,
     scriptId,
+  };
+}
+
+function createResolvedVoicePackClip(assetId: string, durationSeconds: number): VoicePackResolvedClip {
+  return {
+    asset: {
+      assetId,
+      category: 'announcer',
+      defaultGain: 1,
+      loadingStrategy: 'buffer',
+      loop: false,
+      maxSimultaneousInstances: 1,
+      optional: true,
+      url: `/audio/voice-packs/test/${assetId}.mp3`,
+    },
+    caption: assetId,
+    clip: {
+      assetId,
+      caption: assetId,
+      domain: 'pregame',
+      durationSeconds,
+      scriptId: assetId,
+      url: `/audio/voice-packs/test/${assetId}.mp3`,
+    },
+    fallbackSource: 'selectedPack',
+    packId: 'announcer-a',
   };
 }
 

@@ -1364,7 +1364,7 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
       running: false,
     },
   });
-  await page.keyboard.press('Space');
+  await page.mouse.click(640, 360);
   await expect(page.locator('body[data-app-phase="coinToss"]')).toBeAttached();
   await expect(page.locator('.coin-toss-ui')).toBeVisible();
   await expect.poll(() => getCoinTossSnapshot(page), { timeout: 10_000 }).toMatchObject({
