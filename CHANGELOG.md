@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.40] - 2026-06-23
+
+### Added
+
+- Added deterministic receiving-team AI logic for end-zone kickoff touchbacks, projecting whether a return would beat the guaranteed touchback spot before downing the kick.
+
+### Tests
+
+- Verified `npx vitest run tests/specialTeams/kickoff.test.ts` and `npm run build`.
+
 ## [1.21.39] - 2026-06-23
 
 ### Changed

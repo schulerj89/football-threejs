@@ -32,6 +32,7 @@ import {
   KICKOFF_RETURN_CONFIG,
   createKickoffReturnState,
   resolveAssignedKickReturner,
+  resolveKickoffTouchbackDecision,
   startKickoffRunUp,
   updateKickoffReturnState,
   type KickoffReturnOutcome,
@@ -430,6 +431,34 @@ describe('kickoff match flow', () => {
 
     expect(closest?.returnerRosterId).toBe('returner-a');
     expect(tied?.returnerRosterId).toBe('returner-a');
+  });
+
+  it('takes the touchback when the receiving AI projects an end-zone return short of the touchback spot', () => {
+    const result = findResult('touchback', 'user');
+    const decision = resolveKickoffTouchbackDecision({
+      assignedReturner: null,
+      receivingTeam: 'opponent',
+      result,
+    });
+
+    expect(decision.takeTouchback).toBe(true);
+    expect(decision.reason).toBe('projectedReturnShortOfTouchback');
+    expect(decision.landingYardsFromOwnGoalLine).toBe(0);
+    expect(decision.projectedReturnYardLine).toBeLessThan(decision.touchbackYardLine);
+  });
+
+  it('does not call for a touchback when the kick is fielded outside the end zone', () => {
+    const result = simulateKickoff(createInput({ kickPower: 20, matchSeed: 4100 }));
+    const decision = resolveKickoffTouchbackDecision({
+      assignedReturner: null,
+      receivingTeam: 'opponent',
+      result,
+    });
+
+    expect(result.landingType).toBe('fielded');
+    expect(decision.takeTouchback).toBe(false);
+    expect(decision.reason).toBe('notInEndZone');
+    expect(decision.landingYardsFromOwnGoalLine).toBeGreaterThan(0);
   });
 
   it('holds coverage during the kicker run-up, then assigns return blockers at contact', () => {

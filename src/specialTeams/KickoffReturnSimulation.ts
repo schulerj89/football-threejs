@@ -81,6 +81,19 @@ export interface KickoffReturnOutcome {
   type: KickoffReturnOutcomeType;
 }
 
+export type KickoffTouchbackDecisionReason =
+  | 'notInEndZone'
+  | 'projectedReturnBeatsTouchback'
+  | 'projectedReturnShortOfTouchback';
+
+export interface KickoffTouchbackDecision {
+  landingYardsFromOwnGoalLine: number;
+  projectedReturnYardLine: number;
+  reason: KickoffTouchbackDecisionReason;
+  takeTouchback: boolean;
+  touchbackYardLine: number;
+}
+
 export interface KickoffReturnState {
   assignedReturner: KickReturnerAssignment | null;
   ballPosition: { x: number; y: number; z: number };
@@ -148,6 +161,10 @@ export const KICKOFF_RETURN_CONFIG = {
   returnEscortWidthYards: 4.25,
   returnerAiSpeedYardsPerSecond: 12,
   returnerTrackingSpeedYardsPerSecond: 11.8,
+  touchbackDecisionBaseReturnYards: 14,
+  touchbackDecisionEndZoneYardLine: 0.5,
+  touchbackDecisionReturnCushionYards: 2,
+  touchbackDecisionSpareSecondBonusYards: 1.75,
 } as const;
 
 export function createKickoffReturnState(options: {
@@ -268,6 +285,51 @@ export function resolveAssignedKickReturner(
   return selected;
 }
 
+export function resolveKickoffTouchbackDecision(options: {
+  assignedReturner: KickReturnerAssignment | null;
+  receivingTeam: MatchPossession;
+  result: KickoffResult;
+}): KickoffTouchbackDecision {
+  const landingPosition = worldSpotToPossessionFieldPosition(
+    options.result.target,
+    options.receivingTeam,
+  );
+  const touchbackPosition = createFreeKickTouchbackPosition();
+  const spareSeconds = Math.max(0, options.assignedReturner?.estimatedSpareSeconds ?? 0);
+  const lateralPenaltyYards = Math.abs(options.result.target.x) * 0.12;
+  const projectedReturnYardLine = Math.max(
+    0,
+    landingPosition.yardsFromOwnGoalLine +
+      KICKOFF_RETURN_CONFIG.touchbackDecisionBaseReturnYards +
+      spareSeconds * KICKOFF_RETURN_CONFIG.touchbackDecisionSpareSecondBonusYards -
+      lateralPenaltyYards,
+  );
+  const inEndZone =
+    landingPosition.yardsFromOwnGoalLine <= KICKOFF_RETURN_CONFIG.touchbackDecisionEndZoneYardLine;
+
+  if (!inEndZone) {
+    return {
+      landingYardsFromOwnGoalLine: landingPosition.yardsFromOwnGoalLine,
+      projectedReturnYardLine,
+      reason: 'notInEndZone',
+      takeTouchback: false,
+      touchbackYardLine: touchbackPosition.yardsFromOwnGoalLine,
+    };
+  }
+
+  const takeTouchback =
+    projectedReturnYardLine <=
+    touchbackPosition.yardsFromOwnGoalLine + KICKOFF_RETURN_CONFIG.touchbackDecisionReturnCushionYards;
+
+  return {
+    landingYardsFromOwnGoalLine: landingPosition.yardsFromOwnGoalLine,
+    projectedReturnYardLine,
+    reason: takeTouchback ? 'projectedReturnShortOfTouchback' : 'projectedReturnBeatsTouchback',
+    takeTouchback,
+    touchbackYardLine: touchbackPosition.yardsFromOwnGoalLine,
+  };
+}
+
 function updateKickerRunUp(
   state: KickoffReturnState,
   delta: number,
@@ -325,8 +387,14 @@ function updateKickoffFlight(
   );
   state.ballPosition = sampleKickoffBallPosition(state.result, state.flightElapsedSeconds);
   updateReleasedKickoffParticipants(state, delta, null);
+  const flightFinished = state.flightElapsedSeconds >= state.result.flightSeconds;
 
-  if (state.result.landingType === 'touchback' && state.flightElapsedSeconds >= state.result.flightSeconds) {
+  const touchbackDecision = resolveKickoffTouchbackDecision({
+    assignedReturner: state.assignedReturner,
+    receivingTeam: state.receivingTeam,
+    result: state.result,
+  });
+  if (flightFinished && touchbackDecision.takeTouchback) {
     const touchbackPosition = createFreeKickTouchbackPosition();
     const touchbackSpot = possessionFieldPositionToWorldSpot(touchbackPosition, state.receivingTeam);
     completeKickoffReturn(state, {
@@ -353,7 +421,6 @@ function updateKickoffFlight(
 
   const catchDistance = distanceBetween(returner.position, state.result.target);
   const catchableHeight = state.ballPosition.y <= KICKOFF_RETURN_CONFIG.catchHeightYards;
-  const flightFinished = state.flightElapsedSeconds >= state.result.flightSeconds;
   if (
     (catchableHeight && catchDistance <= KICKOFF_RETURN_CONFIG.catchRadiusYards) ||
     (flightFinished && catchDistance <= KICKOFF_RETURN_CONFIG.minimumForcedCatchDistanceYards)
