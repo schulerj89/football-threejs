@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.11] - 2026-06-23
+
+### Fixed
+
+- Fixed the coin toss landing pose so the coin settles on top of the visible turf instead of sinking through the field surface.
+
+### Tests
+
+- Verified `npx vitest run tests/coinToss.test.ts`, `npm run build`, and `npm run test:unit`.
+
 ## [1.22.10] - 2026-06-23
 
 ### Added

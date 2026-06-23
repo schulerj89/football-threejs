@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { CoinFace } from '../../match/CoinTossModel';
+import { TURF_BAND_HEIGHT, TURF_BAND_Y } from '../../field/FieldMarkingLayout';
 
 export interface CoinVisualResources {
   dispose: () => void;
@@ -67,16 +68,20 @@ export function calculateCoinAnimationPose(
   const finalRotationX = resolveCoinFinalRotationX(face);
   const rotationX = COIN_VISUAL_CONFIG.spinTurns * Math.PI * 2 * eased + finalRotationX * eased;
   const landingHeight = getCoinLandingCenterHeight();
-  const positionY = quadraticBezier(
+  const arcedPositionY = quadraticBezier(
     COIN_VISUAL_CONFIG.startHeight,
     COIN_VISUAL_CONFIG.apexControlHeight,
     landingHeight,
     progress,
   );
+  const minimumPositionY =
+    getCoinLandingSurfaceY() +
+    getCoinVerticalHalfExtent(rotationX, Math.sin(progress * Math.PI) * 0.18) +
+    COIN_VISUAL_CONFIG.groundClearance;
 
   return {
     finalRotationX,
-    positionY,
+    positionY: Math.max(arcedPositionY, minimumPositionY),
     progress,
     rotationX,
     rotationZ: Math.sin(progress * Math.PI) * 0.18,
@@ -205,7 +210,26 @@ function easeInOutCubic(value: number): number {
 }
 
 function getCoinLandingCenterHeight(): number {
-  return (COIN_VISUAL_CONFIG.thickness / 2) + COIN_VISUAL_CONFIG.groundClearance;
+  return getCoinLandingSurfaceY() + (COIN_VISUAL_CONFIG.thickness / 2) + COIN_VISUAL_CONFIG.groundClearance;
+}
+
+function getCoinLandingSurfaceY(): number {
+  return TURF_BAND_Y + (TURF_BAND_HEIGHT / 2);
+}
+
+function getCoinVerticalHalfExtent(rotationX: number, rotationZ: number): number {
+  const xSin = Math.sin(rotationX);
+  const xCos = Math.cos(rotationX);
+  const zSin = Math.sin(rotationZ);
+  const zCos = Math.cos(rotationZ);
+  const localXWorldY = zSin * xCos;
+  const localYWorldY = zCos * xCos;
+  const localZWorldY = -xSin;
+
+  return (
+    COIN_VISUAL_CONFIG.radius * Math.hypot(localXWorldY, localZWorldY) +
+    (COIN_VISUAL_CONFIG.thickness / 2) * Math.abs(localYWorldY)
+  );
 }
 
 function quadraticBezier(start: number, control: number, end: number, progress: number): number {

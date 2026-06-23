@@ -20,6 +20,7 @@ import {
   DEFAULT_OPPONENT_TEAM_ID,
   DEFAULT_USER_TEAM_ID,
 } from '../src/teams/TeamRegistry';
+import { TURF_BAND_HEIGHT, TURF_BAND_Y } from '../src/field/FieldMarkingLayout';
 import { BROADCAST_EXPERIENCE_SETTINGS } from '../src/config/GameExperienceSettings';
 import {
   getPlayerBodyVisualSnapshot,
@@ -227,12 +228,43 @@ describe('coin toss presentation data', () => {
     const start = calculateCoinAnimationPose('heads', 0);
     const middle = calculateCoinAnimationPose('heads', getCoinAnimationDurationSeconds() / 2);
     const landed = calculateCoinAnimationPose('heads', getCoinAnimationDurationSeconds());
+    const turfTopY = TURF_BAND_Y + (TURF_BAND_HEIGHT / 2);
 
     expect(start.positionY).toBeGreaterThan(1);
     expect(middle.positionY).toBeGreaterThan(start.positionY);
-    expect(landed.positionY).toBeGreaterThan(0.04);
-    expect(landed.positionY).toBeLessThan(0.08);
+    expect(landed.positionY).toBeGreaterThan(turfTopY);
+    expect(landed.positionY).toBeLessThan(0.14);
     expect(landed.rotationZ).toBeCloseTo(0, 8);
+  });
+
+  it('keeps the rendered coin above the turf through the full landing animation', () => {
+    const restoreDom = installCoinTossDom();
+    try {
+      const coin = createCoinVisualResources();
+      const bounds = new THREE.Box3();
+      const turfTopY = TURF_BAND_Y + (TURF_BAND_HEIGHT / 2);
+      const frameCount = 90;
+
+      for (const face of ['heads', 'tails'] as const) {
+        for (let frame = 0; frame <= frameCount; frame += 1) {
+          const pose = calculateCoinAnimationPose(
+            face,
+            getCoinAnimationDurationSeconds() * (frame / frameCount),
+          );
+          coin.group.position.y = pose.positionY;
+          coin.mesh.rotation.set(pose.rotationX, 0, pose.rotationZ);
+          coin.group.updateMatrixWorld(true);
+          bounds.setFromObject(coin.group);
+
+          expect(bounds.min.y).toBeGreaterThanOrEqual(turfTopY + 0.01);
+        }
+      }
+
+      coin.dispose();
+      disposeSharedCoinVisualResources();
+    } finally {
+      restoreDom();
+    }
   });
 
   it('uses a smaller 3D coin mesh for midfield staging', () => {
