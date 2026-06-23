@@ -2619,6 +2619,25 @@ body[data-game-mode="exhibition"] .score-counter {
   margin-bottom: 14px;
 }
 
+.football-hub-player-detail-heading {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.football-hub-player-detail-heading strong {
+  color: #f7fbf8;
+  font-size: 17px;
+  line-height: 1.12;
+}
+
+.football-hub-player-detail-heading span {
+  display: block;
+  color: #cbd6cf;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .football-hub-attribute-list {
   display: grid;
   gap: 9px;

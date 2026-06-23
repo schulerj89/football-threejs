@@ -714,7 +714,7 @@ export class FootballHubScreen {
     const header = document.createElement('header');
     header.append(
       logo.root,
-      createTextBlock(
+      createPlayerDetailHeading(
         `#${player.jerseyNumber} ${player.displayName}`,
         `${player.footballPosition} | ${formatArchetype(player.archetype)} | OVR ${overall} | ${status}`,
       ),
@@ -836,6 +836,17 @@ function createRatingColor(value: number): string {
 
 function createTextBlock(title: string, subtitle: string): HTMLElement {
   const block = document.createElement('div');
+  const strong = document.createElement('strong');
+  strong.textContent = title;
+  const span = document.createElement('span');
+  span.textContent = subtitle;
+  block.append(strong, span);
+  return block;
+}
+
+function createPlayerDetailHeading(title: string, subtitle: string): HTMLElement {
+  const block = document.createElement('div');
+  block.className = 'football-hub-player-detail-heading';
   const strong = document.createElement('strong');
   strong.textContent = title;
   const span = document.createElement('span');

@@ -1215,6 +1215,8 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.football-hub-roster-table tbody tr')).toHaveCount(11);
   await expect(page.locator('.football-hub-player-detail')).toContainText('OVR');
   await expect(page.locator('.football-hub-player-detail')).toContainText('starter');
+  await expect(page.locator('.football-hub-player-detail-heading strong')).toContainText(/^#\d+ .+/);
+  await expect(page.locator('.football-hub-player-detail-heading span')).toContainText(/^[A-Z]+ \| .+ \| OVR \d+ \| .+ starter$/);
   await page.getByRole('tab', { name: 'Specialists' }).click();
   await expect(page.locator('.football-hub-roster-table tbody tr')).toHaveCount(10);
   await page.getByRole('button', { name: 'Play Now' }).click();

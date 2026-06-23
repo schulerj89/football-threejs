@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.37] - 2026-06-23
+
+### Changed
+
+- Improved roster player detail spacing by separating the player name and position/archetype/overall/status metadata into distinct lines.
+
+### Tests
+
+- Verified `npm run build` and `npx playwright test tests/scene-smoke.spec.ts --grep "shows the title screen"`.
+
 ## [1.21.36] - 2026-06-23
 
 ### Changed
