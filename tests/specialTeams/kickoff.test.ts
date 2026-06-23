@@ -442,6 +442,134 @@ describe('kickoff match flow', () => {
     expect(crowdingBlockers).toEqual([]);
   });
 
+  it('does not allow an instant post-catch tackle before blockers can transition', () => {
+    const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
+    const kickoff = createKickoffStateForTeam('opponent', 155, { kickPower: 20 });
+    const layout = createKickoffFormation(kickoff, binding);
+    const state = createKickoffReturnState({ kickoff, layout, matchSeed: 155 });
+
+    startKickoffRunUp(state);
+    for (
+      let frame = 0;
+      frame < 600 && state.phase !== 'returnLive' && state.phase !== 'dead';
+      frame += 1
+    ) {
+      updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+    }
+
+    const graceFrames = Math.floor(KICKOFF_RETURN_CONFIG.postCatchTackleGraceSeconds * 60) - 1;
+    for (let frame = 0; frame < graceFrames && state.phase === 'returnLive'; frame += 1) {
+      updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+    }
+
+    expect(state.phase).toBe('returnLive');
+    expect(state.outcome).toBeNull();
+    expect(state.returnClockElapsedSeconds).toBeLessThan(KICKOFF_RETURN_CONFIG.postCatchTackleGraceSeconds);
+  });
+
+  it('moves receiving blockers toward assigned coverage threats after the catch', () => {
+    const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
+    const kickoff = createKickoffStateForTeam('opponent', 156, { kickPower: 20 });
+    const layout = createKickoffFormation(kickoff, binding);
+    const state = createKickoffReturnState({ kickoff, layout, matchSeed: 156 });
+
+    startKickoffRunUp(state);
+    for (
+      let frame = 0;
+      frame < 600 && state.phase !== 'returnLive' && state.phase !== 'dead';
+      frame += 1
+    ) {
+      updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+    }
+
+    const startingDistances = state.blockerAssignments.map((assignment) => {
+      const blocker = state.participants.find((participant) => participant.visualId === assignment.blockerVisualId);
+      const coverage = state.participants.find((participant) => participant.visualId === assignment.coverageVisualId);
+      return {
+        assignment,
+        distance: blocker && coverage
+          ? Math.hypot(blocker.position.x - coverage.position.x, blocker.position.z - coverage.position.z)
+          : Number.POSITIVE_INFINITY,
+      };
+    });
+
+    for (let frame = 0; frame < 18 && state.phase === 'returnLive'; frame += 1) {
+      updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+    }
+
+    const improvedAssignments = startingDistances.filter(({ assignment, distance }) => {
+      const blocker = state.participants.find((participant) => participant.visualId === assignment.blockerVisualId);
+      const coverage = state.participants.find((participant) => participant.visualId === assignment.coverageVisualId);
+      const currentDistance = blocker && coverage
+        ? Math.hypot(blocker.position.x - coverage.position.x, blocker.position.z - coverage.position.z)
+        : Number.POSITIVE_INFINITY;
+      return currentDistance < distance;
+    });
+
+    expect(state.phase).toBe('returnLive');
+    expect(improvedAssignments.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('collides assigned return blockers with coverage so engaged defenders cannot pass through to tackle', () => {
+    const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
+    const kickoff = createKickoffStateForTeam('opponent', 157, { kickPower: 20 });
+    const layout = createKickoffFormation(kickoff, binding);
+    const state = createKickoffReturnState({ kickoff, layout, matchSeed: 157 });
+
+    startKickoffRunUp(state);
+    for (
+      let frame = 0;
+      frame < 600 && state.phase !== 'returnLive' && state.phase !== 'dead';
+      frame += 1
+    ) {
+      updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+    }
+
+    const carrier = state.participants.find((participant) =>
+      participant.visualId === state.carrierVisualId);
+    const assignment = state.blockerAssignments[0];
+    const blocker = state.participants.find((participant) =>
+      participant.visualId === assignment?.blockerVisualId);
+    const coverage = state.participants.find((participant) =>
+      participant.visualId === assignment?.coverageVisualId);
+    expect(carrier).toBeDefined();
+    expect(blocker).toBeDefined();
+    expect(coverage).toBeDefined();
+
+    const carrierPosition = { ...carrier!.position };
+    blocker!.position = {
+      x: carrierPosition.x,
+      z: carrierPosition.z + 1.15,
+    };
+    coverage!.position = {
+      x: carrierPosition.x,
+      z: carrierPosition.z + 0.3,
+    };
+    state.returnClockElapsedSeconds = KICKOFF_RETURN_CONFIG.postCatchTackleGraceSeconds;
+
+    updateKickoffReturnState(state, { deltaSeconds: 0 });
+
+    const blockerToCarrier = Math.hypot(
+      blocker!.position.x - carrier!.position.x,
+      blocker!.position.z - carrier!.position.z,
+    );
+    const coverageToCarrier = Math.hypot(
+      coverage!.position.x - carrier!.position.x,
+      coverage!.position.z - carrier!.position.z,
+    );
+    const blockerToCoverage = Math.hypot(
+      blocker!.position.x - coverage!.position.x,
+      blocker!.position.z - coverage!.position.z,
+    );
+
+    expect(state.phase).toBe('returnLive');
+    expect(state.outcome).toBeNull();
+    expect(coverageToCarrier).toBeGreaterThan(blockerToCarrier);
+    expect(blockerToCoverage).toBeGreaterThanOrEqual(
+      KICKOFF_RETURN_CONFIG.returnBlockStandoffDistanceYards - 0.001,
+    );
+  });
+
   it('starts the clock on legal touch and resolves a fielded return to the exact dead-ball spot', () => {
     const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
     const kickoff = createKickoffStateForTeam('opponent', 1, { kickPower: 20 });

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.12] - 2026-06-23
+
+### Changed
+
+- Added a short post-catch tackle grace window so kickoff returns cannot end immediately before blockers transition.
+- Expanded post-catch blocker targeting and added deterministic blocker-vs-coverage engagement collision so assigned defenders cannot pass through return blockers into the returner.
+
+### Tests
+
+- Verified `npx vitest run tests/specialTeams/kickoff.test.ts tests/specialTeams/placeKick.test.ts` and `npm run build`.
+
 ## [1.21.11] - 2026-06-23
 
 ### Changed

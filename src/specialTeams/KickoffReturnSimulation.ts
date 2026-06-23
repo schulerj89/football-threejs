@@ -134,7 +134,11 @@ export const KICKOFF_RETURN_CONFIG = {
   leadBlockOffsetZ: 6,
   maxDeltaSeconds: 1 / 15,
   minimumForcedCatchDistanceYards: 3.4,
+  postCatchBlockSearchDistanceYards: 14,
+  postCatchTackleGraceSeconds: 0.55,
   pursuitTackleRadiusYards: DEFENDER_CONFIG.tackleRadius,
+  returnBlockEngagementRadiusYards: 2.2,
+  returnBlockStandoffDistanceYards: 1.65,
   receivingBlockerEngageDistanceYards: 5.25,
   receivingBlockerProtectCarrierDistanceYards: 8.5,
   receivingBlockerSpeedYardsPerSecond: 9.5,
@@ -431,11 +435,14 @@ function updateKickoffReturnLive(
     return;
   }
 
-  const tackler = state.participants.find((participant) =>
-    participant.phase === 'kicking' &&
-    participant.slotId !== 'kicker' &&
-    distanceBetween(participant.position, carrier.position) <=
-      KICKOFF_RETURN_CONFIG.pursuitTackleRadiusYards);
+  const tackler = state.returnClockElapsedSeconds >= KICKOFF_RETURN_CONFIG.postCatchTackleGraceSeconds
+    ? state.participants.find((participant) =>
+      participant.phase === 'kicking' &&
+      participant.slotId !== 'kicker' &&
+      !isCoverageEngaged(state, participant.visualId) &&
+      distanceBetween(participant.position, carrier.position) <=
+        KICKOFF_RETURN_CONFIG.pursuitTackleRadiusYards)
+    : null;
   if (tackler) {
     completeKickoffReturn(state, {
       carrierRosterId: carrier.rosterPlayerId,
@@ -508,6 +515,8 @@ function updateReleasedKickoffParticipants(
       delta,
     );
   }
+
+  resolveReturnBlockerCollisions(state, carrier);
 }
 
 function completeKickoffReturn(
@@ -657,8 +666,81 @@ function shouldEngageAssignedCoverage(
     distanceBetween(blocker.position, coverage.position) <=
       KICKOFF_RETURN_CONFIG.receivingBlockerEngageDistanceYards ||
     distanceBetween(carrier.position, coverage.position) <=
-      KICKOFF_RETURN_CONFIG.receivingBlockerProtectCarrierDistanceYards
+      KICKOFF_RETURN_CONFIG.receivingBlockerProtectCarrierDistanceYards ||
+    distanceBetween(carrier.position, coverage.position) <=
+      KICKOFF_RETURN_CONFIG.postCatchBlockSearchDistanceYards
   );
+}
+
+function resolveReturnBlockerCollisions(
+  state: KickoffReturnState,
+  carrier: KickoffReturnParticipantState | null,
+): void {
+  const protectedPoint = carrier?.position ?? state.result.target;
+
+  for (const assignment of state.blockerAssignments) {
+    const blocker = findParticipant(state, assignment.blockerVisualId);
+    const coverage = findParticipant(state, assignment.coverageVisualId);
+    if (!blocker || !coverage) {
+      continue;
+    }
+
+    const distance = distanceBetween(blocker.position, coverage.position);
+    if (distance > KICKOFF_RETURN_CONFIG.returnBlockEngagementRadiusYards) {
+      continue;
+    }
+
+    separateAssignedBlockerAndCoverage(state, blocker, coverage, protectedPoint, distance);
+  }
+}
+
+function separateAssignedBlockerAndCoverage(
+  state: KickoffReturnState,
+  blocker: KickoffReturnParticipantState,
+  coverage: KickoffReturnParticipantState,
+  protectedPoint: FootballSpot,
+  distance: number,
+): void {
+  const towardProtectedPoint = normalize({
+    x: protectedPoint.x - blocker.position.x,
+    z: protectedPoint.z - blocker.position.z,
+  });
+  const coverageOffset = {
+    x: coverage.position.x - blocker.position.x,
+    z: coverage.position.z - blocker.position.z,
+  };
+  const coverageOnProtectedSide =
+    coverageOffset.x * towardProtectedPoint.x + coverageOffset.z * towardProtectedPoint.z > 0;
+
+  if (coverageOnProtectedSide && (towardProtectedPoint.x !== 0 || towardProtectedPoint.z !== 0)) {
+    coverage.position = {
+      x: clampX(
+        blocker.position.x - towardProtectedPoint.x * KICKOFF_RETURN_CONFIG.returnBlockStandoffDistanceYards,
+        state.fieldBounds,
+      ),
+      z: clampZ(
+        blocker.position.z - towardProtectedPoint.z * KICKOFF_RETURN_CONFIG.returnBlockStandoffDistanceYards,
+        state.fieldBounds,
+      ),
+    };
+    coverage.velocity = { x: 0, z: 0 };
+    return;
+  }
+
+  if (distance >= KICKOFF_RETURN_CONFIG.returnBlockStandoffDistanceYards) {
+    return;
+  }
+
+  const normal = distance > 0.0001
+    ? normalize(coverageOffset)
+    : {
+      x: -towardProtectedPoint.x,
+      z: -towardProtectedPoint.z,
+    };
+  const correction = KICKOFF_RETURN_CONFIG.returnBlockStandoffDistanceYards - distance;
+  coverage.position.x = clampX(coverage.position.x + normal.x * correction, state.fieldBounds);
+  coverage.position.z = clampZ(coverage.position.z + normal.z * correction, state.fieldBounds);
+  coverage.velocity = { x: 0, z: 0 };
 }
 
 function resolveReturnEscortTarget(
