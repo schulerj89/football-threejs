@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { DynamicFieldMarkers } from './field/DynamicFieldMarkers';
+import {
+  FieldBrandingController,
+  type HomeFieldBranding,
+} from './field/FieldBrandingController';
 import { createEndZonePylonBoxes } from './field/FieldMarkingLayout';
 import { FieldResourceOwner } from './field/FieldResourceOwner';
 import type { CreateFootballFieldOptions, FootballField } from './field/FieldTypes';
@@ -37,6 +41,7 @@ export {
 export type { CreateFootballFieldOptions, FootballField } from './field/FieldTypes';
 
 const dynamicMarkerControllers = new WeakMap<FootballField, DynamicFieldMarkers>();
+const fieldBrandingControllers = new WeakMap<FootballField, FieldBrandingController>();
 const fieldResourceOwners = new WeakMap<FootballField, FieldResourceOwner>();
 
 export function createFootballField(options: CreateFootballFieldOptions = {}): FootballField {
@@ -72,6 +77,11 @@ export function createFootballField(options: CreateFootballFieldOptions = {}): F
   group.add(geometryBuilder.createTeamBoxBoundaryMesh());
   group.add(createEndZonePylonsMesh(geometryBuilder, resourceOwner.materials, layout));
   group.add(geometryBuilder.createGoalpostsMesh());
+  const brandingController = new FieldBrandingController(layout);
+  group.add(brandingController.group);
+  if (options.homeFieldBranding) {
+    brandingController.sync(options.homeFieldBranding);
+  }
 
   const dynamicMarkers = new DynamicFieldMarkers(resourceOwner.materials, {
     firstDownLine: layout.firstDownLine,
@@ -89,6 +99,8 @@ export function createFootballField(options: CreateFootballFieldOptions = {}): F
     auditEnabled: !!options.fieldAudit,
     dispose: () => {
       dynamicMarkerControllers.delete(field);
+      fieldBrandingControllers.get(field)?.dispose();
+      fieldBrandingControllers.delete(field);
       fieldResourceOwners.delete(field);
       resourceOwner.disposeObject(group);
     },
@@ -101,6 +113,7 @@ export function createFootballField(options: CreateFootballFieldOptions = {}): F
   };
 
   dynamicMarkerControllers.set(field, dynamicMarkers);
+  fieldBrandingControllers.set(field, brandingController);
   fieldResourceOwners.set(field, resourceOwner);
   return field;
 }
@@ -134,10 +147,18 @@ export function syncFootballFieldDriveLines(
 
 export function syncFootballFieldTeamColors(
   field: FootballField,
-  colors: { farEndZone: string; nearEndZone: string },
+  colors: {
+    farEndZone: string;
+    homeFieldBranding?: HomeFieldBranding;
+    nearEndZone: string;
+  },
 ): void {
   fieldResourceOwners.get(field)?.materials.setEndZoneColors({
     far: colors.farEndZone,
     near: colors.nearEndZone,
   });
+  fieldBrandingControllers.get(field)?.sync(colors.homeFieldBranding ?? null);
 }
+
+export type { HomeFieldBranding } from './field/FieldBrandingController';
+export { splitTeamNameForEndZones } from './field/FieldBrandingController';

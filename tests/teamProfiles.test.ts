@@ -192,13 +192,13 @@ describe('team profiles', () => {
     expect(getReadableTextColor('#000000')).toBe('#f7fbf8');
   });
 
-  it('applies active team colors to field end zones', () => {
+  it('applies the home team identity to both field end zones', () => {
     const field = createFootballField();
     const theme = resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS);
 
     try {
       syncFootballFieldTeamColors(field, {
-        farEndZone: theme.defense.profile.endZoneColor,
+        farEndZone: theme.offense.profile.endZoneColor,
         nearEndZone: theme.offense.profile.endZoneColor,
       });
 
@@ -210,7 +210,7 @@ describe('team profiles', () => {
       expect(((near as THREE.Mesh).material as THREE.MeshLambertMaterial).color.getHexString())
         .toBe(theme.offense.profile.endZoneColor.replace('#', ''));
       expect(((far as THREE.Mesh).material as THREE.MeshLambertMaterial).color.getHexString())
-        .toBe(theme.defense.profile.endZoneColor.replace('#', ''));
+        .toBe(theme.offense.profile.endZoneColor.replace('#', ''));
     } finally {
       field.dispose();
     }

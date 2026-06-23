@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.35] - 2026-06-23
+
+### Added
+
+- Added home-field branding with a masked midfield logo badge and split home-team name wordmarks in the two end zones.
+
+### Changed
+
+- Updated field theme application so both end zones use the home team's end-zone color instead of splitting colors by offense and opponent.
+
+### Tests
+
+- Verified `npx vitest run tests/fieldGeometry.test.ts tests/teamProfiles.test.ts`, `npm run test:unit`, and `npm run build`.
+
 ## [1.21.34] - 2026-06-23
 
 ### Changed

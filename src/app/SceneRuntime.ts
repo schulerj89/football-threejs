@@ -4,10 +4,14 @@ import {
   createFootballField,
   syncFootballFieldDriveLines,
   syncFootballFieldTeamColors,
+  type HomeFieldBranding,
   type FootballField,
 } from '../field';
 import type { RenderMetricsSnapshot } from '../debugOverlay';
-import type { TeamPresentationTheme } from '../teams/TeamThemeApplier';
+import {
+  getReadableTextColor,
+  type TeamPresentationTheme,
+} from '../teams/TeamThemeApplier';
 import {
   WeatherPresentationController,
 } from '../weather/WeatherPresentationController';
@@ -123,9 +127,23 @@ export class SceneRuntime {
   }
 
   applyTeamTheme(theme: TeamPresentationTheme): void {
+    const homeProfile = theme.offense.profile;
+    const homeFieldBranding: HomeFieldBranding = {
+      abbreviation: homeProfile.abbreviation,
+      accentColor: homeProfile.colors.accent,
+      displayName: homeProfile.displayName,
+      endZoneColor: homeProfile.endZoneColor,
+      id: homeProfile.id,
+      logoUrl: homeProfile.logoUrl,
+      primaryColor: homeProfile.colors.primary,
+      secondaryColor: homeProfile.colors.secondary,
+      textColor: getReadableTextColor(homeProfile.endZoneColor),
+    };
+
     syncFootballFieldTeamColors(this.field, {
-      farEndZone: theme.defense.profile.endZoneColor,
-      nearEndZone: theme.offense.profile.endZoneColor,
+      farEndZone: homeProfile.endZoneColor,
+      homeFieldBranding,
+      nearEndZone: homeProfile.endZoneColor,
     });
   }
 

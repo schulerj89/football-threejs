@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { FIELD_BOUNDS, createFootballField } from '../src/field';
+import {
+  FIELD_BOUNDS,
+  createFootballField,
+  splitTeamNameForEndZones,
+  syncFootballFieldTeamColors,
+} from '../src/field';
 
 const BOUNDS_EPSILON = 0.00001;
 
@@ -72,5 +77,72 @@ describe('field geometry integration', () => {
     expect(pylons?.userData.presentationOnly).toBe(true);
     expect(pylons?.userData.endZonePylons).toBe(true);
     expect(pylons?.userData.pylonIds).toHaveLength(8);
+  });
+
+  it('adds home-team midfield and split end-zone branding meshes', () => {
+    const field = createFootballField();
+
+    try {
+      syncFootballFieldTeamColors(field, {
+        farEndZone: '#244b91',
+        homeFieldBranding: {
+          abbreviation: 'BAY',
+          accentColor: '#e0a94d',
+          displayName: 'Bay City Current',
+          endZoneColor: '#215964',
+          id: 'bay-city-current',
+          logoUrl: '/branding/teams/bay-city-current/logo.webp',
+          primaryColor: '#1f6f7a',
+          secondaryColor: '#f4f7f2',
+          textColor: '#f7fbf8',
+        },
+        nearEndZone: '#244b91',
+      });
+
+      const branding = field.group.getObjectByName('home-field-branding');
+      const midfieldLogo = field.group.getObjectByName('home-midfield-logo');
+      const nearWordmark = field.group.getObjectByName('near-end-zone-home-wordmark');
+      const farWordmark = field.group.getObjectByName('far-end-zone-home-wordmark');
+
+      expect(branding).toBeInstanceOf(THREE.Group);
+      expect(branding?.userData).toMatchObject({
+        homeFieldBranding: true,
+        homeTeamId: 'bay-city-current',
+        homeTeamName: 'Bay City Current',
+      });
+      expect(midfieldLogo).toBeInstanceOf(THREE.Mesh);
+      expect(midfieldLogo?.userData).toMatchObject({
+        homeMidfieldLogo: true,
+        logoUrl: '/branding/teams/bay-city-current/logo.webp',
+        presentationOnly: true,
+      });
+      expect(nearWordmark).toBeInstanceOf(THREE.Mesh);
+      expect(nearWordmark?.userData).toMatchObject({
+        homeEndZoneWordmark: true,
+        side: 'near',
+        teamId: 'bay-city-current',
+        text: 'BAY CITY',
+      });
+      expect(farWordmark).toBeInstanceOf(THREE.Mesh);
+      expect(farWordmark?.userData).toMatchObject({
+        homeEndZoneWordmark: true,
+        side: 'far',
+        teamId: 'bay-city-current',
+        text: 'CURRENT',
+      });
+    } finally {
+      field.dispose();
+    }
+  });
+
+  it('splits team names into home-field end-zone wordmarks', () => {
+    expect(splitTeamNameForEndZones('Metro Meteors')).toEqual({
+      far: 'METEORS',
+      near: 'METRO',
+    });
+    expect(splitTeamNameForEndZones('Desert Ridge Scorpions')).toEqual({
+      far: 'SCORPIONS',
+      near: 'DESERT RIDGE',
+    });
   });
 });

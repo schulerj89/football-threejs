@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import type { FieldLayout } from '../fieldSpec';
+import type { HomeFieldBranding } from './FieldBrandingController';
 
 export interface BoxBatchItem {
   center: {
@@ -32,4 +33,5 @@ export interface CreateFootballFieldOptions {
     near: string;
   };
   fieldAudit?: boolean;
+  homeFieldBranding?: HomeFieldBranding;
 }
