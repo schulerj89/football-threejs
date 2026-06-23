@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.17] - 2026-06-23
+
+### Changed
+
+- Simplified the Rosters page so it focuses on the team logo, roster table, and player details instead of repeating helmet previews, starting quarterback, and best-player summary cards.
+
+### Fixed
+
+- Hid the Play Now SVG helmet fallback layer once the shared GLB helmet preview loads so no fallback/logo shape appears behind the 3D helmet.
+- Added spacing and a divider to the compact Rosters header so team identity and roster-size text no longer crowd each other.
+
+### Tests
+
+- Verified `npm run build` and `npx playwright test tests/scene-smoke.spec.ts --grep "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.21.16] - 2026-06-23
 
 ### Changed

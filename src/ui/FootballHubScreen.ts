@@ -23,7 +23,6 @@ import { MatchSetupHelmetPreviewRenderer } from './MatchSetupHelmetPreview';
 import {
   createTeamSummaryViewModel,
   resolveRosterPlayerStatus,
-  type TeamRatingCategorySummary,
   type TeamSummaryViewModel,
 } from './TeamSummaryViewModel';
 import {
@@ -78,7 +77,6 @@ export class FootballHubScreen {
   private readonly playNowValidation = document.createElement('div');
   private readonly playNowCorrectionButton = document.createElement('button');
   private readonly playNowPlayButton = document.createElement('button');
-  private readonly teamOverviewHelmet = document.createElement('div');
   private readonly playNowUserBadge = createTeamHelmetBadge(resolveCustomizedTeamProfile(
     DEFAULT_TEAM_PROFILE_SETTINGS.userTeamId,
     DEFAULT_TEAM_PROFILE_SETTINGS,
@@ -87,10 +85,6 @@ export class FootballHubScreen {
     DEFAULT_TEAM_PROFILE_SETTINGS.opponentTeamId,
     DEFAULT_TEAM_PROFILE_SETTINGS,
   ).awayUniform);
-  private readonly teamOverviewBadge = createTeamHelmetBadge(resolveCustomizedTeamProfile(
-    DEFAULT_TEAM_PROFILE_SETTINGS.userTeamId,
-    DEFAULT_TEAM_PROFILE_SETTINGS,
-  ).homeUniform);
   private readonly userLogo: TeamLogoBadge;
   private readonly opponentLogo: TeamLogoBadge;
   private readonly teamOverviewLogo: TeamLogoBadge;
@@ -362,11 +356,7 @@ export class FootballHubScreen {
   private createRostersView(): void {
     this.rostersView.className = 'football-hub-view football-hub-rosters';
     this.teamOverview.className = 'football-hub-team-overview football-hub-roster-overview';
-    const helmet = this.teamOverviewHelmet;
-    helmet.className = 'football-hub-helmet-preview football-hub-overview-helmet';
-    helmet.dataset.preview = 'fallback';
-    helmet.append(this.teamOverviewBadge);
-    this.teamOverview.append(this.teamOverviewLogo.root, helmet);
+    this.teamOverview.append(this.teamOverviewLogo.root);
 
     const controls = document.createElement('div');
     controls.className = 'football-hub-roster-controls';
@@ -468,12 +458,6 @@ export class FootballHubScreen {
       this.playNowOpponentHelmet,
       this.playNowOpponentBadge,
       resolveTeamPresentationTheme(this.settings.teamProfiles).defense.uniform,
-    );
-    this.helmetPreview.registerPreview(
-      'hub-team-overview',
-      this.teamOverviewHelmet,
-      this.teamOverviewBadge,
-      resolveCustomizedTeamProfile(this.selectedTeamId, this.settings.teamProfiles).homeUniform,
     );
   }
 
@@ -695,20 +679,10 @@ export class FootballHubScreen {
 
   private syncRosterOverview(summary: TeamSummaryViewModel): void {
     this.teamOverviewLogo.sync(summary.profile);
-    syncTeamHelmetBadge(this.teamOverviewBadge, summary.profile.homeUniform);
-    this.helmetPreview.syncPreview('hub-team-overview', summary.profile.homeUniform);
     this.teamOverview.style.setProperty('--team-primary', summary.profile.colors.primary);
     this.teamOverview.style.setProperty('--team-text', getReadableTextColor(summary.profile.colors.primary));
     this.root.style.setProperty('--hub-accent', summary.profile.colors.primary);
-    replaceAfterFirstTwo(this.teamOverview, [
-      createOverviewHeader(summary),
-      createTeamColorPanel(summary),
-      createStrengthWeaknessPanel(summary),
-      createTeamRatingCategoryPanel(summary),
-      createKeyPlayerPanel('Starting QB', summary.startingQuarterback),
-      createKeyPlayerPanel('Best offensive player', summary.bestOffensivePlayer),
-      createKeyPlayerPanel('Best defensive player', summary.bestDefensivePlayer),
-    ]);
+    this.teamOverview.replaceChildren(this.teamOverviewLogo.root, createOverviewHeader(summary));
   }
 
   private stepRosterTeam(direction: -1 | 1): void {
@@ -828,7 +802,7 @@ function sectionTitle(section: HubSection): string {
 function sectionSubtitle(section: HubSection): string {
   return {
     playNow: 'Review the matchup, uniforms, helmets, and ratings before setup.',
-    rosters: 'Inspect team identity, ratings, strengths, starters, specialists, and player attributes.',
+    rosters: 'Browse team rosters and player attributes.',
     settings: 'Adjust presentation and gameplay preferences without leaving the hub.',
   }[section];
 }
@@ -879,56 +853,9 @@ function createOverviewHeader(summary: TeamSummaryViewModel): HTMLElement {
       summary.profile.displayName,
       `${summary.profile.abbreviation} | ${summary.profile.identity}`,
     ),
-    ...createRatingPills(summary),
     createTextBlock('Roster size', `${summary.rosterSize} players`),
-    createTextBlock('Starting QB', formatKeyPlayer(summary.startingQuarterback)),
   );
   return header;
-}
-
-function createTeamColorPanel(summary: TeamSummaryViewModel): HTMLElement {
-  const panel = document.createElement('div');
-  panel.className = 'football-hub-team-colors';
-  const label = document.createElement('strong');
-  label.textContent = 'Colors';
-  panel.append(label);
-  for (const color of summary.colors) {
-    const swatch = document.createElement('span');
-    swatch.className = 'football-hub-color-swatch';
-    swatch.style.setProperty('--swatch-color', color.color);
-    swatch.setAttribute('aria-label', `${color.label} ${color.color}`);
-    swatch.title = `${color.label}: ${color.color}`;
-    panel.append(swatch);
-  }
-  return panel;
-}
-
-function createStrengthWeaknessPanel(summary: TeamSummaryViewModel): HTMLElement {
-  const panel = document.createElement('div');
-  panel.className = 'football-hub-strengths';
-  panel.append(
-    createTextBlock('Top strengths', formatRatingCategories(summary.strengths)),
-    createTextBlock('Watch areas', formatRatingCategories(summary.weaknesses)),
-  );
-  return panel;
-}
-
-function createTeamRatingCategoryPanel(summary: TeamSummaryViewModel): HTMLElement {
-  const panel = document.createElement('div');
-  panel.className = 'football-hub-team-summary-metrics';
-  for (const category of summary.ratingCategories) {
-    panel.append(createScoreBlock(category.label, category.value));
-  }
-  return panel;
-}
-
-function createKeyPlayerPanel(label: string, player: RosterPlayer | null): HTMLElement {
-  return createTextBlock(label, formatKeyPlayer(player));
-}
-
-function replaceAfterFirstTwo(root: HTMLElement, children: HTMLElement[]): void {
-  const fixed = Array.from(root.children).slice(0, 2);
-  root.replaceChildren(...fixed, ...children);
 }
 
 function getRosterTabPlayers(roster: TeamRoster, tab: RosterTab): RosterPlayer[] {
@@ -988,18 +915,6 @@ function formatArchetype(archetype: string): string {
   return archetype
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (value) => value.toUpperCase());
-}
-
-function formatKeyPlayer(player: RosterPlayer | null): string {
-  if (!player) {
-    return 'Unavailable';
-  }
-
-  return `#${player.jerseyNumber} ${player.displayName} ${player.footballPosition} OVR ${calculateOverallRating(player.footballPosition, player.ratings)}`;
-}
-
-function formatRatingCategories(categories: readonly TeamRatingCategorySummary[]): string {
-  return categories.map((category) => `${category.label} ${category.value}`).join(' | ');
 }
 
 function createEmptyState(text: string): HTMLElement {

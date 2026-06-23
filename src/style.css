@@ -2089,10 +2089,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-section-header,
 .football-hub-play-team-title,
 .football-hub-player-detail header,
-.football-hub-overview-header,
-.football-hub-strengths,
-.football-hub-team-colors,
-.football-hub-team-overview > div {
+.football-hub-overview-header {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -2282,10 +2279,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-play-team-title span,
 .football-hub-team-row span,
 .football-hub-player-detail span,
-.football-hub-overview-header span,
-.football-hub-strengths span,
-.football-hub-team-colors span,
-.football-hub-team-overview > div span {
+.football-hub-overview-header span {
   color: #cbd6cf;
   font-size: 13px;
 }
@@ -2297,10 +2291,6 @@ body[data-game-mode="exhibition"] .score-counter {
   overflow: hidden;
   border-radius: 8px;
   background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.36));
-}
-
-.football-hub-overview-helmet {
-  min-height: 220px;
 }
 
 .football-hub-vs {
@@ -2418,8 +2408,9 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-team-overview {
   display: grid;
-  grid-template-columns: auto minmax(220px, 34%) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 14px;
+  align-items: center;
   align-content: start;
   padding: 14px;
 }
@@ -2429,19 +2420,23 @@ body[data-game-mode="exhibition"] .score-counter {
   height: 86px;
 }
 
-.football-hub-team-overview > .football-hub-helmet-preview {
-  grid-row: span 6;
-}
-
-.football-hub-overview-header,
-.football-hub-strengths,
-.football-hub-team-colors,
-.football-hub-team-summary-metrics,
-.football-hub-team-overview > div {
+.football-hub-overview-header {
   flex-wrap: wrap;
+  gap: 12px 30px;
   padding: 10px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.055);
+}
+
+.football-hub-overview-header > div {
+  display: grid;
+  gap: 3px;
+  min-width: max-content;
+}
+
+.football-hub-overview-header > div + div {
+  padding-left: 22px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .football-hub-rosters {
@@ -2453,25 +2448,6 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-roster-overview {
   grid-column: 1 / -1;
-}
-
-.football-hub-team-colors {
-  align-content: center;
-}
-
-.football-hub-color-swatch {
-  width: 28px;
-  height: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  border-radius: 50%;
-  background: var(--swatch-color, #f0f5ea);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.32);
-}
-
-.football-hub-team-summary-metrics {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
 }
 
 .football-hub-roster-controls {
@@ -2866,7 +2842,8 @@ body[data-game-mode="exhibition"] .score-counter {
   transition: opacity 160ms ease;
 }
 
-.team-helmet-preview[data-preview="glb"] .team-helmet-badge {
+.team-helmet-preview[data-preview="glb"] .team-helmet-badge,
+.football-hub-helmet-preview[data-preview="glb"] .team-helmet-badge {
   opacity: 0;
   visibility: hidden;
 }
@@ -3715,10 +3692,6 @@ body[data-game-mode="exhibition"] .score-counter {
   .football-hub-player-detail {
     grid-column: auto;
     grid-row: auto;
-  }
-
-  .football-hub-team-summary-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .football-hub-roster-controls {

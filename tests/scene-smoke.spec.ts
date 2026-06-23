@@ -1192,16 +1192,14 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('OFF');
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('DEF');
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('ST');
-  await expect(page.locator('.football-hub-helmet-preview')).toHaveCount(3);
+  await expect(page.locator('.football-hub-helmet-preview')).toHaveCount(2);
   await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(1);
   await page.getByRole('button', { name: 'Rosters' }).click();
   await expect(page.locator('.football-hub-team-row')).toHaveCount(0);
-  await expect(page.locator('.football-hub-team-overview')).toContainText('Top strengths');
-  await expect(page.locator('.football-hub-team-overview')).toContainText('Watch areas');
-  await expect(page.locator('.football-hub-team-overview')).toContainText('Starting QB');
-  await expect(page.locator('.football-hub-team-summary-metrics')).toContainText('Passing');
-  await expect(page.locator('.football-hub-team-summary-metrics')).toContainText('Special Teams');
-  await expect(page.locator('.football-hub-color-swatch')).toHaveCount(3);
+  await expect(page.locator('.football-hub-team-overview .hub-team-logo')).toHaveCount(1);
+  await expect(page.locator('.football-hub-roster-overview .football-hub-helmet-preview')).toHaveCount(0);
+  await expect(page.locator('.football-hub-team-overview')).not.toContainText('Starting QB');
+  await expect(page.locator('.football-hub-team-overview')).not.toContainText('Best offensive player');
   await expect(page.getByLabel('Roster team')).toBeVisible();
   await expect(page.locator('.football-hub-roster-table tbody tr')).toHaveCount(11);
   await expect(page.locator('.football-hub-player-detail')).toContainText('OVR');
@@ -1236,6 +1234,8 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect.poll(async () =>
     page.locator('.football-hub-play-team[data-side="user"] .football-hub-helmet-preview').getAttribute('data-preview'),
   { timeout: 5000 }).toBe('glb');
+  await expect(page.locator('.football-hub-play-team[data-side="user"] .team-helmet-badge')).toBeHidden();
+  await expect(page.locator('.football-hub-play-team[data-side="opponent"] .team-helmet-badge')).toBeHidden();
   const registeredTeamNames = listTeamProfiles().map((profile) => profile.displayName);
   await expect(page.getByLabel('Your team').locator('option'))
     .toHaveText(registeredTeamNames);
