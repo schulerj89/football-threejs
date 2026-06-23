@@ -32,7 +32,7 @@ import {
 } from './MatchSetupModel';
 import type { UniformVariant } from '../teams/UniformPalette';
 
-type HubSection = 'playNow' | 'rosters' | 'settings';
+type HubSection = 'playNow' | 'dynasty' | 'rosters' | 'settings';
 type RosterTab = 'offense' | 'defense' | 'specialists';
 type RosterSort = 'number' | 'name' | 'overall' | 'position';
 
@@ -53,6 +53,7 @@ export class FootballHubScreen {
   private readonly sectionSubtitle = document.createElement('p');
   private readonly content = document.createElement('div');
   private readonly playNowView = document.createElement('section');
+  private readonly dynastyView = document.createElement('section');
   private readonly rostersView = document.createElement('section');
   private readonly settingsView = document.createElement('section');
   private readonly playNowTeamSelects = {
@@ -170,6 +171,7 @@ export class FootballHubScreen {
     nav.setAttribute('aria-label', 'Football hub sections');
     for (const [section, label] of [
       ['playNow', 'Play Now'],
+      ['dynasty', 'Dynasty'],
       ['rosters', 'Rosters'],
       ['settings', 'Settings'],
     ] as const) {
@@ -189,10 +191,11 @@ export class FootballHubScreen {
     sectionHeader.append(this.sectionTitle, this.sectionSubtitle);
     this.content.className = 'football-hub-content';
     this.createPlayNowView();
+    this.createDynastyView();
     this.createRostersView();
     this.settingsView.className = 'football-hub-view football-hub-settings-view';
     this.settingsView.append(this.settingsPanel.root);
-    this.content.append(this.playNowView, this.rostersView, this.settingsView);
+    this.content.append(this.playNowView, this.dynastyView, this.rostersView, this.settingsView);
     main.append(sectionHeader, this.content);
 
     body.append(nav, main);
@@ -239,6 +242,42 @@ export class FootballHubScreen {
     });
     actions.append(this.playNowCorrectionButton, this.playNowPlayButton);
     this.playNowView.append(matchup, this.playNowSummary, actions);
+  }
+
+  private createDynastyView(): void {
+    this.dynastyView.className = 'football-hub-view football-hub-dynasty';
+    const hero = document.createElement('article');
+    hero.className = 'football-hub-dynasty-hero';
+
+    const eyebrow = document.createElement('span');
+    eyebrow.className = 'football-hub-dynasty-eyebrow';
+    eyebrow.textContent = 'Planning Shell';
+
+    const title = document.createElement('h3');
+    title.textContent = 'Build a program, not just a lineup';
+
+    const summary = document.createElement('p');
+    summary.textContent = 'Dynasty will become the long-term mode for seasons, recruiting, staff decisions, roster growth, and program identity. This shell is intentionally non-playable while we lock the scope and data model.';
+
+    const phases = document.createElement('ol');
+    phases.className = 'football-hub-dynasty-phases';
+    for (const phase of [
+      'Season hub, schedule, standings, and weekly advance',
+      'Roster progression, seniors leaving, and lightweight recruiting',
+      'Coach goals, program identity, and budget choices',
+      'Offseason cycle with signing, depth review, and next-season setup',
+    ]) {
+      const item = document.createElement('li');
+      item.textContent = phase;
+      phases.append(item);
+    }
+
+    const note = document.createElement('p');
+    note.className = 'football-hub-dynasty-note';
+    note.textContent = 'Decision map: docs/DYNASTY_DECISIONS.md';
+
+    hero.append(eyebrow, title, summary, phases, note);
+    this.dynastyView.append(hero);
   }
 
   private createPlayTeamPanel(side: 'opponent' | 'user'): HTMLElement {
@@ -432,6 +471,7 @@ export class FootballHubScreen {
       button.setAttribute('aria-current', section === this.activeSection ? 'page' : 'false');
     }
     this.playNowView.hidden = this.activeSection !== 'playNow';
+    this.dynastyView.hidden = this.activeSection !== 'dynasty';
     this.rostersView.hidden = this.activeSection !== 'rosters';
     this.settingsView.hidden = this.activeSection !== 'settings';
     this.sectionTitle.textContent = sectionTitle(this.activeSection);
@@ -449,6 +489,7 @@ export class FootballHubScreen {
       button.setAttribute('aria-current', section === 'playNow' ? 'page' : 'false');
     }
     this.playNowView.hidden = false;
+    this.dynastyView.hidden = true;
     this.rostersView.hidden = true;
     this.settingsView.hidden = true;
     this.playNowSummary.className = 'football-hub-match-summary';
@@ -749,7 +790,7 @@ export class FootballHubScreen {
       return;
     }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      const sections: HubSection[] = ['playNow', 'rosters', 'settings'];
+      const sections: HubSection[] = ['playNow', 'dynasty', 'rosters', 'settings'];
       const current = sections.indexOf(this.activeSection);
       this.setSection(sections[wrapIndex(current + (event.key === 'ArrowDown' ? 1 : -1), sections.length)]);
       event.preventDefault();
@@ -768,6 +809,7 @@ export class FootballHubScreen {
 function sectionTitle(section: HubSection): string {
   return {
     playNow: 'Play Now',
+    dynasty: 'Dynasty',
     rosters: 'Roster Browser',
     settings: 'Settings',
   }[section];
@@ -776,6 +818,7 @@ function sectionTitle(section: HubSection): string {
 function sectionSubtitle(section: HubSection): string {
   return {
     playNow: 'Review the matchup, uniforms, logos, and ratings before setup.',
+    dynasty: 'Long-term team-building mode is being scoped before implementation.',
     rosters: 'Browse team rosters and player attributes.',
     settings: 'Adjust presentation and gameplay preferences without leaving the hub.',
   }[section];

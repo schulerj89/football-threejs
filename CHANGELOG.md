@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.45] - 2026-06-23
+
+### Added
+
+- Added a non-playable Dynasty destination to the Football Hub with a roadmap-style shell for future long-term team-building mode work.
+- Added the local `football-dynasty-planner` Codex skill for Dynasty scope, phase, and tradeoff decisions.
+- Added `docs/DYNASTY_DECISIONS.md` with a phased Dynasty implementation map informed by public football franchise/dynasty references.
+
+### Tests
+
+- Verified `python C:\Users\joshs\.codex\skills\.system\skill-creator\scripts\quick_validate.py .codex\skills\football-dynasty-planner`, `npx vitest run tests/teamSummaryViewModel.test.ts tests/matchSetup.test.ts`, and `npm run build`.
+
 ## [1.21.44] - 2026-06-23
 
 ### Changed

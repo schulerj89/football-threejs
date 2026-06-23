@@ -1,0 +1,4 @@
+interface:
+  display_name: "Football Dynasty Planner"
+  short_description: "Plan Football JS dynasty mode scope and phases"
+  default_prompt: "Use $football-dynasty-planner to evaluate dynasty mode scope, phase priorities, and implementation tradeoffs for Football JS."
