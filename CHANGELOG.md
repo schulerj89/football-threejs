@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.6] - 2026-06-23
+
+### Changed
+
+- Fixed the announcer and pregame audition HTML pages so audio controls use local relative paths, making them work when opened directly from disk or through the dev server.
+- Added play-all and stop controls to the audition pages for faster review.
+- Updated the pregame audition page to list every generated pregame MP3 sidecar, including legacy matchup and quarterback-specific assets, instead of only the current compact runtime catalog.
+
+### Tests
+
+- Verified local audition-page links for 27 announcer clips and 84 pregame clips, `npx vitest run tests/audioPipeline.test.ts tests/pregameCommentaryCatalog.test.ts`, and `npm run build`.
+
 ## [1.21.5] - 2026-06-23
 
 ### Changed

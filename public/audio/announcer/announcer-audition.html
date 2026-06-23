@@ -10,11 +10,20 @@
     th { color: #9ec7db; }
     audio { width: 260px; }
     .meta { color: #b8c8d1; max-width: 900px; }
+    .toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+    button { background: #20313c; border: 1px solid #527083; border-radius: 6px; color: #e8eef2; cursor: pointer; font: inherit; padding: 8px 12px; }
+    button:hover, button:focus-visible { background: #2a4050; outline: 2px solid #9ec7db; outline-offset: 2px; }
+    .count { color: #b8c8d1; }
   </style>
 </head>
 <body>
   <h1>Grant Mercer Audition</h1>
   <p class="meta">Original fictional football broadcaster for the low-poly prototype. Warm, authoritative, modern, and energetic without imitating a named person.</p>
+  <div class="toolbar">
+    <button type="button" data-play-all>Play all</button>
+    <button type="button" data-stop-all>Stop</button>
+    <span class="count">27 available clips</span>
+  </div>
   <table>
     <thead>
       <tr>
@@ -29,34 +38,73 @@
       </tr>
     </thead>
     <tbody>
-<tr><td>gameOpening</td><td>1</td><td>low</td><td>ann_game_opening_01</td><td>Settle in. The offense has a short field and a ticking clock.</td><td>3.12s</td><td>49.8 KiB</td><td><audio controls src="/audio/announcer/ann_game_opening_01.mp3"></audio></td></tr>
-<tr><td>gameOpening</td><td>2</td><td>low</td><td>ann_game_opening_02</td><td>Here we go. Clean execution is the whole story on this drive.</td><td>3.44s</td><td>54.7 KiB</td><td><audio controls src="/audio/announcer/ann_game_opening_02.mp3"></audio></td></tr>
-<tr><td>playReady</td><td>1</td><td>low</td><td>ann_play_ready_01</td><td>Fresh snap coming. The offense is set.</td><td>2.24s</td><td>36.0 KiB</td><td><audio controls src="/audio/announcer/ann_play_ready_01.mp3"></audio></td></tr>
-<tr><td>playReady</td><td>2</td><td>low</td><td>ann_play_ready_02</td><td>Quiet at the line. The play call is in.</td><td>2.16s</td><td>34.7 KiB</td><td><audio controls src="/audio/announcer/ann_play_ready_02.mp3"></audio></td></tr>
-<tr><td>firstDown</td><td>1</td><td>medium</td><td>ann_first_down_01</td><td>That keeps the drive moving. The offense earns a fresh set.</td><td>3.12s</td><td>49.8 KiB</td><td><audio controls src="/audio/announcer/ann_first_down_01.mp3"></audio></td></tr>
-<tr><td>firstDown</td><td>2</td><td>medium</td><td>ann_first_down_02</td><td>They needed the marker, and they got there.</td><td>2.40s</td><td>38.4 KiB</td><td><audio controls src="/audio/announcer/ann_first_down_02.mp3"></audio></td></tr>
-<tr><td>firstDown</td><td>3</td><td>medium</td><td>ann_first_down_03</td><td>Good push after the snap. The chains move again.</td><td>3.04s</td><td>48.6 KiB</td><td><audio controls src="/audio/announcer/ann_first_down_03.mp3"></audio></td></tr>
-<tr><td>touchdown</td><td>1</td><td>peak</td><td>ann_touchdown_01</td><td>He breaks through and finishes it. Touchdown.</td><td>2.56s</td><td>40.9 KiB</td><td><audio controls src="/audio/announcer/ann_touchdown_01.mp3"></audio></td></tr>
-<tr><td>touchdown</td><td>2</td><td>peak</td><td>ann_touchdown_02</td><td>Into the paint. The offense cashes in.</td><td>2.40s</td><td>38.4 KiB</td><td><audio controls src="/audio/announcer/ann_touchdown_02.mp3"></audio></td></tr>
-<tr><td>touchdown</td><td>3</td><td>peak</td><td>ann_touchdown_03</td><td>That run finds daylight all the way home.</td><td>2.48s</td><td>39.6 KiB</td><td><audio controls src="/audio/announcer/ann_touchdown_03.mp3"></audio></td></tr>
-<tr><td>sack</td><td>1</td><td>high</td><td>ann_sack_01</td><td>Pressure gets there. The quarterback is wrapped up behind the line.</td><td>3.28s</td><td>52.3 KiB</td><td><audio controls src="/audio/announcer/ann_sack_01.mp3"></audio></td></tr>
-<tr><td>sack</td><td>2</td><td>high</td><td>ann_sack_02</td><td>The pocket closes fast, and the defense wins the down.</td><td>3.28s</td><td>52.3 KiB</td><td><audio controls src="/audio/announcer/ann_sack_02.mp3"></audio></td></tr>
-<tr><td>sack</td><td>3</td><td>high</td><td>ann_sack_03</td><td>Nowhere to go. The rush drops him before the throw.</td><td>2.96s</td><td>47.4 KiB</td><td><audio controls src="/audio/announcer/ann_sack_03.mp3"></audio></td></tr>
-<tr><td>tackleForLoss</td><td>1</td><td>high</td><td>ann_tackle_for_loss_01</td><td>Hit in the backfield. That one moves the wrong way.</td><td>2.96s</td><td>47.4 KiB</td><td><audio controls src="/audio/announcer/ann_tackle_for_loss_01.mp3"></audio></td></tr>
-<tr><td>tackleForLoss</td><td>2</td><td>high</td><td>ann_tackle_for_loss_02</td><td>The defense knifes through and shuts it down early.</td><td>2.56s</td><td>40.9 KiB</td><td><audio controls src="/audio/announcer/ann_tackle_for_loss_02.mp3"></audio></td></tr>
-<tr><td>bigGain</td><td>1</td><td>high</td><td>ann_big_gain_01</td><td>Big lane, big burst. The offense flips the field.</td><td>3.04s</td><td>48.6 KiB</td><td><audio controls src="/audio/announcer/ann_big_gain_01.mp3"></audio></td></tr>
-<tr><td>bigGain</td><td>2</td><td>high</td><td>ann_big_gain_02</td><td>He found space and turned it into a chunk.</td><td>2.40s</td><td>38.4 KiB</td><td><audio controls src="/audio/announcer/ann_big_gain_02.mp3"></audio></td></tr>
-<tr><td>bigGain</td><td>3</td><td>high</td><td>ann_big_gain_03</td><td>That is the kind of gain that changes the drive.</td><td>2.80s</td><td>44.9 KiB</td><td><audio controls src="/audio/announcer/ann_big_gain_03.mp3"></audio></td></tr>
-<tr><td>incomplete</td><td>1</td><td>medium</td><td>ann_incomplete_01</td><td>The throw is there late, and it falls away.</td><td>2.40s</td><td>38.4 KiB</td><td><audio controls src="/audio/announcer/ann_incomplete_01.mp3"></audio></td></tr>
-<tr><td>incomplete</td><td>2</td><td>medium</td><td>ann_incomplete_02</td><td>Close window, no connection.</td><td>1.92s</td><td>31.1 KiB</td><td><audio controls src="/audio/announcer/ann_incomplete_02.mp3"></audio></td></tr>
-<tr><td>incomplete</td><td>3</td><td>medium</td><td>ann_incomplete_03</td><td>The pass misses the mark. The drive moves to the next down.</td><td>3.28s</td><td>52.3 KiB</td><td><audio controls src="/audio/announcer/ann_incomplete_03.mp3"></audio></td></tr>
-<tr><td>outOfBounds</td><td>1</td><td>medium</td><td>ann_out_of_bounds_01</td><td>Forced to the sideline, and the spot comes back in.</td><td>2.64s</td><td>42.5 KiB</td><td><audio controls src="/audio/announcer/ann_out_of_bounds_01.mp3"></audio></td></tr>
-<tr><td>outOfBounds</td><td>2</td><td>medium</td><td>ann_out_of_bounds_02</td><td>He steps out before the defense can finish the hit.</td><td>2.40s</td><td>38.4 KiB</td><td><audio controls src="/audio/announcer/ann_out_of_bounds_02.mp3"></audio></td></tr>
-<tr><td>turnoverOnDowns</td><td>1</td><td>high</td><td>ann_turnover_on_downs_01</td><td>The stop holds. The drive ends on downs.</td><td>2.88s</td><td>46.2 KiB</td><td><audio controls src="/audio/announcer/ann_turnover_on_downs_01.mp3"></audio></td></tr>
-<tr><td>turnoverOnDowns</td><td>2</td><td>high</td><td>ann_turnover_on_downs_02</td><td>Fourth down comes up short, and the drill resets.</td><td>2.64s</td><td>42.5 KiB</td><td><audio controls src="/audio/announcer/ann_turnover_on_downs_02.mp3"></audio></td></tr>
-<tr><td>challengeEnding</td><td>1</td><td>medium</td><td>ann_challenge_ending_01</td><td>That is the horn. Final score is on the board.</td><td>2.72s</td><td>43.7 KiB</td><td><audio controls src="/audio/announcer/ann_challenge_ending_01.mp3"></audio></td></tr>
-<tr><td>challengeEnding</td><td>2</td><td>medium</td><td>ann_challenge_ending_02</td><td>Time runs out, and the offense has its number.</td><td>2.56s</td><td>40.9 KiB</td><td><audio controls src="/audio/announcer/ann_challenge_ending_02.mp3"></audio></td></tr>
+<tr><td>gameOpening</td><td>1</td><td>low</td><td>ann_game_opening_01</td><td>Settle in. The offense has a short field and a ticking clock.</td><td>3.12s</td><td>49.8 KiB</td><td><audio controls preload="metadata" src="./ann_game_opening_01.mp3"></audio></td></tr>
+<tr><td>gameOpening</td><td>2</td><td>low</td><td>ann_game_opening_02</td><td>Here we go. Clean execution is the whole story on this drive.</td><td>3.44s</td><td>54.7 KiB</td><td><audio controls preload="metadata" src="./ann_game_opening_02.mp3"></audio></td></tr>
+<tr><td>playReady</td><td>1</td><td>low</td><td>ann_play_ready_01</td><td>Fresh snap coming. The offense is set.</td><td>2.24s</td><td>36.0 KiB</td><td><audio controls preload="metadata" src="./ann_play_ready_01.mp3"></audio></td></tr>
+<tr><td>playReady</td><td>2</td><td>low</td><td>ann_play_ready_02</td><td>Quiet at the line. The play call is in.</td><td>2.16s</td><td>34.7 KiB</td><td><audio controls preload="metadata" src="./ann_play_ready_02.mp3"></audio></td></tr>
+<tr><td>firstDown</td><td>1</td><td>medium</td><td>ann_first_down_01</td><td>That keeps the drive moving. The offense earns a fresh set.</td><td>3.12s</td><td>49.8 KiB</td><td><audio controls preload="metadata" src="./ann_first_down_01.mp3"></audio></td></tr>
+<tr><td>firstDown</td><td>2</td><td>medium</td><td>ann_first_down_02</td><td>They needed the marker, and they got there.</td><td>2.40s</td><td>38.4 KiB</td><td><audio controls preload="metadata" src="./ann_first_down_02.mp3"></audio></td></tr>
+<tr><td>firstDown</td><td>3</td><td>medium</td><td>ann_first_down_03</td><td>Good push after the snap. The chains move again.</td><td>3.04s</td><td>48.6 KiB</td><td><audio controls preload="metadata" src="./ann_first_down_03.mp3"></audio></td></tr>
+<tr><td>touchdown</td><td>1</td><td>peak</td><td>ann_touchdown_01</td><td>He breaks through and finishes it. Touchdown.</td><td>2.56s</td><td>40.9 KiB</td><td><audio controls preload="metadata" src="./ann_touchdown_01.mp3"></audio></td></tr>
+<tr><td>touchdown</td><td>2</td><td>peak</td><td>ann_touchdown_02</td><td>Into the paint. The offense cashes in.</td><td>2.40s</td><td>38.4 KiB</td><td><audio controls preload="metadata" src="./ann_touchdown_02.mp3"></audio></td></tr>
+<tr><td>touchdown</td><td>3</td><td>peak</td><td>ann_touchdown_03</td><td>That run finds daylight all the way home.</td><td>2.48s</td><td>39.6 KiB</td><td><audio controls preload="metadata" src="./ann_touchdown_03.mp3"></audio></td></tr>
+<tr><td>sack</td><td>1</td><td>high</td><td>ann_sack_01</td><td>Pressure gets there. The quarterback is wrapped up behind the line.</td><td>3.28s</td><td>52.3 KiB</td><td><audio controls preload="metadata" src="./ann_sack_01.mp3"></audio></td></tr>
+<tr><td>sack</td><td>2</td><td>high</td><td>ann_sack_02</td><td>The pocket closes fast, and the defense wins the down.</td><td>3.28s</td><td>52.3 KiB</td><td><audio controls preload="metadata" src="./ann_sack_02.mp3"></audio></td></tr>
+<tr><td>sack</td><td>3</td><td>high</td><td>ann_sack_03</td><td>Nowhere to go. The rush drops him before the throw.</td><td>2.96s</td><td>47.4 KiB</td><td><audio controls preload="metadata" src="./ann_sack_03.mp3"></audio></td></tr>
+<tr><td>tackleForLoss</td><td>1</td><td>high</td><td>ann_tackle_for_loss_01</td><td>Hit in the backfield. That one moves the wrong way.</td><td>2.96s</td><td>47.4 KiB</td><td><audio controls preload="metadata" src="./ann_tackle_for_loss_01.mp3"></audio></td></tr>
+<tr><td>tackleForLoss</td><td>2</td><td>high</td><td>ann_tackle_for_loss_02</td><td>The defense knifes through and shuts it down early.</td><td>2.56s</td><td>40.9 KiB</td><td><audio controls preload="metadata" src="./ann_tackle_for_loss_02.mp3"></audio></td></tr>
+<tr><td>bigGain</td><td>1</td><td>high</td><td>ann_big_gain_01</td><td>Big lane, big burst. The offense flips the field.</td><td>3.04s</td><td>48.6 KiB</td><td><audio controls preload="metadata" src="./ann_big_gain_01.mp3"></audio></td></tr>
+<tr><td>bigGain</td><td>2</td><td>high</td><td>ann_big_gain_02</td><td>He found space and turned it into a chunk.</td><td>2.40s</td><td>38.4 KiB</td><td><audio controls preload="metadata" src="./ann_big_gain_02.mp3"></audio></td></tr>
+<tr><td>bigGain</td><td>3</td><td>high</td><td>ann_big_gain_03</td><td>That is the kind of gain that changes the drive.</td><td>2.80s</td><td>44.9 KiB</td><td><audio controls preload="metadata" src="./ann_big_gain_03.mp3"></audio></td></tr>
+<tr><td>incomplete</td><td>1</td><td>medium</td><td>ann_incomplete_01</td><td>The throw is there late, and it falls away.</td><td>2.40s</td><td>38.4 KiB</td><td><audio controls preload="metadata" src="./ann_incomplete_01.mp3"></audio></td></tr>
+<tr><td>incomplete</td><td>2</td><td>medium</td><td>ann_incomplete_02</td><td>Close window, no connection.</td><td>1.92s</td><td>31.1 KiB</td><td><audio controls preload="metadata" src="./ann_incomplete_02.mp3"></audio></td></tr>
+<tr><td>incomplete</td><td>3</td><td>medium</td><td>ann_incomplete_03</td><td>The pass misses the mark. The drive moves to the next down.</td><td>3.28s</td><td>52.3 KiB</td><td><audio controls preload="metadata" src="./ann_incomplete_03.mp3"></audio></td></tr>
+<tr><td>outOfBounds</td><td>1</td><td>medium</td><td>ann_out_of_bounds_01</td><td>Forced to the sideline, and the spot comes back in.</td><td>2.64s</td><td>42.5 KiB</td><td><audio controls preload="metadata" src="./ann_out_of_bounds_01.mp3"></audio></td></tr>
+<tr><td>outOfBounds</td><td>2</td><td>medium</td><td>ann_out_of_bounds_02</td><td>He steps out before the defense can finish the hit.</td><td>2.40s</td><td>38.4 KiB</td><td><audio controls preload="metadata" src="./ann_out_of_bounds_02.mp3"></audio></td></tr>
+<tr><td>turnoverOnDowns</td><td>1</td><td>high</td><td>ann_turnover_on_downs_01</td><td>The stop holds. The drive ends on downs.</td><td>2.88s</td><td>46.2 KiB</td><td><audio controls preload="metadata" src="./ann_turnover_on_downs_01.mp3"></audio></td></tr>
+<tr><td>turnoverOnDowns</td><td>2</td><td>high</td><td>ann_turnover_on_downs_02</td><td>Fourth down comes up short, and the drill resets.</td><td>2.64s</td><td>42.5 KiB</td><td><audio controls preload="metadata" src="./ann_turnover_on_downs_02.mp3"></audio></td></tr>
+<tr><td>challengeEnding</td><td>1</td><td>medium</td><td>ann_challenge_ending_01</td><td>That is the horn. Final score is on the board.</td><td>2.72s</td><td>43.7 KiB</td><td><audio controls preload="metadata" src="./ann_challenge_ending_01.mp3"></audio></td></tr>
+<tr><td>challengeEnding</td><td>2</td><td>medium</td><td>ann_challenge_ending_02</td><td>Time runs out, and the offense has its number.</td><td>2.56s</td><td>40.9 KiB</td><td><audio controls preload="metadata" src="./ann_challenge_ending_02.mp3"></audio></td></tr>
     </tbody>
   </table>
+  <script>
+    const audios = Array.from(document.querySelectorAll('audio'));
+    let playAllToken = 0;
+
+    async function playAll() {
+      const token = ++playAllToken;
+      for (const audio of audios) {
+        if (token !== playAllToken) {
+          return;
+        }
+        audio.currentTime = 0;
+        try {
+          await audio.play();
+          await new Promise((resolve) => {
+            const done = () => {
+              audio.removeEventListener('ended', done);
+              audio.removeEventListener('error', done);
+              resolve();
+            };
+            audio.addEventListener('ended', done);
+            audio.addEventListener('error', done);
+          });
+        } catch {
+          return;
+        }
+      }
+    }
+
+    function stopAll() {
+      playAllToken += 1;
+      for (const audio of audios) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    }
+
+    document.querySelector('[data-play-all]')?.addEventListener('click', playAll);
+    document.querySelector('[data-stop-all]')?.addEventListener('click', stopAll);
+  </script>
 </body>
 </html>

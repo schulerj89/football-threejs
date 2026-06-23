@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, relative } from 'node:path';
 import {
   ANNOUNCER_IDENTITY,
   type AnnouncerEventCategory,
@@ -84,8 +84,8 @@ export function writeAnnouncerArtifacts(
 
 function createAnnouncerAuditionHtml(manifest: AnnouncerCaptionManifest): string {
   const rows = manifest.scripts.map((entry) => {
-    const duration = entry.durationSeconds?.toFixed(2) ?? 'missing';
-    const source = entry.exists ? publicPathToUrl(entry.outputPath) : '';
+    const duration = formatDuration(entry.durationSeconds);
+    const source = entry.exists ? publicPathToRelativeUrl(entry.outputPath, ANNOUNCER_AUDITION_PAGE_PATH) : '';
 
     return [
       '<tr>',
@@ -94,9 +94,9 @@ function createAnnouncerAuditionHtml(manifest: AnnouncerCaptionManifest): string
       `<td>${escapeHtml(entry.intensity)}</td>`,
       `<td>${escapeHtml(entry.scriptId)}</td>`,
       `<td>${escapeHtml(entry.caption)}</td>`,
-      `<td>${duration}s</td>`,
+      `<td>${duration}</td>`,
       `<td>${formatBytes(entry.compressedBytes)}</td>`,
-      `<td>${entry.exists ? `<audio controls src="${escapeHtml(source)}"></audio>` : 'missing'}</td>`,
+      `<td>${entry.exists ? `<audio controls preload="metadata" src="${escapeHtml(source)}"></audio>` : 'missing'}</td>`,
       '</tr>',
     ].join('');
   }).join('\n');
@@ -113,11 +113,20 @@ function createAnnouncerAuditionHtml(manifest: AnnouncerCaptionManifest): string
     th { color: #9ec7db; }
     audio { width: 260px; }
     .meta { color: #b8c8d1; max-width: 900px; }
+    .toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+    button { background: #20313c; border: 1px solid #527083; border-radius: 6px; color: #e8eef2; cursor: pointer; font: inherit; padding: 8px 12px; }
+    button:hover, button:focus-visible { background: #2a4050; outline: 2px solid #9ec7db; outline-offset: 2px; }
+    .count { color: #b8c8d1; }
   </style>
 </head>
 <body>
   <h1>${escapeHtml(manifest.announcer.displayName)} Audition</h1>
   <p class="meta">${escapeHtml(manifest.announcer.description)}</p>
+  <div class="toolbar">
+    <button type="button" data-play-all>Play all</button>
+    <button type="button" data-stop-all>Stop</button>
+    <span class="count">${manifest.scripts.filter((entry) => entry.exists).length} available clips</span>
+  </div>
   <table>
     <thead>
       <tr>
@@ -135,6 +144,45 @@ function createAnnouncerAuditionHtml(manifest: AnnouncerCaptionManifest): string
 ${rows}
     </tbody>
   </table>
+  <script>
+    const audios = Array.from(document.querySelectorAll('audio'));
+    let playAllToken = 0;
+
+    async function playAll() {
+      const token = ++playAllToken;
+      for (const audio of audios) {
+        if (token !== playAllToken) {
+          return;
+        }
+        audio.currentTime = 0;
+        try {
+          await audio.play();
+          await new Promise((resolve) => {
+            const done = () => {
+              audio.removeEventListener('ended', done);
+              audio.removeEventListener('error', done);
+              resolve();
+            };
+            audio.addEventListener('ended', done);
+            audio.addEventListener('error', done);
+          });
+        } catch {
+          return;
+        }
+      }
+    }
+
+    function stopAll() {
+      playAllToken += 1;
+      for (const audio of audios) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    }
+
+    document.querySelector('[data-play-all]')?.addEventListener('click', playAll);
+    document.querySelector('[data-stop-all]')?.addEventListener('click', stopAll);
+  </script>
 </body>
 </html>
 `;
@@ -168,8 +216,20 @@ function writeTextFile(relativePath: string, text: string): void {
   writeFileSync(absolutePath, text, 'utf8');
 }
 
-function publicPathToUrl(path: string): string {
-  return path.replace(/^public\//, '/');
+function publicPathToRelativeUrl(assetPath: string, pagePath: string): string {
+  const pageDirectory = dirname(stripPublicPrefix(pagePath));
+  const asset = stripPublicPrefix(assetPath);
+  const relativePath = relative(pageDirectory, asset).replaceAll('\\', '/');
+
+  return relativePath.startsWith('.') ? relativePath : `./${relativePath}`;
+}
+
+function stripPublicPrefix(path: string): string {
+  return path.replaceAll('\\', '/').replace(/^public\//, '');
+}
+
+function formatDuration(durationSeconds: number | null): string {
+  return durationSeconds === null ? 'missing' : `${durationSeconds.toFixed(2)}s`;
 }
 
 function formatBytes(bytes: number): string {
