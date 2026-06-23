@@ -137,7 +137,6 @@ export const KICKOFF_RETURN_CONFIG = {
   pursuitTackleRadiusYards: DEFENDER_CONFIG.tackleRadius,
   receivingBlockerSpeedYardsPerSecond: 9.5,
   returnerAiSpeedYardsPerSecond: 12,
-  returnerUserSpeedYardsPerSecond: 16,
   returnerTrackingSpeedYardsPerSecond: 11.8,
 } as const;
 
@@ -448,17 +447,12 @@ function updateKickoffReturnLive(
 function updateCarrier(
   state: KickoffReturnState,
   carrier: KickoffReturnParticipantState,
-  userInput: Vector2,
+  _userInput: Vector2,
   delta: number,
 ): void {
   const receivingDirection = invertDirection(state.direction);
-  const hasUserInput = state.receivingTeam === 'user' && (userInput.x !== 0 || userInput.z !== 0);
-  const input = hasUserInput
-    ? userInput
-    : resolveAiReturnInput(state, carrier, receivingDirection);
-  const speed = state.receivingTeam === 'user'
-    ? KICKOFF_RETURN_CONFIG.returnerUserSpeedYardsPerSecond
-    : KICKOFF_RETURN_CONFIG.returnerAiSpeedYardsPerSecond;
+  const input = resolveAiReturnInput(state, carrier, receivingDirection);
+  const speed = KICKOFF_RETURN_CONFIG.returnerAiSpeedYardsPerSecond;
 
   carrier.velocity = {
     x: input.x * speed,

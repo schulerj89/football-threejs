@@ -23,6 +23,8 @@ export class PlayCallUi {
   private lastRenderKey = '';
   private pendingSelectedPlayId: string | null = null;
   private selectionLocked = false;
+  private currentPreSnapKey: string | null = null;
+  private dismissedForPreSnapKey: string | null = null;
 
   constructor(
     private plays: PlayDefinition[] = PLAYS,
@@ -60,6 +62,8 @@ export class PlayCallUi {
     this.plays = plays;
     this.lastRenderKey = '';
     this.pendingSelectedPlayId = null;
+    this.currentPreSnapKey = null;
+    this.dismissedForPreSnapKey = null;
     this.grid.replaceChildren();
   }
 
@@ -74,6 +78,13 @@ export class PlayCallUi {
 
   hide(): void {
     this.enabled = false;
+    this.currentPreSnapKey = null;
+    this.dismissedForPreSnapKey = null;
+    this.root.hidden = true;
+  }
+
+  dismissAfterSelection(): void {
+    this.dismissedForPreSnapKey = this.currentPreSnapKey;
     this.root.hidden = true;
   }
 
@@ -87,10 +98,22 @@ export class PlayCallUi {
   sync(gameplay: GameplaySnapshot, options: { selectionLocked?: boolean } = {}): void {
     this.enabled = gameplay.playState === 'preSnap';
     this.selectionLocked = Boolean(options.selectionLocked);
-    this.root.hidden = !this.enabled;
+    const preSnapKey = this.enabled ? createPreSnapDisplayKey(gameplay) : null;
+    if (preSnapKey !== this.currentPreSnapKey) {
+      this.currentPreSnapKey = preSnapKey;
+      this.dismissedForPreSnapKey = null;
+    }
+    const dismissed = preSnapKey !== null && this.dismissedForPreSnapKey === preSnapKey;
+    this.root.hidden = !this.enabled || dismissed;
     this.root.dataset.selectionLocked = this.selectionLocked ? 'true' : 'false';
 
     if (!this.enabled) {
+      this.currentPreSnapKey = null;
+      this.dismissedForPreSnapKey = null;
+      return;
+    }
+
+    if (dismissed) {
       return;
     }
 
@@ -186,6 +209,7 @@ export class PlayCallUi {
     }
 
     this.pendingSelectedPlayId = playId;
+    this.dismissAfterSelection();
     card.blur();
     event.preventDefault();
   };
@@ -578,4 +602,14 @@ function createSvgElement<K extends keyof SVGElementTagNameMap>(
   tagName: K,
 ): SVGElementTagNameMap[K] {
   return document.createElementNS(SVG_NAMESPACE, tagName);
+}
+
+function createPreSnapDisplayKey(gameplay: GameplaySnapshot): string {
+  return [
+    gameplay.drive.currentDown,
+    gameplay.drive.snapLane,
+    gameplay.drive.lineOfScrimmage.x.toFixed(3),
+    gameplay.drive.lineOfScrimmage.z.toFixed(3),
+    gameplay.drive.firstDownMarker.z.toFixed(3),
+  ].join('|');
 }

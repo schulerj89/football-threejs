@@ -77,6 +77,9 @@ const KICKOFF_PRESENTATION_CONFIG = {
   readyCameraHeight: 12,
   resultCameraDistanceBehind: 15,
   resultCameraHeight: 8.5,
+  returnCameraDistanceBehind: 17,
+  returnCameraHeight: 9.5,
+  returnLookAhead: 7,
   sidelineCameraOffset: 8,
 } as const;
 
@@ -254,32 +257,39 @@ export class KickoffPresentationDirector {
   createCameraShot(): PresentationCameraShot {
     const result = this.kickoffState?.result ?? null;
     const direction = this.kickoffState?.direction ?? 1;
+    const cameraDirection = this.getCameraDirection(direction);
     const focus = result
       ? this.createFocusForPhase(result)
       : new THREE.Vector3(0, 1.4, 0);
     const sidelineOffset = KICKOFF_PRESENTATION_CONFIG.sidelineCameraOffset;
     const distanceBehind = this.phase === 'result'
       ? KICKOFF_PRESENTATION_CONFIG.resultCameraDistanceBehind
+      : this.isReturnCameraPhase()
+        ? KICKOFF_PRESENTATION_CONFIG.returnCameraDistanceBehind
       : this.phase === 'flight'
         ? KICKOFF_PRESENTATION_CONFIG.flightCameraDistanceBehind
         : KICKOFF_PRESENTATION_CONFIG.readyCameraDistanceBehind;
     const height = this.phase === 'result'
       ? KICKOFF_PRESENTATION_CONFIG.resultCameraHeight
+      : this.isReturnCameraPhase()
+        ? KICKOFF_PRESENTATION_CONFIG.returnCameraHeight
       : this.phase === 'flight'
         ? KICKOFF_PRESENTATION_CONFIG.flightCameraHeight
         : KICKOFF_PRESENTATION_CONFIG.readyCameraHeight;
     const position = new THREE.Vector3(
       focus.x - sidelineOffset,
       height,
-      focus.z - direction * distanceBehind,
+      focus.z - cameraDirection * distanceBehind,
     );
     const lookAhead = this.phase === 'flight'
       ? KICKOFF_PRESENTATION_CONFIG.flightLookAhead
+      : this.isReturnCameraPhase()
+        ? KICKOFF_PRESENTATION_CONFIG.returnLookAhead
       : 0;
     const lookTarget = new THREE.Vector3(
       focus.x,
       focus.y,
-      focus.z + direction * lookAhead,
+      focus.z + cameraDirection * lookAhead,
     );
 
     return {
@@ -637,6 +647,21 @@ export class KickoffPresentationDirector {
     }
 
     return new THREE.Vector3(result.origin.x, 1.2, result.origin.z);
+  }
+
+  private getCameraDirection(kickDirection: KickoffState['direction']): KickoffState['direction'] {
+    return this.isReturnCameraPhase()
+      ? kickDirection > 0 ? -1 : 1
+      : kickDirection;
+  }
+
+  private isReturnCameraPhase(): boolean {
+    return (
+      this.phase === 'fielding' ||
+      this.phase === 'returnLive' ||
+      this.phase === 'dead' ||
+      (this.phase === 'result' && this.returnState?.outcome?.type !== 'touchback')
+    );
   }
 
   private getAnimationProgress(): number {

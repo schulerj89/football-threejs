@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.5] - 2026-06-23
+
+### Changed
+
+- Regenerated the three Grant Mercer pregame welcome clips so the announcer introduces himself in first person, with refreshed captions, sidecars, and audition metadata.
+- Increased coin-toss captain spacing to keep same-team representatives from standing too close together at midfield.
+- Changed play-card selection so the tray hides after a play is selected and returns on the next pre-snap sequence.
+- Made kickoff and kickoff returns fully automatic, removed user movement control from returns, and flipped fielded-return camera framing behind the return direction.
+- Made PAT/place-kick timing automatic in normal play while keeping the existing kick meter implementation available for focused UI tests.
+
+### Tests
+
+- Verified `npx vitest run tests/pregameCommentaryCatalog.test.ts`, `npx vitest run tests/specialTeams/kickoff.test.ts tests/specialTeams/placeKick.test.ts`, focused play-card browser coverage, `npx vitest run tests/coinToss.test.ts`, and `npm run build`.
+
 ## [1.21.4] - 2026-06-23
 
 ### Added

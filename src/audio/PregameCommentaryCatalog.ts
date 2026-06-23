@@ -138,7 +138,7 @@ const FALLBACK_LINES: Readonly<Record<PregameCommentaryCategory, string>> = {
   quarterbackArchetype: 'The starting quarterback brings a balanced profile into this one.',
   warmupTransition: "Both teams are finishing warmups, and we're getting closer to kickoff.",
   weather: 'Clear conditions over the stadium, and the first snap is close.',
-  welcome: `${GAME_BRAND.announcerName} welcomes you to ${GAME_BRAND.title}. The field is set for pregame energy.`,
+  welcome: `I'm ${GAME_BRAND.announcerName}. Welcome to ${GAME_BRAND.title}. The field is set for pregame energy.`,
 };
 
 export const PREGAME_COMMENTARY_CATALOG: readonly PregameCommentaryClip[] = [
@@ -505,22 +505,22 @@ function createWelcomeClips(): PregameCommentaryClip[] {
       'pregame_welcome_01',
       'welcome',
       1,
-      `${GAME_BRAND.announcerName} welcomes you to ${GAME_BRAND.title}. The lights are up, and the opening possession is next.`,
-      5.7,
+      `I'm ${GAME_BRAND.announcerName}. Welcome to ${GAME_BRAND.title}. The lights are up, and the opening possession is next.`,
+      4.8,
     ),
     line(
       'pregame_welcome_02',
       'welcome',
       2,
-      `This is ${GAME_BRAND.title}, with ${GAME_BRAND.announcerName} on the call. The offense is moments from the first snap.`,
-      4.2,
+      `I'm ${GAME_BRAND.announcerName}, here with you for ${GAME_BRAND.title}. The offense is moments from the first snap.`,
+      4.7,
     ),
     line(
       'pregame_welcome_03',
       'welcome',
       3,
-      `${GAME_BRAND.announcerName} is set for pregame energy in ${GAME_BRAND.title}. The stadium is ready, and so are we.`,
-      5.9,
+      `I'm ${GAME_BRAND.announcerName}. The stadium is ready, the teams are set, and ${GAME_BRAND.title} is underway soon.`,
+      4.9,
     ),
   ];
 }

@@ -31,10 +31,7 @@ export class PlaceKickMeter {
     rail.className = 'place-kick-meter-rail';
     rail.type = 'button';
     rail.setAttribute('aria-label', 'Stop the kick meter');
-    rail.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      this.confirm();
-    });
+    rail.addEventListener('pointerdown', this.handlePointerDown);
 
     const center = document.createElement('div');
     center.className = 'place-kick-meter-center';
@@ -49,6 +46,7 @@ export class PlaceKickMeter {
     this.status.textContent = 'Press Space, Enter, or tap to kick.';
 
     this.root.append(label, rail, this.status);
+    this.root.addEventListener('pointerdown', this.handlePointerDown);
     document.body.appendChild(this.root);
     this.target.addEventListener('keydown', this.handleKeyDown, { capture: true });
   }
@@ -118,6 +116,7 @@ export class PlaceKickMeter {
   }
 
   dispose(): void {
+    this.root.removeEventListener('pointerdown', this.handlePointerDown);
     this.target.removeEventListener('keydown', this.handleKeyDown, { capture: true });
     this.root.remove();
   }
@@ -153,5 +152,14 @@ export class PlaceKickMeter {
       event.stopPropagation();
       this.confirm();
     }
+  };
+
+  private readonly handlePointerDown = (event: PointerEvent): void => {
+    if (this.root.hidden) {
+      return;
+    }
+
+    event.preventDefault();
+    this.confirm();
   };
 }

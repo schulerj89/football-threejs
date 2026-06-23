@@ -31,6 +31,7 @@ import {
   validatePlaceKickFormation,
 } from '../../src/specialTeams/PlaceKickFormation';
 import { PlaceKickPresentationDirector } from '../../src/specialTeams/PlaceKickPresentationDirector';
+import { PlaceKickMeter } from '../../src/ui/PlaceKickMeter';
 import {
   FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
 } from '../../src/presentation/players/FootballPlayerVisualFactory';
@@ -58,6 +59,46 @@ describe('place-kick meter model', () => {
     expect(sixtyHz.normalizedValue).toBeCloseTo(thirtyHz.normalizedValue, 5);
     expect(confirmed.timingInput.normalizedValue).toBeCloseTo(sixtyHz.normalizedValue, 5);
     expect(afterConfirmed.normalizedValue).toBeCloseTo(confirmed.state.normalizedValue, 5);
+  });
+});
+
+describe('place-kick meter UI input', () => {
+  it('accepts Space and panel pointer input while active', () => {
+    const restoreDom = installPlaceKickMeterDom();
+    const keyboardTarget = new FakeEventTarget();
+    const placeKick = createExtraPointPlaceKickState({
+      defendingTeam: 'opponent',
+      holderRosterId: 'holder',
+      kickerRatings: { kickAccuracy: 82, kickPower: 90 },
+      kickerRosterId: 'kicker',
+      kickingTeam: 'user',
+      sequenceIndex: 2,
+    });
+
+    try {
+      const spaceMeter = new PlaceKickMeter(keyboardTarget as unknown as Window);
+      spaceMeter.sync(placeKick, 'pro', true);
+      keyboardTarget.dispatch('keydown', createFakeKeyboardEvent('Space', ' '));
+      expect(spaceMeter.consumeTimingInput()).toMatchObject({
+        confirmedAtSeconds: expect.any(Number),
+        normalizedValue: expect.any(Number),
+      });
+      spaceMeter.dispose();
+
+      const pointerMeter = new PlaceKickMeter(keyboardTarget as unknown as Window);
+      pointerMeter.sync({
+        ...placeKick,
+        sequenceIndex: 3,
+      }, 'pro', true);
+      (pointerMeter.root as unknown as FakeElement).dispatch('pointerdown', createFakePointerEvent());
+      expect(pointerMeter.consumeTimingInput()).toMatchObject({
+        confirmedAtSeconds: expect.any(Number),
+        normalizedValue: expect.any(Number),
+      });
+      pointerMeter.dispose();
+    } finally {
+      restoreDom();
+    }
   });
 });
 
@@ -275,4 +316,102 @@ function createFakePlaceKickAudio() {
       return true;
     },
   };
+}
+
+function installPlaceKickMeterDom(): () => void {
+  const globals = globalThis as unknown as Record<string, unknown>;
+  const hadDocument = Object.prototype.hasOwnProperty.call(globals, 'document');
+  const previousDocument = globals.document;
+  const body = new FakeElement('body');
+
+  globals.document = {
+    body,
+    createElement: (tagName: string) => new FakeElement(tagName),
+  } as unknown as Document;
+
+  return () => {
+    if (hadDocument) {
+      globals.document = previousDocument;
+    } else {
+      delete globals.document;
+    }
+  };
+}
+
+class FakeEventTarget {
+  private readonly listeners = new Map<string, Set<(event: unknown) => void>>();
+
+  addEventListener(type: string, listener: EventListenerOrEventListenerObject): void {
+    const callback = typeof listener === 'function'
+      ? listener
+      : (event: Event) => listener.handleEvent(event);
+    const listeners = this.listeners.get(type) ?? new Set();
+    listeners.add(callback as (event: unknown) => void);
+    this.listeners.set(type, listeners);
+  }
+
+  removeEventListener(type: string, listener: EventListenerOrEventListenerObject): void {
+    const callback = typeof listener === 'function'
+      ? listener
+      : (event: Event) => listener.handleEvent(event);
+    this.listeners.get(type)?.delete(callback as (event: unknown) => void);
+  }
+
+  dispatch(type: string, event: unknown): void {
+    for (const listener of this.listeners.get(type) ?? []) {
+      listener(event);
+    }
+  }
+}
+
+class FakeElement extends FakeEventTarget {
+  readonly children: FakeElement[] = [];
+  className = '';
+  dataset: Record<string, string> = {};
+  hidden = false;
+  textContent = '';
+  type = '';
+  readonly style = {
+    left: '',
+    setProperty: (_name: string, _value: string) => undefined,
+  };
+
+  constructor(readonly tagName: string) {
+    super();
+  }
+
+  append(...children: FakeElement[]): void {
+    this.children.push(...children);
+  }
+
+  appendChild(child: FakeElement): FakeElement {
+    this.children.push(child);
+    return child;
+  }
+
+  remove(): void {
+    return undefined;
+  }
+
+  setAttribute(): void {
+    return undefined;
+  }
+}
+
+function createFakeKeyboardEvent(code: string, key: string): KeyboardEvent {
+  return {
+    altKey: false,
+    code,
+    ctrlKey: false,
+    key,
+    metaKey: false,
+    preventDefault: () => undefined,
+    stopPropagation: () => undefined,
+  } as unknown as KeyboardEvent;
+}
+
+function createFakePointerEvent(): PointerEvent {
+  return {
+    preventDefault: () => undefined,
+  } as unknown as PointerEvent;
 }

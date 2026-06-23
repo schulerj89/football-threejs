@@ -182,6 +182,16 @@ describe('coin toss presentation data', () => {
     for (const placement of layout.captainPlacements) {
       expect(placement.jerseyNumber).toBe(jerseyNumbersByRosterId.get(placement.rosterPlayerId));
     }
+    for (const team of ['user', 'opponent'] as const) {
+      const teammates = layout.captainPlacements.filter((placement) => placement.team === team);
+      expect(teammates).toHaveLength(2);
+      expect(
+        Math.hypot(
+          teammates[0]!.position.x - teammates[1]!.position.x,
+          teammates[0]!.position.z - teammates[1]!.position.z,
+        ),
+      ).toBeGreaterThanOrEqual(2.25);
+    }
     expect('officials' in layout).toBe(false);
     expect(binding.activeLineup.bindings.map((entry) => entry.gameplayPlayerId)).not.toContain(
       'coin-toss-captain-user-1',

@@ -408,6 +408,77 @@ describe('kickoff match flow', () => {
     );
   });
 
+  it('ignores user movement input during kickoff returns', () => {
+    const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
+    const kickoff = createKickoffStateForTeam('opponent', 1, { kickPower: 20 });
+    const layout = createKickoffFormation(kickoff, binding);
+    const leftInputState = createKickoffReturnState({ kickoff, layout, matchSeed: 1 });
+    const rightInputState = createKickoffReturnState({ kickoff, layout, matchSeed: 1 });
+
+    startKickoffRunUp(leftInputState);
+    startKickoffRunUp(rightInputState);
+
+    for (let frame = 0; frame < 420; frame += 1) {
+      updateKickoffReturnState(leftInputState, {
+        deltaSeconds: 1 / 60,
+        userInput: { x: -1, z: 0 },
+      });
+      updateKickoffReturnState(rightInputState, {
+        deltaSeconds: 1 / 60,
+        userInput: { x: 1, z: 0 },
+      });
+    }
+
+    expect(leftInputState.carrierVisualId).toBe(rightInputState.carrierVisualId);
+    expect(leftInputState.outcome).toEqual(rightInputState.outcome);
+    expect(leftInputState.participants.map((participant) => ({
+      position: participant.position,
+      visualId: participant.visualId,
+    }))).toEqual(rightInputState.participants.map((participant) => ({
+      position: participant.position,
+      visualId: participant.visualId,
+    })));
+  });
+
+  it('frames a fielded return from behind the return direction', () => {
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const kickoff = createKickoffStateForTeam('opponent', 1, { kickPower: 20 });
+    const matchSnapshot = {
+      deterministicSeed: 1,
+      kickoff,
+    };
+    const audio = createFakeKickoffAudioCoordinator();
+    const director = new KickoffPresentationDirector({
+      audioCoordinator: audio as never,
+      ballVisualStyle: 'football',
+      rosterBinding: createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+      teamTheme: resolveTeamPresentationTheme(BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+    });
+
+    director.start(matchSnapshot);
+    audio.complete('kickoffReady');
+    for (let frame = 0; frame < 240; frame += 1) {
+      director.update({
+        deltaSeconds: 1 / 60,
+        gameplaySnapshot: snapshotGameplayModel(gameplay),
+        matchSnapshot,
+      });
+      if (director.getSnapshot().carrierVisualId) {
+        break;
+      }
+    }
+
+    const snapshot = director.getSnapshot();
+    const shot = director.createCameraShot();
+
+    expect(snapshot.carrierVisualId).not.toBeNull();
+    expect(snapshot.direction).toBe(-1);
+    expect(shot.position.z - shot.focus.z).toBeLessThan(0);
+    expect(shot.lookTarget.z - shot.focus.z).toBeGreaterThan(0);
+
+    director.dispose();
+  });
+
   it('does not schedule the opening kickoff more than once for a match', () => {
     const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
     const controller = createController(20260620);

@@ -2935,22 +2935,22 @@ test('renders graphical play cards and selects plays through the shared request 
   await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-receiver-route')).toHaveCount(3);
   await expect(page.locator('.play-card[data-play-id="inside-zone-7"]')).toHaveAttribute('data-selected', 'true');
 
-  await page.keyboard.press('3');
-  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
-    selectedPlay: { id: 'quick-pass-7', displayName: 'Quick Pass 7' },
-  });
-  await expect(page.locator('.play-card[data-play-id="quick-pass-7"]')).toHaveAttribute('data-selected', 'true');
-
   await page.locator('.play-card[data-play-id="outside-zone-7"]').click();
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     selectedPlay: { id: 'outside-zone-7', displayName: 'Outside Zone 7' },
   });
-  await expect(page.locator('.play-card[data-play-id="outside-zone-7"]')).toHaveAttribute('data-selected', 'true');
+  await expect(page.locator('.play-call-ui')).toBeHidden();
   expect(await page.evaluate(() => document.activeElement?.classList.contains('play-card') ?? false)).toBe(false);
+
+  await page.keyboard.press('3');
+  await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
+    selectedPlay: { id: 'quick-pass-7', displayName: 'Quick Pass 7' },
+  });
+  await expect(page.locator('.play-call-ui')).toBeHidden();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(cards).toHaveCount(4);
-  await expect(page.locator('.play-call-ui')).toBeVisible();
+  await expect(page.locator('.play-call-ui')).toBeHidden();
 
   await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
@@ -2958,7 +2958,7 @@ test('renders graphical play cards and selects plays through the shared request 
 
   await page.keyboard.press('1');
   await page.waitForTimeout(100);
-  expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('outside-zone-7');
+  expect((await getGameplaySnapshot(page)).selectedPlay.id).toBe('quick-pass-7');
 });
 
 test('shows on-field receiver routes before snap and supports route audit mode', async ({ page }) => {
@@ -3156,12 +3156,14 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     selectedPlay: { id: 'curl-flat-11', displayName: 'Curl Flat 11' },
   });
+  await expect(page.locator('.play-call-ui')).toBeHidden();
 
-  await page.locator('.play-card[data-play-id="spread-quick-11"]').click();
+  await page.keyboard.press('2');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     selectedPlay: { id: 'spread-quick-11', displayName: 'Spread Quick 11' },
     selectedReceiver: { id: 'offense-wr-left', displayName: 'Receiver Left' },
   });
+  await expect(page.locator('.play-call-ui')).toBeHidden();
   await page.keyboard.press('e');
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     selectedReceiver: { id: 'offense-wr-right', displayName: 'Receiver Right' },
@@ -3199,6 +3201,7 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({
     selectedPlay: { id: 'inside-zone-11', displayName: 'Inside Zone 11' },
   });
+  await expect(page.locator('.play-call-ui')).toBeHidden();
 
   await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({

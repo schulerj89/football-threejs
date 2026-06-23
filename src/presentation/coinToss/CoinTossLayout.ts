@@ -10,11 +10,11 @@ import type {
 } from './CoinTossTypes';
 
 const COIN_TOSS_LAYOUT_CONFIG = {
-  captainGapX: 1.05,
+  captainGapX: 2.35,
   captainLineZ: 2.2,
   coinHeight: 1.55,
   coinZ: 0,
-  minimumCaptainClearance: 0.9,
+  minimumCaptainClearance: 1.6,
   playerScale: 1,
   sidelineClearance: 8,
 } as const;

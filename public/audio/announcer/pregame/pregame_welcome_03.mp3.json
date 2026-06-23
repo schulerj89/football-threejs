@@ -1,12 +1,12 @@
 {
   "assetId": "pregame_welcome_03",
-  "caption": "Grant Mercer is set for pregame energy in Football JS. The stadium is ready, and so are we.",
+  "caption": "I'm Grant Mercer. The stadium is ready, the teams are set, and Football JS is underway soon.",
   "category": "announcer",
-  "compressedBytes": 94502,
-  "contentHash": "262d73a22b5e5c5dafaf62ba5a07956be9a8f8b533379bca4854c79b08a06e30",
-  "durationSeconds": 5.84,
+  "compressedBytes": 103279,
+  "contentHash": "c4787eb0c36bfbfb45cb14f83f5f111f4f060fd1b6bcb0bba022ede96d4bfb78",
+  "durationSeconds": 6.4,
   "eventCategory": "pregame:welcome",
-  "generatedAt": "2026-06-22T03:32:42.709Z",
+  "generatedAt": "2026-06-23T00:36:17.140Z",
   "kind": "speech",
   "metadata": {
     "announcerName": "Grant Mercer",
@@ -22,9 +22,9 @@
   },
   "modelId": "eleven_v3",
   "outputFormat": "mp3_44100_128",
-  "requestedDurationSeconds": 5.9,
+  "requestedDurationSeconds": 4.9,
   "runtimeLoadingStrategy": "buffer",
-  "script": "Grant Mercer is set for pregame energy in Football JS. The stadium is ready, and so are we.",
+  "script": "I'm Grant Mercer. The stadium is ready, the teams are set, and Football JS is underway soon.",
   "scriptId": "pregame_welcome_03",
   "voiceId": "KKOOCEM13w1s47p4Qrw3"
 }

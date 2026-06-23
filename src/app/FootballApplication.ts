@@ -106,6 +106,7 @@ export class FootballApplication {
       gameMode: this.gameExperience.settings.gameMode,
       onPassReleased: (gameplay, snapshot) => this.handlePassReleased(gameplay, snapshot),
       onPlayStarted: (gameplay, snapshot) => this.handlePlayStarted(gameplay, snapshot),
+      onPlaySelected: () => this.presentation.dismissPlayCallUiAfterSelection(),
       onPunt: (gameplay, snapshot) => this.handlePunt(gameplay, snapshot),
       playbookId: this.gameExperience.settings.playbookId,
       searchParams,

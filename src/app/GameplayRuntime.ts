@@ -47,6 +47,7 @@ export interface GameplayRuntimeOptions {
   gameMode?: GameExperienceSettings['gameMode'];
   onPassReleased?: (gameplay: GameplayModel, snapshotBeforeRelease: GameplaySnapshot) => void;
   onPlayStarted?: (gameplay: GameplayModel, snapshotBeforeStart: GameplaySnapshot) => void;
+  onPlaySelected?: (playId: string) => void;
   onPunt?: (gameplay: GameplayModel, snapshot: GameplaySnapshot) => boolean;
   playbookId: GameExperienceSettings['playbookId'];
   searchParams: URLSearchParams;
@@ -314,6 +315,7 @@ export class GameplayRuntime {
     if (selectedPlayId && !isPreSnapPlaySelectionLocked(this.preSnapCadence)) {
       const selected = selectPlay(this.gameplayModel, selectedPlayId);
       if (selected) {
+        this.options.onPlaySelected?.(this.gameplayModel.selectedPlay.id);
         this.cadenceAudioDirector?.reset();
         this.handlePreSnapCadenceEvents(
           notifyPreSnapPlaySelected(this.preSnapCadence, this.gameplayModel.selectedPlay.id),

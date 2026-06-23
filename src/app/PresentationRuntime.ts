@@ -164,9 +164,9 @@ import type {
   PlaceKickFrameResult,
   PlaceKickFrameSnapshot,
   PlaceKickPresentationContext,
+  PlaceKickTimingInput,
 } from '../specialTeams/PlaceKickTypes';
 import { PlaceKickMeter } from '../ui/PlaceKickMeter';
-import { KeyboardMovementInput } from '../input';
 import { VoicePackAssetResolver } from '../audio/voicePacks/VoicePackAssetResolver';
 import {
   HalftimePresentationDirector,
@@ -284,7 +284,7 @@ export class PresentationRuntime {
   private qualityProfile: QualityProfileSnapshot;
   private readonly gamePresentationRuntime: GamePresentationRuntime;
   private readonly holdCinematicPreSnapEstablish: boolean;
-  private readonly kickoffMovementInput = new KeyboardMovementInput(window);
+  private lastAutomaticPlaceKickSequenceIndex: number | null = null;
   private officialsController: OfficialsPresentationController | null = null;
   private playCallUi: PlayCallUi | null;
   private pregameAudioCoordinator: PregameAudioCoordinator;
@@ -543,6 +543,10 @@ export class PresentationRuntime {
 
   consumeSelectedPlayId(): string | null {
     return this.playCallUi?.consumeSelectedPlayId() ?? null;
+  }
+
+  dismissPlayCallUiAfterSelection(): void {
+    this.playCallUi?.dismissAfterSelection();
   }
 
   resetCameraPresentation(): void {
@@ -906,7 +910,6 @@ export class PresentationRuntime {
       deltaSeconds,
       gameplaySnapshot,
       matchSnapshot,
-      userInput: this.kickoffMovementInput.getMovement(),
     };
     const result = this.kickoffPresentationDirector.update(context);
     this.cameraController.updatePregamePresentation(
@@ -926,10 +929,12 @@ export class PresentationRuntime {
 
   startExtraPoint(matchSnapshot: MatchSnapshot | null): void {
     this.syncVoicePackSelection(matchSnapshot);
+    this.lastAutomaticPlaceKickSequenceIndex = null;
     this.pregameWarmupController.setActive(false);
     this.qbShowcaseCard.hide('extraPoint');
     this.coinTossController.reset();
     this.kickoffPresentationDirector.reset();
+    this.placeKickMeter.hide();
     this.ballVisual.visible = false;
     this.routeArtRenderer.group.visible = false;
     this.controlledPlayerLabels.group.visible = false;
@@ -959,14 +964,8 @@ export class PresentationRuntime {
       matchSnapshot,
     };
     const result = this.placeKickPresentationDirector.update(context);
-    this.placeKickMeter.sync(
-      matchSnapshot?.extraPoint ?? null,
-      this.gameExperience.settings.matchDifficulty,
-      this.placeKickPresentationDirector.isMeterActive() ||
-        Boolean(matchSnapshot?.phase === 'extraPoint' && matchSnapshot.extraPoint.result),
-    );
-    this.placeKickMeter.update(deltaSeconds);
-    const timingInput = this.placeKickMeter.consumeTimingInput();
+    this.placeKickMeter.hide();
+    const timingInput = this.resolveAutomaticPlaceKickTimingInput(matchSnapshot);
     this.cameraController.updatePregamePresentation(
       this.placeKickPresentationDirector.createCameraShot(),
       deltaSeconds,
@@ -1385,7 +1384,6 @@ export class PresentationRuntime {
     this.scene.remove(this.placeKickPresentationDirector.group);
     this.placeKickPresentationDirector.dispose();
     this.halftimePresentationDirector.dispose();
-    this.kickoffMovementInput.dispose();
     this.placeKickMeter.dispose();
     this.playCallUi?.dispose();
     this.gameplayHud.root.remove();
@@ -1520,6 +1518,29 @@ export class PresentationRuntime {
       ),
       upperTierEnabled: shouldUseStadiumUpperTier(this.gameExperience, this.qualityProfile),
     });
+  }
+
+  private resolveAutomaticPlaceKickTimingInput(
+    matchSnapshot: MatchSnapshot | null,
+  ): PlaceKickTimingInput | null {
+    const extraPoint = matchSnapshot?.extraPoint ?? null;
+    const presentation = this.placeKickPresentationDirector.getSnapshot();
+    if (
+      matchSnapshot?.phase !== 'extraPoint' ||
+      !extraPoint ||
+      extraPoint.result ||
+      extraPoint.completed ||
+      presentation.phase !== 'meter' ||
+      this.lastAutomaticPlaceKickSequenceIndex === extraPoint.sequenceIndex
+    ) {
+      return null;
+    }
+
+    this.lastAutomaticPlaceKickSequenceIndex = extraPoint.sequenceIndex;
+    return {
+      confirmedAtSeconds: presentation.animationProgress,
+      normalizedValue: 0,
+    };
   }
 }
 
