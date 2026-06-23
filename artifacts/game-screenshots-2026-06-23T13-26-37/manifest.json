@@ -1,0 +1,72 @@
+{
+  "baseUrl": "http://127.0.0.1:5174",
+  "capturedAt": "2026-06-23T13:26:37.432Z",
+  "captures": [
+    {
+      "fileName": "01-title.png",
+      "label": "Football JS title screen",
+      "notes": ""
+    },
+    {
+      "fileName": "02-dynasty-shell.png",
+      "label": "Dynasty shell",
+      "notes": "Current non-playable dynasty planning shell."
+    },
+    {
+      "fileName": "03-settings.png",
+      "label": "Football Hub settings",
+      "notes": "Settings opened from the current hub shell."
+    },
+    {
+      "fileName": "04-play-now-team-choose.png",
+      "label": "Play Now team choose screen",
+      "notes": "Current Play Now matchup and uniform selection screen."
+    },
+    {
+      "fileName": "05-pregame.png",
+      "label": "Pregame broadcast presentation",
+      "notes": "Captured from the live pregame presentation flow."
+    },
+    {
+      "fileName": "06-coin-toss.png",
+      "label": "Opening coin toss",
+      "notes": "Captured before the user call is resolved."
+    },
+    {
+      "fileName": "07-touchback.png",
+      "label": "Kickoff touchback",
+      "notes": "Seed 20260622 produces a live opening-kickoff touchback."
+    },
+    {
+      "fileName": "08-touchdown.png",
+      "label": "Touchdown presentation",
+      "notes": "Captured from the maintained 5v5 scoring flow."
+    },
+    {
+      "fileName": "09-field-goal.png",
+      "label": "Opponent field-goal summary",
+      "notes": "Seed 20260620 resolves the opponent opening drive as a made field goal."
+    },
+    {
+      "fileName": "10-halftime.png",
+      "label": "Halftime report",
+      "notes": "Rendered from the actual HalftimeStatsOverlay component with representative halftime MatchSnapshot data."
+    },
+    {
+      "fileName": "11-end-of-game.png",
+      "label": "End-of-game final screen",
+      "notes": "Rendered from the actual QuarterTransitionPanel component with representative final MatchSnapshot data."
+    }
+  ],
+  "notes": [
+    "Captured with Playwright at a 1600x900 viewport.",
+    "Menu, pregame, coin toss, touchback, touchdown, and opponent field-goal summary artifacts are driven through the running app.",
+    "The touchback artifact adds a small artifact-only label sourced from the live kickoff snapshot because kickoff chrome is hidden outside gameplay.",
+    "Halftime and end-of-game artifacts are rendered from the actual UI components with representative MatchSnapshot data because the runtime does not expose a safe direct phase setter."
+  ],
+  "viewport": {
+    "deviceScaleFactor": 1,
+    "height": 900,
+    "width": 1600
+  }
+}

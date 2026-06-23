@@ -331,6 +331,7 @@ function createMidfieldLogoTexture(logoUrl: string): Promise<THREE.CanvasTexture
         radius * 2,
       );
       context.restore();
+      removeEdgeConnectedLogoBackground(context, canvas.width, canvas.height, center, radius);
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.colorSpace = THREE.SRGBColorSpace;
@@ -341,6 +342,136 @@ function createMidfieldLogoTexture(logoUrl: string): Promise<THREE.CanvasTexture
     image.onerror = () => reject(new Error(`Unable to load midfield logo ${logoUrl}`));
     image.src = logoUrl;
   });
+}
+
+function removeEdgeConnectedLogoBackground(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  center: number,
+  radius: number,
+): void {
+  const imageData = context.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  const pixelCount = width * height;
+  const visited = new Uint8Array(pixelCount);
+  const queue = new Int32Array(pixelCount);
+  let head = 0;
+  let tail = 0;
+  const edgeBandMin = (radius - 5) * (radius - 5);
+  const edgeBandMax = (radius + 1) * (radius + 1);
+  const background = sampleEdgeBackgroundColor(data, width, height, center, edgeBandMin, edgeBandMax);
+  if (!background) {
+    return;
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const dx = x - center;
+      const dy = y - center;
+      const distanceSq = dx * dx + dy * dy;
+      if (distanceSq < edgeBandMin || distanceSq > edgeBandMax) {
+        continue;
+      }
+      const index = y * width + x;
+      if (getAlpha(data, index) === 0) {
+        continue;
+      }
+      if (!isBackgroundColor(data, index, background, 46)) {
+        continue;
+      }
+      visited[index] = 1;
+      queue[tail] = index;
+      tail += 1;
+    }
+  }
+
+  while (head < tail) {
+    const index = queue[head];
+    head += 1;
+    const currentOffset = index * 4;
+    data[currentOffset + 3] = 0;
+    const x = index % width;
+    const y = Math.floor(index / width);
+    for (const neighbor of [
+      x > 0 ? index - 1 : -1,
+      x < width - 1 ? index + 1 : -1,
+      y > 0 ? index - width : -1,
+      y < height - 1 ? index + width : -1,
+    ]) {
+      if (neighbor < 0 || visited[neighbor] === 1 || getAlpha(data, neighbor) === 0) {
+        continue;
+      }
+      if (!isBackgroundColor(data, neighbor, background, 46)) {
+        continue;
+      }
+      visited[neighbor] = 1;
+      queue[tail] = neighbor;
+      tail += 1;
+    }
+  }
+
+  context.putImageData(imageData, 0, 0);
+}
+
+function sampleEdgeBackgroundColor(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  center: number,
+  edgeBandMin: number,
+  edgeBandMax: number,
+): { b: number; g: number; r: number } | null {
+  let count = 0;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const dx = x - center;
+      const dy = y - center;
+      const distanceSq = dx * dx + dy * dy;
+      if (distanceSq < edgeBandMin || distanceSq > edgeBandMax) {
+        continue;
+      }
+      const index = y * width + x;
+      if (getAlpha(data, index) === 0) {
+        continue;
+      }
+      const offset = index * 4;
+      r += data[offset];
+      g += data[offset + 1];
+      b += data[offset + 2];
+      count += 1;
+    }
+  }
+
+  return count > 0
+    ? {
+        b: b / count,
+        g: g / count,
+        r: r / count,
+      }
+    : null;
+}
+
+function isBackgroundColor(
+  data: Uint8ClampedArray,
+  index: number,
+  background: { b: number; g: number; r: number },
+  threshold: number,
+): boolean {
+  const offset = index * 4;
+  const dr = data[offset] - background.r;
+  const dg = data[offset + 1] - background.g;
+  const db = data[offset + 2] - background.b;
+  const distance = Math.sqrt(dr * dr + dg * dg + db * db);
+  return distance <= threshold;
+}
+
+function getAlpha(data: Uint8ClampedArray, index: number): number {
+  return data[index * 4 + 3];
 }
 
 function createInvisibleMaterial(): THREE.MeshBasicMaterial {

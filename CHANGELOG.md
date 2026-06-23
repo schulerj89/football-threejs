@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.4] - 2026-06-23
+
+### Changed
+
+- Removed the baked square team-color background from midfield logos at render time so the logo mark sits directly on the field turf while UI logo badges remain unchanged.
+
+### Tests
+
+- Verified `npm run build` and `npm run artifacts:game-screens`.
+
 ## [1.22.3] - 2026-06-23
 
 ### Changed
