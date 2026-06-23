@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.28] - 2026-06-23
+
+### Added
+
+- Added a GPT Image 2 play-art asset pipeline with dry-run planning, guarded generation, provenance sidecars, report output, and gallery preview.
+- Generated three play-card background candidates from a captured current-play SVG context screenshot and selected candidate C as the stable runtime play-card field asset.
+- Added the captured context screenshot and runtime preview artifact for play-card visual review.
+
+### Changed
+
+- Updated play-card diagrams to use the generated broadcast field background while keeping player markers, routes, run arrows, and blocking overlays driven by exact gameplay SVG data.
+
+### Tests
+
+- Verified `npm run branding:play-art:plan`, `npx vitest run tests/brandAssets.test.ts tests/playCallDiagram.test.ts`, and `npm run build`.
+
 ## [1.21.27] - 2026-06-23
 
 ### Changed

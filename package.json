@@ -1,6 +1,6 @@
 {
   "name": "football-threejs",
-  "version": "1.21.27",
+  "version": "1.21.28",
   "private": true,
   "type": "module",
   "description": "Low-poly 3D American football prototype built with Three.js.",
@@ -31,6 +31,9 @@
     "branding:scorebug:plan": "tsx tools/branding/scorebugAssetPlan.ts",
     "branding:scorebug:generate": "tsx tools/branding/generateScorebugAssets.ts",
     "branding:scorebug:report": "tsx tools/branding/scorebugAssetReport.ts",
+    "branding:play-art:plan": "tsx tools/branding/playArtAssetPlan.ts",
+    "branding:play-art:generate": "tsx tools/branding/generatePlayArtAssets.ts",
+    "branding:play-art:report": "tsx tools/branding/playArtAssetReport.ts",
     "league:generate": "tsx tools/league/generateLeagueData.ts",
     "league:report": "tsx tools/league/leagueDataReport.ts",
     "meshy:helmet:plan": "tsx tools/meshy/helmetGenerationPlan.ts",

@@ -543,6 +543,12 @@ canvas[hidden] {
   width: 100%;
   aspect-ratio: 184 / 112;
   border-radius: 5px;
+  background:
+    linear-gradient(rgba(2, 8, 7, 0.08), rgba(2, 8, 7, 0.26)),
+    url("/branding/play-art/football-js-play-card-field.webp"),
+    linear-gradient(135deg, #17351f 0%, #244f32 48%, #102318 100%);
+  background-position: center;
+  background-size: cover;
   overflow: hidden;
 }
 
@@ -578,7 +584,7 @@ canvas[hidden] {
 }
 
 .play-card-field-background {
-  fill: #244f32;
+  fill: rgba(20, 58, 34, 0.26);
 }
 
 .play-card-field-stripe {

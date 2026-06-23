@@ -1,0 +1,21 @@
+{
+  "assetId": "candidate-b",
+  "background": "opaque",
+  "candidateId": "candidate-b",
+  "compressedBytes": 163304,
+  "contentHash": "7849fe286b65df9cbb496bc076295d0a912b91c95a6ee8d2adc28e44fca04a67",
+  "generatedAt": "2026-06-23T06:46:35.325Z",
+  "generationMetadata": {
+    "apiEndpoint": "images/edits",
+    "referenceImagePath": "public/branding/play-art/current-play-svg-context.png",
+    "referenceMode": "imageEdit",
+    "revisedPrompt": null
+  },
+  "model": "gpt-image-2",
+  "outputFormat": "webp",
+  "outputPath": "public/branding/play-art/candidate-b.webp",
+  "prompt": "Use the optional attached screenshot only as context for what the current Football JS play cards look like: a centered tray of six small SVG football play diagrams with routes, blockers, markers, and arrows. The current issue is that the diagrams feel flat, cramped, and visually raw. Create only a polished blank play-diagram board/background that the game can place exact SVG route and blocking overlays on top of. Do not redraw, interpret, simplify, or bake in any specific play route from the screenshot. Create an original Football JS tactical play-call diagram background for a stylized low-poly American-football video game. Asset use: one reusable background image behind exact runtime SVG route art inside a play-card diagram. Composition: wide landscape play-board rectangle matching a 184:112 football play-card aspect ratio, straight-on 2D view, no perspective tilt, no camera angle. Visual language: polished modern football broadcast telestrator board, dark synthetic turf surface, subtle yard-line grid, faint hash marks, restrained field texture, low-poly angular edge accents, clean readable central field area. The middle 80 percent must remain uncluttered so white/yellow/blue SVG routes, blocking lines, player markers, and arrowheads remain readable. Add tasteful vignette, subtle bevels, soft inner shadow, and very light worn-turf texture without busy noise. Use dark emerald, charcoal, slate, and muted broadcast-metal neutrals; keep contrast high for light route overlays. Opaque WebP, no transparency required. Candidate B variation: tactical chalkboard meets modern broadcast, faint chalk-smudge texture, subtle sideline hash rhythm, controlled retro-console influence, no actual chalk route markings. Do not include words, letters, numbers, play names, team names, logos, real brands, network marks, EA, Madden, NCAA, ESPN, FOX, CBS, NBC, CFB references, watermark, UI buttons, scorebug graphics, player names, jersey numbers, route arrows, route lines, blocking lines, X-and-O symbols, circles, triangles, player dots, football icons, ball markers, or any baked play-specific diagram elements. Do not create a busy illustrated football field that would hide runtime SVG art. Leave the board blank enough for exact runtime overlays.",
+  "quality": "high",
+  "referenceImagePath": "public/branding/play-art/current-play-svg-context.png",
+  "requestedSize": "1472x896"
+}

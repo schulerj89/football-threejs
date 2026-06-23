@@ -32,6 +32,10 @@ import {
   validateFootballJsScorebugAssetPlan,
 } from '../tools/branding/scorebugAssetPlan';
 import {
+  FOOTBALL_JS_PLAY_ART_ASSET_PLAN,
+  validateFootballJsPlayArtAssetPlan,
+} from '../tools/branding/playArtAssetPlan';
+import {
   COIN_GALLERY_PATH,
   COIN_REPORT_PATH,
   COIN_SELECTION_PATH,
@@ -44,6 +48,7 @@ import {
 import { generateBrandImages } from '../tools/branding/generateBrandImages';
 import { generateCoinAssets } from '../tools/branding/generateCoinAssets';
 import { generateScorebugAssets, parseScorebugGenerateOptions } from '../tools/branding/generateScorebugAssets';
+import { generatePlayArtAssets, parsePlayArtGenerateOptions } from '../tools/branding/generatePlayArtAssets';
 import { generateTeamLogos, parseTeamLogoGenerateOptions } from '../tools/branding/generateTeamLogos';
 import {
   TEAM_LOGO_GALLERY_PATH,
@@ -64,6 +69,15 @@ import {
   validateScorebugLayout,
   writeScorebugAssetReportFiles,
 } from '../tools/branding/scorebugAssetReport';
+import {
+  FOOTBALL_JS_PLAY_ART_RUNTIME_PATH,
+  PLAY_ART_GALLERY_PATH,
+  PLAY_ART_REPORT_PATH,
+  PLAY_ART_SELECTION_PATH,
+  createPlayArtAssetReport,
+  selectPlayArtAsset,
+  writePlayArtAssetReportFiles,
+} from '../tools/branding/playArtAssetReport';
 import {
   BRAND_GALLERY_PATH,
   BRAND_REPORT_PATH,
@@ -863,6 +877,121 @@ describe('Football JS scorebug shell asset pipeline', () => {
   });
 });
 
+describe('Football JS play-art asset pipeline', () => {
+  it('validates the typed GPT Image 2 play-art plan', () => {
+    expect(validateFootballJsPlayArtAssetPlan()).toEqual([]);
+    expect(FOOTBALL_JS_PLAY_ART_ASSET_PLAN).toHaveLength(3);
+    expect(FOOTBALL_JS_PLAY_ART_ASSET_PLAN.map((asset) => asset.candidateId)).toEqual([
+      'candidate-a',
+      'candidate-b',
+      'candidate-c',
+    ]);
+    expect(FOOTBALL_JS_PLAY_ART_ASSET_PLAN.every((asset) => asset.model === 'gpt-image-2')).toBe(true);
+    expect(FOOTBALL_JS_PLAY_ART_ASSET_PLAN.every((asset) => asset.requestedSize === '1472x896')).toBe(true);
+    expect(FOOTBALL_JS_PLAY_ART_ASSET_PLAN.every((asset) => asset.quality === 'high')).toBe(true);
+    expect(FOOTBALL_JS_PLAY_ART_ASSET_PLAN.every((asset) => asset.outputFormat === 'webp')).toBe(true);
+    expect(FOOTBALL_JS_PLAY_ART_ASSET_PLAN.every((asset) => asset.background === 'opaque')).toBe(true);
+    expect(FOOTBALL_JS_PLAY_ART_ASSET_PLAN.every((asset) => asset.prompt.includes('Do not include words'))).toBe(true);
+  });
+
+  it('keeps play-art dry-run generation from making an API request or writing files', async () => {
+    await withTemporaryCwd(async (cwd) => {
+      let requestCalled = false;
+      const summary = await generatePlayArtAssets(
+        FOOTBALL_JS_PLAY_ART_ASSET_PLAN,
+        {
+          ...DEFAULT_GENERATE_OPTIONS,
+          maxFiles: 3,
+        },
+        {
+          requestImage: async () => {
+            requestCalled = true;
+            throw new Error('dry-run should not request play-art images');
+          },
+        },
+      );
+
+      expect(summary).toEqual({
+        dryRun: true,
+        generated: [],
+        skipped: ['candidate-a', 'candidate-b', 'candidate-c'],
+      });
+      expect(requestCalled).toBe(false);
+      expect(existsSync(join(cwd, 'public/branding/play-art/candidate-a.webp'))).toBe(false);
+    });
+  });
+
+  it('uses a three-image cap for the approved play-art candidate set', () => {
+    expect(parsePlayArtGenerateOptions(['--max-files=3'])).toMatchObject({
+      execute: false,
+      force: false,
+      maxFiles: 3,
+    });
+    expect(() => parsePlayArtGenerateOptions(['--max-files=4'])).toThrow(/capped at 3/);
+  });
+
+  it('generates play-art report, gallery, selection manifest, and stable runtime filename', async () => {
+    await withTemporaryCwd(async (cwd) => {
+      process.env.OPENAI_API_KEY = 'test-key';
+      mkdirSync(join(cwd, 'public/branding/play-art'), { recursive: true });
+      writeFileSync(join(cwd, 'public/branding/play-art/current-play-svg-context.png'), 'reference screenshot');
+      const summary = await generatePlayArtAssets(
+        FOOTBALL_JS_PLAY_ART_ASSET_PLAN,
+        {
+          ...DEFAULT_GENERATE_OPTIONS,
+          execute: true,
+          maxFiles: 3,
+        },
+        {
+          requestImage: async (asset, _apiKey, referenceImage) => ({
+            content: Buffer.from(`play-art-image-${asset.assetId}`),
+            metadata: {
+              apiEndpoint: referenceImage ? 'images/edits' : 'images/generations',
+              referenceImagePath: referenceImage ? asset.referenceImagePath : null,
+              referenceMode: referenceImage ? 'imageEdit' : 'none',
+              revisedPrompt: null,
+            },
+          }),
+        },
+      );
+      const selection = selectPlayArtAsset(FOOTBALL_JS_PLAY_ART_ASSET_PLAN, {
+        force: false,
+        selectedAt: '2026-06-23T00:00:00.000Z',
+        selectedCandidateId: 'candidate-a',
+      });
+      const report = createPlayArtAssetReport();
+      writePlayArtAssetReportFiles(report);
+
+      expect(summary.generated).toEqual(['candidate-a', 'candidate-b', 'candidate-c']);
+      expect(report.validationErrors).toEqual([]);
+      expect(report.generatedCount).toBe(3);
+      expect(report.assets[0].dimensions).toEqual({ height: 896, width: 1472 });
+      expect(report.assets.every((asset) => asset.referenceImageExists)).toBe(true);
+      expect(selection.selected.runtimeImageUrl).toBe('/branding/play-art/football-js-play-card-field.webp');
+      expect(existsSync(join(cwd, FOOTBALL_JS_PLAY_ART_RUNTIME_PATH))).toBe(true);
+      expect(existsSync(join(cwd, PLAY_ART_SELECTION_PATH))).toBe(true);
+      expect(existsSync(join(cwd, PLAY_ART_REPORT_PATH))).toBe(true);
+      expect(existsSync(join(cwd, PLAY_ART_GALLERY_PATH))).toBe(true);
+      expect(readFileSync(join(cwd, PLAY_ART_GALLERY_PATH), 'utf8')).toContain('Football JS Play Art Gallery');
+    });
+  });
+
+  it('does not put OpenAI secrets or API calls in play-art browser-facing manifests', async () => {
+    await withTemporaryCwd(async (cwd) => {
+      selectPlayArtAssetFixture(cwd);
+
+      const files = [
+        {
+          path: PLAY_ART_SELECTION_PATH,
+          text: readFileSync(join(cwd, PLAY_ART_SELECTION_PATH), 'utf8'),
+        },
+      ];
+
+      expect(findBrowserOpenAISecretReferences(files)).toEqual([]);
+    });
+  });
+});
+
 async function withTemporaryCwd(action: (cwd: string) => Promise<void> | void): Promise<void> {
   const cwd = mkdtempSync(join(tmpdir(), 'football-brand-assets-'));
   process.chdir(cwd);
@@ -926,6 +1055,18 @@ function selectScorebugAssetFixture(cwd: string): unknown {
   return selectScorebugAsset(FOOTBALL_JS_SCOREBUG_ASSET_PLAN, {
     force: false,
     selectedAt: '2026-06-22T00:00:00.000Z',
+    selectedCandidateId: 'candidate-a',
+  });
+}
+
+function selectPlayArtAssetFixture(cwd: string): unknown {
+  const assetPath = join(cwd, FOOTBALL_JS_PLAY_ART_ASSET_PLAN[0].outputPath);
+  mkdirSync(join(cwd, 'public/branding/play-art'), { recursive: true });
+  writeFileSync(assetPath, 'play-art fixture');
+
+  return selectPlayArtAsset(FOOTBALL_JS_PLAY_ART_ASSET_PLAN, {
+    force: false,
+    selectedAt: '2026-06-23T00:00:00.000Z',
     selectedCandidateId: 'candidate-a',
   });
 }
