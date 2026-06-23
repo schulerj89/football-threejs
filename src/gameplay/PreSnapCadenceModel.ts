@@ -3,6 +3,7 @@ export type PreSnapCadencePhase =
   | 'settling'
   | 'readyPending'
   | 'readySpeaking'
+  | 'headSwivel'
   | 'awaitingSnap'
   | 'hutSpeaking'
   | 'snapRelease'
@@ -14,6 +15,8 @@ export interface PreSnapCadenceConfig {
   hutFallbackSeconds: number;
   hutReleaseSeconds: number;
   hutVariants: readonly string[];
+  headSwivelSeconds: number;
+  headSwivelYawRadians: number;
   readyFallbackSeconds: number;
   readyVariants: readonly string[];
   selectionDebounceSeconds: number;
@@ -50,6 +53,7 @@ export interface PreSnapCadenceEvents {
 
 export interface PreSnapCadenceSnapshot {
   earlySnapWarningVisible: boolean;
+  headYawRadians: number;
   hudText: string;
   hutAssetId: string | null;
   phase: PreSnapCadencePhase;
@@ -64,6 +68,8 @@ export const DEFAULT_PRE_SNAP_CADENCE_CONFIG: PreSnapCadenceConfig = {
   hutFallbackSeconds: 0.72,
   hutReleaseSeconds: 0.12,
   hutVariants: ['qb_hut_01', 'qb_hut_02', 'qb_hut_03'],
+  headSwivelSeconds: 0.72,
+  headSwivelYawRadians: 0.48,
   readyFallbackSeconds: 0.68,
   readyVariants: ['qb_ready_01', 'qb_ready_02'],
   selectionDebounceSeconds: 0.22,
@@ -199,6 +205,14 @@ export function updatePreSnapCadence(
 
   if (state.phase === 'readySpeaking') {
     if (input.readyAudioCompleted || state.phaseElapsedSeconds >= config.readyFallbackSeconds) {
+      state.phase = 'headSwivel';
+      state.phaseElapsedSeconds = 0;
+    }
+    return events;
+  }
+
+  if (state.phase === 'headSwivel') {
+    if (state.phaseElapsedSeconds >= config.headSwivelSeconds) {
       state.phase = 'awaitingSnap';
       state.phaseElapsedSeconds = 0;
     }
@@ -227,6 +241,7 @@ export function snapshotPreSnapCadence(
 ): PreSnapCadenceSnapshot {
   return {
     earlySnapWarningVisible: state.earlySnapWarningSeconds > 0,
+    headYawRadians: resolvePreSnapCadenceHeadYaw(state),
     hudText: getPreSnapCadenceHudText(state),
     hutAssetId: state.hutAssetId,
     phase: state.phase,
@@ -254,6 +269,7 @@ export function getPreSnapCadenceHudText(state: PreSnapCadenceState): string {
     case 'settling':
       return 'SETTING FORMATION';
     case 'readySpeaking':
+    case 'headSwivel':
       return 'READY';
     case 'awaitingSnap':
       return 'PRESS SPACE TO SNAP';
@@ -264,6 +280,27 @@ export function getPreSnapCadenceHudText(state: PreSnapCadenceState): string {
     default:
       return '';
   }
+}
+
+export function resolvePreSnapCadenceHeadYaw(
+  state: PreSnapCadenceState,
+  config: Pick<PreSnapCadenceConfig, 'headSwivelSeconds' | 'headSwivelYawRadians'> =
+    DEFAULT_PRE_SNAP_CADENCE_CONFIG,
+): number {
+  if (state.phase !== 'headSwivel') {
+    return 0;
+  }
+
+  const progress = Math.min(
+    1,
+    Math.max(0, state.phaseElapsedSeconds / Math.max(0.001, config.headSwivelSeconds)),
+  );
+  const halfProgress = progress < 0.5
+    ? progress / 0.5
+    : (progress - 0.5) / 0.5;
+  const direction = progress < 0.5 ? -1 : 1;
+
+  return direction * Math.sin(halfProgress * Math.PI) * config.headSwivelYawRadians;
 }
 
 export function isPreSnapPlaySelectionLocked(state: PreSnapCadenceState): boolean {

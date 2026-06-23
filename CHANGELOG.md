@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.33] - 2026-06-23
+
+### Added
+
+- Added a pre-snap quarterback head-swivel phase after the Ready cadence so the QB checks left and right before Space can snap the ball.
+- Added presentation syncing for the quarterback head yaw and cadence debug output for the current head angle.
+
+### Tests
+
+- Verified `npx vitest run tests/preSnapCadenceModel.test.ts tests/preSnapHeadSwivel.test.ts tests/playerVisual.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.32] - 2026-06-23
 
 ### Added

@@ -5,6 +5,7 @@ import {
   notifyPreSnapPlaySelected,
   requestPreSnapSnap,
   resetPreSnapCadenceForFormation,
+  resolvePreSnapCadenceHeadYaw,
   snapshotPreSnapCadence,
   updatePreSnapCadence,
 } from '../src/gameplay/PreSnapCadenceModel';
@@ -37,6 +38,20 @@ describe('pre-snap cadence model', () => {
     updatePreSnapCadence(state, {
       deltaSeconds: 0,
       readyAudioCompleted: true,
+    });
+
+    expect(snapshotPreSnapCadence(state)).toMatchObject({
+      hudText: 'READY',
+      phase: 'headSwivel',
+      playSelectedForSnap: true,
+    });
+
+    const earlySnap = requestPreSnapSnap(state);
+    expect(earlySnap.snapRejected).toBe(true);
+    expect(earlySnap.snapAccepted).toBe(false);
+
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.headSwivelSeconds,
     });
 
     expect(snapshotPreSnapCadence(state)).toMatchObject({
@@ -119,6 +134,9 @@ describe('pre-snap cadence model', () => {
       deltaSeconds: 0,
       readyAudioCompleted: true,
     });
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.headSwivelSeconds,
+    });
 
     const accepted = requestPreSnapSnap(state);
 
@@ -156,7 +174,61 @@ describe('pre-snap cadence model', () => {
     });
 
     expect(snapshotPreSnapCadence(state)).toMatchObject({
+      hudText: 'READY',
+      phase: 'headSwivel',
+    });
+
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.headSwivelSeconds,
+    });
+
+    expect(snapshotPreSnapCadence(state)).toMatchObject({
       hudText: 'PRESS SPACE TO SNAP',
+      phase: 'awaitingSnap',
+    });
+  });
+
+  it('swivels the quarterback head once left and once right before snap is enabled', () => {
+    const state = createPreSnapCadenceState('inside-zone-11');
+    resetPreSnapCadenceForFormation(state, 'inside-zone-11');
+    notifyPreSnapPlaySelected(state, 'inside-zone-11');
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.selectionDebounceSeconds,
+    });
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.settleDelaySeconds,
+    });
+    updatePreSnapCadence(state, {
+      deltaSeconds: 0,
+      readyAudioCompleted: true,
+    });
+
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.headSwivelSeconds * 0.25,
+    });
+    const leftYaw = resolvePreSnapCadenceHeadYaw(state);
+
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.headSwivelSeconds * 0.5,
+    });
+    const rightYaw = resolvePreSnapCadenceHeadYaw(state);
+
+    expect(leftYaw).toBeLessThan(-0.2);
+    expect(rightYaw).toBeGreaterThan(0.2);
+    expect(snapshotPreSnapCadence(state)).toMatchObject({
+      phase: 'headSwivel',
+      playSelectionLocked: false,
+    });
+
+    const earlySnap = requestPreSnapSnap(state);
+    expect(earlySnap.snapRejected).toBe(true);
+
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.headSwivelSeconds * 0.25,
+    });
+
+    expect(snapshotPreSnapCadence(state)).toMatchObject({
+      headYawRadians: 0,
       phase: 'awaitingSnap',
     });
   });

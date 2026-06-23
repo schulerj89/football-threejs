@@ -1165,6 +1165,7 @@ function syncCadenceDebugOverlay(
     `selectedPlay: ${snapshot.selectedPlayId ?? 'none'}`,
     `playSelected: ${snapshot.playSelectedForSnap ? 'yes' : 'no'}`,
     `hud: ${snapshot.hudText || 'hidden'}`,
+    `headYaw: ${snapshot.headYawRadians.toFixed(2)}`,
     `ready: ${snapshot.readyAssetId ?? 'none'}`,
     `hut: ${snapshot.hutAssetId ?? 'none'}`,
     `selectionLocked: ${snapshot.playSelectionLocked ? 'yes' : 'no'}`,

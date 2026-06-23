@@ -60,6 +60,7 @@ import {
   PlayerPoseController,
   type PlayerPoseSnapshot,
 } from '../presentation/PlayerPoseController';
+import { syncPreSnapQuarterbackHeadYaw } from '../presentation/PreSnapHeadSwivel';
 import {
   RouteArtRenderer,
   type RouteArtRendererSnapshot,
@@ -674,6 +675,7 @@ export class PresentationRuntime {
     if (profiler?.enabled) {
       profiler.measure('proceduralPlayerPosing', () => {
         this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+        syncPreSnapQuarterbackHeadYaw(playerVisuals, preSnapCadence);
       });
       profiler.measure('officialsUpdate', () => {
         this.officialsController?.update(gameplaySnapshot, deltaSeconds, active);
@@ -690,6 +692,7 @@ export class PresentationRuntime {
       });
     } else {
       this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
+      syncPreSnapQuarterbackHeadYaw(playerVisuals, preSnapCadence);
       this.officialsController?.update(gameplaySnapshot, deltaSeconds, active);
       this.sidelineTeamController.update(presentationEvents, deltaSeconds);
       this.cameraController.update(gameplaySnapshot, deltaSeconds, {
