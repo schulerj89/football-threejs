@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.26] - 2026-06-23
+
+### Changed
+
+- Made the clear-weather sun more visible with a larger warm disc, broader glow, and explicit sky render ordering while keeping it presentation-only.
+
+### Tests
+
+- Verified `npx vitest run tests/weather/weatherPresentation.test.ts tests/weather/weatherModel.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.25] - 2026-06-23
 
 ### Fixed

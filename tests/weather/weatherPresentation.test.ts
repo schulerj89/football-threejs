@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { createGameplayModel, snapshotGameplayModel } from '../../src/playState';
+import { CLEAR_WEATHER_PROFILE } from '../../src/weather/WeatherProfile';
 import { calculateSunWorldDirection } from '../../src/weather/WeatherModel';
 import { WeatherPresentationController } from '../../src/weather/WeatherPresentationController';
 
@@ -40,6 +41,23 @@ describe('clear weather presentation', () => {
     expect(lightDirection.dot(toVector3(expectedDirection))).toBeGreaterThan(0.999);
     expect(sunVisualDirection.dot(toVector3(expectedDirection))).toBeGreaterThan(0.999);
     expect(keyLight.castShadow).toBe(false);
+    controller.dispose();
+  });
+
+  it('renders the clear-day sun as a visible presentation disc with a broad glow', () => {
+    const { controller } = createControllerFixture();
+    const sunDisc = controller.group.getObjectByName('clear-weather-sun-disc');
+    const sunGlow = controller.group.getObjectByName('clear-weather-sun-glow');
+
+    expect(sunDisc).toBeInstanceOf(THREE.Mesh);
+    expect(sunGlow).toBeInstanceOf(THREE.Mesh);
+    expect(sunDisc?.renderOrder).toBeGreaterThan(controller.group.getObjectByName('clear-weather-sky-dome')?.renderOrder ?? -1000);
+    expect(sunGlow?.renderOrder).toBeGreaterThan(controller.group.getObjectByName('clear-weather-sky-dome')?.renderOrder ?? -1000);
+    expect(CLEAR_WEATHER_PROFILE.sky.sunDiscRadius).toBeGreaterThanOrEqual(14);
+    expect(CLEAR_WEATHER_PROFILE.sky.sunGlowRadius).toBeGreaterThan(
+      CLEAR_WEATHER_PROFILE.sky.sunDiscRadius * 2,
+    );
+
     controller.dispose();
   });
 

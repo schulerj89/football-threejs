@@ -69,26 +69,28 @@ export class ClearWeatherRenderer {
     this.sunGlowMaterial = new THREE.MeshBasicMaterial({
       color: profile.sky.sunGlowColor,
       depthWrite: false,
-      opacity: 0.22,
+      opacity: 0.34,
       transparent: true,
       toneMapped: false,
     });
     this.sunGlow = new THREE.Mesh(this.sunGlowGeometry, this.sunGlowMaterial);
     this.sunGlow.name = 'clear-weather-sun-glow';
     this.sunGlow.frustumCulled = false;
+    this.sunGlow.renderOrder = -990;
     this.sunGlow.userData.weather = true;
 
     this.sunDiscGeometry = new THREE.CircleGeometry(profile.sky.sunDiscRadius, 32);
     this.sunDiscMaterial = new THREE.MeshBasicMaterial({
       color: profile.sky.sunColor,
       depthWrite: false,
-      opacity: 0.92,
+      opacity: 1,
       transparent: true,
       toneMapped: false,
     });
     this.sunDisc = new THREE.Mesh(this.sunDiscGeometry, this.sunDiscMaterial);
     this.sunDisc.name = 'clear-weather-sun-disc';
     this.sunDisc.frustumCulled = false;
+    this.sunDisc.renderOrder = -980;
     this.sunDisc.userData.weather = true;
 
     this.group.add(this.skyMesh, this.sunGlow, this.sunDisc);
