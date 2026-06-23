@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, relative } from 'node:path';
 import {
   DEFAULT_MAX_DECODED_AUDIO_BUFFER_BYTES,
 } from '../../src/audio/AudioAssetLoader';
@@ -8,6 +8,7 @@ import {
   LOCAL_AUDIO_ASSET_MANIFEST,
   type LocalAudioAsset,
 } from '../../src/audio/AudioAssetManifest';
+import { isLocalPregameCommentaryAssetId } from '../../src/audio/PregameLocalAudioAssets';
 import { COMMENTARY_CATALOG } from '../../src/audio/CommentaryCatalog';
 import {
   ANNOUNCER_SCRIPT_CATALOG,
@@ -84,10 +85,14 @@ const READINESS_PATH = 'public/audio/audio-readiness.json';
 const AUDITION_INDEX_PATH = 'public/audio/audition-index.html';
 
 export function createAudioVerificationPlan(): readonly AudioAssetPlan[] {
+  const localPregamePlan = createPregameSpeechPlan(
+    readConfiguredAnnouncerVoiceId() ?? ANNOUNCER_VOICE_ID_PLACEHOLDER,
+  ).filter((asset) => isLocalPregameCommentaryAssetId(asset.assetId));
+
   return [
     ...FOOTBALL_AUDIO_PLAN,
     ...FOOTBALL_STADIUM_CHANT_PLAN,
-    ...createPregameSpeechPlan(readConfiguredAnnouncerVoiceId() ?? ANNOUNCER_VOICE_ID_PLACEHOLDER),
+    ...localPregamePlan,
   ];
 }
 
@@ -371,7 +376,6 @@ function validateProvenance(
     'kind',
     'modelId',
     'outputFormat',
-    'requestedDurationSeconds',
     'runtimeLoadingStrategy',
   ];
 
@@ -379,6 +383,16 @@ function validateProvenance(
     if (sidecar[field] !== asset[field]) {
       errors.push(`provenance ${field} does not match plan`);
     }
+  }
+  if (
+    sidecar.requestedDurationSeconds !== undefined
+    && (
+      typeof sidecar.requestedDurationSeconds !== 'number'
+      || !Number.isFinite(sidecar.requestedDurationSeconds)
+      || sidecar.requestedDurationSeconds <= 0
+    )
+  ) {
+    errors.push('provenance requestedDurationSeconds is invalid');
   }
   if ((sidecar.prompt ?? undefined) !== asset.prompt) {
     errors.push('provenance prompt does not match plan');
@@ -452,7 +466,7 @@ function createAuditionIndexHtml(report: AudioVerificationReport): string {
     const duration = asset.durationSeconds === null
       ? 'missing'
       : `${asset.durationSeconds.toFixed(2)}s`;
-    const source = asset.exists ? publicPathToUrl(asset.expectedPath) : '';
+    const source = asset.exists ? publicPathToRelativeUrl(asset.expectedPath, AUDITION_INDEX_PATH) : '';
     const caption = asset.caption ?? sidecar?.prompt ?? '';
     const metadata = [
       sidecar?.generatedAt ? `generated ${sidecar.generatedAt}` : 'metadata missing',
@@ -468,7 +482,7 @@ function createAuditionIndexHtml(report: AudioVerificationReport): string {
       `<td>${duration}</td>`,
       `<td>${formatBytes(asset.compressedBytes)}</td>`,
       `<td>${escapeHtml(metadata)}</td>`,
-      `<td>${asset.exists ? `<audio controls src="${escapeHtml(source)}"></audio>` : 'missing'}</td>`,
+      `<td>${asset.exists ? `<audio controls preload="metadata" src="${escapeHtml(source)}"></audio>` : 'missing'}</td>`,
       `<td>${escapeHtml(asset.issues.join('; ') || 'ok')}</td>`,
       '</tr>',
     ].join('');
@@ -486,11 +500,20 @@ function createAuditionIndexHtml(report: AudioVerificationReport): string {
     th { color: #9ec7db; }
     audio { width: 260px; }
     .meta { color: #aab8c2; }
+    .toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+    button { background: #20313c; border: 1px solid #527083; border-radius: 6px; color: #e8eef2; cursor: pointer; font: inherit; padding: 8px 12px; }
+    button:hover, button:focus-visible { background: #2a4050; outline: 2px solid #9ec7db; outline-offset: 2px; }
+    .count { color: #aab8c2; }
   </style>
 </head>
 <body>
   <h1>Football Audio Audition Index</h1>
   <p class="meta">Readiness: ${escapeHtml(report.readiness)}. Total compressed size: ${formatBytes(report.totalCompressedBytes)} / ${formatBytes(report.compressedBudgetBytes)}.</p>
+  <div class="toolbar">
+    <button type="button" data-play-all>Play all</button>
+    <button type="button" data-stop-all>Stop</button>
+    <span class="count">${report.assets.filter((asset) => asset.exists).length} available clips</span>
+  </div>
   <table>
     <thead>
       <tr>
@@ -508,6 +531,45 @@ function createAuditionIndexHtml(report: AudioVerificationReport): string {
 ${rows}
     </tbody>
   </table>
+  <script>
+    const audios = Array.from(document.querySelectorAll('audio'));
+    let playAllToken = 0;
+
+    async function playAll() {
+      const token = ++playAllToken;
+      for (const audio of audios) {
+        if (token !== playAllToken) {
+          return;
+        }
+        audio.currentTime = 0;
+        try {
+          await audio.play();
+          await new Promise((resolve) => {
+            const done = () => {
+              audio.removeEventListener('ended', done);
+              audio.removeEventListener('error', done);
+              resolve();
+            };
+            audio.addEventListener('ended', done);
+            audio.addEventListener('error', done);
+          });
+        } catch {
+          return;
+        }
+      }
+    }
+
+    function stopAll() {
+      playAllToken += 1;
+      for (const audio of audios) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    }
+
+    document.querySelector('[data-play-all]')?.addEventListener('click', playAll);
+    document.querySelector('[data-stop-all]')?.addEventListener('click', stopAll);
+  </script>
 </body>
 </html>
 `;
@@ -527,8 +589,16 @@ function readSidecar(sidecarPath: string): Partial<AudioProvenance> | null {
   }
 }
 
-function publicPathToUrl(path: string): string {
-  return path.replace(/^public\//, '/');
+function publicPathToRelativeUrl(assetPath: string, pagePath: string): string {
+  const pageDirectory = dirname(stripPublicPrefix(pagePath));
+  const asset = stripPublicPrefix(assetPath);
+  const relativePath = relative(pageDirectory, asset).replaceAll('\\', '/');
+
+  return relativePath.startsWith('.') ? relativePath : `./${relativePath}`;
+}
+
+function stripPublicPrefix(path: string): string {
+  return path.replaceAll('\\', '/').replace(/^public\//, '');
 }
 
 function formatBytes(bytes: number): string {

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.8] - 2026-06-23
+
+### Changed
+
+- Fixed the full audio audition index so it uses local relative audio paths and can be opened directly without broken `/audio/...` references.
+- Added play-all, stop, preload metadata, and available-clip count controls to the full audition index.
+- Scoped audio verification to the generated local pregame assets so voice-pack-only pregame placeholders no longer mark runtime audio readiness as partial.
+- Regenerated the audio audition index, readiness manifest, and verification report.
+
+### Tests
+
+- Verified `npm run audio:verify`, a local link check for 111 audition controls with zero missing files, `npx vitest run tests/audioRuntime.test.ts tests/audioPipeline.test.ts tests/pregameCommentaryCatalog.test.ts tests/voicePacks.test.ts`, and `npm run build`.
+
 ## [1.21.7] - 2026-06-23
 
 ### Changed
