@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.41] - 2026-06-23
+
+### Added
+
+- Added touchback presentation feedback for kickoff returns, including a TOUCHBACK banner, one whistle SFX trigger, and kickoff-result announcer commentary when the return team downs an end-zone kick.
+
+### Fixed
+
+- Ensured the return team downs an AI-selected touchback as soon as the ball is catchable in the end zone instead of catching and returning before the final flight tick.
+
+### Tests
+
+- Verified `npx vitest run tests/specialTeams/kickoff.test.ts` and `npm run build`.
+
 ## [1.21.40] - 2026-06-23
 
 ### Added

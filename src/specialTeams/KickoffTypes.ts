@@ -99,6 +99,7 @@ export interface KickoffFrameSnapshot {
   result: KickoffResult | null;
   returnLane: KickoffReturnLane | null;
   returnResult: KickoffReturnOutcome | null;
+  resultMessage: string | null;
   reticleVisible: boolean;
   rosterBindings: readonly {
     rosterPlayerId: string;

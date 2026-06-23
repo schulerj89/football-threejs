@@ -561,6 +561,7 @@ export class PresentationRuntime {
     this.kickoffPresentationDirector.reset();
     this.placeKickPresentationDirector.reset();
     this.placeKickMeter.hide();
+    this.syncKickoffResultMessage(null);
     this.qbShowcaseCard.hide('resetPresentationIdentity');
     this.keysToGameOverlay.hide('hidden');
     this.halftimePresentationDirector.reset();
@@ -578,6 +579,7 @@ export class PresentationRuntime {
     this.kickoffPresentationDirector.reset();
     this.placeKickPresentationDirector.reset();
     this.placeKickMeter.hide();
+    this.syncKickoffResultMessage(null);
     this.qbShowcaseCard.hide('skipped');
     this.halftimePresentationDirector.finish();
   }
@@ -892,6 +894,7 @@ export class PresentationRuntime {
     this.routeArtRenderer.group.visible = false;
     this.controlledPlayerLabels.group.visible = false;
     this.officialsController?.group && (this.officialsController.group.visible = false);
+    this.syncKickoffResultMessage(null);
     this.kickoffPresentationDirector.start(matchSnapshot);
   }
 
@@ -917,6 +920,7 @@ export class PresentationRuntime {
       matchSnapshot,
     };
     const result = this.kickoffPresentationDirector.update(context);
+    this.syncKickoffResultMessage(this.kickoffPresentationDirector.getSnapshot());
     this.cameraController.updatePregamePresentation(
       this.kickoffPresentationDirector.createCameraShot(),
       deltaSeconds,
@@ -927,6 +931,7 @@ export class PresentationRuntime {
 
   finishKickoff(gameplaySnapshot: GameplaySnapshot): void {
     this.kickoffPresentationDirector.finish();
+    this.syncKickoffResultMessage(null);
     this.broadcastCaptions.hidden = true;
     this.broadcastCaptions.textContent = '';
     this.cameraController.finishPregamePresentation(gameplaySnapshot);
@@ -1486,6 +1491,16 @@ export class PresentationRuntime {
 
     this.broadcastCaptions.hidden = false;
     this.broadcastCaptions.textContent = caption;
+  }
+
+  private syncKickoffResultMessage(snapshot: KickoffFrameSnapshot | null): void {
+    const message = snapshot?.resultMessage ?? null;
+    const visible =
+      Boolean(message) &&
+      (snapshot?.phase === 'touchback' || snapshot?.phase === 'result');
+
+    this.gameplayHud.resultMessage.hidden = !visible;
+    this.gameplayHud.resultMessage.textContent = visible ? message! : '';
   }
 
   private syncHalftimeCaptions(matchSnapshot: MatchSnapshot | null): void {

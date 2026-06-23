@@ -959,6 +959,7 @@ interface KickoffPresentationSnapshot {
   receivingParticipantCount: number;
   receivingTeam: 'opponent' | 'user' | null;
   result: MatchSnapshot['kickoff']['result'];
+  resultMessage: string | null;
   reticleVisible: boolean;
   sequenceIndex: number | null;
   stageVisibility: {

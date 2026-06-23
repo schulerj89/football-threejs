@@ -53,6 +53,9 @@ import type {
   KickoffState,
 } from './KickoffTypes';
 
+export const KICKOFF_TOUCHBACK_MESSAGE = 'TOUCHBACK';
+export const KICKOFF_TOUCHBACK_WHISTLE_ASSET_ID = 'referee_whistle_01';
+
 export interface KickoffPresentationDirectorOptions {
   audioCoordinator: PregameAudioCoordinator;
   ballVisualStyle: BallVisualStyle;
@@ -106,6 +109,7 @@ export class KickoffPresentationDirector {
   private requestedReadyLine = false;
   private requestedResultLine = false;
   private resultElapsedSeconds = 0;
+  private playedTouchbackWhistle = false;
   private kickerKickAnimationElapsedSeconds = 0;
   private kickerKickAnimationActive = false;
   private kickoffState: KickoffState | null = null;
@@ -151,6 +155,7 @@ export class KickoffPresentationDirector {
     this.requestedReadyLine = false;
     this.requestedResultLine = false;
     this.resultElapsedSeconds = 0;
+    this.playedTouchbackWhistle = false;
     this.kickerKickAnimationElapsedSeconds = 0;
     this.kickerKickAnimationActive = false;
     this.group.visible = true;
@@ -221,6 +226,7 @@ export class KickoffPresentationDirector {
         void this.options.sfxAudio?.playOneShot('kickoff_catch_01');
       }
       if (events.touchback) {
+        this.playTouchbackWhistle();
         this.startResultLine(context.matchSnapshot?.deterministicSeed ?? 'kickoff');
       }
     } else if (this.phase === 'fielding' || this.phase === 'returnLive') {
@@ -237,6 +243,9 @@ export class KickoffPresentationDirector {
       }
       if (events.dead) {
         this.resultElapsedSeconds = 0;
+        if (this.returnState.outcome?.type === 'touchback') {
+          this.playTouchbackWhistle();
+        }
         this.startResultLine(context.matchSnapshot?.deterministicSeed ?? 'kickoff');
       }
     } else if (this.phase === 'touchback' || this.phase === 'dead') {
@@ -346,6 +355,7 @@ export class KickoffPresentationDirector {
     this.requestedReadyLine = false;
     this.requestedResultLine = false;
     this.resultElapsedSeconds = 0;
+    this.playedTouchbackWhistle = false;
     this.group.visible = false;
     this.ballVisual.visible = false;
     this.reticle.sync(null, false);
@@ -417,6 +427,7 @@ export class KickoffPresentationDirector {
             receivingStartPosition: { ...this.returnState.outcome.receivingStartPosition },
           }
         : null,
+      resultMessage: this.resolveResultMessage(),
       reticleVisible: this.reticle.group.visible,
       rosterBindings,
       sequenceIndex: this.kickoffState?.sequenceIndex ?? null,
@@ -578,6 +589,21 @@ export class KickoffPresentationDirector {
           : classifyKickoffCommentaryResult(this.kickoffState.result),
       }),
     );
+  }
+
+  private playTouchbackWhistle(): void {
+    if (this.playedTouchbackWhistle) {
+      return;
+    }
+
+    this.playedTouchbackWhistle = true;
+    void this.options.sfxAudio?.playOneShot(KICKOFF_TOUCHBACK_WHISTLE_ASSET_ID);
+  }
+
+  private resolveResultMessage(): string | null {
+    return this.returnState?.outcome?.type === 'touchback'
+      ? KICKOFF_TOUCHBACK_MESSAGE
+      : null;
   }
 
   private syncBallFromReturnState(): void {

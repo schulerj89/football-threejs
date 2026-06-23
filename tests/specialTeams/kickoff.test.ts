@@ -13,7 +13,11 @@ import {
   DEFAULT_OPPONENT_TEAM_ID,
   DEFAULT_USER_TEAM_ID,
 } from '../../src/teams/TeamRegistry';
-import { KickoffPresentationDirector } from '../../src/specialTeams/KickoffPresentationDirector';
+import {
+  KICKOFF_TOUCHBACK_MESSAGE,
+  KICKOFF_TOUCHBACK_WHISTLE_ASSET_ID,
+  KickoffPresentationDirector,
+} from '../../src/specialTeams/KickoffPresentationDirector';
 import {
   createKickoffFormation,
   validateKickoffFormation,
@@ -1092,6 +1096,42 @@ describe('kickoff match flow', () => {
 
     director.dispose();
   });
+
+  it('shows a touchback message, whistle, and announcer result when the return team downs an end-zone kick', () => {
+    const seed = findSeedForOpeningKickoff('touchback', 'user');
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const controller = createController(seed);
+    const audio = createFakeKickoffAudioCoordinator();
+    const sfx = createFakeKickoffSfxAudio();
+    controller.prepareForPregame(gameplay);
+    controller.enterCoinToss();
+    const resolvedFace = resolveCoinTossFace(seed);
+    controller.resolveOpeningCoinToss(resolvedFace);
+    controller.beginOpeningKickoffAfterCoinToss(gameplay);
+    const matchSnapshot = controller.getSnapshot();
+    const director = new KickoffPresentationDirector({
+      audioCoordinator: audio as never,
+      ballVisualStyle: 'football',
+      rosterBinding: createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+      sfxAudio: sfx,
+      teamTheme: resolveTeamPresentationTheme(BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+    });
+
+    director.start(matchSnapshot);
+    audio.complete('kickoffReady');
+    updateKickoffFrames(director, gameplay, matchSnapshot, 300);
+    const snapshot = director.getSnapshot();
+
+    expect(snapshot.returnResult).toMatchObject({ type: 'touchback' });
+    expect(snapshot.resultMessage).toBe(KICKOFF_TOUCHBACK_MESSAGE);
+    expect(audio.startedLines).toContain('kickoffResult');
+    expect(sfx.played.filter((assetId) => assetId === KICKOFF_TOUCHBACK_WHISTLE_ASSET_ID)).toHaveLength(1);
+
+    updateKickoffFrames(director, gameplay, matchSnapshot, 30);
+    expect(sfx.played.filter((assetId) => assetId === KICKOFF_TOUCHBACK_WHISTLE_ASSET_ID)).toHaveLength(1);
+
+    director.dispose();
+  });
 });
 
 function createInput(options: {
@@ -1282,6 +1322,17 @@ function createFakeKickoffAudioCoordinator() {
       startedLines.push(lineId);
     },
     updateAmbience: () => undefined,
+  };
+}
+
+function createFakeKickoffSfxAudio() {
+  const played: string[] = [];
+  return {
+    played,
+    playOneShot: async (assetId: string) => {
+      played.push(assetId);
+      return true;
+    },
   };
 }
 

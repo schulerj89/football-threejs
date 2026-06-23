@@ -388,13 +388,14 @@ function updateKickoffFlight(
   state.ballPosition = sampleKickoffBallPosition(state.result, state.flightElapsedSeconds);
   updateReleasedKickoffParticipants(state, delta, null);
   const flightFinished = state.flightElapsedSeconds >= state.result.flightSeconds;
+  const catchableHeight = state.ballPosition.y <= KICKOFF_RETURN_CONFIG.catchHeightYards;
 
   const touchbackDecision = resolveKickoffTouchbackDecision({
     assignedReturner: state.assignedReturner,
     receivingTeam: state.receivingTeam,
     result: state.result,
   });
-  if (flightFinished && touchbackDecision.takeTouchback) {
+  if (touchbackDecision.takeTouchback && (catchableHeight || flightFinished)) {
     const touchbackPosition = createFreeKickTouchbackPosition();
     const touchbackSpot = possessionFieldPositionToWorldSpot(touchbackPosition, state.receivingTeam);
     completeKickoffReturn(state, {
@@ -420,7 +421,6 @@ function updateKickoffFlight(
   }
 
   const catchDistance = distanceBetween(returner.position, state.result.target);
-  const catchableHeight = state.ballPosition.y <= KICKOFF_RETURN_CONFIG.catchHeightYards;
   if (
     (catchableHeight && catchDistance <= KICKOFF_RETURN_CONFIG.catchRadiusYards) ||
     (flightFinished && catchDistance <= KICKOFF_RETURN_CONFIG.minimumForcedCatchDistanceYards)
