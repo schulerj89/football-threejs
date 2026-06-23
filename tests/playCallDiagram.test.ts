@@ -7,6 +7,7 @@ import {
   createFootballToSvgTransform,
   createPlayCallDiagramModel,
   normalizeFootballSpotToSvg,
+  validatePlayCallDiagramAlignment,
 } from '../src/playCallDiagram';
 import {
   ALL_PLAYS,
@@ -121,6 +122,84 @@ describe('play call diagrams', () => {
           .map((point) => normalizeFootballSpotToSvg(point, diagram.transform)),
       );
     }
+  });
+
+  it('starts every route, run arrow, and blocker assignment on its player marker', () => {
+    for (const play of ALL_PLAYS) {
+      for (const snapPlacement of createSnapPlacements()) {
+        const diagram = createPlayCallDiagramModel(play, snapPlacement);
+        const playersById = new Map(diagram.players.map((player) => [player.id, player]));
+
+        expect(diagram.alignmentIssues).toEqual([]);
+
+        for (const route of diagram.receiverRoutes) {
+          const player = playersById.get(route.receiverId);
+
+          expect(player).toBeDefined();
+          expectFootballSpotCloseTo(route.footballPoints[0], player!.footballPosition);
+          expectSvgPointCloseTo(route.points[0], player!.point);
+        }
+
+        if (diagram.runDirection) {
+          const player = playersById.get(diagram.runDirection.receiverId);
+
+          expect(player).toBeDefined();
+          expectFootballSpotCloseTo(diagram.runDirection.footballPoints[0], player!.footballPosition);
+          expectSvgPointCloseTo(diagram.runDirection.points[0], player!.point);
+        }
+
+        for (const assignment of diagram.blockerAssignments) {
+          const player = playersById.get(assignment.blockerId);
+
+          expect(player).toBeDefined();
+          expectFootballSpotCloseTo(assignment.footballStart, player!.footballPosition);
+          expectSvgPointCloseTo(assignment.start, player!.point);
+        }
+      }
+    }
+  });
+
+  it('reports play-art alignment failures when route coordinates drift away from the player', () => {
+    const diagram = createPlayCallDiagramModel(
+      getPlay('four-verts-out-flat-11'),
+      createSnapPlacement('middle'),
+    );
+    const [firstRoute, ...otherRoutes] = diagram.receiverRoutes;
+
+    expect(firstRoute).toBeDefined();
+
+    const driftedDiagram = {
+      ...diagram,
+      receiverRoutes: [
+        {
+          ...firstRoute,
+          footballPoints: [
+            {
+              x: firstRoute.footballPoints[0].x + 1,
+              z: firstRoute.footballPoints[0].z,
+            },
+            ...firstRoute.footballPoints.slice(1),
+          ],
+          points: [
+            {
+              x: firstRoute.points[0].x + 4,
+              y: firstRoute.points[0].y,
+            },
+            ...firstRoute.points.slice(1),
+          ],
+        },
+        ...otherRoutes,
+      ],
+    };
+
+    expect(validatePlayCallDiagramAlignment(driftedDiagram)).toContainEqual(
+      expect.objectContaining({
+        artKind: 'receiverRoute',
+        kind: 'routeStartMismatch',
+        playerId: firstRoute.receiverId,
+        playId: diagram.playId,
+      }),
+    );
   });
 
   it('preserves route break order for multi-segment 11v11 pass routes', () => {
@@ -375,6 +454,22 @@ function getFootballRouteStart(route: { footballPoints: ReadonlyArray<{ x: numbe
 
 function getFootballRouteEnd(route: { footballPoints: ReadonlyArray<{ x: number; z: number }> } | null): { x: number; z: number } | null {
   return route?.footballPoints[route.footballPoints.length - 1] ?? null;
+}
+
+function expectFootballSpotCloseTo(
+  actual: { x: number; z: number },
+  expected: { x: number; z: number },
+): void {
+  expect(actual.x).toBeCloseTo(expected.x, 6);
+  expect(actual.z).toBeCloseTo(expected.z, 6);
+}
+
+function expectSvgPointCloseTo(
+  actual: { x: number; y: number },
+  expected: { x: number; y: number },
+): void {
+  expect(actual.x).toBeCloseTo(expected.x, 6);
+  expect(actual.y).toBeCloseTo(expected.y, 6);
 }
 
 function indexAssignments(

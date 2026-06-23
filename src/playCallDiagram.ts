@@ -40,6 +40,7 @@ export interface FootballToSvgTransform {
 }
 
 export interface PlayCallPlayerMarker {
+  footballPosition: FootballSpot;
   id: string;
   point: SvgPoint;
   role: ResolvedFormationSlot['role'];
@@ -57,11 +58,14 @@ export interface PlayCallBlockerAssignment {
   blockerId: string;
   defenderId: string | null;
   end: SvgPoint;
+  footballEnd: FootballSpot;
+  footballStart: FootballSpot;
   kind: 'passProtection' | 'runBlock';
   start: SvgPoint;
 }
 
 export interface PlayCallDiagramModel {
+  alignmentIssues: PlayCallDiagramAlignmentIssue[];
   ball: SvgPoint;
   blockerAssignments: PlayCallBlockerAssignment[];
   fieldSide: 'left' | 'right';
@@ -78,6 +82,25 @@ export interface PlayCallDiagramModel {
   transform: FootballToSvgTransform;
 }
 
+export type PlayCallDiagramAlignmentIssueKind =
+  | 'routeStartMissingPlayer'
+  | 'routeStartMismatch'
+  | 'blockerStartMissingPlayer'
+  | 'blockerStartMismatch';
+
+export interface PlayCallDiagramAlignmentIssue {
+  artKind: 'blockerAssignment' | 'receiverRoute' | 'runDirection';
+  footballDistanceYards?: number;
+  footballPlayerPosition?: FootballSpot;
+  footballStart?: FootballSpot;
+  kind: PlayCallDiagramAlignmentIssueKind;
+  playerId: string;
+  playId: string;
+  svgDistance?: number;
+  svgPlayerPoint?: SvgPoint;
+  svgStart?: SvgPoint;
+}
+
 export const PLAY_CALL_DIAGRAM_SIZE: DiagramSize = {
   height: 112,
   width: 184,
@@ -85,6 +108,8 @@ export const PLAY_CALL_DIAGRAM_SIZE: DiagramSize = {
 
 const DIAGRAM_PADDING = 10;
 export const PLAY_CALL_MARKER_PADDING = 8;
+export const PLAY_CALL_ALIGNMENT_TOLERANCE_YARDS = 0.01;
+export const PLAY_CALL_ALIGNMENT_TOLERANCE_SVG = 0.01;
 const DIAGRAM_EDGE_MARGIN_YARDS = 0;
 const SNAP_RELATIVE_DIAGRAM_BOUNDS = {
   maxForward: 26,
@@ -133,12 +158,14 @@ export function createPlayCallDiagramModel(
     z: snapPlacement.spot.z,
   };
 
-  return {
+  const modelWithoutAlignmentIssues = {
     ball: normalizeFootballSpotToSvg(snapPlacement.spot, transform),
     blockerAssignments: blockerAssignments.map((assignment) => ({
       blockerId: assignment.blockerId,
       defenderId: assignment.defenderId,
       end: normalizeFootballSpotToSvg(assignment.footballEnd, transform),
+      footballEnd: { ...assignment.footballEnd },
+      footballStart: { ...assignment.footballStart },
       kind: assignment.kind,
       start: normalizeFootballSpotToSvg(assignment.footballStart, transform),
     })),
@@ -153,6 +180,7 @@ export function createPlayCallDiagramModel(
     players: formation.slots
       .filter((slot) => slot.team === 'offense')
       .map((slot) => ({
+        footballPosition: { ...slot.position },
         id: slot.id,
         point: normalizeFootballSpotToSvg(slot.position, transform),
         role: slot.role,
@@ -175,6 +203,67 @@ export function createPlayCallDiagramModel(
       : null,
     transform,
   };
+
+  return {
+    ...modelWithoutAlignmentIssues,
+    alignmentIssues: validatePlayCallDiagramAlignment(modelWithoutAlignmentIssues),
+  };
+}
+
+export function validatePlayCallDiagramAlignment(
+  model: Omit<PlayCallDiagramModel, 'alignmentIssues'>,
+  toleranceYards = PLAY_CALL_ALIGNMENT_TOLERANCE_YARDS,
+  toleranceSvg = PLAY_CALL_ALIGNMENT_TOLERANCE_SVG,
+): PlayCallDiagramAlignmentIssue[] {
+  const playersById = new Map(model.players.map((player) => [player.id, player]));
+  const issues: PlayCallDiagramAlignmentIssue[] = [];
+
+  for (const route of model.receiverRoutes) {
+    validateArtStart({
+      artKind: 'receiverRoute',
+      footballStart: route.footballPoints[0],
+      issueKind: 'routeStart',
+      issues,
+      model,
+      playerId: route.receiverId,
+      playersById,
+      svgStart: route.points[0],
+      toleranceSvg,
+      toleranceYards,
+    });
+  }
+
+  if (model.runDirection) {
+    validateArtStart({
+      artKind: 'runDirection',
+      footballStart: model.runDirection.footballPoints[0],
+      issueKind: 'routeStart',
+      issues,
+      model,
+      playerId: model.runDirection.receiverId,
+      playersById,
+      svgStart: model.runDirection.points[0],
+      toleranceSvg,
+      toleranceYards,
+    });
+  }
+
+  for (const assignment of model.blockerAssignments) {
+    validateArtStart({
+      artKind: 'blockerAssignment',
+      footballStart: assignment.footballStart,
+      issueKind: 'blockerStart',
+      issues,
+      model,
+      playerId: assignment.blockerId,
+      playersById,
+      svgStart: assignment.start,
+      toleranceSvg,
+      toleranceYards,
+    });
+  }
+
+  return issues;
 }
 
 export function createFootballToSvgTransform(
@@ -248,6 +337,69 @@ export function normalizeFootballSpotToSvg(
       transform.contentOffset.y +
       (transform.bounds.maxForward - localPoint.forward) * transform.scale,
   };
+}
+
+function validateArtStart({
+  artKind,
+  footballStart,
+  issueKind,
+  issues,
+  model,
+  playerId,
+  playersById,
+  svgStart,
+  toleranceSvg,
+  toleranceYards,
+}: {
+  artKind: PlayCallDiagramAlignmentIssue['artKind'];
+  footballStart: FootballSpot | undefined;
+  issueKind: 'blockerStart' | 'routeStart';
+  issues: PlayCallDiagramAlignmentIssue[];
+  model: Omit<PlayCallDiagramModel, 'alignmentIssues'>;
+  playerId: string;
+  playersById: Map<string, PlayCallPlayerMarker>;
+  svgStart: SvgPoint | undefined;
+  toleranceSvg: number;
+  toleranceYards: number;
+}): void {
+  const player = playersById.get(playerId);
+
+  if (!player || !footballStart || !svgStart) {
+    issues.push({
+      artKind,
+      footballStart: footballStart ? { ...footballStart } : undefined,
+      kind: issueKind === 'blockerStart'
+        ? 'blockerStartMissingPlayer'
+        : 'routeStartMissingPlayer',
+      playerId,
+      playId: model.playId,
+      svgStart: svgStart ? { ...svgStart } : undefined,
+    });
+    return;
+  }
+
+  const footballDistanceYards = distanceBetweenFootballSpots(
+    footballStart,
+    player.footballPosition,
+  );
+  const svgDistance = distanceBetweenSvgPoints(svgStart, player.point);
+
+  if (footballDistanceYards > toleranceYards || svgDistance > toleranceSvg) {
+    issues.push({
+      artKind,
+      footballDistanceYards,
+      footballPlayerPosition: { ...player.footballPosition },
+      footballStart: { ...footballStart },
+      kind: issueKind === 'blockerStart'
+        ? 'blockerStartMismatch'
+        : 'routeStartMismatch',
+      playerId,
+      playId: model.playId,
+      svgDistance,
+      svgPlayerPoint: { ...player.point },
+      svgStart: { ...svgStart },
+    });
+  }
 }
 
 function resolveBlockerTargets(
@@ -366,4 +518,12 @@ function toLocalFootballPoint(
     forward: (spot.z - snapPlacement.spot.z) * playDirectionZ,
     lateral: spot.x - snapPlacement.spot.x,
   };
+}
+
+function distanceBetweenFootballSpots(a: FootballSpot, b: FootballSpot): number {
+  return Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+function distanceBetweenSvgPoints(a: SvgPoint, b: SvgPoint): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.31] - 2026-06-23
+
+### Added
+
+- Added coordinate-level play-call diagram alignment validation so receiver routes, run arrows, and blocker/protection art must start on the matching player marker in both football-field coordinates and SVG coordinates.
+
+### Changed
+
+- Exposed source football positions for play-card player markers and blocker assignments to make route-art/player alignment auditable.
+
+### Tests
+
+- Verified `npx vitest run tests/playCallDiagram.test.ts tests/playbook.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.30] - 2026-06-23
 
 ### Added
