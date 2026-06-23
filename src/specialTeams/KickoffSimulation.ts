@@ -24,6 +24,7 @@ export const KICKOFF_SIMULATION_CONFIG = {
   expectedDistancePowerScaleYards: 0.22,
   flightBaseSeconds: 3.1,
   flightDistanceScaleSeconds: 0.012,
+  flightDurationScale: 0.86,
   flightPowerScaleSeconds: 0.006,
   maxReturnYards: 28,
   minReturnYards: 9,
@@ -114,15 +115,16 @@ export function simulateKickoff(input: KickoffSimulationInput): KickoffResult {
         rng,
         target,
       });
+  const unscaledFlightSeconds =
+    KICKOFF_SIMULATION_CONFIG.flightBaseSeconds +
+    traveledDistance * KICKOFF_SIMULATION_CONFIG.flightDistanceScaleSeconds +
+    power * KICKOFF_SIMULATION_CONFIG.flightPowerScaleSeconds;
 
   return {
     apexHeight:
       KICKOFF_SIMULATION_CONFIG.apexBaseYards +
       power * KICKOFF_SIMULATION_CONFIG.apexPowerScaleYards,
-    flightSeconds:
-      KICKOFF_SIMULATION_CONFIG.flightBaseSeconds +
-      traveledDistance * KICKOFF_SIMULATION_CONFIG.flightDistanceScaleSeconds +
-      power * KICKOFF_SIMULATION_CONFIG.flightPowerScaleSeconds,
+    flightSeconds: unscaledFlightSeconds * KICKOFF_SIMULATION_CONFIG.flightDurationScale,
     landingType,
     lateralErrorYards,
     longitudinalErrorYards,

@@ -91,6 +91,29 @@ describe('deterministic kickoff simulation', () => {
     expect(middle.y).toBeGreaterThan(end.y);
   });
 
+  it('speeds up ball flight without changing the normalized landing trajectory', () => {
+    const kickPower = 82;
+    const result = simulateKickoff(createInput({ kickPower, matchSeed: 2100, sequenceIndex: 1 }));
+    const traveledDistance = Math.hypot(
+      result.target.x - result.origin.x,
+      result.target.z - result.origin.z,
+    );
+    const unscaledFlightSeconds =
+      KICKOFF_SIMULATION_CONFIG.flightBaseSeconds +
+      traveledDistance * KICKOFF_SIMULATION_CONFIG.flightDistanceScaleSeconds +
+      kickPower * KICKOFF_SIMULATION_CONFIG.flightPowerScaleSeconds;
+    const middle = sampleKickoffBallPosition(result, result.flightSeconds / 2);
+
+    expect(KICKOFF_SIMULATION_CONFIG.flightDurationScale).toBeGreaterThan(0.8);
+    expect(KICKOFF_SIMULATION_CONFIG.flightDurationScale).toBeLessThan(1);
+    expect(result.flightSeconds).toBeCloseTo(
+      unscaledFlightSeconds * KICKOFF_SIMULATION_CONFIG.flightDurationScale,
+      5,
+    );
+    expect(middle.x).toBeCloseTo((result.origin.x + result.target.x) / 2, 5);
+    expect(middle.z).toBeCloseTo((result.origin.z + result.target.z) / 2, 5);
+  });
+
   it('syncs the landing reticle to the kickoff target and uncertainty radius', () => {
     const result = simulateKickoff(createInput({ kickAccuracy: 88, matchSeed: 3000 }));
     const reticle = createKickLandingReticle();

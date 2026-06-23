@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.39] - 2026-06-23
+
+### Changed
+
+- Sped up kickoff ball flight with a deterministic duration scale while preserving the existing landing target, trajectory shape, touchback classification, and return spot math.
+
+### Tests
+
+- Verified `npx vitest run tests/specialTeams/kickoff.test.ts` and `npm run build`.
+
 ## [1.21.38] - 2026-06-23
 
 ### Changed
