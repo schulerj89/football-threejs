@@ -1,7 +1,6 @@
 import type { GameExperienceSettings } from '../config/GameExperienceSettings';
 import type { LeagueData } from '../league/LeagueTypes';
 import { FootballHubScreen } from './FootballHubScreen';
-import { MatchSetupHelmetPreviewRenderer } from './MatchSetupHelmetPreview';
 import { SettingsPanel } from './SettingsPanel';
 import { TitleScreen, type TitleLoadingState } from './TitleScreen';
 
@@ -17,19 +16,16 @@ export interface TitleScreenControllerOptions {
 
 export class TitleScreenController {
   readonly footballHubScreen: FootballHubScreen;
-  readonly helmetPreview: MatchSetupHelmetPreviewRenderer;
   readonly settingsPanel: SettingsPanel;
   readonly titleScreen: TitleScreen;
 
   constructor(options: TitleScreenControllerOptions) {
-    this.helmetPreview = new MatchSetupHelmetPreviewRenderer(document.body);
     this.settingsPanel = new SettingsPanel({
       initialSettings: options.initialSettings,
       onSettingsChange: options.onSettingsChange,
     });
     this.footballHubScreen = new FootballHubScreen({
       getLeagueData: options.getLeagueData,
-      helmetPreview: this.helmetPreview,
       initialSettings: options.initialSettings,
       onBack: () => {
         this.footballHubScreen.setVisible(false);
@@ -86,6 +82,5 @@ export class TitleScreenController {
   dispose(): void {
     this.titleScreen.root.remove();
     this.footballHubScreen.dispose();
-    this.helmetPreview.dispose();
   }
 }

@@ -7,9 +7,7 @@ import type { RosterPlayer } from '../roster/RosterPlayer';
 import type { TeamRoster } from '../roster/TeamRoster';
 import type { TeamProfile } from '../teams/TeamProfile';
 import {
-  DEFAULT_TEAM_PROFILE_SETTINGS,
   normalizeTeamProfileSettings,
-  resolveCustomizedTeamProfile,
   type TeamProfileSettings,
 } from '../teams/TeamProfileStore';
 import {
@@ -17,9 +15,7 @@ import {
   resolveTeamPresentationTheme,
 } from '../teams/TeamThemeApplier';
 import { SETTINGS_DONE_EVENT, SettingsPanel } from './SettingsPanel';
-import { createTeamHelmetBadge, syncTeamHelmetBadge } from './TeamHelmetBadge';
 import { createTeamLogoBadge, type TeamLogoBadge } from './TeamLogoBadge';
-import { MatchSetupHelmetPreviewRenderer } from './MatchSetupHelmetPreview';
 import {
   createTeamSummaryViewModel,
   resolveRosterPlayerStatus,
@@ -42,7 +38,6 @@ type RosterSort = 'number' | 'name' | 'overall' | 'position';
 
 export interface FootballHubScreenOptions {
   getLeagueData: () => LeagueData | null;
-  helmetPreview?: MatchSetupHelmetPreviewRenderer;
   initialSettings: GameExperienceSettings;
   onBack: () => void;
   onFirstGesture?: () => void;
@@ -60,8 +55,6 @@ export class FootballHubScreen {
   private readonly playNowView = document.createElement('section');
   private readonly rostersView = document.createElement('section');
   private readonly settingsView = document.createElement('section');
-  private readonly playNowUserHelmet = document.createElement('div');
-  private readonly playNowOpponentHelmet = document.createElement('div');
   private readonly playNowTeamSelects = {
     opponent: document.createElement('select'),
     user: document.createElement('select'),
@@ -77,14 +70,6 @@ export class FootballHubScreen {
   private readonly playNowValidation = document.createElement('div');
   private readonly playNowCorrectionButton = document.createElement('button');
   private readonly playNowPlayButton = document.createElement('button');
-  private readonly playNowUserBadge = createTeamHelmetBadge(resolveCustomizedTeamProfile(
-    DEFAULT_TEAM_PROFILE_SETTINGS.userTeamId,
-    DEFAULT_TEAM_PROFILE_SETTINGS,
-  ).homeUniform);
-  private readonly playNowOpponentBadge = createTeamHelmetBadge(resolveCustomizedTeamProfile(
-    DEFAULT_TEAM_PROFILE_SETTINGS.opponentTeamId,
-    DEFAULT_TEAM_PROFILE_SETTINGS,
-  ).awayUniform);
   private readonly userLogo: TeamLogoBadge;
   private readonly opponentLogo: TeamLogoBadge;
   private readonly teamOverviewLogo: TeamLogoBadge;
@@ -99,8 +84,6 @@ export class FootballHubScreen {
   private readonly rosterTableBody = document.createElement('tbody');
   private readonly rosterDetail = document.createElement('aside');
   private readonly settingsPanel: SettingsPanel;
-  private readonly helmetPreview: MatchSetupHelmetPreviewRenderer;
-  private readonly ownsHelmetPreview: boolean;
   private activeSection: HubSection = 'playNow';
   private rosterTab: RosterTab = 'offense';
   private rosterSort: RosterSort = 'overall';
@@ -136,9 +119,6 @@ export class FootballHubScreen {
     this.root.setAttribute('aria-labelledby', 'football-hub-heading');
     this.root.tabIndex = -1;
     this.root.append(this.createShell());
-    this.helmetPreview = options.helmetPreview ?? new MatchSetupHelmetPreviewRenderer(this.root);
-    this.ownsHelmetPreview = !options.helmetPreview;
-    this.registerHelmetPreviews();
     this.root.addEventListener('pointerdown', () => this.handleFirstGesture(), { capture: true });
     this.root.addEventListener('keydown', (event) => this.handleKeyDown(event));
     document.body.append(this.root);
@@ -156,7 +136,6 @@ export class FootballHubScreen {
   setVisible(visible: boolean): void {
     this.visible = visible;
     this.root.hidden = !visible;
-    this.helmetPreview.setVisible(visible);
     if (visible) {
       this.sync();
       this.root.focus({ preventScroll: true });
@@ -168,9 +147,6 @@ export class FootballHubScreen {
   }
 
   dispose(): void {
-    if (this.ownsHelmetPreview) {
-      this.helmetPreview.dispose();
-    }
     this.settingsPanel.root.remove();
     this.root.remove();
   }
@@ -274,11 +250,7 @@ export class FootballHubScreen {
     panel.className = 'football-hub-play-team';
     panel.dataset.side = side;
     const logo = side === 'user' ? this.userLogo : this.opponentLogo;
-    const helmet = side === 'user' ? this.playNowUserHelmet : this.playNowOpponentHelmet;
-    const badge = side === 'user' ? this.playNowUserBadge : this.playNowOpponentBadge;
-    helmet.className = 'football-hub-helmet-preview';
-    helmet.dataset.preview = 'fallback';
-    helmet.append(badge);
+    logo.root.classList.add('football-hub-play-team-logo');
     const title = document.createElement('div');
     title.className = 'football-hub-play-team-title';
     title.dataset.role = side;
@@ -288,7 +260,7 @@ export class FootballHubScreen {
     const controls = this.createPlayTeamControls(side);
     this.playNowQuarterbacks[side].className = 'football-hub-play-team-qb';
     this.playNowQuarterbacks[side].dataset.role = `${side}-quarterback`;
-    panel.append(logo.root, title, helmet, controls, ratings, this.playNowQuarterbacks[side]);
+    panel.append(logo.root, title, controls, ratings, this.playNowQuarterbacks[side]);
     return panel;
   }
 
@@ -446,21 +418,6 @@ export class FootballHubScreen {
     this.rostersView.append(this.teamOverview, controls, tabs, tableWrap, this.rosterDetail);
   }
 
-  private registerHelmetPreviews(): void {
-    this.helmetPreview.registerPreview(
-      'hub-user',
-      this.playNowUserHelmet,
-      this.playNowUserBadge,
-      resolveTeamPresentationTheme(this.settings.teamProfiles).offense.uniform,
-    );
-    this.helmetPreview.registerPreview(
-      'hub-opponent',
-      this.playNowOpponentHelmet,
-      this.playNowOpponentBadge,
-      resolveTeamPresentationTheme(this.settings.teamProfiles).defense.uniform,
-    );
-  }
-
   private setSection(section: HubSection): void {
     this.activeSection = section;
     this.sync();
@@ -517,15 +474,23 @@ export class FootballHubScreen {
       : null;
     this.userLogo.sync(theme.offense.profile);
     this.opponentLogo.sync(theme.defense.profile);
-    syncTeamHelmetBadge(this.playNowUserBadge, theme.offense.uniform);
-    syncTeamHelmetBadge(this.playNowOpponentBadge, theme.defense.uniform);
-    this.helmetPreview.syncPreview('hub-user', theme.offense.uniform);
-    this.helmetPreview.syncPreview('hub-opponent', theme.defense.uniform);
     this.root.style.setProperty('--hub-accent', theme.offense.profile.colors.primary);
     this.root.style.setProperty('--hub-accent-2', theme.defense.profile.colors.primary);
 
-    this.syncPlayTeamControls(league, 'user', teamProfiles.userTeamId, teamProfiles.userUniform);
-    this.syncPlayTeamControls(league, 'opponent', teamProfiles.opponentTeamId, teamProfiles.opponentUniform);
+    this.syncPlayTeamControls(
+      league,
+      'user',
+      teamProfiles.userTeamId,
+      teamProfiles.userUniform,
+      teamProfiles.opponentTeamId,
+    );
+    this.syncPlayTeamControls(
+      league,
+      'opponent',
+      teamProfiles.opponentTeamId,
+      teamProfiles.opponentUniform,
+      teamProfiles.userTeamId,
+    );
     this.syncPlayTeamTitle('user', theme.offense.profile, teamProfiles.userUniform);
     this.syncPlayTeamTitle('opponent', theme.defense.profile, teamProfiles.opponentUniform);
     this.syncPlayTeamRatings('user', userSummary);
@@ -542,10 +507,13 @@ export class FootballHubScreen {
     side: 'opponent' | 'user',
     teamId: string,
     uniform: UniformVariant,
+    excludedTeamId: string,
   ): void {
     syncSelectOptions(
       this.playNowTeamSelects[side],
-      league.teams.map((team) => ({ label: team.displayName, value: team.id })),
+      league.teams
+        .filter((team) => team.id !== excludedTeamId)
+        .map((team) => ({ label: team.displayName, value: team.id })),
       teamId,
     );
     this.playNowUniformSelects[side].value = uniform;
@@ -624,8 +592,17 @@ export class FootballHubScreen {
     const currentTeamId = side === 'user'
       ? this.matchupSelection.userTeamId
       : this.matchupSelection.opponentTeamId;
-    const current = league.teams.findIndex((team) => team.id === currentTeamId);
-    const next = league.teams[wrapIndex(current + direction, league.teams.length)] ?? league.teams[0]!;
+    const excludedTeamId = side === 'user'
+      ? this.matchupSelection.opponentTeamId
+      : this.matchupSelection.userTeamId;
+    const selectableTeams = league.teams.filter((team) => team.id !== excludedTeamId);
+    if (selectableTeams.length === 0) {
+      return;
+    }
+    const current = selectableTeams.findIndex((team) => team.id === currentTeamId);
+    const next = selectableTeams[
+      wrapIndex((current >= 0 ? current : 0) + direction, selectableTeams.length)
+    ] ?? selectableTeams[0]!;
     this.updateMatchupSelection(updateMatchupTeam(
       this.matchupSelection,
       side,
@@ -801,7 +778,7 @@ function sectionTitle(section: HubSection): string {
 
 function sectionSubtitle(section: HubSection): string {
   return {
-    playNow: 'Review the matchup, uniforms, helmets, and ratings before setup.',
+    playNow: 'Review the matchup, uniforms, logos, and ratings before setup.',
     rosters: 'Browse team rosters and player attributes.',
     settings: 'Adjust presentation and gameplay preferences without leaving the hub.',
   }[section];

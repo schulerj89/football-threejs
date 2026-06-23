@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.18] - 2026-06-23
+
+### Changed
+
+- Replaced the Play Now 3D helmet preview with team logos and removed the preview renderer from the title/hub lifecycle.
+- Updated Play Now team selectors so each side omits the team currently selected by the other side, including previous/next navigation.
+
+### Fixed
+
+- Restored the previous committed helmet asset path after the experimental helmet did not fit player heads.
+- Prevented the same-team validation message from appearing in normal Play Now selection by avoiding invalid options up front.
+
+### Tests
+
+- Verified `npm run build`, `npx vitest run tests/matchSetup.test.ts`, `npx vitest run tests/matchSetup.test.ts tests/helmetVisual.test.ts tests/meshy/helmetPipeline.test.ts`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.21.17] - 2026-06-23
 
 ### Changed

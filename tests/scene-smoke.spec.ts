@@ -1192,8 +1192,8 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('OFF');
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('DEF');
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('ST');
-  await expect(page.locator('.football-hub-helmet-preview')).toHaveCount(2);
-  await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(1);
+  await expect(page.locator('.football-hub-play-team-logo')).toHaveCount(2);
+  await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(0);
   await page.getByRole('button', { name: 'Rosters' }).click();
   await expect(page.locator('.football-hub-team-row')).toHaveCount(0);
   await expect(page.locator('.football-hub-team-overview .hub-team-logo')).toHaveCount(1);
@@ -1214,7 +1214,7 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.getByLabel('Opponent uniform')).toBeVisible();
   await expect(page.locator('.football-hub-play-team[data-side="user"] .football-hub-play-team-qb')).toContainText(/^QB #\d+ .+/);
   await expect(page.locator('.football-hub-play-team[data-side="opponent"] .football-hub-play-team-qb')).toContainText(/^QB #\d+ .+/);
-  await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(1);
+  await expect(page.locator('.match-helmet-preview-canvas')).toHaveCount(0);
   await expect.poll(() => getStageVisualMatrixSnapshot(page)).toMatchObject({
     activePrimaryGroups: [],
     appPhase: 'footballHub',
@@ -1228,28 +1228,32 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
     gameplay: {
       visibleCount: 0,
     },
-    previewCanvasCount: 1,
+    previewCanvasCount: 0,
     profileId: 'football-player-v1',
   });
-  await expect.poll(async () =>
-    page.locator('.football-hub-play-team[data-side="user"] .football-hub-helmet-preview').getAttribute('data-preview'),
-  { timeout: 5000 }).toBe('glb');
-  await expect(page.locator('.football-hub-play-team[data-side="user"] .team-helmet-badge')).toBeHidden();
-  await expect(page.locator('.football-hub-play-team[data-side="opponent"] .team-helmet-badge')).toBeHidden();
-  const registeredTeamNames = listTeamProfiles().map((profile) => profile.displayName);
-  await expect(page.getByLabel('Your team').locator('option'))
-    .toHaveText(registeredTeamNames);
-  await expect(page.getByLabel('Opponent team').locator('option'))
-    .toHaveText(registeredTeamNames);
+  const registeredTeams = listTeamProfiles();
+  const userTeamSelect = page.getByLabel('Your team');
+  const opponentTeamSelect = page.getByLabel('Opponent team');
+  const selectedUserTeam = await userTeamSelect.inputValue();
+  const selectedOpponentTeam = await opponentTeamSelect.inputValue();
+  await expect(userTeamSelect.locator('option'))
+    .toHaveText(registeredTeams
+      .filter((profile) => profile.id !== selectedOpponentTeam)
+      .map((profile) => profile.displayName));
+  await expect(opponentTeamSelect.locator('option'))
+    .toHaveText(registeredTeams
+      .filter((profile) => profile.id !== selectedUserTeam)
+      .map((profile) => profile.displayName));
+  await expect(userTeamSelect.locator(`option[value="${selectedOpponentTeam}"]`)).toHaveCount(0);
+  await expect(opponentTeamSelect.locator(`option[value="${selectedUserTeam}"]`)).toHaveCount(0);
   const userTeamSelectWidth = await page.getByLabel('Your team').evaluate(
     (element) => element.getBoundingClientRect().width,
   );
   expect(userTeamSelectWidth).toBeGreaterThanOrEqual(200);
-  const userTeamSelect = page.getByLabel('Your team');
-  const opponentTeamSelect = page.getByLabel('Opponent team');
   const originalUserTeam = await userTeamSelect.inputValue();
   await page.getByRole('button', { name: 'Next user' }).click();
   await expect(userTeamSelect).not.toHaveValue(originalUserTeam);
+  await expect(opponentTeamSelect.locator(`option[value="${await userTeamSelect.inputValue()}"]`)).toHaveCount(0);
   await page.getByRole('button', { name: 'Previous user' }).click();
   await expect(userTeamSelect).toHaveValue(originalUserTeam);
   const userUniformSelect = page.getByLabel('Your uniform');
@@ -1257,11 +1261,8 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(userUniformSelect).toHaveValue('away');
   await userUniformSelect.selectOption('home');
   await expect(userUniformSelect).toHaveValue('home');
-  const originalOpponentTeam = await opponentTeamSelect.inputValue();
-  await opponentTeamSelect.selectOption(await userTeamSelect.inputValue());
-  await expect(page.getByRole('button', { name: 'Play Game' })).toBeDisabled();
-  await expect(page.locator('.football-hub-play-validation')).toContainText('Choose two different teams.');
-  await opponentTeamSelect.selectOption(originalOpponentTeam);
+  await expect(opponentTeamSelect.locator(`option[value="${await userTeamSelect.inputValue()}"]`)).toHaveCount(0);
+  await expect(page.locator('.football-hub-play-validation')).not.toContainText('Choose two different teams.');
   await expect(page.getByRole('button', { name: 'Play Game' })).toBeEnabled();
   await page.locator('.football-hub-screen').getByRole('button', { name: 'Back' }).click();
   await expect(page.locator('.football-hub-screen')).toBeHidden();

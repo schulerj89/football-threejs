@@ -2246,6 +2246,12 @@ body[data-game-mode="exhibition"] .score-counter {
   height: 70px;
 }
 
+.football-hub-play-team-logo {
+  width: clamp(86px, 10vw, 128px);
+  height: clamp(86px, 10vw, 128px);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+}
+
 .hub-team-list-logo,
 .hub-player-detail-logo {
   width: 44px;
@@ -2282,15 +2288,6 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-overview-header span {
   color: #cbd6cf;
   font-size: 13px;
-}
-
-.football-hub-helmet-preview {
-  position: relative;
-  grid-column: 1 / -1;
-  min-height: 190px;
-  overflow: hidden;
-  border-radius: 8px;
-  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.36));
 }
 
 .football-hub-vs {
@@ -2842,8 +2839,7 @@ body[data-game-mode="exhibition"] .score-counter {
   transition: opacity 160ms ease;
 }
 
-.team-helmet-preview[data-preview="glb"] .team-helmet-badge,
-.football-hub-helmet-preview[data-preview="glb"] .team-helmet-badge {
+.team-helmet-preview[data-preview="glb"] .team-helmet-badge {
   opacity: 0;
   visibility: hidden;
 }
