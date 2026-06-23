@@ -459,6 +459,41 @@ describe('kickoff match flow', () => {
     expect(decision.projectedReturnYardLine).toBeLessThan(decision.touchbackYardLine);
   });
 
+  it('fields a touchback kick with the assigned returner before ending the kickoff', () => {
+    const seed = findSeedForOpeningKickoff('touchback', 'user');
+    const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
+    const gameplay = createGameplayModel({ challengeMode: 'exhibition', playbookId: '11v11' });
+    const controller = createController(seed);
+    controller.prepareForPregame(gameplay);
+    controller.enterCoinToss();
+    const resolvedFace = resolveCoinTossFace(seed);
+    controller.resolveOpeningCoinToss(resolvedFace);
+    controller.beginOpeningKickoffAfterCoinToss(gameplay);
+    const kickoff = controller.getSnapshot().kickoff;
+    const layout = createKickoffFormation(kickoff, binding);
+    const state = createKickoffReturnState({ kickoff, layout, matchSeed: seed });
+    let sawCatch = false;
+    let sawTouchback = false;
+
+    startKickoffRunUp(state);
+    for (let frame = 0; frame < 900 && !sawTouchback; frame += 1) {
+      const events = updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+      sawCatch ||= events.catch;
+      sawTouchback ||= events.touchback;
+      if (events.touchback) {
+        expect(sawCatch).toBe(true);
+      }
+    }
+
+    expect(sawCatch).toBe(true);
+    expect(sawTouchback).toBe(true);
+    expect(state.outcome).toMatchObject({
+      receivingTeam: 'user',
+      type: 'touchback',
+    });
+    expect(state.outcome?.carrierRosterId).not.toBeNull();
+  });
+
   it('does not call for a touchback when the kick is fielded outside the end zone', () => {
     const result = simulateKickoff(createInput({ kickPower: 20, matchSeed: 4100 }));
     const decision = resolveKickoffTouchbackDecision({

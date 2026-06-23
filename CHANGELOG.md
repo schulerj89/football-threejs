@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.9] - 2026-06-23
+
+### Fixed
+
+- Fixed kickoff touchback handling so the assigned returner fields the kick before the return simulation decides to take a touchback, preserving the normal kickoff presentation sequence instead of skipping straight to the result.
+
+### Tests
+
+- Verified `npx vitest run tests/specialTeams/kickoff.test.ts`, `npm run build`, and `npm run test:unit`.
+
 ## [1.22.8] - 2026-06-23
 
 ### Added

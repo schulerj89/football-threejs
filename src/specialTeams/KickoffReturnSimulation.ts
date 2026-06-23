@@ -395,28 +395,14 @@ function updateKickoffFlight(
     receivingTeam: state.receivingTeam,
     result: state.result,
   });
-  if (touchbackDecision.takeTouchback && (catchableHeight || flightFinished)) {
-    const touchbackPosition = createFreeKickTouchbackPosition();
-    const touchbackSpot = possessionFieldPositionToWorldSpot(touchbackPosition, state.receivingTeam);
-    completeKickoffReturn(state, {
-      carrierRosterId: null,
-      carrierVisualId: null,
-      clockElapsedSeconds: state.returnClockElapsedSeconds,
-      deadBallSpot: { ...touchbackSpot },
-      receivingStartPosition: { ...touchbackPosition },
-      scoringTeam: null,
-      type: 'touchback',
-    });
-    state.phase = 'touchback';
-    events.touchback = true;
-    events.dead = true;
-    return;
-  }
 
   const returner = state.assignedReturner
     ? findParticipant(state, state.assignedReturner.returnerVisualId)
     : null;
   if (!returner) {
+    if (touchbackDecision.takeTouchback && flightFinished) {
+      completeTouchback(state, events);
+    }
     return;
   }
 
@@ -435,6 +421,9 @@ function updateKickoffFlight(
     state.catchSoundPlayed = true;
     state.phase = 'fielding';
     events.catch = true;
+    if (touchbackDecision.takeTouchback) {
+      completeTouchback(state, events, returner);
+    }
   }
 }
 
@@ -600,6 +589,27 @@ function completeKickoffReturn(
   for (const participant of state.participants) {
     participant.velocity = { x: 0, z: 0 };
   }
+}
+
+function completeTouchback(
+  state: KickoffReturnState,
+  events: KickoffReturnUpdateEvents,
+  carrier: KickoffReturnParticipantState | null = null,
+): void {
+  const touchbackPosition = createFreeKickTouchbackPosition();
+  const touchbackSpot = possessionFieldPositionToWorldSpot(touchbackPosition, state.receivingTeam);
+
+  completeKickoffReturn(state, {
+    carrierRosterId: carrier?.rosterPlayerId ?? null,
+    carrierVisualId: carrier?.visualId ?? null,
+    clockElapsedSeconds: state.returnClockElapsedSeconds,
+    deadBallSpot: { ...touchbackSpot },
+    receivingStartPosition: { ...touchbackPosition },
+    scoringTeam: null,
+    type: 'touchback',
+  });
+  events.touchback = true;
+  events.dead = true;
 }
 
 function startClock(state: KickoffReturnState, events: KickoffReturnUpdateEvents): void {
