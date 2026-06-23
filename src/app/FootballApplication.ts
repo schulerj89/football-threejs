@@ -104,6 +104,7 @@ export class FootballApplication {
     this.matchController = this.createMatchController();
     this.performanceProfiler = FramePerformanceProfiler.createFromSearchParams(searchParams);
     this.qualityController = new AdaptiveQualityController(this.gameExperience.settings.qualityMode);
+    const initialRosterBinding = this.createGameplayRosterBinding();
     this.gameplay = new GameplayRuntime({
       canPunt: (snapshot) => this.canPunt(snapshot),
       canStartPlay: (snapshot) => this.canStartPlay(snapshot),
@@ -114,6 +115,7 @@ export class FootballApplication {
       onPlaySelected: () => this.presentation.dismissPlayCallUiAfterSelection(),
       onPunt: (gameplay, snapshot) => this.handlePunt(gameplay, snapshot),
       playbookId: this.gameExperience.settings.playbookId,
+      rosterBinding: initialRosterBinding,
       searchParams,
       shouldHoldDeadPlayReset: () => this.presentation.shouldHoldDeadPlayReset(),
       skipPresentation: () => this.presentation.skipPresentation(),
@@ -153,7 +155,7 @@ export class FootballApplication {
       debugRoleColors: searchParams.has('debugRoleColors'),
       teamUniforms: resolveTeamPresentationTheme(this.gameExperience.settings.teamProfiles).uniforms,
       visualMode: this.gameExperience.settings.playerVisualMode,
-    }, this.createGameplayRosterBinding());
+    }, initialRosterBinding);
     this.playerVisuals.reconcile(this.getActivePlayers());
     this.preloadRequestedPlayerVisualMode();
     this.presentation.syncBall(
@@ -740,6 +742,7 @@ export class FootballApplication {
     this.preloadRequestedPlayerVisualMode();
     const rosterBinding = this.createGameplayRosterBinding();
     this.matchController.setRosterBinding(rosterBinding);
+    this.gameplay.setRosterBinding(rosterBinding);
     this.playerVisuals.setRosterBinding(rosterBinding);
     this.presentation.applyExperience(this.gameExperience);
     if (
@@ -811,6 +814,7 @@ export class FootballApplication {
     this.presentation.setPlays(this.gameplay.availablePlays);
     const binding = this.createGameplayRosterBinding();
     this.matchController.setRosterBinding(binding);
+    this.gameplay.setRosterBinding(binding);
     this.playerVisuals.setRosterBinding(binding);
     this.playerVisuals.reconcile(this.getActivePlayers());
     this.presentation.syncBall(this.gameplay.gameplayModel.ball);

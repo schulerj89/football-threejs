@@ -355,7 +355,7 @@ export class MatchFlowController {
     const result = snapshot.lastPlayResult;
     if (result && result.id !== this.lastProcessedPlayResultId) {
       this.lastProcessedPlayResultId = result.id;
-      this.handleUserPlayResult(result, snapshot);
+      this.handleUserPlayResult(gameplay, result, snapshot);
     }
 
     if (
@@ -518,7 +518,11 @@ export class MatchFlowController {
     };
   }
 
-  private handleUserPlayResult(result: PlayResult, snapshot: GameplaySnapshot): void {
+  private handleUserPlayResult(
+    gameplay: GameplayModel,
+    result: PlayResult,
+    snapshot: GameplaySnapshot,
+  ): void {
     this.recordUserPlayResultStats(result, snapshot);
 
     if (result.type === 'touchdown') {
@@ -542,6 +546,32 @@ export class MatchFlowController {
       });
       stopUserPlayClock(this.model);
       prepareExtraPoint(this.model, this.createExtraPointState('user'), summary);
+      return;
+    }
+
+    if (result.type === 'safety') {
+      const startingFieldPosition = offenseSpotToPossessionFieldPosition(result.startingBallSpot);
+      const endingFieldPosition = offenseSpotToPossessionFieldPosition(result.endingBallSpot);
+      const summary = createDriveSummary({
+        description: 'The ball carrier is tackled in his own end zone for a safety.',
+        driveNumber: this.model.driveNumber,
+        elapsedSeconds: 0,
+        endingFieldPosition,
+        plays: 1,
+        possession: 'user',
+        quarter: this.model.quarter,
+        result: 'safety',
+        scoringEvents: [
+          { points: 2, team: 'opponent', type: 'safety' },
+        ],
+        startedAtSeconds: this.model.clock.remainingSeconds,
+        startingFieldPosition,
+        yards: result.yardsGained,
+      });
+      addDriveSummary(this.model, summary);
+      stopUserPlayClock(this.model);
+      this.resetGameplayForFreeKickTouchback(gameplay);
+      this.scheduleKickoff('postSafety', 'opponent');
       return;
     }
 
@@ -712,6 +742,7 @@ export class MatchFlowController {
       kickPower: ratings.kickPower,
       kickingTeam,
       matchSeed: this.model.deterministicSeed,
+      placement: reason === 'postSafety' ? 'safetyFreeKick' : 'kickoff',
       rules: this.model.rules,
       sequenceIndex,
     });
@@ -971,7 +1002,7 @@ function stableRatingOffset(value: string): number {
 }
 
 function isScoringDriveResult(result: DriveSummaryResult): boolean {
-  return result === 'fieldGoal' || result === 'touchdown';
+  return result === 'fieldGoal' || result === 'safety' || result === 'touchdown';
 }
 
 function resolveClockExpiredDriveResult(quarter: number): DriveSummaryResult {

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import type { GameplaySnapshot, PlayState } from '../src/playState';
-import type { PlayerSnapshot } from '../src/playerModel';
+import { DEFAULT_PLAYER_MOVEMENT_PROFILE, type PlayerSnapshot } from '../src/playerModel';
 import { createPlaceholderPlayerVisual, syncPlayerVisual } from '../src/playerVisual';
 import {
   PLAYER_POSE_CONFIG,
@@ -250,6 +250,7 @@ function createPlayer(overrides: Partial<PlayerSnapshot> = {}): PlayerSnapshot {
     team: 'offense',
     velocity: { x: 0, z: 0 },
     ...overrides,
+    movement: overrides.movement ?? DEFAULT_PLAYER_MOVEMENT_PROFILE,
   };
 }
 

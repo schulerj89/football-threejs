@@ -18,6 +18,7 @@ import {
   createGameplayRosterBinding,
   getRosterPlayerForGameplayId,
 } from '../src/roster/GameplayRosterBinding';
+import { createPlayerMovementProfileFromRosterPlayer } from '../src/playerMovementProfile';
 import {
   STARTER_TEAM_ROSTERS,
   getTeamRosterOrDefault,
@@ -118,6 +119,19 @@ describe('roster identity', () => {
     expect(snapshot.players.some((player) => player.id.includes(' '))).toBe(false);
   });
 
+  it('applies roster ratings to gameplay movement profiles without changing player IDs', () => {
+    const binding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
+    const gameplay = createGameplayModel({ playbookId: '11v11', rosterBinding: binding });
+    const runningBack = gameplay.players.find((player) => player.id === 'offense-rb');
+    const rosterPlayer = getRosterPlayerForGameplayId(binding, 'offense-rb');
+
+    expect(runningBack?.movement.source).toBe('ratings');
+    expect(runningBack?.movement).toEqual(
+      createPlayerMovementProfileFromRosterPlayer(rosterPlayer!),
+    );
+    expect(runningBack?.id).toBe('offense-rb');
+  });
+
   it('keeps slot-to-roster identity stable across play changes and reloads', () => {
     const first = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
     const second = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
@@ -210,6 +224,7 @@ describe('roster identity', () => {
       maximumNonKickerDepthBehindKickingLineYards: 5,
       minimumKickingPlayersPerSideOfKicker: 4,
       receivingRestrainingLineDistanceYards: 10,
+      safetyFreeKickYardLine: 20,
       touchbackReceivingYardLine: 25,
       tryLineYardsFromOpponentGoal: 3,
     });

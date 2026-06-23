@@ -184,6 +184,23 @@ describe('drive and down model', () => {
     expect(drive.lastDriveResult).toBeNull();
   });
 
+  it('ends the drive after a safety', () => {
+    const drive = createDriveModel();
+    const update = applyPlayResultToDrive(
+      drive,
+      createPlayResult(1, 'safety', { x: 0, z: -51 }),
+    );
+
+    expect(update).toMatchObject({
+      applied: true,
+      driveEnded: true,
+      newFirstDown: false,
+      nextSnapLane: 'middle',
+      nextSnapSpot: INITIAL_BALL_SPOT,
+    });
+    expect(drive.lastDriveResult?.type).toBe('safety');
+  });
+
   it('does not apply the same play result more than once', () => {
     const drive = createDriveModel();
     const result = createPlayResult(1, 'tackle', { x: 0, z: LINE_OF_SCRIMMAGE_Z + 3 });
@@ -211,7 +228,7 @@ function createPlayResult(
     endingBallSpot,
     id,
     reason: type,
-    scoringTeam: type === 'touchdown' ? 'offense' : null,
+    scoringTeam: type === 'touchdown' ? 'offense' : type === 'safety' ? 'defense' : null,
     startingBallSpot: INITIAL_BALL_SPOT,
     type,
     yardsGained: endingBallSpot.z - INITIAL_BALL_SPOT.z,

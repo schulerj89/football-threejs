@@ -9,6 +9,7 @@ import {
   loadCrowdPresentationSettings,
   saveCrowdPresentationSettings,
 } from '../src/presentation/CrowdPresentationController';
+import { DEFAULT_PLAYER_MOVEMENT_PROFILE } from '../src/playerModel';
 import type { GameplaySnapshot, PlayResult } from '../src/playState';
 
 describe('crowd presentation controller', () => {
@@ -242,6 +243,7 @@ function makeSnapshot(playState: GameplaySnapshot['playState']): GameplaySnapsho
       currentState: 'idle',
       facingRadians: 0,
       id: 'offense-rb',
+      movement: DEFAULT_PLAYER_MOVEMENT_PROFILE,
       position: { x: 0, z: -15 },
       role: 'runner',
       team: 'offense',

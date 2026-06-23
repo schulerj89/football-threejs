@@ -388,6 +388,7 @@ function createAudit(snapshot: ReturnType<typeof snapshotGameplayModel>, play = 
         playReset: 0,
         playStarted: 0,
         sack: 40,
+        safety: 50,
         tackle: 10,
         touchdown: 60,
         turnoverOnDowns: 50,

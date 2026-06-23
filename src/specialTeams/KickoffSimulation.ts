@@ -11,7 +11,7 @@ import type {
   KickoffState,
   KickoffSimulationInput,
 } from './KickoffTypes';
-import { resolveKickoffLineSpot } from './CollegeSpecialTeamsRuleSpec';
+import { resolveKickoffLineSpot, resolveSafetyFreeKickLineSpot } from './CollegeSpecialTeamsRuleSpec';
 
 export const KICKOFF_SIMULATION_CONFIG = {
   accuracyLongitudinalStdMaxYards: 9.5,
@@ -62,14 +62,19 @@ export function cloneKickoffState(state: KickoffState): KickoffState {
   };
 }
 
-export function createKickoffOrigin(kickingTeam: MatchPossession): {
+export function createKickoffOrigin(
+  kickingTeam: MatchPossession,
+  placement: 'kickoff' | 'safetyFreeKick' = 'kickoff',
+): {
   direction: KickoffDirection;
   origin: FootballSpot;
 } {
   const direction: KickoffDirection = kickingTeam === 'user' ? 1 : -1;
   return {
     direction,
-    origin: resolveKickoffLineSpot(direction),
+    origin: placement === 'safetyFreeKick'
+      ? resolveSafetyFreeKickLineSpot(direction)
+      : resolveKickoffLineSpot(direction),
   };
 }
 
@@ -147,8 +152,9 @@ export function createKickoffSimulationInput(options: {
   matchSeed: number;
   rules: MatchRules;
   sequenceIndex: number;
+  placement?: 'kickoff' | 'safetyFreeKick';
 }): KickoffSimulationInput {
-  const placement = createKickoffOrigin(options.kickingTeam);
+  const placement = createKickoffOrigin(options.kickingTeam, options.placement);
 
   return {
     direction: placement.direction,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveSnapPlacement } from '../src/ballSpotting';
-import { DEFENDER_CONFIG, isTackleContact } from '../src/defenderModel';
+import { DEFENDER_CONFIG, isTackleContact, updateDefenderPursuit } from '../src/defenderModel';
 import { INITIAL_BALL_SPOT, PLAYABLE_FIELD_BOUNDS } from '../src/field';
 import { createFormationPlayers, getPlay, getRushingPlay } from '../src/playbook';
 import { PLAYER_MOVEMENT_CONFIG, createPlayerModel, type PlayerModel } from '../src/playerModel';
@@ -78,6 +78,28 @@ describe('five-on-five rushing drill simulation', () => {
       DEFENDER_CONFIG.pursuitSpeed * BLOCKING_CONFIG.engagedDefenderSpeedMultiplier,
     );
     expect(vectorLength(unblockedDefender.velocity)).toBeCloseTo(DEFENDER_CONFIG.pursuitSpeed);
+  });
+
+  it('uses rated movement speed for defender pursuit when a roster profile is assigned', () => {
+    const carrier = makePlayer('carrier', 'offense', 'runner', 0, 10);
+    const defender = createPlayerModel(
+      { x: 0, z: 0 },
+      {
+        id: 'rated-defender',
+        movement: {
+          acceleration: 40,
+          deceleration: 50,
+          maxSpeed: 11.25,
+          source: 'ratings',
+        },
+        role: 'defender',
+        team: 'defense',
+      },
+    );
+
+    updateDefenderPursuit(defender, carrier, 0.1);
+
+    expect(vectorLength(defender.velocity)).toBeCloseTo(11.25);
   });
 
   it('runs the Quick Pass receiver route and has the coverage defender track the receiver', () => {

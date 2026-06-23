@@ -23,6 +23,7 @@ import type {
 export const PRESENTATION_EVENT_PRECEDENCE: Record<PresentationAudioEventType, number> = {
   touchdown: 60,
   turnoverOnDowns: 50,
+  safety: 50,
   sack: 40,
   firstDown: 30,
   incomplete: 20,

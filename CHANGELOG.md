@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.8] - 2026-06-23
+
+### Added
+
+- Added roster-rating-based movement profiles so controlled players and CPU defenders use speed, acceleration, and deceleration derived from player attributes instead of giving the user a flat speed advantage.
+- Added safety detection when the user ball carrier is tackled or sacked in their own end zone, including opponent scoring, safety HUD/audio handling, and the NCAA-style post-safety free kick from the kicking team's own 20-yard line.
+
+### Tests
+
+- Verified `npm run build`, `npm run test:unit`, and `npx vitest run tests/playState.test.ts tests/driveModel.test.ts tests/matchModel.test.ts tests/specialTeams/kickoff.test.ts tests/rosterIdentity.test.ts`.
+
 ## [1.22.7] - 2026-06-23
 
 ### Changed

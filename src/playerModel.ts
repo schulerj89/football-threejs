@@ -22,11 +22,19 @@ export type PlayerState =
   | 'pursuing'
   | 'engaged';
 
+export interface PlayerMovementProfile {
+  acceleration: number;
+  deceleration: number;
+  maxSpeed: number;
+  source: 'default' | 'ratings';
+}
+
 export interface PlayerModel {
   collisionRadius: number;
   currentState: PlayerState;
   facingRadians: number;
   id: string;
+  movement: PlayerMovementProfile;
   position: Vector2;
   role: PlayerRole;
   team: PlayerTeam;
@@ -38,6 +46,7 @@ export interface PlayerSnapshot {
   currentState: PlayerState;
   facingRadians: number;
   id: string;
+  movement: PlayerMovementProfile;
   position: Vector2;
   role: PlayerRole;
   team: PlayerTeam;
@@ -56,10 +65,18 @@ export const PLAYER_MOVEMENT_CONFIG = {
   initialFacingRadians: 0,
 } as const;
 
+export const DEFAULT_PLAYER_MOVEMENT_PROFILE: PlayerMovementProfile = {
+  acceleration: PLAYER_MOVEMENT_CONFIG.acceleration,
+  deceleration: PLAYER_MOVEMENT_CONFIG.deceleration,
+  maxSpeed: PLAYER_MOVEMENT_CONFIG.maxSpeed,
+  source: 'default',
+};
+
 export interface CreatePlayerModelOptions {
   collisionRadius?: number;
   facingRadians?: number;
   id?: string;
+  movement?: PlayerMovementProfile;
   role?: PlayerRole;
   state?: PlayerState;
   team?: PlayerTeam;
@@ -74,6 +91,7 @@ export function createPlayerModel(
     currentState: options.state ?? 'idle',
     facingRadians: options.facingRadians ?? PLAYER_MOVEMENT_CONFIG.initialFacingRadians,
     id: options.id ?? RUNNER_PLAYER_ID,
+    movement: clonePlayerMovementProfile(options.movement ?? DEFAULT_PLAYER_MOVEMENT_PROFILE),
     position: { x: initialSpot.x, z: initialSpot.z },
     role: options.role ?? 'runner',
     team: options.team ?? 'offense',
@@ -102,9 +120,19 @@ export function snapshotPlayerModel(player: PlayerModel): PlayerSnapshot {
     currentState: player.currentState,
     facingRadians: player.facingRadians,
     id: player.id,
+    movement: clonePlayerMovementProfile(player.movement),
     position: { ...player.position },
     role: player.role,
     team: player.team,
     velocity: { ...player.velocity },
+  };
+}
+
+export function clonePlayerMovementProfile(profile: PlayerMovementProfile): PlayerMovementProfile {
+  return {
+    acceleration: profile.acceleration,
+    deceleration: profile.deceleration,
+    maxSpeed: profile.maxSpeed,
+    source: profile.source,
   };
 }

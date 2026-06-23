@@ -6,6 +6,7 @@ import {
 import { derivePresentationAudioEvents } from '../src/audio/PresentationEventBridge';
 import type { AudioMixerSnapshot } from '../src/audio/AudioMixer';
 import type { DriveSnapshot } from '../src/driveModel';
+import { DEFAULT_PLAYER_MOVEMENT_PROFILE } from '../src/playerModel';
 import type { GameplaySnapshot, PlayResult } from '../src/playState';
 
 describe('presentation audio event bridge and director', () => {
@@ -319,6 +320,7 @@ function makeSnapshot(overrides: {
       currentState: playState === 'live' ? 'userControlled' : 'idle',
       facingRadians: 0,
       id: 'offense-rb',
+      movement: DEFAULT_PLAYER_MOVEMENT_PROFILE,
       position: { x: 0, z: drive.lineOfScrimmage.z },
       role: 'runner',
       team: 'offense',

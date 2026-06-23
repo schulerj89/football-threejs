@@ -55,6 +55,34 @@ describe('player movement simulation', () => {
     expect(speedOf(player)).toBeCloseTo(0, 5);
   });
 
+  it('uses player movement profiles for rated top speed and burst', () => {
+    const fastPlayer = createPlayerModel(undefined, {
+      movement: {
+        acceleration: 60,
+        deceleration: 72,
+        maxSpeed: 12,
+        source: 'ratings',
+      },
+    });
+    const slowerPlayer = createPlayerModel(undefined, {
+      movement: {
+        acceleration: 30,
+        deceleration: 72,
+        maxSpeed: 9,
+        source: 'ratings',
+      },
+    });
+
+    updatePlayerSimulation(fastPlayer, { x: 0, z: 1 }, 0.1, PLAYABLE_FIELD_BOUNDS);
+    updatePlayerSimulation(slowerPlayer, { x: 0, z: 1 }, 0.1, PLAYABLE_FIELD_BOUNDS);
+    expect(speedOf(fastPlayer)).toBeGreaterThan(speedOf(slowerPlayer));
+
+    stepForSeconds(fastPlayer, { x: 0, z: 1 }, 2);
+    stepForSeconds(slowerPlayer, { x: 0, z: 1 }, 2);
+    expect(speedOf(fastPlayer)).toBeCloseTo(12, 5);
+    expect(speedOf(slowerPlayer)).toBeCloseTo(9, 5);
+  });
+
   it('updates facing toward movement direction', () => {
     const player = createPlayerModel();
 

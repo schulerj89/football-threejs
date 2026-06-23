@@ -29,11 +29,12 @@ export type DriveSummaryResult =
   | 'endOfQuarter'
   | 'fieldGoal'
   | 'punt'
+  | 'safety'
   | 'touchdown'
   | 'turnover'
   | 'turnoverOnDowns';
 
-export type ScoringEventType = 'extraPoint' | 'fieldGoal' | 'touchdown';
+export type ScoringEventType = 'extraPoint' | 'fieldGoal' | 'safety' | 'touchdown';
 
 export type PossessionTransitionReason =
   | 'kickoffTouchback'
@@ -41,6 +42,7 @@ export type PossessionTransitionReason =
   | 'puntDowned'
   | 'puntTouchback'
   | 'puntReturn'
+  | 'safetyFreeKick'
   | 'scoringKickoff'
   | 'turnover'
   | 'turnoverOnDowns';

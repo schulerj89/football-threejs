@@ -26,6 +26,7 @@ export interface GameplayHud {
   resultMessage: HTMLDivElement;
   root: HTMLDivElement;
   sackMessage: HTMLDivElement;
+  safetyMessage: HTMLDivElement;
   score: HTMLDivElement;
   tackleMessage: HTMLDivElement;
   targetLabel: HTMLDivElement;
@@ -81,6 +82,11 @@ export function createGameplayHud(): GameplayHud {
   sackMessage.textContent = 'SACK';
   root.appendChild(sackMessage);
 
+  const safetyMessage = document.createElement('div');
+  safetyMessage.className = 'safety-message';
+  safetyMessage.textContent = 'SAFETY';
+  root.appendChild(safetyMessage);
+
   const outOfBoundsMessage = document.createElement('div');
   outOfBoundsMessage.className = 'out-of-bounds-message';
   outOfBoundsMessage.textContent = 'OUT OF BOUNDS';
@@ -123,6 +129,7 @@ export function createGameplayHud(): GameplayHud {
     resultMessage,
     root,
     sackMessage,
+    safetyMessage,
     score,
     tackleMessage,
     targetLabel,
@@ -168,6 +175,7 @@ export function syncGameplayHud(
   hud.cadenceStatus.dataset.warning = cadence?.earlySnapWarningVisible ? 'true' : 'false';
   hud.tackleMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'tackle';
   hud.sackMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'sack';
+  hud.safetyMessage.hidden = isGameOver || lastPlayResult?.type !== 'safety';
   hud.touchdownMessage.hidden = isGameOver || lastPlayResult?.type !== 'touchdown';
   hud.outOfBoundsMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'outOfBounds';
   hud.incompleteMessage.hidden = isGameOver || isTurnoverOnDowns || lastPlayResult?.type !== 'incomplete';
@@ -176,7 +184,7 @@ export function syncGameplayHud(
   hud.resultMessage.hidden =
     isGameOver ||
     !lastPlayResult ||
-    !['tackle', 'outOfBounds', 'incomplete', 'sack'].includes(lastPlayResult.type);
+    !['tackle', 'outOfBounds', 'incomplete', 'sack', 'safety'].includes(lastPlayResult.type);
   hud.resultMessage.textContent = lastPlayResult ? formatYards(lastPlayResult.yardsGained) : '';
   hud.gameOverMessage.hidden = !isGameOver;
   hud.gameOverMessage.textContent = isGameOver

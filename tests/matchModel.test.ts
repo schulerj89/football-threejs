@@ -23,7 +23,8 @@ import {
   createOwnYardLinePosition,
   possessionFieldPositionToOffenseSpot,
 } from '../src/match/FieldPositionModel';
-import { PLAYABLE_FIELD_BOUNDS } from '../src/fieldSpec';
+import { NEAR_GOAL_LINE_Z, PLAYABLE_FIELD_BOUNDS } from '../src/fieldSpec';
+import { COLLEGE_SPECIAL_TEAMS_RULE_SPEC } from '../src/specialTeams/CollegeSpecialTeamsRuleSpec';
 import {
   DEFAULT_OPPONENT_TEAM_ID,
   DEFAULT_USER_TEAM_ID,
@@ -219,6 +220,48 @@ describe('offense-only exhibition match model', () => {
 
     expect(controller.beginPreparedExtraPoint()).toBe(true);
     expect(controller.getSnapshot().phase).toBe('extraPoint');
+  });
+
+  it('records a user safety and schedules the user safety free kick from the 20', () => {
+    const gameplay = createGameplayModel({
+      challengeMode: 'exhibition',
+      playbookId: '11v11',
+    });
+    const controller = createController({ seed: 20260620 });
+    controller.start(gameplay);
+
+    expect(startPlay(gameplay)).toBe(true);
+    gameplay.player.position.z = NEAR_GOAL_LINE_Z - 1;
+    const tackler = gameplay.players.find((player) => player.team === 'defense');
+    if (!tackler) {
+      throw new Error('Expected a defender for safety setup');
+    }
+    tackler.position = { ...gameplay.player.position };
+    updateGameplayModel(gameplay, 0, { suppressDeadPlayReset: true });
+    const safetyResult = gameplay.lastPlayResult;
+    controller.update(0, gameplay, snapshotGameplayModel(gameplay));
+
+    const snapshot = controller.getSnapshot();
+    expect(safetyResult).toMatchObject({
+      scoringTeam: 'defense',
+      type: 'safety',
+    });
+    expect(snapshot.opponentScore).toBe(2);
+    expect(snapshot.userScore).toBe(0);
+    expect(snapshot.previousDriveSummary).toMatchObject({
+      possession: 'user',
+      result: 'safety',
+      scoringEvents: [
+        { points: 2, team: 'opponent', type: 'safety' },
+      ],
+    });
+    expect(snapshot.phase).toBe('kickoff');
+    expect(snapshot.kickoff.reason).toBe('postSafety');
+    expect(snapshot.kickoff.kickingTeam).toBe('user');
+    expect(snapshot.kickoff.receivingTeam).toBe('opponent');
+    expect(snapshot.kickoff.result?.origin.z).toBe(
+      NEAR_GOAL_LINE_Z + COLLEGE_SPECIAL_TEAMS_RULE_SPEC.safetyFreeKickYardLine,
+    );
   });
 
   it('turns a failed fourth down into one opponent possession', () => {

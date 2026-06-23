@@ -11,6 +11,7 @@ export type PresentationAudioEventType =
   | 'playReset'
   | 'playStarted'
   | 'sack'
+  | 'safety'
   | 'tackle'
   | 'touchdown'
   | 'turnoverOnDowns';
@@ -106,6 +107,7 @@ function isFirstDownResult(
   if (
     result.type === 'touchdown' ||
     result.type === 'incomplete' ||
+    result.type === 'safety' ||
     current.drive.state !== 'active'
   ) {
     return false;

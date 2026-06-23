@@ -1,6 +1,7 @@
 import { OPPOSING_GOAL_LINE_Z } from './field';
 import type { FootballSpot } from './fieldScale';
 import { createPlayerModel, type PlayerModel, type PlayerSnapshot, type Vector2 } from './playerModel';
+import { getRatedPursuitSpeed } from './playerMovementProfile';
 
 export type DefenderModel = PlayerModel;
 export type DefenderSnapshot = PlayerSnapshot;
@@ -53,7 +54,7 @@ export function updateDefenderPursuit(
     carrier.position.z - defender.position.z,
   );
   const maxTurn = DEFENDER_CONFIG.steeringRateRadiansPerSecond * delta;
-  const speed = DEFENDER_CONFIG.pursuitSpeed * speedMultiplier;
+  const speed = getRatedPursuitSpeed(defender, DEFENDER_CONFIG.pursuitSpeed) * speedMultiplier;
 
   defender.facingRadians = rotateToward(defender.facingRadians, desiredFacing, maxTurn);
   defender.velocity.x = Math.sin(defender.facingRadians) * speed;
@@ -82,6 +83,7 @@ export function snapshotDefenderModel(defender: DefenderModel): DefenderSnapshot
     currentState: defender.currentState,
     facingRadians: defender.facingRadians,
     id: defender.id,
+    movement: { ...defender.movement },
     position: { ...defender.position },
     role: defender.role,
     team: defender.team,

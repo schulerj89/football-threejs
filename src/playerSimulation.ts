@@ -1,6 +1,5 @@
 import type { PlayableFieldBounds } from './field';
 import {
-  PLAYER_MOVEMENT_CONFIG,
   type PlayerModel,
   type Vector2,
 } from './playerModel';
@@ -20,12 +19,12 @@ export function updatePlayerSimulation(
   const hasInput = input.x !== 0 || input.z !== 0;
   const targetVelocity = hasInput
     ? {
-        x: input.x * PLAYER_MOVEMENT_CONFIG.maxSpeed,
-        z: input.z * PLAYER_MOVEMENT_CONFIG.maxSpeed,
+        x: input.x * player.movement.maxSpeed,
+        z: input.z * player.movement.maxSpeed,
       }
     : { x: 0, z: 0 };
   const velocityStep =
-    (hasInput ? PLAYER_MOVEMENT_CONFIG.acceleration : PLAYER_MOVEMENT_CONFIG.deceleration) * delta;
+    (hasInput ? player.movement.acceleration : player.movement.deceleration) * delta;
 
   player.velocity = moveVectorToward(player.velocity, targetVelocity, velocityStep);
 

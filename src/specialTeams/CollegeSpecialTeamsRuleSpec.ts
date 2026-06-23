@@ -11,17 +11,26 @@ export const COLLEGE_SPECIAL_TEAMS_RULE_SPEC = {
   kickoffYardLine: 35,
   maximumNonKickerDepthBehindKickingLineYards: 5,
   minimumKickingPlayersPerSideOfKicker: 4,
+  safetyFreeKickYardLine: 20,
   receivingRestrainingLineDistanceYards: 10,
   touchbackReceivingYardLine: 25,
   tryLineYardsFromOpponentGoal: 3,
 } as const;
 
 export function resolveKickoffLineSpot(direction: KickoffDirection): FootballSpot {
+  return resolveFreeKickLineSpot(direction, COLLEGE_SPECIAL_TEAMS_RULE_SPEC.kickoffYardLine);
+}
+
+export function resolveSafetyFreeKickLineSpot(direction: KickoffDirection): FootballSpot {
+  return resolveFreeKickLineSpot(direction, COLLEGE_SPECIAL_TEAMS_RULE_SPEC.safetyFreeKickYardLine);
+}
+
+function resolveFreeKickLineSpot(direction: KickoffDirection, yardLine: number): FootballSpot {
   return {
     x: 0,
     z: direction > 0
-      ? NEAR_GOAL_LINE_Z + COLLEGE_SPECIAL_TEAMS_RULE_SPEC.kickoffYardLine
-      : FAR_GOAL_LINE_Z - COLLEGE_SPECIAL_TEAMS_RULE_SPEC.kickoffYardLine,
+      ? NEAR_GOAL_LINE_Z + yardLine
+      : FAR_GOAL_LINE_Z - yardLine,
   };
 }
 

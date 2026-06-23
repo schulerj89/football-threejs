@@ -16,6 +16,7 @@ import { resetDriveModel } from '../src/driveModel';
 import {
   INITIAL_BALL_SPOT,
   LINE_OF_SCRIMMAGE_Z,
+  NEAR_GOAL_LINE_Z,
   PLAYABLE_FIELD_BOUNDS,
   PLAYER_MOVEMENT_BOUNDS,
 } from '../src/field';
@@ -203,6 +204,26 @@ describe('play state transitions', () => {
       type: 'outOfBounds',
     });
     expect(outOfBounds.nextSnapSpot.x).toBeLessThanOrEqual(PLAYABLE_FIELD_BOUNDS.maxX);
+  });
+
+  it('records a safety when the ball carrier is tackled in his own end zone', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+    startPlay(gameplay);
+    gameplay.player.position.z = NEAR_GOAL_LINE_Z - 1;
+    updateCarriedBallPosition(gameplay.ball, gameplay.player);
+    getPlayer(gameplay.players, 'defense-safety').position = { ...gameplay.player.position };
+
+    updateGameplayModel(gameplay, 0);
+
+    expect(gameplay.playState).toBe('dead');
+    expect(gameplay.lastPlayResult).toMatchObject({
+      scoringTeam: 'defense',
+      type: 'safety',
+    });
+    expect(gameplay.drive.lastDriveResult).toMatchObject({
+      reason: 'safety',
+      type: 'safety',
+    });
   });
 
   it('starts Spread Quick 11 with five stable receiver targets', () => {

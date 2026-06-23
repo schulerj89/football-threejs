@@ -14,7 +14,7 @@ import type {
 } from './KickoffReturnSimulation';
 
 export type KickoffLandingType = 'fielded' | 'touchback';
-export type KickoffReason = 'opening' | 'postScore' | 'secondHalf';
+export type KickoffReason = 'opening' | 'postScore' | 'postSafety' | 'secondHalf';
 export type KickoffDirection = -1 | 1;
 export type KickoffPresentationPhase =
   | 'completed'

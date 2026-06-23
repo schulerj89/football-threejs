@@ -769,6 +769,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .out-of-bounds-message,
 .pass-warning-message,
 .sack-message,
+.safety-message,
 .turnover-message,
 .touchdown-message {
   position: absolute;
@@ -805,6 +806,11 @@ body[data-game-mode="exhibition"] .score-counter {
 .sack-message {
   color: #f3f5f6;
   border-color: rgba(243, 245, 246, 0.4);
+}
+
+.safety-message {
+  color: #f2b84b;
+  border-color: rgba(242, 184, 75, 0.5);
 }
 
 .pass-warning-message {
@@ -846,6 +852,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .pass-warning-message[hidden],
 .result-message[hidden],
 .sack-message[hidden],
+.safety-message[hidden],
 .target-label[hidden],
 .turnover-message[hidden],
 .touchdown-message[hidden] {

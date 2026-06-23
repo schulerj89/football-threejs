@@ -16,6 +16,7 @@ import {
   resetPlay,
   restartScoreAttack,
   selectPlay,
+  setGameplayRosterBinding,
   snapshotGameplayModel,
   startPlay,
   updateGameplayModel,
@@ -39,6 +40,7 @@ import {
   type PreSnapCadenceEvents,
   type PreSnapCadenceSnapshot,
 } from '../gameplay/PreSnapCadenceModel';
+import type { GameplayRosterBinding } from '../roster/GameplayRosterBinding';
 
 export interface GameplayRuntimeOptions {
   canPunt?: (snapshot: GameplaySnapshot) => boolean;
@@ -50,6 +52,7 @@ export interface GameplayRuntimeOptions {
   onPlaySelected?: (playId: string) => void;
   onPunt?: (gameplay: GameplayModel, snapshot: GameplaySnapshot) => boolean;
   playbookId: GameExperienceSettings['playbookId'];
+  rosterBinding?: GameplayRosterBinding | null;
   searchParams: URLSearchParams;
   shouldHoldDeadPlayReset: () => boolean;
   skipPresentation: () => void;
@@ -65,18 +68,21 @@ export class GameplayRuntime {
   private lastPreSnapCadenceKey: string | null = null;
   private playControls: KeyboardPlayControls;
   private presentationAuditState: PresentationAuditState;
+  private rosterBinding: GameplayRosterBinding | null;
 
   gameplayModel: GameplayModel;
 
   constructor(private readonly options: GameplayRuntimeOptions) {
     this.searchParams = options.searchParams;
     this.gameMode = options.gameMode ?? 'scoreAttack';
+    this.rosterBinding = options.rosterBinding ?? null;
     this.presentationAuditState = resolvePresentationAuditState(
       options.searchParams.get('presentationState'),
     );
     this.gameplayModel = createGameplayModel({
       challengeMode: options.gameMode === 'exhibition' ? 'exhibition' : 'scoreAttack',
       playbookId: options.playbookId,
+      rosterBinding: this.rosterBinding,
     });
     const formationPreviewMode = resolveFormationPreviewMode(
       options.searchParams.get('formationPreview'),
@@ -99,6 +105,11 @@ export class GameplayRuntime {
     this.playControls.dispose();
     this.keyboardInput.dispose();
     this.cadenceAudioDirector?.reset();
+  }
+
+  setRosterBinding(binding: GameplayRosterBinding | null): void {
+    this.rosterBinding = binding;
+    setGameplayRosterBinding(this.gameplayModel, binding);
   }
 
   update(delta: number, active: boolean, profiler?: FramePerformanceProfiler): void {
@@ -185,6 +196,7 @@ export class GameplayRuntime {
     this.gameplayModel = createGameplayModel({
       challengeMode: nextChallengeMode,
       playbookId: nextPlaybookId,
+      rosterBinding: this.rosterBinding,
     });
     this.playControls.dispose();
     this.playControls = this.createPlayControls();

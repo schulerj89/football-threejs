@@ -14,15 +14,15 @@ import {
 
 export type Down = 1 | 2 | 3 | 4;
 export type DriveState = 'active' | 'over';
-export type DriveEndType = 'touchdown' | 'turnoverOnDowns';
+export type DriveEndType = 'safety' | 'touchdown' | 'turnoverOnDowns';
 
 export interface DrivePlayResult {
   endingBallSpot: FootballSpot;
   id: number;
-  reason: 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete' | 'sack';
-  scoringTeam: 'offense' | null;
+  reason: 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete' | 'sack' | 'safety';
+  scoringTeam: 'defense' | 'offense' | null;
   startingBallSpot: FootballSpot;
-  type: 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete' | 'sack';
+  type: 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete' | 'sack' | 'safety';
   yardsGained: number;
 }
 
@@ -120,6 +120,12 @@ export function applyPlayResultToDrive(
   if (playResult.type === 'touchdown') {
     drive.state = 'over';
     drive.lastDriveResult = createDriveEndResult('touchdown');
+    return createDriveUpdate(true, true, false, createCenterSnapPlacement(DRIVE_CONFIG.startingBallSpot));
+  }
+
+  if (playResult.type === 'safety') {
+    drive.state = 'over';
+    drive.lastDriveResult = createDriveEndResult('safety');
     return createDriveUpdate(true, true, false, createCenterSnapPlacement(DRIVE_CONFIG.startingBallSpot));
   }
 

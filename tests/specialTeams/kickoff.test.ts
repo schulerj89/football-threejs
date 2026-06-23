@@ -66,6 +66,14 @@ describe('deterministic kickoff simulation', () => {
     expect(different.target).not.toEqual(same.target);
   });
 
+  it('uses the college safety free-kick line at the kicking team own 20', () => {
+    const userInput = createInput({ kickingTeam: 'user', placement: 'safetyFreeKick' });
+    const opponentInput = createInput({ kickingTeam: 'opponent', placement: 'safetyFreeKick' });
+
+    expect(userInput.origin.z).toBe(-50 + COLLEGE_SPECIAL_TEAMS_RULE_SPEC.safetyFreeKickYardLine);
+    expect(opponentInput.origin.z).toBe(50 - COLLEGE_SPECIAL_TEAMS_RULE_SPEC.safetyFreeKickYardLine);
+  });
+
   it('makes stronger kickers drive the ball farther on average', () => {
     const weak = sampleDistances({ kickPower: 30, kickAccuracy: 82 });
     const strong = sampleDistances({ kickPower: 92, kickAccuracy: 82 });
@@ -1139,6 +1147,7 @@ function createInput(options: {
   kickPower?: number;
   kickingTeam?: MatchPossession;
   matchSeed?: number;
+  placement?: 'kickoff' | 'safetyFreeKick';
   sequenceIndex?: number;
 } = {}) {
   return createKickoffSimulationInput({
@@ -1147,6 +1156,7 @@ function createInput(options: {
     kickPower: options.kickPower ?? 82,
     kickingTeam: options.kickingTeam ?? 'user',
     matchSeed: options.matchSeed ?? 1000,
+    placement: options.placement,
     rules: DEFAULT_MATCH_RULES,
     sequenceIndex: options.sequenceIndex ?? 0,
   });

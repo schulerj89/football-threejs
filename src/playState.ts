@@ -29,6 +29,7 @@ import {
   FIELD_DIRECTION,
   FIELD_OF_PLAY_BOUNDS,
   INITIAL_BALL_SPOT,
+  NEAR_GOAL_LINE_Z,
   OPPOSING_GOAL_LINE_Z,
   PLAYABLE_FIELD_BOUNDS,
   PLAYER_MOVEMENT_BOUNDS,
@@ -76,10 +77,12 @@ import {
   type PlayerModel,
   type PlayerSnapshot,
 } from './playerModel';
+import { applyRosterMovementProfiles } from './playerMovementProfile';
 import {
   findSackingDefender,
   hasQuarterbackCrossedLineOfScrimmage,
 } from './sackRules';
+import type { GameplayRosterBinding } from './roster/GameplayRosterBinding';
 import {
   canStartScoreAttackPlay,
   createScoreAttackModel,
@@ -103,9 +106,15 @@ import type { FramePerformanceProfiler } from './performance/FramePerformancePro
 import type { PlaybookId } from './roster';
 
 export type PlayState = 'preSnap' | 'live' | 'dead' | 'gameOver';
-export type PlayResultType = 'tackle' | 'outOfBounds' | 'touchdown' | 'incomplete' | 'sack';
+export type PlayResultType =
+  | 'incomplete'
+  | 'outOfBounds'
+  | 'sack'
+  | 'safety'
+  | 'tackle'
+  | 'touchdown';
 export type PlayEndReason = PlayResultType;
-export type ScoringTeam = 'offense' | null;
+export type ScoringTeam = 'defense' | 'offense' | null;
 
 export interface PlayResult {
   endingBallSpot: FootballSpot;
@@ -147,7 +156,9 @@ export const GAMEPLAY_CONFIG = {
   opposingGoalLineZ: OPPOSING_GOAL_LINE_Z,
   outOfBoundsResetDelaySeconds: 1.25,
   incompleteResetDelaySeconds: 1.25,
+  ownGoalLineZ: NEAR_GOAL_LINE_Z,
   sackResetDelaySeconds: 1.25,
+  safetyResetDelaySeconds: 1.25,
   tackleResetDelaySeconds: 1.25,
   turnoverResetDelaySeconds: 1.25,
   touchdownRunoutDeceleration: 7.5,
@@ -180,6 +191,7 @@ export interface GameplayModel {
   receiverRouteRuntime: ReceiverRouteRuntimeMap;
   receiverRouteStates: Record<string, ReceiverRouteState>;
   previousPlayerPositions: Record<string, FootballSpot>;
+  rosterBinding: GameplayRosterBinding | null;
   selectedPlay: PlayDefinition;
   playState: PlayState;
   playResetTimerSeconds: number | null;
@@ -238,6 +250,7 @@ export interface GameplayUpdateOptions {
 export interface CreateGameplayModelOptions {
   challengeMode?: 'exhibition' | 'scoreAttack';
   playbookId?: PlaybookId;
+  rosterBinding?: GameplayRosterBinding | null;
 }
 
 export function createGameplayModel(options: CreateGameplayModelOptions = {}): GameplayModel {
@@ -249,6 +262,8 @@ export function createGameplayModel(options: CreateGameplayModelOptions = {}): G
   const drive = createDriveModel(initialSpot);
   const initialSnapSpot = cloneFootballSpot(drive.lineOfScrimmage);
   const players = createFormationPlayers(initialSnapSpot, selectedPlay);
+  const rosterBinding = options.rosterBinding ?? null;
+  applyRosterMovementProfiles(players, rosterBinding);
   const ballCarrier = getBallCarrier(players, selectedPlay);
   const receiverRouteRuntime = createReceiverRouteRuntimeForSpot(selectedPlay, initialSnapSpot);
 
@@ -276,6 +291,7 @@ export function createGameplayModel(options: CreateGameplayModelOptions = {}): G
     receiverRouteRuntime,
     receiverRouteStates: createReceiverRouteStateMap(selectedPlay),
     previousPlayerPositions: capturePlayerPositions(players),
+    rosterBinding,
     selectedPlay,
     playState: 'preSnap',
     playResetTimerSeconds: null,
@@ -283,6 +299,14 @@ export function createGameplayModel(options: CreateGameplayModelOptions = {}): G
     scoreAttack: createScoreAttackModel(),
     selectedReceiverId: getDefaultEligibleReceiverId(selectedPlay),
   };
+}
+
+export function setGameplayRosterBinding(
+  gameplay: GameplayModel,
+  binding: GameplayRosterBinding | null,
+): void {
+  gameplay.rosterBinding = binding;
+  applyRosterMovementProfiles(gameplay.players, binding);
 }
 
 export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
@@ -677,6 +701,10 @@ export function hasCrossedOpposingGoalLine(player: PlayerModel): boolean {
   return player.position.z >= GAMEPLAY_CONFIG.opposingGoalLineZ;
 }
 
+export function isBallCarrierInOwnEndZone(player: PlayerModel): boolean {
+  return player.position.z <= GAMEPLAY_CONFIG.ownGoalLineZ;
+}
+
 export function hasBallBrokenGoalPlane(
   ballPosition: Pick<Vector3, 'x' | 'z'>,
   directionOfPlay: number,
@@ -777,13 +805,14 @@ function detectTackle(gameplay: GameplayModel): void {
   }
 
   const endingSpot = getCarrierBallSpot(gameplay.player);
+  const isSafety = isBallCarrierInOwnEndZone(gameplay.player);
 
   recordPlayResult(
     gameplay,
-    'tackle',
+    isSafety ? 'safety' : 'tackle',
     endingSpot,
-    GAMEPLAY_CONFIG.tackleResetDelaySeconds,
-    null,
+    isSafety ? GAMEPLAY_CONFIG.safetyResetDelaySeconds : GAMEPLAY_CONFIG.tackleResetDelaySeconds,
+    isSafety ? 'defense' : null,
   );
 }
 
@@ -803,13 +832,14 @@ function detectSack(gameplay: GameplayModel): void {
   }
 
   const endingSpot = getCarrierBallSpot(gameplay.player);
+  const isSafety = isBallCarrierInOwnEndZone(gameplay.player);
 
   recordPlayResult(
     gameplay,
-    'sack',
+    isSafety ? 'safety' : 'sack',
     endingSpot,
-    GAMEPLAY_CONFIG.sackResetDelaySeconds,
-    null,
+    isSafety ? GAMEPLAY_CONFIG.safetyResetDelaySeconds : GAMEPLAY_CONFIG.sackResetDelaySeconds,
+    isSafety ? 'defense' : null,
   );
 }
 
@@ -1269,6 +1299,7 @@ function resetFormationAt(
 ): void {
   gameplay.formationOrigin = cloneFootballSpot(snapSpot);
   resetFormationPlayers(gameplay.players, snapSpot, play);
+  applyRosterMovementProfiles(gameplay.players, gameplay.rosterBinding);
 }
 
 function resetReceiverRoutesForSpot(

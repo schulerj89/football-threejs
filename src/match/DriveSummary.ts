@@ -78,6 +78,8 @@ export function getDriveSummaryTitle(summary: DriveSummary): string {
       return 'Field goal drive';
     case 'punt':
       return 'Punt';
+    case 'safety':
+      return 'Safety';
     case 'turnover':
       return 'Turnover';
     case 'turnoverOnDowns':
