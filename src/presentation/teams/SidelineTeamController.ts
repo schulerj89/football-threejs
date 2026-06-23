@@ -57,6 +57,8 @@ const SIDELINE_REACTION_DURATIONS: Record<SidelineReactionState, number> = {
   watching: 0,
 } as const;
 
+const SIDELINE_COACH_VISUALS_ENABLED = false;
+
 const EMPTY_METRICS = {
   drawCalls: 0,
   geometryCount: 0,
@@ -142,7 +144,7 @@ export class SidelineTeamController {
 
   getSettings(): SidelinePresentationSettings {
     return {
-      coachesEnabled: this.coachesEnabled,
+      coachesEnabled: this.areCoachVisualsEnabled(),
       density: this.density,
       enabled: this.enabled,
       sidelinePlayersEnabled: this.sidelinePlayersEnabled,
@@ -156,7 +158,7 @@ export class SidelineTeamController {
     return {
       ...metrics,
       coachCount: coachPlacements.length,
-      coachesEnabled: this.coachesEnabled,
+      coachesEnabled: this.areCoachVisualsEnabled(),
       coachStates: coachPlacements.map((coach) => ({
         id: coach.id,
         state: coach.state,
@@ -213,7 +215,7 @@ export class SidelineTeamController {
     this.disposeResources();
     this.resourceKey = key;
     this.layout = createSidelineLayout({
-      coachesEnabled: this.coachesEnabled,
+      coachesEnabled: this.areCoachVisualsEnabled(),
       density: this.density,
       featuredTunnelTeamSide: 'user',
       rosterAppearanceIds: createRosterAppearanceIds(this.rosterBinding),
@@ -222,7 +224,6 @@ export class SidelineTeamController {
       tunnelTableauEnabled: this.tunnelTableauEnabled,
     });
     this.resources = createSidelineFootballPlayerVisualResources(this.layout.allPlacements, this.teamTheme, {
-      coachPlacements: this.createCoachPlacements(),
       footballPlayerVisual: this.footballPlayerVisual,
       playerVisualMode: this.playerVisualMode,
       reactionState: this.reactionState,
@@ -247,7 +248,7 @@ export class SidelineTeamController {
     return [
       this.enabled ? 'enabled' : 'disabled',
       this.sidelinePlayersEnabled ? 'reserves' : 'no-reserves',
-      this.coachesEnabled ? 'coaches' : 'no-coaches',
+      this.areCoachVisualsEnabled() ? 'coaches' : 'no-coaches',
       this.density,
       this.tunnelTableauEnabled ? 'tunnel' : 'no-tunnel',
       this.teamTheme.teamKey,
@@ -301,7 +302,6 @@ export class SidelineTeamController {
     }
 
     this.resources.sync(this.layout.allPlacements, this.teamTheme, {
-      coachPlacements: this.createCoachPlacements(),
       footballPlayerVisual: this.footballPlayerVisual,
       playerVisualMode: this.playerVisualMode,
       reactionState: this.reactionState,
@@ -334,6 +334,10 @@ export class SidelineTeamController {
 
   private findZoneCenter(id: SidelineTeamControllerSnapshot['zones'][number]['id']) {
     return this.layout?.zones.find((zone) => zone.id === id)?.center ?? null;
+  }
+
+  private areCoachVisualsEnabled(): boolean {
+    return this.coachesEnabled && SIDELINE_COACH_VISUALS_ENABLED;
   }
 }
 

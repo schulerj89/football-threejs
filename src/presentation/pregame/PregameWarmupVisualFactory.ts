@@ -7,7 +7,7 @@ import {
   type FootballPlayerVisualResources,
 } from '../players/FootballPlayerVisualFactory';
 import {
-  createSidelineVisualResources,
+  createSidelineFootballPlayerVisualResources,
   type SidelineVisualResources,
 } from '../teams/SidelineVisualFactory';
 import type { SidelinePlayerPlacement, SidelinePoseId } from '../teams/SidelineTeamTypes';
@@ -77,13 +77,15 @@ export function createPregameWarmupVisualResources(
   group.userData.pregameWarmup = true;
 
   const supportPlacements = layout.placements
-    .filter((placement) => placement !== layout.userQuarterback)
+    .filter((placement) => placement !== layout.userQuarterback && placement.player)
     .map(toSidelinePlacement);
   const supportResources = supportPlacements.length > 0
-    ? createSidelineVisualResources(supportPlacements, theme)
+    ? createSidelineFootballPlayerVisualResources(supportPlacements, theme, {
+        footballPlayerVisual: options.footballPlayerVisual,
+      })
     : null;
   if (supportResources) {
-    supportResources.group.name = 'pregame-warmup-support-instances';
+    supportResources.group.name = 'pregame-warmup-support-full-players';
     supportResources.group.userData.pregameWarmup = true;
     group.add(supportResources.group);
   }
@@ -282,9 +284,12 @@ function toSidelinePlacement(placement: PregameWarmupPlacement): SidelinePlayerP
   return {
     appearanceId: placement.appearanceId,
     facingRadians: placement.facingRadians,
+    footballPosition: placement.player?.footballPosition,
     id: placement.id,
+    jerseyNumber: placement.player?.jerseyNumber,
     position: placement.position,
     pose: toSidelinePose(placement.pose),
+    rosterPlayerId: placement.player?.id,
     scale: placement.scale,
     team: placement.team,
     teamSide: placement.teamSide,

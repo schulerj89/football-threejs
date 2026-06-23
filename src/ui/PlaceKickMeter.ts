@@ -4,6 +4,7 @@ import {
   updatePlaceKickMeterState,
   type PlaceKickMeterState,
 } from '../specialTeams/PlaceKickMeterModel';
+import { PLACE_KICK_GOOD_MESSAGE } from '../specialTeams/PlaceKickPresentationDirector';
 import type { PlaceKickState, PlaceKickTimingInput } from '../specialTeams/PlaceKickTypes';
 import type { MatchDifficulty } from '../match/MatchTypes';
 
@@ -11,6 +12,7 @@ export class PlaceKickMeter {
   readonly root: HTMLDivElement;
 
   private readonly fill: HTMLDivElement;
+  private readonly label: HTMLDivElement;
   private readonly status: HTMLDivElement;
   private state: PlaceKickMeterState | null = null;
   private consumedTiming: PlaceKickTimingInput | null = null;
@@ -23,9 +25,9 @@ export class PlaceKickMeter {
     this.root.setAttribute('role', 'group');
     this.root.setAttribute('aria-label', 'Extra point kick meter');
 
-    const label = document.createElement('div');
-    label.className = 'place-kick-meter-label';
-    label.textContent = 'Extra Point';
+    this.label = document.createElement('div');
+    this.label.className = 'place-kick-meter-label';
+    this.label.textContent = 'Extra Point';
 
     const rail = document.createElement('button');
     rail.className = 'place-kick-meter-rail';
@@ -45,7 +47,7 @@ export class PlaceKickMeter {
     this.status.className = 'place-kick-meter-status';
     this.status.textContent = 'Press Space, Enter, or tap to kick.';
 
-    this.root.append(label, rail, this.status);
+    this.root.append(this.label, rail, this.status);
     this.root.addEventListener('pointerdown', this.handlePointerDown);
     document.body.appendChild(this.root);
     this.target.addEventListener('keydown', this.handleKeyDown, { capture: true });
@@ -67,12 +69,15 @@ export class PlaceKickMeter {
       }
       return;
     }
+    this.root.setAttribute('aria-label', 'Extra point kick meter');
 
     if (placeKick.result) {
       this.root.hidden = false;
+      this.root.setAttribute('aria-label', 'Place-kick result');
+      this.label.textContent = getPlaceKickLabel(placeKick);
       this.root.dataset.result = placeKick.result.good ? 'good' : 'noGood';
       this.status.textContent = placeKick.result.good
-        ? 'GOOD'
+        ? PLACE_KICK_GOOD_MESSAGE
         : 'NO GOOD';
       this.fill.style.left = '50%';
       this.state = null;
@@ -91,9 +96,29 @@ export class PlaceKickMeter {
     }
 
     this.root.hidden = false;
+    this.root.setAttribute('aria-label', 'Extra point kick meter');
+    this.label.textContent = getPlaceKickLabel(placeKick);
     delete this.root.dataset.result;
     this.status.textContent = 'Press Space, Enter, or tap to kick.';
     this.render();
+  }
+
+  syncResult(placeKick: PlaceKickState | null, visible: boolean): void {
+    if (!visible || !placeKick?.result) {
+      this.root.hidden = true;
+      return;
+    }
+
+    this.root.hidden = false;
+    this.root.setAttribute('aria-label', 'Place-kick result');
+    this.label.textContent = getPlaceKickLabel(placeKick);
+    this.root.dataset.result = placeKick.result.good ? 'good' : 'noGood';
+    this.status.textContent = placeKick.result.good
+      ? PLACE_KICK_GOOD_MESSAGE
+      : 'NO GOOD';
+    this.fill.style.left = '50%';
+    this.state = null;
+    this.consumedTiming = null;
   }
 
   update(deltaSeconds: number): void {
@@ -162,4 +187,8 @@ export class PlaceKickMeter {
     event.preventDefault();
     this.confirm();
   };
+}
+
+function getPlaceKickLabel(placeKick: PlaceKickState): string {
+  return placeKick.reason === 'fieldGoal' ? 'Field Goal' : 'Extra Point';
 }

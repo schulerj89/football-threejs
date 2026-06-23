@@ -3863,6 +3863,15 @@ body[data-game-mode="exhibition"] .score-counter {
   font-size: 18px;
 }
 
+.place-kick-meter[data-result] {
+  width: min(320px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.place-kick-meter[data-result] .place-kick-meter-rail {
+  display: none;
+}
+
 .place-kick-meter-rail {
   position: relative;
   height: 38px;

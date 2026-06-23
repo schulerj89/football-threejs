@@ -12,6 +12,7 @@ import type { PresentationCameraShot } from '../camera/PresentationShotDefinitio
 import type { TeamPresentationTheme } from '../teams/TeamThemeApplier';
 import type { GameplayRosterBinding } from '../roster/GameplayRosterBinding';
 import type { PlayerVisualMode } from '../presentation/players/PlayerVisualMode';
+import { updateRunAnimation } from '../presentation/RunAnimation';
 import {
   FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
   createFootballPlayerVisual,
@@ -60,10 +61,19 @@ const PLACE_KICK_PRESENTATION_CONFIG = {
   fieldOfView: 40,
   formationSeconds: 0.55,
   maximumDeltaSeconds: 1 / 15,
-  resultSeconds: 1.25,
+  resultSeconds: 3.1,
   runUpSeconds: 0.52,
   setSeconds: 0.28,
   snapSeconds: 0.32,
+} as const;
+
+export const PLACE_KICK_GOOD_MESSAGE = "IT'S GOOD!";
+export const PLACE_KICK_GOOD_ANNOUNCER_ASSET_ID = 'place_kick_good_01';
+export const PLACE_KICK_GOOD_WHISTLE_ASSET_ID = 'referee_whistle_01';
+
+const PLACE_KICK_KICKER_ANIMATION_CONFIG = {
+  approachStopDistanceYards: 0.78,
+  movingSpeedFloorYardsPerSecond: 4.5,
 } as const;
 
 export class PlaceKickPresentationDirector {
@@ -80,6 +90,8 @@ export class PlaceKickPresentationDirector {
   private placeKickState: PlaceKickState | null = null;
   private placeKickVisuals = new Map<string, FootballPlayerVisualResources>();
   private playedContact = false;
+  private playedResultAnnouncer = false;
+  private playedResultWhistle = false;
   private playedSet = false;
   private playedSnap = false;
 
@@ -113,6 +125,8 @@ export class PlaceKickPresentationDirector {
     this.flightElapsedSeconds = 0;
     this.phase = 'formation';
     this.playedContact = false;
+    this.playedResultAnnouncer = false;
+    this.playedResultWhistle = false;
     this.playedSet = false;
     this.playedSnap = false;
     this.group.visible = true;
@@ -190,13 +204,19 @@ export class PlaceKickPresentationDirector {
     } else if (this.phase === 'result') {
       const result = this.placeKickState.result;
       if (result) {
-        this.syncBallToResult(result, result.flightSeconds);
+        if (result.good) {
+          this.syncBallToGoalPlane(result);
+        } else {
+          this.syncBallToResult(result, result.flightSeconds);
+        }
       }
       if (this.elapsedInPhaseSeconds >= PLACE_KICK_PRESENTATION_CONFIG.resultSeconds) {
         this.phase = 'completed';
         this.completed = true;
       }
     }
+
+    this.syncAllPlaceKickVisuals(delta);
 
     return { completed: this.completed, timingInput: null };
   }
@@ -252,6 +272,8 @@ export class PlaceKickPresentationDirector {
     this.placeKickLayout = null;
     this.placeKickState = null;
     this.playedContact = false;
+    this.playedResultAnnouncer = false;
+    this.playedResultWhistle = false;
     this.playedSet = false;
     this.playedSnap = false;
     this.group.visible = false;
@@ -262,6 +284,7 @@ export class PlaceKickPresentationDirector {
   getSnapshot(): PlaceKickFrameSnapshot {
     const result = this.placeKickState?.result ?? null;
     const visualReadiness = [...this.placeKickVisuals.values()].map((resource) => resource.getReadiness());
+    const kickerVisual = this.findKickerVisualResource();
     const rosterBindings = (this.placeKickLayout?.participants ?? []).map((participant) => ({
       rosterPlayerId: participant.rosterPlayerId,
       slotId: participant.slotId,
@@ -283,6 +306,13 @@ export class PlaceKickPresentationDirector {
       good: result?.good ?? null,
       helmetReadyCount: visualReadiness.filter((readiness) => readiness.helmetReady).length,
       holderRosterId: this.placeKickState?.holderRosterId ?? null,
+      kickerVisualPosition: kickerVisual && kickerVisual.root.visible
+        ? {
+            x: kickerVisual.root.position.x,
+            y: kickerVisual.root.position.y,
+            z: kickerVisual.root.position.z,
+          }
+        : null,
       kickerRosterId: this.placeKickState?.kickerRosterId ?? null,
       kickingParticipantCount: this.placeKickLayout?.participants
         .filter((participant) => participant.phase === 'protection').length ?? 0,
@@ -292,8 +322,13 @@ export class PlaceKickPresentationDirector {
       participantCount: this.placeKickLayout?.participants.length ?? 0,
       phase: this.phase,
       result: result ? cloneResult(result) : null,
+      resultAnnouncerAssetId: result?.good ? PLACE_KICK_GOOD_ANNOUNCER_ASSET_ID : null,
+      resultMessage: result?.good ? PLACE_KICK_GOOD_MESSAGE : result ? 'NO GOOD' : null,
+      resultWhistleAssetId: result?.good ? PLACE_KICK_GOOD_WHISTLE_ASSET_ID : null,
       rosterBindings,
       sequenceIndex: this.placeKickState?.sequenceIndex ?? null,
+      playedResultAnnouncer: this.playedResultAnnouncer,
+      playedResultWhistle: this.playedResultWhistle,
       stageVisibility: {
         officialsVisible: false,
         placeKickParticipantsVisible: this.group.visible && this.placeKickVisuals.size > 0,
@@ -390,13 +425,19 @@ export class PlaceKickPresentationDirector {
   private syncPlaceKickVisual(
     placement: PlaceKickFormationParticipantPlacement,
     resource: FootballPlayerVisualResources,
+    deltaSeconds = 0,
   ): void {
-    resource.syncTransform(placement.position, placement.facingRadians);
+    const transform = this.resolvePlaceKickVisualTransform(placement);
+    resource.syncTransform(transform.position, transform.facingRadians);
     resource.syncUniform(
       this.options.teamTheme.uniforms[placement.gameplayTeam],
       this.options.teamTheme.uniforms,
     );
-    resource.setPose(placement.phase === 'protection' ? 'readyOffense' : 'readyDefense');
+    const moving = transform.animationSpeedYardsPerSecond > 0;
+    resource.setPose(moving ? 'locomotion' : placement.phase === 'protection' ? 'readyOffense' : 'readyDefense');
+    if (moving || resource.root.userData.runAnimationInitialized) {
+      updateRunAnimation(resource.root, deltaSeconds, transform.animationSpeedYardsPerSecond);
+    }
     resource.root.scale.setScalar(placement.scale);
     resource.setVisible(this.group.visible && resource.getReadiness().subjectReady);
   }
@@ -404,6 +445,13 @@ export class PlaceKickPresentationDirector {
   private transitionTo(phase: PlaceKickPresentationPhase): void {
     this.phase = phase;
     this.elapsedInPhaseSeconds = 0;
+    if (phase === 'result') {
+      const result = this.placeKickState?.result ?? null;
+      if (result?.good) {
+        this.syncBallToGoalPlane(result);
+      }
+      this.playResultFeedback();
+    }
   }
 
   private syncBallToSpot(spot: { x: number; z: number }): void {
@@ -428,6 +476,23 @@ export class PlaceKickPresentationDirector {
     this.ballModel.state = {
       durationSeconds: result.flightSeconds,
       elapsedSeconds,
+      kind: 'inFlight',
+      maxFlightTimeSeconds: result.flightSeconds,
+      peakHeight: result.apexHeight,
+      start: { x: result.origin.x, y: 0.2, z: result.origin.z },
+      target: { x: result.target.x, y: 0.18, z: result.target.z },
+    };
+    syncBallVisual(this.ballVisual, this.ballModel);
+  }
+
+  private syncBallToGoalPlane(result: PlaceKickResult): void {
+    const previous = { ...this.ballModel.position };
+    this.ballModel.previousPosition = previous;
+    this.ballModel.position = { ...result.goalPlanePosition };
+    this.ballModel.possession = { kind: 'none' };
+    this.ballModel.state = {
+      durationSeconds: result.flightSeconds,
+      elapsedSeconds: result.flightSeconds,
       kind: 'inFlight',
       maxFlightTimeSeconds: result.flightSeconds,
       peakHeight: result.apexHeight,
@@ -483,6 +548,115 @@ export class PlaceKickPresentationDirector {
   private playSfx(assetId: string): void {
     void this.options.audio?.playOneShot(assetId).catch(() => undefined);
   }
+
+  private playResultFeedback(): void {
+    const result = this.placeKickState?.result ?? null;
+    if (!result?.good) {
+      return;
+    }
+
+    if (!this.playedResultWhistle) {
+      this.playedResultWhistle = true;
+      this.playSfx(PLACE_KICK_GOOD_WHISTLE_ASSET_ID);
+    }
+    if (!this.playedResultAnnouncer) {
+      this.playedResultAnnouncer = true;
+      this.playSfx(PLACE_KICK_GOOD_ANNOUNCER_ASSET_ID);
+    }
+  }
+
+  private syncAllPlaceKickVisuals(deltaSeconds: number): void {
+    for (const placement of this.placeKickLayout?.participants ?? []) {
+      const resource = this.placeKickVisuals.get(placement.visualId);
+      if (resource) {
+        this.syncPlaceKickVisual(placement, resource, deltaSeconds);
+      }
+    }
+  }
+
+  private resolvePlaceKickVisualTransform(
+    placement: PlaceKickFormationParticipantPlacement,
+  ): {
+    animationSpeedYardsPerSecond: number;
+    facingRadians: number;
+    position: { x: number; z: number };
+  } {
+    if (placement.slotId !== 'kicker' || !this.placeKickState) {
+      return {
+        animationSpeedYardsPerSecond: 0,
+        facingRadians: placement.facingRadians,
+        position: placement.position,
+      };
+    }
+
+    const progress = this.getKickerApproachProgress();
+    if (progress <= 0) {
+      return {
+        animationSpeedYardsPerSecond: 0,
+        facingRadians: placement.facingRadians,
+        position: placement.position,
+      };
+    }
+
+    const holderSpot = this.placeKickState.holderSpot;
+    const dx = holderSpot.x - placement.position.x;
+    const dz = holderSpot.z - placement.position.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance <= 0.001) {
+      return {
+        animationSpeedYardsPerSecond: 0,
+        facingRadians: placement.facingRadians,
+        position: placement.position,
+      };
+    }
+
+    const stopDistance = Math.max(0, distance - PLACE_KICK_KICKER_ANIMATION_CONFIG.approachStopDistanceYards);
+    const travelScale = stopDistance / distance;
+    const easedProgress = easeOutCubic(progress);
+    const x = placement.position.x + dx * travelScale * easedProgress;
+    const z = placement.position.z + dz * travelScale * easedProgress;
+    const moving =
+      this.phase === 'runUp' &&
+      this.elapsedInPhaseSeconds < PLACE_KICK_PRESENTATION_CONFIG.runUpSeconds;
+
+    return {
+      animationSpeedYardsPerSecond: moving
+        ? Math.max(
+            PLACE_KICK_KICKER_ANIMATION_CONFIG.movingSpeedFloorYardsPerSecond,
+            stopDistance / PLACE_KICK_PRESENTATION_CONFIG.runUpSeconds,
+          )
+        : 0,
+      facingRadians: Math.atan2(dx, dz),
+      position: { x, z },
+    };
+  }
+
+  private getKickerApproachProgress(): number {
+    if (
+      this.phase === 'contact' ||
+      this.phase === 'flight' ||
+      this.phase === 'result' ||
+      this.phase === 'completed'
+    ) {
+      return 1;
+    }
+
+    if (this.phase !== 'runUp') {
+      return 0;
+    }
+
+    return Math.min(1, this.elapsedInPhaseSeconds / PLACE_KICK_PRESENTATION_CONFIG.runUpSeconds);
+  }
+
+  private findKickerVisualResource(): FootballPlayerVisualResources | null {
+    const kickerPlacement = this.placeKickLayout?.participants.find((participant) => participant.slotId === 'kicker');
+    return kickerPlacement ? this.placeKickVisuals.get(kickerPlacement.visualId) ?? null : null;
+  }
+}
+
+function easeOutCubic(value: number): number {
+  const t = Math.min(1, Math.max(0, value));
+  return 1 - Math.pow(1 - t, 3);
 }
 
 function cloneResult(result: PlaceKickResult): PlaceKickResult {

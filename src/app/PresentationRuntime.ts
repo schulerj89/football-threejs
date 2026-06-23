@@ -371,7 +371,6 @@ export class PresentationRuntime {
       density: gameExperience.settings.sidelineDensity,
       enabled: !this.crowdPreviewController && (
         gameExperience.settings.sidelinePlayersEnabled ||
-        gameExperience.settings.coachesEnabled ||
         gameExperience.settings.tunnelTableauEnabled
       ),
       playerVisualMode: gameExperience.settings.playerVisualMode,
@@ -965,7 +964,11 @@ export class PresentationRuntime {
       matchSnapshot,
     };
     const result = this.placeKickPresentationDirector.update(context);
-    this.placeKickMeter.hide();
+    const placeKickSnapshot = this.placeKickPresentationDirector.getSnapshot();
+    this.placeKickMeter.syncResult(
+      matchSnapshot?.extraPoint ?? null,
+      placeKickSnapshot.phase === 'result' && Boolean(placeKickSnapshot.resultMessage),
+    );
     const timingInput = this.resolveAutomaticPlaceKickTimingInput(matchSnapshot);
     this.cameraController.updatePregamePresentation(
       this.placeKickPresentationDirector.createCameraShot(),
@@ -1162,7 +1165,6 @@ export class PresentationRuntime {
       density: gameExperience.settings.sidelineDensity,
       enabled: !this.crowdPreviewController && (
         gameExperience.settings.sidelinePlayersEnabled ||
-        gameExperience.settings.coachesEnabled ||
         gameExperience.settings.tunnelTableauEnabled
       ),
       playerVisualMode: gameExperience.settings.playerVisualMode,
@@ -1499,7 +1501,7 @@ export class PresentationRuntime {
     if (!snapshot.enabled) {
       return 0;
     }
-    return snapshot.sidelinePlayerCount + snapshot.coachCount + snapshot.tunnelPlayerCount;
+    return snapshot.sidelinePlayerCount + snapshot.tunnelPlayerCount;
   }
 
   private syncVoicePackSelection(matchSnapshot: MatchSnapshot | null): void {

@@ -291,13 +291,6 @@ export function createSidelineFootballPlayerVisualResources(
   group.userData.sidelinePresentation = true;
 
   const playerResources = new Map<string, FootballPlayerVisualResources>();
-  const coachResources = createSidelineVisualResources([], theme, {
-    coachPlacements: options.coachPlacements,
-    reactionState: options.reactionState,
-  });
-  if (coachResources.group.children.length > 0) {
-    group.add(coachResources.group);
-  }
 
   for (const placement of placements) {
     const uniform = theme.uniforms[placement.team];
@@ -351,14 +344,10 @@ export function createSidelineFootballPlayerVisualResources(
         resource.dispose();
       }
       playerResources.clear();
-      coachResources.dispose();
       group.clear();
     },
     group,
-    metrics: mergeSidelineVisualMetrics(
-      coachResources.metrics,
-      measureFootballPlayerResourceMetrics(playerResources),
-    ),
+    metrics: measureFootballPlayerResourceMetrics(playerResources),
     sync: (nextPlacements, nextTheme, nextOptions = {}) => {
       for (const placement of nextPlacements) {
         const resource = playerResources.get(placement.id);
@@ -372,10 +361,6 @@ export function createSidelineFootballPlayerVisualResources(
           nextOptions.reactionState ?? 'idle',
         );
       }
-      coachResources.sync([], nextTheme, {
-        coachPlacements: nextOptions.coachPlacements,
-        reactionState: nextOptions.reactionState,
-      });
     },
   };
 

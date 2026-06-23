@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.19] - 2026-06-23
+
+### Changed
+
+- Replaced remaining black sideline and warmup silhouettes with roster-backed full football-player presentation clones.
+- Extended the place-kick result hold so made field goals/PATs remain on screen long enough to read and hear.
+
+### Fixed
+
+- Added a visible kicker run-up toward the holder before place-kick contact.
+- Added made-kick feedback with a whistle, an optional announcer “It’s good!” call, and a clean result banner instead of showing the timing meter after the kick.
+- Held successful place-kick ball visuals at the goal plane during the result moment so the ball visibly clears the uprights.
+
+### Tests
+
+- Verified `npx tsc --noEmit` and `npx vitest run tests/specialTeams/placeKick.test.ts` during implementation.
+
 ## [1.21.18] - 2026-06-23
 
 ### Changed

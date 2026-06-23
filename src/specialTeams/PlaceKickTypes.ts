@@ -112,6 +112,7 @@ export interface PlaceKickFrameSnapshot {
   good: boolean | null;
   helmetReadyCount: number;
   holderRosterId: string | null;
+  kickerVisualPosition: Vector3 | null;
   kickerRosterId: string | null;
   kickingParticipantCount: number;
   kickingTeam: MatchPossession | null;
@@ -120,6 +121,9 @@ export interface PlaceKickFrameSnapshot {
   participantCount: number;
   phase: PlaceKickPresentationPhase;
   result: PlaceKickResult | null;
+  resultAnnouncerAssetId: string | null;
+  resultMessage: string | null;
+  resultWhistleAssetId: string | null;
   rosterBindings: readonly {
     rosterPlayerId: string;
     slotId: string;
@@ -127,6 +131,8 @@ export interface PlaceKickFrameSnapshot {
     visualId: string;
   }[];
   sequenceIndex: number | null;
+  playedResultAnnouncer: boolean;
+  playedResultWhistle: boolean;
   stageVisibility: {
     officialsVisible: boolean;
     placeKickParticipantsVisible: boolean;

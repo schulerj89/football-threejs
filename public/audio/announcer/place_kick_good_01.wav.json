@@ -1,0 +1,13 @@
+{
+  "assetId": "place_kick_good_01",
+  "caption": "It's good!",
+  "category": "announcer",
+  "contentHash": "sha256-f4b69a5fd2be6f342bbd3190dd169cd2673d720c6b4e441e687af74d14ff0e4c",
+  "durationSeconds": 0.62,
+  "generatedAt": "2026-06-23T00:00:00.000Z",
+  "model": "local-system-speech-fallback",
+  "outputPath": "public/audio/announcer/place_kick_good_01.wav",
+  "prompt": "Short fictional football broadcast call: \"It's good!\"",
+  "semanticCategory": "placeKick",
+  "voice": "local-system-speech"
+}

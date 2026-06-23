@@ -31,6 +31,11 @@ import {
   validatePlaceKickFormation,
 } from '../../src/specialTeams/PlaceKickFormation';
 import { PlaceKickPresentationDirector } from '../../src/specialTeams/PlaceKickPresentationDirector';
+import {
+  PLACE_KICK_GOOD_ANNOUNCER_ASSET_ID,
+  PLACE_KICK_GOOD_MESSAGE,
+  PLACE_KICK_GOOD_WHISTLE_ASSET_ID,
+} from '../../src/specialTeams/PlaceKickPresentationDirector';
 import { PlaceKickMeter } from '../../src/ui/PlaceKickMeter';
 import {
   FOOTBALL_PLAYER_VISUAL_PROFILE_ID,
@@ -96,6 +101,42 @@ describe('place-kick meter UI input', () => {
         normalizedValue: expect.any(Number),
       });
       pointerMeter.dispose();
+    } finally {
+      restoreDom();
+    }
+  });
+
+  it('shows the made-kick message for a completed result', () => {
+    const restoreDom = installPlaceKickMeterDom();
+    const keyboardTarget = new FakeEventTarget();
+    const placeKick = createExtraPointPlaceKickState({
+      defendingTeam: 'opponent',
+      holderRosterId: 'holder',
+      kickerRatings: { kickAccuracy: 82, kickPower: 90 },
+      kickerRosterId: 'kicker',
+      kickingTeam: 'user',
+      sequenceIndex: 4,
+    });
+    const result = simulatePlaceKick(createPlaceKickSimulationInput({
+      difficulty: 'pro',
+      direction: placeKick.direction,
+      kickerRatings: placeKick.kickerRatings!,
+      kickerRosterId: 'kicker',
+      matchSeed: 12,
+      sequenceIndex: 4,
+      timingInput: { confirmedAtSeconds: 0.5, normalizedValue: 0 },
+    }));
+
+    try {
+      const meter = new PlaceKickMeter(keyboardTarget as unknown as Window);
+      meter.syncResult({
+        ...placeKick,
+        result,
+      }, true);
+
+      expect((meter.root as unknown as FakeElement).dataset.result).toBe('good');
+      expect((meter.root as unknown as FakeElement).children[2]?.textContent).toBe(PLACE_KICK_GOOD_MESSAGE);
+      meter.dispose();
     } finally {
       restoreDom();
     }
@@ -282,6 +323,101 @@ describe('extra-point presentation stage', () => {
     expect(director.getSnapshot().stageVisibility.placeKickParticipantsVisible).toBe(false);
     director.dispose();
   });
+
+  it('runs the kicker toward the holder and plays made-kick feedback once', async () => {
+    const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
+    const placeKick = createExtraPointPlaceKickState({
+      defendingTeam: 'opponent',
+      holderRosterId: binding.userRoster.punterId,
+      kickerRatings: { kickAccuracy: 82, kickPower: 90 },
+      kickerRosterId: binding.userRoster.kickerId,
+      kickingTeam: 'user',
+      sequenceIndex: 5,
+    });
+    let activePlaceKick = placeKick;
+    const audio = createFakePlaceKickAudio();
+    const director = new PlaceKickPresentationDirector({
+      audio,
+      ballVisualStyle: 'football',
+      footballPlayerVisual: {
+        attachHelmet: attachMockHelmet,
+      },
+      rosterBinding: binding,
+      teamTheme: resolveTeamPresentationTheme(BROADCAST_EXPERIENCE_SETTINGS.teamProfiles),
+    });
+    const gameplaySnapshot = snapshotGameplayModel(createGameplayModel({ playbookId: '11v11' }));
+
+    director.start({ extraPoint: activePlaceKick });
+    await Promise.resolve();
+    await Promise.resolve();
+    const initial = director.getSnapshot().kickerVisualPosition;
+    expect(initial).not.toBeNull();
+    const result = simulatePlaceKick(createPlaceKickSimulationInput({
+      difficulty: 'pro',
+      direction: activePlaceKick.direction,
+      kickerRatings: activePlaceKick.kickerRatings!,
+      kickerRosterId: activePlaceKick.kickerRosterId!,
+      matchSeed: 20260622,
+      sequenceIndex: activePlaceKick.sequenceIndex,
+      timingInput: { confirmedAtSeconds: 0.5, normalizedValue: 0 },
+    }));
+    activePlaceKick = {
+      ...activePlaceKick,
+      result,
+    };
+
+    let runUpSnapshot = director.getSnapshot();
+    for (let frame = 0; frame < 90 && runUpSnapshot.phase !== 'runUp'; frame += 1) {
+      director.update({
+        deltaSeconds: 1 / 60,
+        gameplaySnapshot,
+        matchSnapshot: {
+          deterministicSeed: 20260622,
+          extraPoint: activePlaceKick,
+        },
+      });
+      runUpSnapshot = director.getSnapshot();
+    }
+
+    expect(runUpSnapshot.phase).toBe('runUp');
+    director.update({
+      deltaSeconds: 1 / 60,
+      gameplaySnapshot,
+      matchSnapshot: {
+        deterministicSeed: 20260622,
+        extraPoint: activePlaceKick,
+      },
+    });
+    runUpSnapshot = director.getSnapshot();
+    const runUpPosition = runUpSnapshot.kickerVisualPosition;
+    expect(runUpPosition).not.toBeNull();
+    expect(distance2d(runUpPosition!, activePlaceKick.holderSpot))
+      .toBeLessThan(distance2d(initial!, activePlaceKick.holderSpot));
+
+    let finalSnapshot = runUpSnapshot;
+    for (let frame = 0; frame < 180 && finalSnapshot.phase !== 'result'; frame += 1) {
+      director.update({
+        deltaSeconds: 1 / 60,
+        gameplaySnapshot,
+        matchSnapshot: {
+          deterministicSeed: 20260622,
+          extraPoint: activePlaceKick,
+        },
+      });
+      finalSnapshot = director.getSnapshot();
+    }
+
+    expect(finalSnapshot.phase).toBe('result');
+    expect(finalSnapshot.resultMessage).toBe(PLACE_KICK_GOOD_MESSAGE);
+    expect(finalSnapshot.playedResultWhistle).toBe(true);
+    expect(finalSnapshot.playedResultAnnouncer).toBe(true);
+    expect(finalSnapshot.ballPosition?.x).toBeCloseTo(result.goalPlanePosition.x, 5);
+    expect(finalSnapshot.ballPosition?.y).toBeCloseTo(result.goalPlanePosition.y, 5);
+    expect(finalSnapshot.ballPosition?.z).toBeCloseTo(result.goalPlanePosition.z, 5);
+    expect(audio.played.filter((assetId) => assetId === PLACE_KICK_GOOD_WHISTLE_ASSET_ID)).toHaveLength(1);
+    expect(audio.played.filter((assetId) => assetId === PLACE_KICK_GOOD_ANNOUNCER_ASSET_ID)).toHaveLength(1);
+    director.dispose();
+  });
 });
 
 function createController(seed: number): MatchFlowController {
@@ -414,4 +550,8 @@ function createFakePointerEvent(): PointerEvent {
   return {
     preventDefault: () => undefined,
   } as unknown as PointerEvent;
+}
+
+function distance2d(a: { x: number; z: number }, b: { x: number; z: number }): number {
+  return Math.hypot(a.x - b.x, a.z - b.z);
 }

@@ -10,7 +10,7 @@ import {
 } from '../../../src/presentation/teams/SidelineLayout';
 import { SidelineTeamController } from '../../../src/presentation/teams/SidelineTeamController';
 import {
-  createSidelineVisualResources,
+  createSidelineFootballPlayerVisualResources,
 } from '../../../src/presentation/teams/SidelineVisualFactory';
 import { FOOTBALL_PLAYER_VISUAL_PROFILE_ID } from '../../../src/presentation/players/FootballPlayerVisualFactory';
 import {
@@ -103,27 +103,27 @@ describe('sideline team layout', () => {
 });
 
 describe('sideline team visuals', () => {
-  it('renders sideline subjects with bounded instanced resources and varied skin colors', () => {
+  it('renders sideline subjects as full football-player assets without coach silhouettes', () => {
     const theme = resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS);
     const layout = createSidelineLayout({
       coachesEnabled: true,
       density: 'low',
       tunnelTableauEnabled: true,
     });
-    const resources = createSidelineVisualResources(layout.allPlacements, theme, {
-      coachPlacements: layout.coachPlacements,
+    const resources = createSidelineFootballPlayerVisualResources(layout.allPlacements, theme, {
+      footballPlayerVisual: { helmet: 'disabled' },
     });
 
-    expect(resources.metrics.meshCount).toBe(18);
-    expect(resources.metrics.materialCount).toBe(2);
-    expect(resources.metrics.geometryCount).toBe(16);
-    expect(resources.metrics.textureCount).toBe(0);
-    expect(resources.metrics.drawCalls).toBe(18);
-    expect(resources.metrics.instanceBufferBytes).toBeGreaterThan(0);
+    expect(resources.metrics.meshCount).toBeGreaterThan(0);
+    expect(resources.metrics.materialCount).toBeGreaterThan(0);
+    expect(resources.metrics.geometryCount).toBeGreaterThan(0);
+    expect(resources.metrics.textureCount).toBeGreaterThanOrEqual(0);
+    expect(resources.metrics.drawCalls).toBeGreaterThan(0);
+    expect(resources.metrics.instanceBufferBytes).toBe(0);
     expect(resources.metrics.triangleCount).toBeGreaterThan(0);
-    expect(countObjects(resources.group)).toBeLessThan(22);
-    expect(countUniqueInstanceColors(resources.meshes.head)).toBeGreaterThan(1);
-    expect(countUniqueInstanceColors(resources.coachMeshes.head)).toBeGreaterThan(0);
+    expect(countFullFootballPlayerRoots(resources.group)).toBe(layout.allPlacements.length);
+    expect(countNamedObjects(resources.group, /^sideline-coach-/)).toBe(0);
+    expect(countNamedObjects(resources.group, /^sideline-player-.*-instances$/)).toBe(0);
 
     resources.dispose();
     expect(resources.group.children).toHaveLength(0);
@@ -210,10 +210,8 @@ describe('sideline team visuals', () => {
     const touchdownSnapshot = controller.getSnapshot();
     expect(touchdownSnapshot.reactionState).toBe('touchdown');
     expect(touchdownSnapshot.lastReactionEventId).toBe(touchdownEvent.id);
-    expect(touchdownSnapshot.coachStates.map((coach) => coach.state)).toEqual([
-      'touchdownCelebration',
-      'touchdownCelebration',
-    ]);
+    expect(touchdownSnapshot.coachCount).toBe(0);
+    expect(touchdownSnapshot.coachStates).toEqual([]);
 
     controller.update([touchdownEvent], 1 / 60);
     expect(controller.getSnapshot().lastReactionEventId).toBe(touchdownEvent.id);
@@ -227,7 +225,7 @@ describe('sideline team visuals', () => {
       },
     ], 1 / 60);
     expect(controller.getSnapshot().reactionState).toBe('firstDown');
-    expect(controller.getSnapshot().coachStates[0].state).toBe('firstDownApproval');
+    expect(controller.getSnapshot().coachStates).toEqual([]);
 
     controller.dispose();
   });
@@ -275,26 +273,22 @@ describe('sideline team visuals', () => {
   });
 });
 
-function countObjects(root: THREE.Object3D): number {
+function countFullFootballPlayerRoots(root: THREE.Object3D): number {
   let count = 0;
-  root.traverse(() => {
-    count += 1;
+  root.traverse((object) => {
+    if (object.userData.fullFootballPlayerVisual === true) {
+      count += 1;
+    }
   });
   return count;
 }
 
-function countUniqueInstanceColors(mesh: THREE.InstancedMesh): number {
-  const attribute = mesh.instanceColor;
-  if (!attribute) {
-    return 0;
-  }
-  const values = new Set<string>();
-  for (let index = 0; index < attribute.count; index += 1) {
-    values.add([
-      attribute.getX(index).toFixed(4),
-      attribute.getY(index).toFixed(4),
-      attribute.getZ(index).toFixed(4),
-    ].join(','));
-  }
-  return values.size;
+function countNamedObjects(root: THREE.Object3D, pattern: RegExp): number {
+  let count = 0;
+  root.traverse((object) => {
+    if (pattern.test(object.name)) {
+      count += 1;
+    }
+  });
+  return count;
 }

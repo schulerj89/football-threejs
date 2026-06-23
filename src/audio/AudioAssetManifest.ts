@@ -52,6 +52,20 @@ const PREGAME_ANNOUNCER_AUDIO_ASSETS: readonly LocalAudioAsset[] = PREGAME_COMME
     url: `/audio/announcer/pregame/${clip.assetId}.mp3`,
   }));
 
+const PLACE_KICK_ANNOUNCER_AUDIO_ASSETS: readonly LocalAudioAsset[] = [
+  {
+    assetId: 'place_kick_good_01',
+    category: 'announcer',
+    defaultGain: 1,
+    loadingStrategy: 'buffer',
+    loop: false,
+    maxSimultaneousInstances: 1,
+    optional: true,
+    semanticCategory: 'placeKick',
+    url: '/audio/announcer/place_kick_good_01.wav',
+  },
+];
+
 export const LOCAL_AUDIO_ASSET_MANIFEST: readonly LocalAudioAsset[] = [
   ...createMusicLocalAudioAssets(),
   {
@@ -240,6 +254,7 @@ export const LOCAL_AUDIO_ASSET_MANIFEST: readonly LocalAudioAsset[] = [
   },
   ...ANNOUNCER_AUDIO_ASSETS,
   ...PREGAME_ANNOUNCER_AUDIO_ASSETS,
+  ...PLACE_KICK_ANNOUNCER_AUDIO_ASSETS,
 ] as const;
 
 export function getAudioAsset(
