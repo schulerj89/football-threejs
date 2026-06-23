@@ -2421,22 +2421,50 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-score-block {
   display: grid;
-  justify-items: center;
-  padding: 9px 6px;
+  gap: 7px;
+  justify-items: stretch;
+  padding: 9px 8px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.08);
   border-bottom: 2px solid color-mix(in srgb, var(--play-team-secondary, #f7fbf8) 38%, transparent);
 }
 
-.football-hub-score-block strong {
-  font-size: 24px;
-  line-height: 1;
+.football-hub-score-block-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.football-hub-score-block span {
+.football-hub-score-block-header span {
   color: #cbd6cf;
   font-size: 11px;
   font-weight: 850;
+}
+
+.football-hub-score-block-header strong {
+  color: #f7fbf8;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.football-hub-score-bar {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(196, 48, 44, 0.34), rgba(226, 186, 58, 0.26), rgba(54, 176, 93, 0.28));
+}
+
+.football-hub-score-bar-fill {
+  display: block;
+  width: var(--rating-width, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--rating-color, #d94b45);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--rating-color, #d94b45) 46%, transparent);
 }
 
 .football-hub-match-summary,

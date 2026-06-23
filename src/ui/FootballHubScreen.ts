@@ -799,14 +799,39 @@ function createRatingPills(summary: TeamSummaryViewModel | null): HTMLElement[] 
 }
 
 function createScoreBlock(label: string, value: number): HTMLElement {
+  const rating = clampRating(value);
   const block = document.createElement('div');
   block.className = 'football-hub-score-block';
+  block.setAttribute('aria-label', `${label} rating ${rating} out of 100`);
+  block.style.setProperty('--rating-width', `${rating}%`);
+  block.style.setProperty('--rating-color', createRatingColor(rating));
+
+  const header = document.createElement('div');
+  header.className = 'football-hub-score-block-header';
   const strong = document.createElement('strong');
-  strong.textContent = String(value);
+  strong.textContent = String(rating);
   const span = document.createElement('span');
   span.textContent = label;
-  block.append(strong, span);
+  header.append(span, strong);
+
+  const bar = document.createElement('div');
+  bar.className = 'football-hub-score-bar';
+  bar.setAttribute('aria-hidden', 'true');
+  const fill = document.createElement('i');
+  fill.className = 'football-hub-score-bar-fill';
+  bar.append(fill);
+
+  block.append(header, bar);
   return block;
+}
+
+function clampRating(value: number): number {
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+function createRatingColor(value: number): string {
+  const hue = Math.round((value / 100) * 120);
+  return `hsl(${hue} 74% 46%)`;
 }
 
 function createTextBlock(title: string, subtitle: string): HTMLElement {

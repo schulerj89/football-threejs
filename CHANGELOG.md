@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.36] - 2026-06-23
+
+### Changed
+
+- Updated Play Now team ratings to keep the numeric OVR/OFF/DEF/ST values while adding horizontal red-to-green rating bars for faster matchup scanning.
+
+### Tests
+
+- Verified `npm run build` and `npx playwright test tests/scene-smoke.spec.ts --grep "shows the title screen"`.
+
 ## [1.21.35] - 2026-06-23
 
 ### Added

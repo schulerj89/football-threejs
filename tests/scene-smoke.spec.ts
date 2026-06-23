@@ -1193,6 +1193,8 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('OFF');
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('DEF');
   await expect(page.locator('.football-hub-rating-grid').first()).toContainText('ST');
+  await expect(page.locator('.football-hub-playnow .football-hub-score-bar')).toHaveCount(8);
+  await expect(page.locator('.football-hub-playnow .football-hub-score-bar-fill')).toHaveCount(8);
   await expect(page.locator('.football-hub-play-team-logo')).toHaveCount(2);
   await expect(page.locator('.football-hub-play-team-logo-stage')).toHaveCount(2);
   await expect(page.locator('.football-hub-play-team').first()).toContainText(/\w+ \w+/);
