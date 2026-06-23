@@ -38,6 +38,9 @@ import {
 } from '../src/presentation/coinToss/CoinTossLayout';
 import { CoinTossController } from '../src/presentation/coinToss/CoinTossController';
 import {
+  calculateCoinAnimationPose,
+  createCoinVisualResources,
+  disposeSharedCoinVisualResources,
   getCoinAnimationDurationSeconds,
   resolveCoinFinalRotationX,
 } from '../src/presentation/coinToss/CoinTossVisualFactory';
@@ -218,6 +221,37 @@ describe('coin toss presentation data', () => {
   it('ends the visual animation with the requested face up', () => {
     expect(resolveCoinFinalRotationX('heads')).toBe(0);
     expect(resolveCoinFinalRotationX('tails')).toBeCloseTo(Math.PI, 8);
+  });
+
+  it('lands the coin at turf height after an upward toss arc', () => {
+    const start = calculateCoinAnimationPose('heads', 0);
+    const middle = calculateCoinAnimationPose('heads', getCoinAnimationDurationSeconds() / 2);
+    const landed = calculateCoinAnimationPose('heads', getCoinAnimationDurationSeconds());
+
+    expect(start.positionY).toBeGreaterThan(1);
+    expect(middle.positionY).toBeGreaterThan(start.positionY);
+    expect(landed.positionY).toBeGreaterThan(0.04);
+    expect(landed.positionY).toBeLessThan(0.08);
+    expect(landed.rotationZ).toBeCloseTo(0, 8);
+  });
+
+  it('uses a smaller 3D coin mesh for midfield staging', () => {
+    const restoreDom = installCoinTossDom();
+    try {
+      const coin = createCoinVisualResources();
+      const geometry = coin.mesh.geometry;
+      geometry.computeBoundingBox();
+      const bounds = geometry.boundingBox;
+
+      expect(bounds).not.toBeNull();
+      expect(bounds!.max.x - bounds!.min.x).toBeLessThan(0.95);
+      expect(bounds!.max.z - bounds!.min.z).toBeLessThan(0.95);
+
+      coin.dispose();
+      disposeSharedCoinVisualResources();
+    } finally {
+      restoreDom();
+    }
   });
 
   it('repeated coin-toss staging shows only four helmeted full-profile captains', async () => {

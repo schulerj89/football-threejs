@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.25] - 2026-06-23
+
+### Fixed
+
+- Reduced the 3D coin size for midfield coin-toss staging.
+- Updated the coin-toss animation so the coin arcs upward, lands at turf height, and finishes flat with the resolved face up.
+
+### Tests
+
+- Verified `npx vitest run tests/coinToss.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.24] - 2026-06-23
 
 ### Fixed

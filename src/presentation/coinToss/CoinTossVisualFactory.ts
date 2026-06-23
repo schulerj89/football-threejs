@@ -17,13 +17,14 @@ export interface CoinAnimationPose {
 
 const COIN_VISUAL_CONFIG = {
   animationDurationSeconds: 2.8,
+  apexControlHeight: 4.1,
   edgeColor: 0xb08b45,
-  fallHeight: 2.5,
-  radius: 0.62,
-  restingHeight: 1.55,
+  groundClearance: 0.012,
+  radius: 0.44,
   segments: 48,
   spinTurns: 5,
-  thickness: 0.11,
+  startHeight: 1.55,
+  thickness: 0.09,
 } as const;
 
 let sharedGeometry: THREE.CylinderGeometry | null = null;
@@ -65,15 +66,20 @@ export function calculateCoinAnimationPose(
   const eased = easeInOutCubic(progress);
   const finalRotationX = resolveCoinFinalRotationX(face);
   const rotationX = COIN_VISUAL_CONFIG.spinTurns * Math.PI * 2 * eased + finalRotationX * eased;
-  const positionY = COIN_VISUAL_CONFIG.restingHeight +
-    Math.sin(Math.PI * progress) * COIN_VISUAL_CONFIG.fallHeight;
+  const landingHeight = getCoinLandingCenterHeight();
+  const positionY = quadraticBezier(
+    COIN_VISUAL_CONFIG.startHeight,
+    COIN_VISUAL_CONFIG.apexControlHeight,
+    landingHeight,
+    progress,
+  );
 
   return {
     finalRotationX,
     positionY,
     progress,
     rotationX,
-    rotationZ: Math.PI / 12 + Math.sin(progress * Math.PI * 2) * 0.18,
+    rotationZ: Math.sin(progress * Math.PI) * 0.18,
   };
 }
 
@@ -196,6 +202,20 @@ function easeInOutCubic(value: number): number {
   return value < 0.5
     ? 4 * value * value * value
     : 1 - Math.pow(-2 * value + 2, 3) / 2;
+}
+
+function getCoinLandingCenterHeight(): number {
+  return (COIN_VISUAL_CONFIG.thickness / 2) + COIN_VISUAL_CONFIG.groundClearance;
+}
+
+function quadraticBezier(start: number, control: number, end: number, progress: number): number {
+  const inverse = 1 - progress;
+
+  return (
+    (inverse * inverse * start) +
+    (2 * inverse * progress * control) +
+    (progress * progress * end)
+  );
 }
 
 function clamp(value: number, min: number, max: number): number {
