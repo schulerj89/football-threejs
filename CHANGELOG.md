@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.23] - 2026-06-23
+
+### Fixed
+
+- Required an explicit pre-snap play-card or number-key selection before the quarterback cadence can reach Hut or snap-release.
+- Added a `CHOOSE A PLAY` cadence HUD/debug state so the default gameplay play cannot be silently hiked after a formation reset.
+
+### Tests
+
+- Verified `npx vitest run tests/preSnapCadenceModel.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.22] - 2026-06-23
 
 ### Fixed

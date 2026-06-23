@@ -3985,7 +3985,14 @@ async function getDebugOverlayNumber(page: Page, label: string): Promise<number>
 }
 
 async function pressSpaceWhenSnapReady(page: Page): Promise<void> {
-  await expect(page.locator('.cadence-status')).toContainText('PRESS SPACE TO SNAP', {
+  const cadenceStatus = page.locator('.cadence-status');
+  await expect(cadenceStatus).toContainText(/CHOOSE A PLAY|PRESS SPACE TO SNAP/, {
+    timeout: 5000,
+  });
+  if ((await cadenceStatus.textContent())?.includes('CHOOSE A PLAY')) {
+    await page.keyboard.press('1');
+  }
+  await expect(cadenceStatus).toContainText('PRESS SPACE TO SNAP', {
     timeout: 5000,
   });
   await page.keyboard.press('Space');

@@ -1,4 +1,5 @@
 export type PreSnapCadencePhase =
+  | 'waitingForPlaySelection'
   | 'settling'
   | 'readyPending'
   | 'readySpeaking'
@@ -25,6 +26,7 @@ export interface PreSnapCadenceState {
   hutAssetId: string | null;
   phase: PreSnapCadencePhase;
   phaseElapsedSeconds: number;
+  playSelectedForSnap: boolean;
   playSelectionLocked: boolean;
   readyAssetId: string | null;
   selectedPlayId: string | null;
@@ -51,6 +53,7 @@ export interface PreSnapCadenceSnapshot {
   hudText: string;
   hutAssetId: string | null;
   phase: PreSnapCadencePhase;
+  playSelectedForSnap: boolean;
   playSelectionLocked: boolean;
   readyAssetId: string | null;
   selectedPlayId: string | null;
@@ -74,8 +77,9 @@ export function createPreSnapCadenceState(
   return {
     earlySnapWarningSeconds: 0,
     hutAssetId: null,
-    phase: 'settling',
+    phase: selectedPlayId ? 'readyPending' : 'waitingForPlaySelection',
     phaseElapsedSeconds: 0,
+    playSelectedForSnap: selectedPlayId !== null,
     playSelectionLocked: false,
     readyAssetId: null,
     selectedPlayId,
@@ -90,8 +94,9 @@ export function resetPreSnapCadenceForFormation(
 ): PreSnapCadenceEvents {
   state.earlySnapWarningSeconds = 0;
   state.hutAssetId = null;
-  state.phase = 'settling';
+  state.phase = 'waitingForPlaySelection';
   state.phaseElapsedSeconds = 0;
+  state.playSelectedForSnap = false;
   state.playSelectionLocked = false;
   state.readyAssetId = null;
   state.selectedPlayId = selectedPlayId;
@@ -110,6 +115,7 @@ export function notifyPreSnapPlaySelected(
 
   state.earlySnapWarningSeconds = 0;
   state.hutAssetId = null;
+  state.playSelectedForSnap = true;
   state.phase = 'readyPending';
   state.phaseElapsedSeconds = 0;
   state.readyAssetId = null;
@@ -124,6 +130,7 @@ export function clearPreSnapCadence(state: PreSnapCadenceState): void {
   state.hutAssetId = null;
   state.phase = 'complete';
   state.phaseElapsedSeconds = 0;
+  state.playSelectedForSnap = false;
   state.playSelectionLocked = false;
   state.readyAssetId = null;
   state.selectedPlayId = null;
@@ -135,7 +142,7 @@ export function requestPreSnapSnap(
   config: PreSnapCadenceConfig = DEFAULT_PRE_SNAP_CADENCE_CONFIG,
 ): PreSnapCadenceEvents {
   const events = createEmptyEvents();
-  if (state.phase !== 'awaitingSnap') {
+  if (!state.playSelectedForSnap || state.phase !== 'awaitingSnap') {
     state.earlySnapWarningSeconds = config.waitForReadyFlashSeconds;
     events.snapRejected = true;
     return events;
@@ -164,6 +171,10 @@ export function updatePreSnapCadence(
   const delta = Math.max(0, input.deltaSeconds);
   state.phaseElapsedSeconds += delta;
   state.earlySnapWarningSeconds = Math.max(0, state.earlySnapWarningSeconds - delta);
+
+  if (state.phase === 'waitingForPlaySelection' || !state.playSelectedForSnap) {
+    return events;
+  }
 
   if (state.phase === 'readyPending') {
     if (state.phaseElapsedSeconds >= config.selectionDebounceSeconds) {
@@ -219,6 +230,7 @@ export function snapshotPreSnapCadence(
     hudText: getPreSnapCadenceHudText(state),
     hutAssetId: state.hutAssetId,
     phase: state.phase,
+    playSelectedForSnap: state.playSelectedForSnap,
     playSelectionLocked: state.playSelectionLocked,
     readyAssetId: state.readyAssetId,
     selectedPlayId: state.selectedPlayId,
@@ -227,11 +239,17 @@ export function snapshotPreSnapCadence(
 }
 
 export function getPreSnapCadenceHudText(state: PreSnapCadenceState): string {
+  if (!state.playSelectedForSnap && state.phase !== 'complete') {
+    return 'CHOOSE A PLAY';
+  }
+
   if (state.earlySnapWarningSeconds > 0) {
     return 'WAIT FOR READY';
   }
 
   switch (state.phase) {
+    case 'waitingForPlaySelection':
+      return 'CHOOSE A PLAY';
     case 'readyPending':
     case 'settling':
       return 'SETTING FORMATION';

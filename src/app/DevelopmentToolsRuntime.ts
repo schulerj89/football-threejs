@@ -1163,6 +1163,7 @@ function syncCadenceDebugOverlay(
     `phase: ${snapshot.phase}`,
     `sequence: ${snapshot.sequence}`,
     `selectedPlay: ${snapshot.selectedPlayId ?? 'none'}`,
+    `playSelected: ${snapshot.playSelectedForSnap ? 'yes' : 'no'}`,
     `hud: ${snapshot.hudText || 'hidden'}`,
     `ready: ${snapshot.readyAssetId ?? 'none'}`,
     `hut: ${snapshot.hutAssetId ?? 'none'}`,

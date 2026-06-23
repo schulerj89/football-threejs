@@ -13,12 +13,17 @@ describe('pre-snap cadence model', () => {
   it('plays Ready after formation settlement and waits for Space', () => {
     const state = createPreSnapCadenceState('inside-zone-11');
     resetPreSnapCadenceForFormation(state, 'inside-zone-11');
+    notifyPreSnapPlaySelected(state, 'inside-zone-11');
 
     expect(snapshotPreSnapCadence(state)).toMatchObject({
       hudText: 'SETTING FORMATION',
-      phase: 'settling',
+      phase: 'readyPending',
+      playSelectedForSnap: true,
     });
 
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.selectionDebounceSeconds,
+    });
     const ready = updatePreSnapCadence(state, {
       deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.settleDelaySeconds,
     });
@@ -37,12 +42,52 @@ describe('pre-snap cadence model', () => {
     expect(snapshotPreSnapCadence(state)).toMatchObject({
       hudText: 'PRESS SPACE TO SNAP',
       phase: 'awaitingSnap',
+      playSelectedForSnap: true,
+    });
+  });
+
+  it('requires an explicit play selection before Ready or Hut can fire', () => {
+    const state = createPreSnapCadenceState('inside-zone-11');
+    resetPreSnapCadenceForFormation(state, 'inside-zone-11');
+
+    expect(snapshotPreSnapCadence(state)).toMatchObject({
+      hudText: 'CHOOSE A PLAY',
+      phase: 'waitingForPlaySelection',
+      playSelectedForSnap: false,
+      selectedPlayId: 'inside-zone-11',
+    });
+
+    const noReady = updatePreSnapCadence(state, {
+      deltaSeconds:
+        DEFAULT_PRE_SNAP_CADENCE_CONFIG.selectionDebounceSeconds +
+        DEFAULT_PRE_SNAP_CADENCE_CONFIG.settleDelaySeconds +
+        DEFAULT_PRE_SNAP_CADENCE_CONFIG.readyFallbackSeconds,
+    });
+    expect(noReady.readyCueRequested).toBeNull();
+    expect(snapshotPreSnapCadence(state)).toMatchObject({
+      hudText: 'CHOOSE A PLAY',
+      phase: 'waitingForPlaySelection',
+      playSelectedForSnap: false,
+    });
+
+    const rejected = requestPreSnapSnap(state);
+    expect(rejected).toMatchObject({
+      hutCueRequested: null,
+      snapAccepted: false,
+      snapRejected: true,
+      snapReleased: false,
+    });
+    expect(snapshotPreSnapCadence(state)).toMatchObject({
+      hudText: 'CHOOSE A PLAY',
+      phase: 'waitingForPlaySelection',
+      playSelectionLocked: false,
     });
   });
 
   it('rejects Space before awaitingSnap without queueing a snap', () => {
     const state = createPreSnapCadenceState('inside-zone-11');
     resetPreSnapCadenceForFormation(state, 'inside-zone-11');
+    notifyPreSnapPlaySelected(state, 'inside-zone-11');
 
     const early = requestPreSnapSnap(state);
 
@@ -54,7 +99,8 @@ describe('pre-snap cadence model', () => {
     });
     expect(snapshotPreSnapCadence(state)).toMatchObject({
       hudText: 'WAIT FOR READY',
-      phase: 'settling',
+      phase: 'readyPending',
+      playSelectedForSnap: true,
       playSelectionLocked: false,
     });
   });
@@ -62,6 +108,10 @@ describe('pre-snap cadence model', () => {
   it('plays Hut and releases the snap at the configured marker', () => {
     const state = createPreSnapCadenceState('spread-quick-11');
     resetPreSnapCadenceForFormation(state, 'spread-quick-11');
+    notifyPreSnapPlaySelected(state, 'spread-quick-11');
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.selectionDebounceSeconds,
+    });
     updatePreSnapCadence(state, {
       deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.settleDelaySeconds,
     });
@@ -93,6 +143,10 @@ describe('pre-snap cadence model', () => {
   it('falls back to timing when audio is missing', () => {
     const state = createPreSnapCadenceState('curl-flat-11');
     resetPreSnapCadenceForFormation(state, 'curl-flat-11');
+    notifyPreSnapPlaySelected(state, 'curl-flat-11');
+    updatePreSnapCadence(state, {
+      deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.selectionDebounceSeconds,
+    });
     updatePreSnapCadence(state, {
       deltaSeconds: DEFAULT_PRE_SNAP_CADENCE_CONFIG.settleDelaySeconds,
     });
