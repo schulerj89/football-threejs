@@ -256,6 +256,61 @@ describe('gameplay camera controller', () => {
     expect(controller.getDebugSnapshot().activeShotName ?? null).toBeNull();
   });
 
+  it('runs a ball-centered 360 orbit while waiting for play selection', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+    const controller = new GameplayCameraController({
+      cinematics: 'off',
+      height: 900,
+      initialMode: 'tacticalOrthographic',
+      width: 1440,
+    });
+    const snapshot = snapshotGameplayModel(gameplay);
+
+    controller.update(snapshot, 0, { playSelectionOrbitActive: true });
+    const firstDebug = controller.getDebugSnapshot();
+    const firstPosition = controller.camera.position.clone();
+
+    expect(controller.camera).toBeInstanceOf(THREE.PerspectiveCamera);
+    expect(firstDebug).toMatchObject({
+      mode: 'tacticalOrthographic',
+      state: 'playSelectionOrbit',
+    });
+    expect(firstDebug.activeShotName ?? null).toBeNull();
+    expect(firstDebug.orbitCenter?.x).toBeCloseTo(snapshot.nextSnapSpot.x);
+    expect(firstDebug.orbitCenter?.z).toBeCloseTo(snapshot.nextSnapSpot.z);
+    expect(firstDebug.focusPosition.x).toBeCloseTo(snapshot.nextSnapSpot.x);
+    expect(firstDebug.focusPosition.z).toBeCloseTo(snapshot.nextSnapSpot.z);
+
+    for (let frame = 0; frame < 90; frame += 1) {
+      controller.update(snapshot, 1 / 60, { playSelectionOrbitActive: true });
+    }
+
+    const secondDebug = controller.getDebugSnapshot();
+    expect(controller.camera.position.distanceTo(firstPosition)).toBeGreaterThan(1);
+    expect(secondDebug.state).toBe('playSelectionOrbit');
+    expect(secondDebug.shotProgress).toBeGreaterThan(0);
+  });
+
+  it('stops the play-selection orbit after a play is selected without starting another pre-play orbit', () => {
+    const gameplay = createGameplayModel({ playbookId: '11v11' });
+    const controller = new GameplayCameraController({
+      cinematics: 'full',
+      height: 900,
+      initialMode: 'cinematicBroadcast',
+      width: 1440,
+    });
+
+    controller.update(snapshotGameplayModel(gameplay), 0, { playSelectionOrbitActive: true });
+    expect(controller.getDebugSnapshot().state).toBe('playSelectionOrbit');
+
+    expect(selectPlay(gameplay, 'spread-quick-11')).toBe(true);
+    controller.update(snapshotGameplayModel(gameplay), 1 / 60, { playSelectionOrbitActive: false });
+
+    const debug = controller.getDebugSnapshot();
+    expect(debug.state).toBe('cinematicBroadcast');
+    expect(debug.activeShotName ?? null).toBeNull();
+  });
+
   it('permits the pre-play orbit only for cinematic full mode', () => {
     const gameplay = createGameplayModel({ playbookId: '7v7' });
     const snapshot = snapshotGameplayModel(gameplay);

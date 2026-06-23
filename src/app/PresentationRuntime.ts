@@ -684,6 +684,7 @@ export class PresentationRuntime {
       profiler.measure('cameraUpdate', () => {
         this.cameraController.update(gameplaySnapshot, deltaSeconds, {
           crowdCutawaysEnabled,
+          playSelectionOrbitActive: shouldRunPlaySelectionOrbit(gameplaySnapshot, preSnapCadence),
           presentationEvents,
         });
       });
@@ -693,6 +694,7 @@ export class PresentationRuntime {
       this.sidelineTeamController.update(presentationEvents, deltaSeconds);
       this.cameraController.update(gameplaySnapshot, deltaSeconds, {
         crowdCutawaysEnabled,
+        playSelectionOrbitActive: shouldRunPlaySelectionOrbit(gameplaySnapshot, preSnapCadence),
         presentationEvents,
       });
     }
@@ -1546,6 +1548,15 @@ export class PresentationRuntime {
       normalizedValue: 0,
     };
   }
+}
+
+function shouldRunPlaySelectionOrbit(
+  gameplaySnapshot: GameplaySnapshot,
+  preSnapCadence: PreSnapCadenceSnapshot | null,
+): boolean {
+  return gameplaySnapshot.playState === 'preSnap' &&
+    preSnapCadence !== null &&
+    preSnapCadence.playSelectedForSnap === false;
 }
 
 function areCrowdSettingsEqual(

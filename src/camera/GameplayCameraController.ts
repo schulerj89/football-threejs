@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { Camera } from 'three';
 import type { GameplaySnapshot } from '../playState';
 import { GAMEPLAY_CAMERA_CONFIG, PRESENTATION_CAMERA_CONFIG } from './CameraConfiguration';
@@ -31,6 +32,15 @@ export type {
 } from './CameraTypes';
 export { GAMEPLAY_CAMERA_CONFIG } from './CameraConfiguration';
 
+const PLAY_SELECTION_ORBIT_CONFIG = {
+  durationSeconds: 12,
+  fieldOfView: 46,
+  height: 28,
+  lookTargetHeight: 1.35,
+  radius: 42,
+  startAngleRadians: -Math.PI,
+} as const;
+
 export class GameplayCameraController {
   private readonly cinematics: CinematicsSetting;
   private cinematicDebug: PresentationCameraDebugSnapshot;
@@ -45,6 +55,10 @@ export class GameplayCameraController {
   private previousPreSnapAnchorKey: string | null = null;
   private previousPlayState: GameplaySnapshot['playState'] | null = null;
   private previousSelectedPlayId: string | null = null;
+  private completedPlaySelectionOrbitAnchorKey: string | null = null;
+  private playSelectionOrbitActive = false;
+  private playSelectionOrbitKey: string | null = null;
+  private playSelectionOrbitSeconds = 0;
   private preSnapSequenceId = 0;
   private resetLineOfScrimmageSeconds = 0;
   private readonly rig: GameplayCameraRig;
@@ -141,6 +155,14 @@ export class GameplayCameraController {
     if (this.previousPlayState === 'dead' && snapshot.playState === 'preSnap') {
       this.resetLineOfScrimmageSeconds = 0.7;
     }
+
+    if (this.shouldUsePlaySelectionOrbit(snapshot, options)) {
+      this.updatePlaySelectionOrbit(snapshot, cameraDeltaSeconds);
+      this.finishCameraUpdate(snapshot, targetChangeReason);
+      return;
+    }
+
+    this.clearPlaySelectionOrbit(snapshot);
 
     if (this.updatePresentationOverride(snapshot, cameraDeltaSeconds, options)) {
       this.finishCameraUpdate(snapshot, targetChangeReason);
@@ -259,7 +281,7 @@ export class GameplayCameraController {
       deltaSeconds,
       {
         aspectRatio: this.rig.activeAspectRatio,
-        cameraShotPolicy: this.getCameraShotPolicy(),
+        cameraShotPolicy: this.getCameraShotPolicy(snapshot),
         crowdCutawaysEnabled: options.crowdCutawaysEnabled,
         presentationEvents: options.presentationEvents,
         restoreCameraMode: this.mode,
@@ -270,12 +292,89 @@ export class GameplayCameraController {
     this.rig.usePresentationTargets(this.cinematicDebug.focusTarget, this.cinematicDebug.lookTarget);
   }
 
+  private shouldUsePlaySelectionOrbit(
+    snapshot: GameplaySnapshot,
+    options: GameplayCameraUpdateOptions,
+  ): boolean {
+    return snapshot.playState === 'preSnap' && options.playSelectionOrbitActive === true;
+  }
+
+  private updatePlaySelectionOrbit(snapshot: GameplaySnapshot, deltaSeconds: number): void {
+    const orbitKey = createPlaySelectionOrbitKey(snapshot, this.preSnapSequenceId);
+    if (!this.playSelectionOrbitActive || this.playSelectionOrbitKey !== orbitKey) {
+      this.presentationDirector.reset();
+      this.playSelectionOrbitSeconds = 0;
+      this.playSelectionOrbitKey = orbitKey;
+    } else {
+      this.playSelectionOrbitSeconds += deltaSeconds;
+    }
+
+    this.playSelectionOrbitActive = true;
+    this.presentationOverrideActive = true;
+
+    const progress = (
+      this.playSelectionOrbitSeconds % PLAY_SELECTION_ORBIT_CONFIG.durationSeconds
+    ) / PLAY_SELECTION_ORBIT_CONFIG.durationSeconds;
+    const angle = PLAY_SELECTION_ORBIT_CONFIG.startAngleRadians + progress * Math.PI * 2;
+    const snap = snapshot.nextSnapSpot ?? snapshot.currentBallSpot;
+    const center = new THREE.Vector3(
+      snap.x,
+      PLAY_SELECTION_ORBIT_CONFIG.lookTargetHeight,
+      snap.z,
+    );
+    const position = new THREE.Vector3(
+      center.x + Math.sin(angle) * PLAY_SELECTION_ORBIT_CONFIG.radius,
+      PLAY_SELECTION_ORBIT_CONFIG.height,
+      center.z + Math.cos(angle) * PLAY_SELECTION_ORBIT_CONFIG.radius,
+    );
+
+    this.cinematicDebug = this.presentationDirector.applyExternalShot(
+      this.rig.perspectiveCamera,
+      {
+        activeShotName: null,
+        fieldOfView: PLAY_SELECTION_ORBIT_CONFIG.fieldOfView,
+        focus: center.clone(),
+        lookTarget: center.clone(),
+        orbitCenter: center.clone(),
+        orbitRadius: PLAY_SELECTION_ORBIT_CONFIG.radius,
+        phase: 'preSnapEstablish',
+        position,
+        restoreCamera: this.mode,
+        shotProgress: progress,
+      },
+      deltaSeconds,
+      {
+        preSnapSequenceId: this.preSnapSequenceId,
+      },
+    );
+    this.cameraState = 'playSelectionOrbit';
+    this.lastGameplayFocus = null;
+    this.rig.usePresentationTargets(this.cinematicDebug.focusTarget, this.cinematicDebug.lookTarget);
+    this.isPerspectiveInitialized = true;
+  }
+
+  private clearPlaySelectionOrbit(snapshot?: GameplaySnapshot): void {
+    if (!this.playSelectionOrbitActive) {
+      return;
+    }
+
+    if (snapshot?.playState === 'preSnap') {
+      this.completedPlaySelectionOrbitAnchorKey = createPreSnapAnchorKey(snapshot);
+    }
+    this.playSelectionOrbitActive = false;
+    this.playSelectionOrbitKey = null;
+    this.playSelectionOrbitSeconds = 0;
+    this.presentationOverrideActive = false;
+    this.presentationDirector.reset();
+    this.cinematicDebug = this.presentationDirector.getDebugSnapshot();
+  }
+
   private updatePresentationOverride(
     snapshot: GameplaySnapshot,
     deltaSeconds: number,
     options: GameplayCameraUpdateOptions,
   ): boolean {
-    const policy = this.getCameraShotPolicy();
+    const policy = this.getCameraShotPolicy(snapshot);
     const allowDebugPreview = this.shotPreview !== null;
 
     if (
@@ -319,8 +418,16 @@ export class GameplayCameraController {
     return true;
   }
 
-  private getCameraShotPolicy(): CameraShotPolicy {
-    return resolveCameraShotPolicy(this.mode, this.cinematics);
+  private getCameraShotPolicy(snapshot?: GameplaySnapshot): CameraShotPolicy {
+    const policy = resolveCameraShotPolicy(this.mode, this.cinematics);
+    if (!snapshot || this.completedPlaySelectionOrbitAnchorKey !== createPreSnapAnchorKey(snapshot)) {
+      return policy;
+    }
+
+    return {
+      ...policy,
+      allowPrePlayOrbit: false,
+    };
   }
 
   private createStabilityDebugSnapshot(): GameplayCameraDebugSnapshot['stability'] {
@@ -412,6 +519,16 @@ function createPreSnapAnchorKey(snapshot: GameplaySnapshot): string {
     snapshot.drive.currentDown,
     snapshot.drive.yardsToFirstDown.toFixed(2),
     snapshot.score,
+  ].join('|');
+}
+
+function createPlaySelectionOrbitKey(snapshot: GameplaySnapshot, preSnapSequenceId: number): string {
+  return [
+    preSnapSequenceId,
+    snapshot.playbookId,
+    snapshot.snapLane,
+    snapshot.nextSnapSpot.x.toFixed(2),
+    snapshot.nextSnapSpot.z.toFixed(2),
   ].join('|');
 }
 

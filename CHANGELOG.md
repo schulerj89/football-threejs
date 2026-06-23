@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.27] - 2026-06-23
+
+### Changed
+
+- Centered the pre-snap play-selection tray in the middle of the screen.
+- Added a ball-centered 360-degree play-selection orbit that runs only while a play has not yet been selected for the snap.
+- Suppressed the older automatic pre-play orbit after the play-selection orbit completes, so selecting a play does not trigger a second swivel.
+
+### Tests
+
+- Verified `npx vitest run tests/gameplayCameraController.test.ts tests/playCallDiagram.test.ts`, `npx tsc --noEmit --pretty false`, and `npm run build`.
+
 ## [1.21.26] - 2026-06-23
 
 ### Changed

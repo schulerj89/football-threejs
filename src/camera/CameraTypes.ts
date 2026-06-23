@@ -15,6 +15,7 @@ export type GameplayCameraState =
   | 'deadBall'
   | 'gameOver'
   | 'passFlight'
+  | 'playSelectionOrbit'
   | 'preSnapFormation'
   | 'resetLineOfScrimmage'
   | 'tacticalOverview';
@@ -125,6 +126,7 @@ export interface GameplayCameraControllerOptions {
 
 export interface GameplayCameraUpdateOptions {
   crowdCutawaysEnabled?: boolean;
+  playSelectionOrbitActive?: boolean;
   presentationEvents?: readonly PresentationAudioEvent[];
 }
 
