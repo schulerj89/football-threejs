@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.43] - 2026-06-23
+
+### Added
+
+- Added stats-driven postgame story selection for the final screen, with eligible opinions for close finishes, decisive wins, turnover swings, quarterback dominance, rushing control, defensive control, and offensive efficiency.
+- Added compact final-stat chips to the game-over transition panel so the final presentation reads more like the halftime report.
+- Added one-time game-over announcer handling that uses future postgame voice-pack clips when available and otherwise falls back to existing final-horn commentary with exact captions.
+
+### Tests
+
+- Verified `npx vitest run tests/postgamePresentation.test.ts tests/halftimePresentation.test.ts` and `npm run build`.
+
 ## [1.21.42] - 2026-06-23
 
 ### Added

@@ -1,4 +1,5 @@
 import type { MatchSnapshot } from '../match/MatchTypes';
+import { resolvePostgameStory } from '../presentation/postgame/PostgameStoryResolver';
 import { formatMatchClock } from './MatchScorebug';
 
 export interface QuarterTransitionOptions {
@@ -12,6 +13,8 @@ export class QuarterTransitionPanel {
 
   private readonly title = document.createElement('h2');
   private readonly summary = document.createElement('p');
+  private readonly story = document.createElement('p');
+  private readonly finalStats = document.createElement('div');
   private readonly drives = document.createElement('ul');
   private readonly continueButton = document.createElement('button');
   private readonly rematchButton = document.createElement('button');
@@ -20,6 +23,8 @@ export class QuarterTransitionPanel {
   constructor(options: QuarterTransitionOptions) {
     this.root.className = 'match-transition-panel quarter-transition-panel';
     this.root.setAttribute('role', 'dialog');
+    this.story.className = 'match-transition-story';
+    this.finalStats.className = 'match-transition-final-stats';
     this.continueButton.type = 'button';
     this.continueButton.textContent = 'Continue';
     this.continueButton.addEventListener('click', options.onContinue);
@@ -32,6 +37,8 @@ export class QuarterTransitionPanel {
     this.root.append(
       this.title,
       this.summary,
+      this.story,
+      this.finalStats,
       this.drives,
       this.continueButton,
       this.rematchButton,
@@ -52,6 +59,7 @@ export class QuarterTransitionPanel {
     this.summary.textContent = `${match.userTeam.abbreviation} ${match.userScore} - ${match.opponentTeam.abbreviation} ${match.opponentScore} | Q${match.quarter} ${formatMatchClock(
       match.clock.remainingSeconds,
     )}`;
+    this.syncPostgameStory(match);
     const completedDrives = match.driveSummaries.filter((drive) => drive.result !== 'endOfQuarter');
     this.drives.replaceChildren(
       ...completedDrives.slice(-8).map((drive) => {
@@ -65,9 +73,43 @@ export class QuarterTransitionPanel {
     this.returnButton.hidden = phase !== 'gameOver';
   }
 
+  private syncPostgameStory(match: MatchSnapshot): void {
+    if (match.phase !== 'gameOver') {
+      this.story.hidden = true;
+      this.story.textContent = '';
+      this.finalStats.hidden = true;
+      this.finalStats.replaceChildren();
+      return;
+    }
+
+    const story = resolvePostgameStory(match);
+    this.story.hidden = false;
+    this.story.textContent = story.caption;
+    this.finalStats.hidden = false;
+    this.finalStats.replaceChildren(
+      createFinalStatChip('Total Yards', match.stats.teams.user.totalYards, match.stats.teams.opponent.totalYards),
+      createFinalStatChip('Passing', match.stats.teams.user.passingYards, match.stats.teams.opponent.passingYards),
+      createFinalStatChip('Rushing', match.stats.teams.user.rushingYards, match.stats.teams.opponent.rushingYards),
+      createFinalStatChip('Turnovers', match.stats.teams.user.turnovers, match.stats.teams.opponent.turnovers),
+    );
+  }
+
   dispose(): void {
     this.root.remove();
   }
+}
+
+function createFinalStatChip(label: string, user: number, opponent: number): HTMLDivElement {
+  const chip = document.createElement('div');
+  const userValue = document.createElement('span');
+  const labelElement = document.createElement('strong');
+  const opponentValue = document.createElement('span');
+  chip.className = 'match-transition-final-stat';
+  userValue.textContent = String(user);
+  labelElement.textContent = label;
+  opponentValue.textContent = String(opponent);
+  chip.append(userValue, labelElement, opponentValue);
+  return chip;
 }
 
 function getTransitionTitle(match: MatchSnapshot): string {

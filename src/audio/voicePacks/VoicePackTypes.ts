@@ -12,6 +12,7 @@ export type VoicePackScriptDomain =
   | 'gameplay'
   | 'gameOpinion'
   | 'halftime'
+  | 'postgame'
   | 'pregame';
 
 export type GameOpinionCategory =
@@ -38,10 +39,20 @@ export type HalftimeCategory =
   | 'userPassingSuccess'
   | 'userRushingSuccess';
 
+export type PostgameCategory =
+  | 'balancedFinal'
+  | 'closeFinish'
+  | 'decisiveWin'
+  | 'defensiveControl'
+  | 'offensiveEfficiency'
+  | 'quarterbackDominance'
+  | 'rushingControl'
+  | 'turnoverSwing';
+
 export interface VoicePackClip {
   readonly assetId: string;
   readonly caption: string;
-  readonly category?: CommentaryCategory | PregameCommentaryCategory | GameOpinionCategory | HalftimeCategory;
+  readonly category?: CommentaryCategory | PregameCommentaryCategory | GameOpinionCategory | HalftimeCategory | PostgameCategory;
   readonly compressedBytes?: number;
   readonly contentHash?: string | null;
   readonly domain: VoicePackScriptDomain;

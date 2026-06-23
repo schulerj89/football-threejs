@@ -4,6 +4,7 @@ import type {
   BroadcastScriptId,
   GameOpinionCategory,
   HalftimeCategory,
+  PostgameCategory,
   VoicePackId,
   VoicePackMetadata,
 } from './VoicePackTypes';
@@ -55,6 +56,17 @@ export const HALFTIME_SCRIPT_IDS: Readonly<Record<HalftimeCategory, readonly Bro
   turnoverStory: ['half_turnover_story_01', 'half_turnover_story_02'],
   userPassingSuccess: ['half_user_passing_success_01', 'half_user_passing_success_02'],
   userRushingSuccess: ['half_user_rushing_success_01', 'half_user_rushing_success_02'],
+} as const;
+
+export const POSTGAME_SCRIPT_IDS: Readonly<Record<PostgameCategory, readonly BroadcastScriptId[]>> = {
+  balancedFinal: ['post_balanced_final_01', 'post_balanced_final_02'],
+  closeFinish: ['post_close_finish_01', 'post_close_finish_02'],
+  decisiveWin: ['post_decisive_win_01', 'post_decisive_win_02'],
+  defensiveControl: ['post_defensive_control_01', 'post_defensive_control_02'],
+  offensiveEfficiency: ['post_offensive_efficiency_01', 'post_offensive_efficiency_02'],
+  quarterbackDominance: ['post_qb_dominance_01', 'post_qb_dominance_02'],
+  rushingControl: ['post_rushing_control_01', 'post_rushing_control_02'],
+  turnoverSwing: ['post_turnover_swing_01', 'post_turnover_swing_02'],
 } as const;
 
 export const REQUIRED_VOICE_PACK_SCRIPT_IDS: readonly BroadcastScriptId[] = [

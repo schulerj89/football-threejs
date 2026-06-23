@@ -6,7 +6,7 @@ import {
   syncBallVisual,
   type BallVisualSnapshot,
 } from '../ballVisual';
-import { AudioMixer } from '../audio/AudioMixer';
+import { AudioMixer, type AudioPlaybackHandle } from '../audio/AudioMixer';
 import {
   MenuMusicPlaylistController,
   type MenuMusicPlaylistSnapshot,
@@ -81,6 +81,7 @@ import { NowPlayingIndicator } from '../ui/NowPlayingIndicator';
 import type { PlayDefinition } from '../playbook';
 import type { BallModel } from '../ballModel';
 import type { RuntimeAudioDebugSnapshot } from '../audio/AudioDebugOverlay';
+import { COMMENTARY_CATALOG } from '../audio/CommentaryCatalog';
 import type { FramePerformanceProfiler } from '../performance/FramePerformanceProfiler';
 import {
   getQualityProfile,
@@ -176,6 +177,7 @@ import type {
   HalftimePresentationSnapshot,
   HalftimePresentationUpdateResult,
 } from '../presentation/halftime/HalftimePresentationTypes';
+import { resolvePostgameStory } from '../presentation/postgame/PostgameStoryResolver';
 
 export interface PresentationRuntimeOptions {
   formationPreviewActive: boolean;
@@ -291,6 +293,10 @@ export class PresentationRuntime {
   private pregameAudioCoordinator: PregameAudioCoordinator;
   private pregamePresentationDirector: PregamePresentationDirector;
   private halftimePresentationDirector: HalftimePresentationDirector;
+  private postgameAudioHandle: AudioPlaybackHandle | null = null;
+  private postgameCaption: string | null = null;
+  private postgameCaptionUntilSeconds = 0;
+  private postgameKey: string | null = null;
   private readonly onHalftimeContinue: () => void;
   private presentationHoldDirector: PresentationHoldDirector;
   private readonly voicePackResolver: VoicePackAssetResolver;
@@ -565,6 +571,7 @@ export class PresentationRuntime {
     this.qbShowcaseCard.hide('resetPresentationIdentity');
     this.keysToGameOverlay.hide('hidden');
     this.halftimePresentationDirector.reset();
+    this.resetPostgamePresentation();
     this.broadcastCaptions.hidden = true;
     this.broadcastCaptions.textContent = '';
   }
@@ -582,6 +589,7 @@ export class PresentationRuntime {
     this.syncKickoffResultMessage(null);
     this.qbShowcaseCard.hide('skipped');
     this.halftimePresentationDirector.finish();
+    this.resetPostgamePresentation();
   }
 
   skipPresentationHold(): void {
@@ -1062,6 +1070,21 @@ export class PresentationRuntime {
     this.cameraController.finishPregamePresentation(gameplaySnapshot);
   }
 
+  updatePostgameFrame(matchSnapshot: MatchSnapshot | null): void {
+    if (!matchSnapshot || matchSnapshot.phase !== 'gameOver') {
+      if (this.postgameKey || this.postgameAudioHandle || this.postgameCaption) {
+        this.resetPostgamePresentation();
+      }
+      return;
+    }
+
+    const key = createPostgameKey(matchSnapshot);
+    if (this.postgameKey !== key) {
+      this.startPostgameCommentary(matchSnapshot, key);
+    }
+    this.syncPostgameCaptions();
+  }
+
   syncPlayCallUi(
     gameplaySnapshot: GameplaySnapshot,
     visible: boolean,
@@ -1363,6 +1386,7 @@ export class PresentationRuntime {
   }
 
   dispose(): void {
+    this.resetPostgamePresentation();
     this.scene.remove(this.ballVisual);
     this.scene.remove(this.routeArtRenderer.group);
     this.scene.remove(this.controlledPlayerLabels.group);
@@ -1516,6 +1540,77 @@ export class PresentationRuntime {
     this.broadcastCaptions.textContent = caption;
   }
 
+  private startPostgameCommentary(matchSnapshot: MatchSnapshot, key: string): void {
+    this.resetPostgamePresentation();
+    this.postgameKey = key;
+    this.syncVoicePackSelection(matchSnapshot);
+    const story = resolvePostgameStory(matchSnapshot);
+    this.audioMixer.stopOneShotsByCategory('announcer');
+    this.audioMixer.setCrowdDuckingGain(0.68);
+
+    void this.voicePackResolver.resolveClip(story.scriptId)
+      .then((resolved) => {
+        if (this.postgameKey !== key) {
+          return null;
+        }
+
+        if (resolved) {
+          this.postgameCaption = resolved.caption;
+          return this.audioMixer.playOneShotTracked(resolved.asset.assetId);
+        }
+
+        const fallback = selectFinalHornFallback(matchSnapshot);
+        this.postgameCaption = fallback.caption;
+        return this.audioMixer.playOneShotTracked(fallback.assetId);
+      })
+      .then((handle) => {
+        if (this.postgameKey !== key) {
+          handle?.stop(0.05);
+          return;
+        }
+        if (!handle) {
+          this.audioMixer.setCrowdDuckingGain(1);
+          return;
+        }
+
+        this.postgameAudioHandle = handle;
+        this.postgameCaptionUntilSeconds = handle.startedAt + (handle.durationSeconds ?? 3) + 0.4;
+        void handle.ended.then(() => {
+          if (this.postgameKey === key) {
+            this.postgameCaptionUntilSeconds = this.audioMixer.getCurrentTime() + 0.4;
+            this.audioMixer.setCrowdDuckingGain(1);
+          }
+        });
+      })
+      .catch(() => {
+        if (this.postgameKey === key) {
+          this.audioMixer.setCrowdDuckingGain(1);
+        }
+      });
+  }
+
+  private syncPostgameCaptions(): void {
+    const visible =
+      this.gameExperience.settings.captionsEnabled &&
+      Boolean(this.postgameCaption) &&
+      this.audioMixer.getCurrentTime() <= this.postgameCaptionUntilSeconds;
+
+    this.broadcastCaptions.hidden = !visible;
+    this.broadcastCaptions.textContent = visible ? this.postgameCaption! : '';
+  }
+
+  private resetPostgamePresentation(): void {
+    const hadPostgameAudio = Boolean(this.postgameKey || this.postgameAudioHandle || this.postgameCaption);
+    this.postgameAudioHandle?.stop(0.06);
+    this.postgameAudioHandle = null;
+    this.postgameCaption = null;
+    this.postgameCaptionUntilSeconds = 0;
+    this.postgameKey = null;
+    if (hadPostgameAudio) {
+      this.audioMixer.setCrowdDuckingGain(1);
+    }
+  }
+
   private getVisibleSidelineCount(): number {
     const snapshot = this.sidelineTeamController.getSnapshot();
     if (!snapshot.enabled) {
@@ -1575,6 +1670,27 @@ function shouldRunPlaySelectionOrbit(
   return gameplaySnapshot.playState === 'preSnap' &&
     preSnapCadence !== null &&
     preSnapCadence.playSelectedForSnap === false;
+}
+
+function createPostgameKey(match: MatchSnapshot): string {
+  return [
+    match.deterministicSeed,
+    match.userTeam.id,
+    match.opponentTeam.id,
+    match.userScore,
+    match.opponentScore,
+    match.driveSummaries.length,
+    match.stats.processedEventCount,
+  ].join(':');
+}
+
+function selectFinalHornFallback(match: MatchSnapshot): { assetId: string; caption: string } {
+  const assetId = Math.abs(match.deterministicSeed + match.userScore - match.opponentScore) % 2 === 0
+    ? 'ann_challenge_ending_01'
+    : 'ann_challenge_ending_02';
+  const caption = COMMENTARY_CATALOG.find((clip) => clip.assetId === assetId)?.caption ??
+    'That is the horn. Final score is on the board.';
+  return { assetId, caption };
 }
 
 function areCrowdSettingsEqual(

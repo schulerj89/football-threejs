@@ -926,6 +926,7 @@ export class FootballApplication {
     this.matchScorebug.sync(null, null, false);
     this.opponentDriveSummary.sync(null, false);
     this.quarterTransitionPanel.sync(null, false);
+    this.presentation.updatePostgameFrame(null);
     this.presentation.resetPregamePresentationIdentity();
     this.lifecycle.returnToTitleScreen();
   }
@@ -938,6 +939,7 @@ export class FootballApplication {
     this.matchScorebug.sync(matchSnapshot, gameplaySnapshot, visible);
     this.opponentDriveSummary.sync(matchSnapshot, visible);
     this.quarterTransitionPanel.sync(matchSnapshot, visible && matchSnapshot?.phase !== 'halftime');
+    this.presentation.updatePostgameFrame(visible ? matchSnapshot : null);
     document.body.dataset.gameMode = this.gameExperience.settings.gameMode;
   }
 
