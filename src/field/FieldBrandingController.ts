@@ -128,6 +128,7 @@ export class FieldBrandingController {
     mesh.name = `${side}-end-zone-home-wordmark`;
     mesh.position.set(endZone.center.x, BRANDING_Y + 0.004, endZone.center.z);
     mesh.rotation.x = -Math.PI / 2;
+    mesh.rotation.z = side === 'far' ? Math.PI : 0;
     mesh.renderOrder = 7;
     mesh.userData.presentationOnly = true;
     mesh.userData.homeEndZoneWordmark = true;

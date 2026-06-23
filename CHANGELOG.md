@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.2] - 2026-06-23
+
+### Fixed
+
+- Rotated the far home-field end-zone wordmark so split team names like `METRO` and `METEORS` read correctly from their respective end zones.
+
+### Tests
+
+- Verified `npx vitest run tests/fieldGeometry.test.ts`, `npm run artifacts:game-screens`, and `npm run build`.
+
 ## [1.22.1] - 2026-06-23
 
 ### Added

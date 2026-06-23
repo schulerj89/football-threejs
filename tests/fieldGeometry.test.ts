@@ -123,6 +123,7 @@ describe('field geometry integration', () => {
         teamId: 'bay-city-current',
         text: 'BAY CITY',
       });
+      expect(nearWordmark?.rotation.z).toBe(0);
       expect(farWordmark).toBeInstanceOf(THREE.Mesh);
       expect(farWordmark?.userData).toMatchObject({
         homeEndZoneWordmark: true,
@@ -130,6 +131,7 @@ describe('field geometry integration', () => {
         teamId: 'bay-city-current',
         text: 'CURRENT',
       });
+      expect(farWordmark?.rotation.z).toBe(Math.PI);
     } finally {
       field.dispose();
     }
