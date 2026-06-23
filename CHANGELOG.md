@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.0] - 2026-06-23
+
+### Added
+
+- Marked Dynasty Phase 0 complete with a non-playable Football Hub Dynasty shell and decision-map pointer.
+- Added roadmap regression coverage to keep the Dynasty shell tied to `docs/DYNASTY_DECISIONS.md`.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyDecisions.test.ts tests/teamSummaryViewModel.test.ts tests/matchSetup.test.ts` and `npm run build`.
+
 ## [1.21.47] - 2026-06-23
 
 ### Changed

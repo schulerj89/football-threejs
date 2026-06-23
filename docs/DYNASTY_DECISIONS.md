@@ -58,6 +58,8 @@ flowchart TD
 
 ### Phase 0: Dynasty Shell
 
+Status: Complete in `1.22.0`.
+
 Goal: Make Dynasty visible as a hub destination without starting a new mode.
 
 Scope:
@@ -72,6 +74,12 @@ Acceptance:
 - No gameplay starts from the Dynasty shell.
 - No duplicate team-selection path is introduced.
 - Build passes.
+
+Completion notes:
+
+- The Football Hub contains a Dynasty destination.
+- The Dynasty destination is a non-playable planning shell.
+- The shell points back to this decision map and keeps Play Now separate.
 
 ### Phase 1: Season Core
 

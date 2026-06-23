@@ -36,6 +36,8 @@ type HubSection = 'playNow' | 'dynasty' | 'rosters' | 'settings';
 type RosterTab = 'offense' | 'defense' | 'specialists';
 type RosterSort = 'number' | 'name' | 'overall' | 'position';
 
+export const DYNASTY_DECISION_DOC_PATH = 'docs/DYNASTY_DECISIONS.md';
+
 export interface FootballHubScreenOptions {
   getLeagueData: () => LeagueData | null;
   initialSettings: GameExperienceSettings;
@@ -251,13 +253,13 @@ export class FootballHubScreen {
 
     const eyebrow = document.createElement('span');
     eyebrow.className = 'football-hub-dynasty-eyebrow';
-    eyebrow.textContent = 'Planning Shell';
+    eyebrow.textContent = 'Phase 0 Complete';
 
     const title = document.createElement('h3');
     title.textContent = 'Build a program, not just a lineup';
 
     const summary = document.createElement('p');
-    summary.textContent = 'Dynasty will become the long-term mode for seasons, recruiting, staff decisions, roster growth, and program identity. This shell is intentionally non-playable while we lock the scope and data model.';
+    summary.textContent = 'Dynasty will become the long-term mode for seasons, recruiting, staff decisions, roster growth, and program identity. This shell is intentionally non-playable while the season-core save loop is scoped for the next phase.';
 
     const phases = document.createElement('ol');
     phases.className = 'football-hub-dynasty-phases';
@@ -274,7 +276,7 @@ export class FootballHubScreen {
 
     const note = document.createElement('p');
     note.className = 'football-hub-dynasty-note';
-    note.textContent = 'Decision map: docs/DYNASTY_DECISIONS.md';
+    note.textContent = `Decision map: ${DYNASTY_DECISION_DOC_PATH}`;
 
     hero.append(eyebrow, title, summary, phases, note);
     this.dynastyView.append(hero);
