@@ -57,10 +57,10 @@ describe('audio production pipeline', () => {
     expect(validateAudioPlan(FOOTBALL_AUDIO_PLAN)).toEqual([]);
     expect(FOOTBALL_SFX_AUDIO_PLAN).toHaveLength(24);
     expect(QUARTERBACK_CADENCE_AUDIO_PLAN).toHaveLength(5);
-    expect(FOOTBALL_AUDIO_PLAN).toHaveLength(56);
+    expect(FOOTBALL_AUDIO_PLAN).toHaveLength(59);
     expect(FOOTBALL_SFX_AUDIO_PLAN.every((asset) => asset.modelId === 'eleven_text_to_sound_v2')).toBe(true);
     expect(FOOTBALL_AUDIO_PLAN.every((asset) => asset.outputFormat === 'mp3_44100_128')).toBe(true);
-    expect(FOOTBALL_AUDIO_PLAN.filter((asset) => asset.category === 'announcer')).toHaveLength(27);
+    expect(FOOTBALL_AUDIO_PLAN.filter((asset) => asset.category === 'announcer')).toHaveLength(30);
     expect(
       QUARTERBACK_CADENCE_AUDIO_PLAN.every(
         (asset) => asset.category === 'sfx' &&
@@ -99,11 +99,12 @@ describe('audio production pipeline', () => {
 
   it('validates the controlled announcer script catalog and exact captions', () => {
     expect(validateAnnouncerScriptCatalog()).toEqual([]);
-    expect(ANNOUNCER_SCRIPT_CATALOG).toHaveLength(27);
+    expect(ANNOUNCER_SCRIPT_CATALOG).toHaveLength(30);
     expect(ANNOUNCER_SCRIPT_CATALOG.every((script) => script.caption === script.script)).toBe(true);
     expect(ANNOUNCER_SCRIPT_CATALOG.filter((script) => script.eventCategory === 'firstDown')).toHaveLength(3);
     expect(ANNOUNCER_SCRIPT_CATALOG.filter((script) => script.eventCategory === 'touchdown')).toHaveLength(3);
     expect(ANNOUNCER_SCRIPT_CATALOG.filter((script) => script.eventCategory === 'sack')).toHaveLength(3);
+    expect(ANNOUNCER_SCRIPT_CATALOG.filter((script) => script.eventCategory === 'safety')).toHaveLength(3);
     expect(ANNOUNCER_SCRIPT_CATALOG.filter((script) => script.eventCategory === 'bigGain')).toHaveLength(3);
     expect(ANNOUNCER_SCRIPT_CATALOG.filter((script) => script.eventCategory === 'incomplete')).toHaveLength(3);
   });
@@ -160,7 +161,7 @@ describe('audio production pipeline', () => {
         auditionPagePath: ANNOUNCER_AUDITION_PAGE_PATH,
         captionManifestPath: ANNOUNCER_CAPTION_MANIFEST_PATH,
       });
-      expect(captions.scripts).toHaveLength(27);
+      expect(captions.scripts).toHaveLength(30);
       expect(captions.scripts.every((entry) => entry.caption === entry.script)).toBe(true);
       expect(captions.scripts.every((entry) => entry.voiceId === 'voice-test')).toBe(true);
       expect(readFileSync(join(cwd, ANNOUNCER_AUDITION_PAGE_PATH), 'utf8')).toContain('Grant Mercer');

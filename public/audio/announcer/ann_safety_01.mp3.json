@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_safety_01",
+  "caption": "Safety. I'm sure they weren't expecting that.",
+  "category": "announcer",
+  "compressedBytes": 74022,
+  "contentHash": "a46bbcd1cf57261f8d13c6537997ef43f01321e64cefac6b8305123f7455f0e5",
+  "durationSeconds": 4.558912,
+  "eventCategory": "safety",
+  "generatedAt": "2026-06-23T15:21:49.447Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.2,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "Safety. I'm sure they weren't expecting that.",
+  "scriptId": "ann_safety_01",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

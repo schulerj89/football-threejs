@@ -1,0 +1,18 @@
+{
+  "assetId": "ann_safety_02",
+  "caption": "The defense pins them down and takes two points.",
+  "category": "announcer",
+  "compressedBytes": 60230,
+  "contentHash": "d45e7289f5e9f81269b99a1b171beaebc57d97331737a7cd94ed680b52ada3f4",
+  "durationSeconds": 3.70898,
+  "eventCategory": "safety",
+  "generatedAt": "2026-06-23T15:21:49.477Z",
+  "kind": "speech",
+  "modelId": "eleven_v3",
+  "outputFormat": "mp3_44100_128",
+  "requestedDurationSeconds": 3.1,
+  "runtimeLoadingStrategy": "buffer",
+  "script": "The defense pins them down and takes two points.",
+  "scriptId": "ann_safety_02",
+  "voiceId": "KKOOCEM13w1s47p4Qrw3"
+}

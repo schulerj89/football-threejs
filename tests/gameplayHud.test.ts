@@ -29,6 +29,28 @@ describe('gameplay HUD', () => {
     expect(hud.playCall.hidden).toBe(true);
     expect(hud.playCall.getAttribute('aria-hidden')).toBe('true');
   });
+
+  it('shows the safety result message with requested casing', () => {
+    restoreDom = installGameplayHudDom();
+
+    const hud = createGameplayHud();
+    const snapshot = createGameplaySnapshot();
+    snapshot.lastPlayResult = {
+      endingBallSpot: { x: 0, z: -51 },
+      id: 1,
+      reason: 'safety',
+      scoringTeam: 'defense',
+      startingBallSpot: { x: 0, z: -49 },
+      type: 'safety',
+      yardsGained: -2,
+    };
+
+    syncGameplayHud(hud, snapshot);
+
+    expect(hud.safetyMessage.hidden).toBe(false);
+    expect(hud.safetyMessage.textContent).toBe('Safety');
+    expect(hud.resultMessage.textContent).toBe('-2 yards');
+  });
 });
 
 function createGameplaySnapshot(): GameplaySnapshot {

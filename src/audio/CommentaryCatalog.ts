@@ -6,6 +6,7 @@ export type CommentaryCategory =
   | 'incomplete'
   | 'outOfBounds'
   | 'playReady'
+  | 'safety'
   | 'sack'
   | 'tackleForLoss'
   | 'touchdown'
@@ -32,6 +33,7 @@ export interface CommentaryCategoryRule {
 export const COMMENTARY_CATEGORY_RULES: Readonly<Record<CommentaryCategory, CommentaryCategoryRule>> = {
   touchdown: { cooldownSeconds: 0, priority: 100 },
   challengeEnding: { cooldownSeconds: 12, priority: 96 },
+  safety: { cooldownSeconds: 5, priority: 92 },
   turnoverOnDowns: { cooldownSeconds: 5, priority: 90 },
   sack: { cooldownSeconds: 6, priority: 80 },
   firstDown: { cooldownSeconds: 7, priority: 70 },
@@ -54,6 +56,9 @@ export const COMMENTARY_CATALOG: readonly CommentaryClip[] = [
   clip('ann_touchdown_01', 'touchdown', 1, 'peak', 'He breaks through and finishes it. Touchdown.', 2.9),
   clip('ann_touchdown_02', 'touchdown', 2, 'peak', 'Into the paint. The offense cashes in.', 2.7),
   clip('ann_touchdown_03', 'touchdown', 3, 'peak', 'That run finds daylight all the way home.', 2.7),
+  clip('ann_safety_01', 'safety', 1, 'high', "Safety. I'm sure they weren't expecting that.", 3.2),
+  clip('ann_safety_02', 'safety', 2, 'high', 'The defense pins them down and takes two points.', 3.1),
+  clip('ann_safety_03', 'safety', 3, 'high', 'Backed up too far, and the defense turns it into a safety.', 3.4),
   clip('ann_sack_01', 'sack', 1, 'high', 'Pressure gets there. The quarterback is wrapped up behind the line.', 3.7),
   clip('ann_sack_02', 'sack', 2, 'high', 'The pocket closes fast, and the defense wins the down.', 3.3),
   clip('ann_sack_03', 'sack', 3, 'high', 'Nowhere to go. The rush drops him before the throw.', 3.2),

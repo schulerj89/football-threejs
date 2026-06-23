@@ -8,6 +8,7 @@ export type AnnouncerEventCategory =
   | 'incomplete'
   | 'outOfBounds'
   | 'playReady'
+  | 'safety'
   | 'sack'
   | 'tackleForLoss'
   | 'touchdown'
@@ -56,6 +57,9 @@ export const ANNOUNCER_SCRIPT_CATALOG: readonly AnnouncerScript[] = [
   line('ann_touchdown_01', 'touchdown', 1, 'peak', 'He breaks through and finishes it. Touchdown.', 2.9),
   line('ann_touchdown_02', 'touchdown', 2, 'peak', 'Into the paint. The offense cashes in.', 2.7),
   line('ann_touchdown_03', 'touchdown', 3, 'peak', 'That run finds daylight all the way home.', 2.7),
+  line('ann_safety_01', 'safety', 1, 'high', "Safety. I'm sure they weren't expecting that.", 3.2),
+  line('ann_safety_02', 'safety', 2, 'high', 'The defense pins them down and takes two points.', 3.1),
+  line('ann_safety_03', 'safety', 3, 'high', 'Backed up too far, and the defense turns it into a safety.', 3.4),
   line('ann_sack_01', 'sack', 1, 'high', 'Pressure gets there. The quarterback is wrapped up behind the line.', 3.7),
   line('ann_sack_02', 'sack', 2, 'high', 'The pocket closes fast, and the defense wins the down.', 3.3),
   line('ann_sack_03', 'sack', 3, 'high', 'Nowhere to go. The rush drops him before the throw.', 3.2),
@@ -80,6 +84,7 @@ const HIGH_VALUE_EVENT_COUNTS: Readonly<Record<string, number>> = {
   firstDown: 3,
   incomplete: 3,
   sack: 3,
+  safety: 3,
   touchdown: 3,
 };
 

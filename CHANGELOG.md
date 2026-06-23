@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.10] - 2026-06-23
+
+### Added
+
+- Added safety-specific broadcast commentary routing with three safety announcer lines, including "Safety. I'm sure they weren't expecting that."
+- Added generated safety announcer MP3 assets and refreshed the announcer caption/audition metadata so safety clips are available at runtime.
+
+### Changed
+
+- Updated the in-game safety result banner to display "Safety" with the requested casing.
+
+### Tests
+
+- Verified `npx vitest run tests/audioPipeline.test.ts tests/broadcastCommentaryDirector.test.ts tests/gameplayHud.test.ts`, `npm run build`, and `npm run test:unit`.
+
 ## [1.22.9] - 2026-06-23
 
 ### Fixed

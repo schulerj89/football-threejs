@@ -332,6 +332,10 @@ export class BroadcastCommentaryDirector {
       return 'touchdown';
     }
 
+    if (event.type === 'safety') {
+      return 'safety';
+    }
+
     if (event.type === 'sack') {
       return 'sack';
     }

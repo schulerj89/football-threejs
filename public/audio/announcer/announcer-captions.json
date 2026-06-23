@@ -5,7 +5,7 @@
     "description": "Original fictional football broadcaster for the low-poly prototype. Warm, authoritative, modern, and energetic without imitating a named person.",
     "voiceDirection": "Clear modern football broadcast delivery, controlled energy, warm authority, able to rise for big plays without shouting every line."
   },
-  "generatedAt": "2026-06-22T03:33:35.027Z",
+  "generatedAt": "2026-06-23T15:21:55.563Z",
   "scripts": [
     {
       "assetId": "ann_game_opening_01",
@@ -154,6 +154,51 @@
       "outputPath": "public/audio/announcer/ann_touchdown_03.mp3",
       "script": "That run finds daylight all the way home.",
       "scriptId": "ann_touchdown_03",
+      "variant": 3,
+      "voiceId": "KKOOCEM13w1s47p4Qrw3"
+    },
+    {
+      "assetId": "ann_safety_01",
+      "caption": "Safety. I'm sure they weren't expecting that.",
+      "compressedBytes": 74022,
+      "durationSeconds": 4.558912,
+      "eventCategory": "safety",
+      "exists": true,
+      "intensity": "high",
+      "modelId": "eleven_v3",
+      "outputPath": "public/audio/announcer/ann_safety_01.mp3",
+      "script": "Safety. I'm sure they weren't expecting that.",
+      "scriptId": "ann_safety_01",
+      "variant": 1,
+      "voiceId": "KKOOCEM13w1s47p4Qrw3"
+    },
+    {
+      "assetId": "ann_safety_02",
+      "caption": "The defense pins them down and takes two points.",
+      "compressedBytes": 60230,
+      "durationSeconds": 3.70898,
+      "eventCategory": "safety",
+      "exists": true,
+      "intensity": "high",
+      "modelId": "eleven_v3",
+      "outputPath": "public/audio/announcer/ann_safety_02.mp3",
+      "script": "The defense pins them down and takes two points.",
+      "scriptId": "ann_safety_02",
+      "variant": 2,
+      "voiceId": "KKOOCEM13w1s47p4Qrw3"
+    },
+    {
+      "assetId": "ann_safety_03",
+      "caption": "Backed up too far, and the defense turns it into a safety.",
+      "compressedBytes": 77366,
+      "durationSeconds": 4.768662,
+      "eventCategory": "safety",
+      "exists": true,
+      "intensity": "high",
+      "modelId": "eleven_v3",
+      "outputPath": "public/audio/announcer/ann_safety_03.mp3",
+      "script": "Backed up too far, and the defense turns it into a safety.",
+      "scriptId": "ann_safety_03",
       "variant": 3,
       "voiceId": "KKOOCEM13w1s47p4Qrw3"
     },

@@ -128,6 +128,23 @@ describe('broadcast commentary director', () => {
     expect(mixer.crowdDuckingGain).toBe(1);
   });
 
+  it('plays safety commentary for safety presentation events', async () => {
+    const mixer = new FakeCommentaryAudioPort();
+    const director = new BroadcastCommentaryDirector(mixer);
+    const safety = event('safety', 'safety');
+
+    director.processEvents([safety]);
+    await director.flushPendingAudioForTests();
+
+    expect(mixer.playedOneShots).toHaveLength(1);
+    expect(mixer.playedOneShots[0]).toMatch(/^ann_safety_/);
+    expect(director.getSnapshot().playback).toMatchObject({
+      activeClipId: expect.stringMatching(/^ann_safety_/),
+      eventId: safety.id,
+      playing: true,
+    });
+  });
+
   it('marks failed commentary playback as unavailable for presentation holds', async () => {
     const mixer = new FakeCommentaryAudioPort();
     mixer.playOneShotResult = false;
@@ -202,10 +219,10 @@ function event(
     playResult: Object.freeze({
       endingBallSpot: { x: 0, z: -15 + yardsGained },
       id: stableId(id),
-      reason: type === 'sack' ? 'sack' : type === 'touchdown' ? 'touchdown' : 'tackle',
-      scoringTeam: type === 'touchdown' ? 'offense' : null,
+      reason: type === 'sack' ? 'sack' : type === 'touchdown' ? 'touchdown' : type === 'safety' ? 'safety' : 'tackle',
+      scoringTeam: type === 'touchdown' ? 'offense' : type === 'safety' ? 'defense' : null,
       startingBallSpot: { x: 0, z: -15 },
-      type: type === 'sack' ? 'sack' : type === 'touchdown' ? 'touchdown' : 'tackle',
+      type: type === 'sack' ? 'sack' : type === 'touchdown' ? 'touchdown' : type === 'safety' ? 'safety' : 'tackle',
       yardsGained,
     }),
     playState: type === 'playPrepared' ? 'preSnap' : 'dead',

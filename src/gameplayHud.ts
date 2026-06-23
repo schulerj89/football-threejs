@@ -84,7 +84,7 @@ export function createGameplayHud(): GameplayHud {
 
   const safetyMessage = document.createElement('div');
   safetyMessage.className = 'safety-message';
-  safetyMessage.textContent = 'SAFETY';
+  safetyMessage.textContent = 'Safety';
   root.appendChild(safetyMessage);
 
   const outOfBoundsMessage = document.createElement('div');
