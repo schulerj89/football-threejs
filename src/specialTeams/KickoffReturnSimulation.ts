@@ -161,6 +161,7 @@ export const KICKOFF_RETURN_CONFIG = {
   returnEscortWidthYards: 4.25,
   returnerAiSpeedYardsPerSecond: 12,
   returnerTrackingSpeedYardsPerSecond: 11.8,
+  reservedCoveragePursuitSlots: ['coverage-left-1', 'coverage-right-1'],
   touchbackDecisionBaseReturnYards: 14,
   touchbackDecisionEndZoneYardLine: 0.5,
   touchbackDecisionReturnCushionYards: 2,
@@ -626,8 +627,14 @@ function startClock(state: KickoffReturnState, events: KickoffReturnUpdateEvents
 function createKickoffReturnBlockAssignments(
   state: KickoffReturnState,
 ): KickoffReturnBlockAssignment[] {
+  const reservedCoverageSlots = new Set<string>(
+    KICKOFF_RETURN_CONFIG.reservedCoveragePursuitSlots,
+  );
   const coverage = state.participants
-    .filter((participant) => participant.phase === 'kicking' && participant.slotId !== 'kicker')
+    .filter((participant) =>
+      participant.phase === 'kicking' &&
+      participant.slotId !== 'kicker' &&
+      !reservedCoverageSlots.has(participant.slotId))
     .sort(compareByXThenId);
   const blockers = state.participants
     .filter((participant) =>

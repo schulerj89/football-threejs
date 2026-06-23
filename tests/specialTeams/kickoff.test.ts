@@ -542,6 +542,41 @@ describe('kickoff match flow', () => {
       .toBe(state.blockerAssignments.length);
   });
 
+  it('keeps clean pursuit lanes available against an opponent kickoff return', () => {
+    const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
+    const kickoff = createKickoffStateForTeam('user', 36, { kickPower: 20 });
+    const layout = createKickoffFormation(kickoff, binding);
+    const state = createKickoffReturnState({ kickoff, layout, matchSeed: 36 });
+
+    startKickoffRunUp(state);
+    for (let frame = 0; frame < 600 && state.blockerAssignments.length === 0; frame += 1) {
+      updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+    }
+
+    const reservedCoverage = new Set<string>(KICKOFF_RETURN_CONFIG.reservedCoveragePursuitSlots);
+    const reservedCoverageIds = state.participants
+      .filter((participant) => reservedCoverage.has(participant.slotId))
+      .map((participant) => participant.visualId);
+
+    expect(kickoff.receivingTeam).toBe('opponent');
+    expect(kickoff.result?.landingType).toBe('fielded');
+    expect(state.blockerAssignments).not.toEqual([]);
+    for (const coverageId of reservedCoverageIds) {
+      expect(state.blockerAssignments.some((assignment) =>
+        assignment.coverageVisualId === coverageId)).toBe(false);
+    }
+
+    for (let frame = 0; frame < 600 && !state.outcome; frame += 1) {
+      updateKickoffReturnState(state, { deltaSeconds: 1 / 60 });
+    }
+
+    expect(state.outcome).toMatchObject({
+      receivingTeam: 'opponent',
+      scoringTeam: null,
+      type: 'tackle',
+    });
+  });
+
   it('keeps receiving blockers in visible escort lanes during the automated return', () => {
     const binding = createGameplayRosterBinding('11v11', BROADCAST_EXPERIENCE_SETTINGS.teamProfiles);
     const kickoff = createKickoffStateForTeam('opponent', 153, { kickPower: 20 });

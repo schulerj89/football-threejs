@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.13] - 2026-06-23
+
+### Fixed
+
+- Fixed CPU kickoff returns by reserving inside coverage players as clean pursuit lanes so blockers cannot pin every defender away from the returner.
+
+### Tests
+
+- Verified `npx vitest run tests/specialTeams/kickoff.test.ts`, `npm run build`, and `npm run test:unit`.
+
 ## [1.22.12] - 2026-06-23
 
 ### Added
