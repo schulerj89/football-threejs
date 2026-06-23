@@ -6,6 +6,9 @@ import type {
 import type { AudioPlaybackCategory } from '../../audio/AudioAssetManifest';
 import type { GameAudioDirector } from '../../audio/GameAudioDirector';
 import {
+  isLocalPregameCommentaryAssetId,
+} from '../../audio/PregameLocalAudioAssets';
+import {
   resolveMatchupLine,
   resolvePregameWelcome,
   resolveQuarterbackSpotlight,
@@ -416,7 +419,15 @@ export class PregameAudioCoordinator {
 
     const resolved = await this.voicePackResolver.resolveClip(selection.clip.scriptId);
     if (!resolved) {
-      return null;
+      if (!isLocalPregameCommentaryAssetId(selection.assetId)) {
+        return null;
+      }
+
+      return {
+        assetId: selection.assetId ?? selection.clip.assetId,
+        caption: selection.caption,
+        durationSeconds: selection.clip.durationSeconds,
+      };
     }
 
     return {

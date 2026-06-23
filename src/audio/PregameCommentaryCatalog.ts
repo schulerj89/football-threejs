@@ -146,6 +146,7 @@ export const PREGAME_COMMENTARY_CATALOG: readonly PregameCommentaryClip[] = [
   ...createWarmupTransitionClips(),
   ...createMatchupClips(),
   ...createWeatherClips(),
+  ...createPlayerSpecificQuarterbackClips(),
   ...createQuarterbackClips(),
   ...createQuarterbackArchetypeClips(),
   ...createCoinTossSetupClips(),
@@ -221,6 +222,22 @@ export function resolveQuarterbackSpotlight(
   }
 
   const profile = createQuarterbackScoutingProfile(quarterback.player);
+  const playerSpecificCandidates = PREGAME_COMMENTARY_CATALOG.filter(
+    (clip) => clip.category === 'quarterback' && clip.rosterPlayerId === rosterPlayerId,
+  );
+
+  if (playerSpecificCandidates.length > 0) {
+    const playerSpecificSelection = selectFromCandidates({
+      candidates: playerSpecificCandidates,
+      category: 'quarterback',
+      options,
+      seedParts: ['quarterback', rosterPlayerId],
+    });
+
+    if (playerSpecificSelection.available || !options.availableAssetIds) {
+      return playerSpecificSelection;
+    }
+  }
 
   return selectFromCandidates({
     candidates: PREGAME_COMMENTARY_CATALOG.filter(
@@ -586,6 +603,55 @@ function createWeatherClips(): PregameCommentaryClip[] {
   ];
 }
 
+function createPlayerSpecificQuarterbackClips(): PregameCommentaryClip[] {
+  return [
+    ...playerQuarterbackLines(
+      'bay-city-current',
+      'bay-city-current-qb-6',
+      'DROO BAR-tun',
+      6,
+      [
+        ['Drew Barton, number 6, leads this offense with the first snap coming.', 3.76],
+        ['Keep an eye on Drew Barton, number 6. The read comes fast in this system.', 4.16],
+        ['Drew Barton, number 6, starts under center with a chance to set the tone.', 4.08],
+      ],
+    ),
+    ...playerQuarterbackLines(
+      'lakefront-lights',
+      'lakefront-lights-qb-8',
+      'REED HAR-per',
+      8,
+      [
+        ['Reid Harper, number 8, leads this offense with the first snap coming.', 3.76],
+        ['Keep an eye on Reid Harper, number 8. The read comes fast in this system.', 4.16],
+        ['Reid Harper, number 8, starts under center with a chance to set the tone.', 4],
+      ],
+    ),
+    ...playerQuarterbackLines(
+      'metro-meteors',
+      'metro-meteors-qb-12',
+      'JAY-len CAR-ter',
+      12,
+      [
+        ['Jalen Carter, number 12, leads this offense with the first snap coming.', 4.08],
+        ['Keep an eye on Jalen Carter, number 12. The read comes fast in this system.', 4.24],
+        ['Jalen Carter, number 12, starts under center with a chance to set the tone.', 4.56],
+      ],
+    ),
+    ...playerQuarterbackLines(
+      'summit-forge',
+      'summit-forge-qb-14',
+      'SY-rus WORD',
+      14,
+      [
+        ['Cyrus Ward, number 14, leads this offense with the first snap coming.', 4.16],
+        ['Keep an eye on Cyrus Ward, number 14. The read comes fast in this system.', 4.16],
+        ['Cyrus Ward, number 14, starts under center with a chance to set the tone.', 4.56],
+      ],
+    ),
+  ];
+}
+
 function createQuarterbackClips(): PregameCommentaryClip[] {
   return QUARTERBACK_ARCHETYPES.flatMap((archetype) =>
     createQuarterbackIntroScripts(archetype).map((script, index) =>
@@ -794,6 +860,30 @@ function weatherLine(
     ),
     weatherCondition: condition,
   };
+}
+
+function playerQuarterbackLines(
+  teamId: string,
+  rosterPlayerId: string,
+  pronunciation: string,
+  jerseyNumber: number,
+  scripts: readonly (readonly [script: string, durationSeconds: number])[],
+): PregameCommentaryClip[] {
+  return scripts.map(([script, durationSeconds], index) => ({
+    ...line(
+      `pregame_qb_${rosterPlayerId}_${formatVariant(index + 1)}`,
+      'quarterback',
+      index + 1,
+      script,
+      durationSeconds,
+    ),
+    jerseyNumber,
+    matchPhaseEligibility: 'warmup',
+    priority: 34,
+    pronunciation,
+    rosterPlayerId,
+    teamId,
+  }));
 }
 
 function quarterbackLine(

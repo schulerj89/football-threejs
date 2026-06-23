@@ -55,6 +55,7 @@ describe('pregame commentary catalog', () => {
   it('validates the generated script catalog from teams and starting quarterbacks', () => {
     const teams = listTeamProfiles();
     const quarterbackArchetypeCount = 4;
+    const generatedPlayerQuarterbackIntroCount = 12;
 
     expect(validatePregameCommentaryCatalog()).toEqual([]);
     expect(validatePregameScriptCatalog()).toEqual([]);
@@ -62,7 +63,9 @@ describe('pregame commentary catalog', () => {
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'warmupTransition')).toHaveLength(2);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'matchup')).toHaveLength(2);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'weather')).toHaveLength(10);
-    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'quarterback')).toHaveLength(quarterbackArchetypeCount * 2);
+    expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'quarterback')).toHaveLength(
+      (quarterbackArchetypeCount * 2) + generatedPlayerQuarterbackIntroCount,
+    );
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'quarterbackArchetype')).toHaveLength(quarterbackArchetypeCount * 2);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'coinTossSetup')).toHaveLength(2);
     expect(PREGAME_COMMENTARY_CATALOG.filter((clip) => clip.category === 'coinTossResult')).toHaveLength((teams.length * 2) + 2);
@@ -114,7 +117,7 @@ describe('pregame commentary catalog', () => {
     });
   });
 
-  it('resolves every known starting quarterback through generic archetype commentary', () => {
+  it('prefers generated player-specific quarterback intros and keeps archetype fallback available', () => {
     for (const quarterback of listKnownStartingQuarterbacks()) {
       const profile = createQuarterbackScoutingProfile(quarterback.player);
       const selection = resolveQuarterbackSpotlight({
@@ -123,10 +126,15 @@ describe('pregame commentary catalog', () => {
       });
 
       expect(selection.available).toBe(true);
-      expect(selection.clip?.qbArchetype).toBe(profile.archetype);
-      expect(selection.clip?.rosterPlayerId).toBeUndefined();
-      expect(selection.caption).not.toContain(quarterback.player.displayName);
-      expect(selection.caption).not.toContain(`number ${quarterback.jerseyNumber}`);
+      if (selection.clip?.rosterPlayerId) {
+        expect(selection.clip.rosterPlayerId).toBe(quarterback.rosterPlayerId);
+        expect(selection.caption).toContain(quarterback.player.displayName);
+        expect(selection.caption).toContain(`number ${quarterback.jerseyNumber}`);
+      } else {
+        expect(selection.clip?.qbArchetype).toBe(profile.archetype);
+        expect(selection.caption).not.toContain(quarterback.player.displayName);
+        expect(selection.caption).not.toContain(`number ${quarterback.jerseyNumber}`);
+      }
     }
 
     expect(resolveQuarterbackSpotlight({ teamId: 'custom-team' })).toMatchObject({

@@ -90,6 +90,16 @@ describe('runtime audio mixer', () => {
     )).toEqual(new Set(['cadence', 'coin', 'kickoff', 'placeKick']));
   });
 
+  it('registers only generated local pregame announcer assets', () => {
+    const assetIds = new Set(LOCAL_AUDIO_ASSET_MANIFEST.map((entry) => entry.assetId));
+
+    expect(assetIds.has('pregame_qb_metro-meteors-qb-12_01')).toBe(true);
+    expect(assetIds.has('pregame_qb_bay-city-current-qb-6_01')).toBe(true);
+    expect(assetIds.has('pregame_qb_balanced_01')).toBe(false);
+    expect(assetIds.has('pregame_matchup_generic_01')).toBe(false);
+    expect(assetIds.has('pregame_coin_toss_result_desert-ridge-scorpions_receive_01')).toBe(false);
+  });
+
   it('creates one AudioContext and routes category buses into master', () => {
     const fakeContext = new FakeAudioContext('suspended');
     let factoryCalls = 0;

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.7] - 2026-06-23
+
+### Changed
+
+- Mapped generated player-specific pregame quarterback intro clips into the runtime catalog so Metro, Lakefront, Summit, and Bay City starting QBs use their named audio lines during the QB spotlight.
+- Added a local pregame-audio availability gate so missing compact/generic placeholder IDs are no longer registered as local MP3 assets or used as static fallback playback.
+- Kept compact voice-pack lines as fallback when a starting quarterback does not have a generated player-specific intro yet.
+
+### Tests
+
+- Verified QB spotlight resolution for named generated QB intro clips, `npx vitest run tests/audioRuntime.test.ts tests/pregameCommentaryCatalog.test.ts tests/voicePacks.test.ts tests/audioPipeline.test.ts`, and `npm run build`.
+
 ## [1.21.6] - 2026-06-23
 
 ### Changed

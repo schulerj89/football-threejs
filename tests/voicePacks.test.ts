@@ -136,8 +136,25 @@ describe('compact voice packs', () => {
     ]);
   });
 
-  it('uses generic quarterback intro lines that match the actual archetype', () => {
-    const quarterback = listKnownStartingQuarterbacks()[0];
+  it('uses generated quarterback intro lines when available', () => {
+    const quarterback = listKnownStartingQuarterbacks().find(
+      (candidate) => candidate.rosterPlayerId === 'metro-meteors-qb-12',
+    )!;
+    const selection = resolveQuarterbackSpotlight({
+      matchSeed: 'qb-specific',
+      rosterPlayerId: quarterback.rosterPlayerId,
+    });
+
+    expect(selection.available).toBe(true);
+    expect(selection.clip?.rosterPlayerId).toBe(quarterback.rosterPlayerId);
+    expect(selection.caption).toContain(quarterback.player.displayName);
+    expect(selection.caption).toContain(String(quarterback.jerseyNumber));
+  });
+
+  it('keeps generic quarterback archetype lines as fallback when no player-specific intro exists', () => {
+    const quarterback = listKnownStartingQuarterbacks().find(
+      (candidate) => candidate.rosterPlayerId === 'ironwood-owls-qb-4',
+    )!;
     const profile = createQuarterbackScoutingProfile(quarterback.player);
     const selection = resolveQuarterbackSpotlight({
       matchSeed: 'qb-generic',
