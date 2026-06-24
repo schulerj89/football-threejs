@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.48] - 2026-06-24
+
+### Fixed
+
+- Added Dynasty offseason validation helpers for departure previews, incoming class previews, roster reviews, season history snapshots, and next-season shells.
+- Rejected duplicate departure players, duplicate incoming prospects, mismatched roster-review totals, duplicate history rows, bad history math, and invalid next-season metadata.
+- Updated the Phase 6 decision map to mark offseason validation hardening shipped while leaving the final isolation hardening pass in progress.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyOffseason.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.47] - 2026-06-24
 
 ### Added

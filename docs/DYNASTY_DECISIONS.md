@@ -271,7 +271,7 @@ Completion notes:
 
 ### Phase 6: Offseason and Multi-Year Saves
 
-Status: In progress. Minor update 4 shipped in `1.22.47`.
+Status: In progress. Patch hardening update 1 shipped in `1.22.48`.
 
 Goal: Close the long-term loop.
 
@@ -298,7 +298,7 @@ Minor update plan:
 
 Patch hardening plan:
 
-1. Offseason validation hardening: reject malformed departures, incoming class rows, roster review rows, duplicate history entries, and invalid next-season metadata.
+1. Offseason validation hardening: reject malformed departures, incoming class rows, roster review rows, duplicate history entries, and invalid next-season metadata. Shipped in `1.22.48`.
 2. Multi-year save isolation hardening: prove offseason previews and next-season shells cannot corrupt active roster registry, current-season results, or save migration paths.
 
 ## Open Decisions

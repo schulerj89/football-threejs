@@ -5,6 +5,11 @@ import {
   createDynastyOffseasonIncomingClassPreview,
   createDynastyOffseasonNextSeasonShell,
   createDynastyOffseasonRosterReview,
+  validateDynastyOffseasonDeparturePreview,
+  validateDynastyOffseasonIncomingClassPreview,
+  validateDynastyOffseasonNextSeasonShell,
+  validateDynastyOffseasonRosterReview,
+  validateDynastyOffseasonSeasonHistorySnapshot,
 } from '../src/dynasty/DynastyOffseason';
 import { createDynastySigningClassPreview } from '../src/dynasty/DynastyRecruiting';
 import { createDynastySeasonCore } from '../src/dynasty/DynastySchedule';
@@ -224,6 +229,92 @@ describe('dynasty offseason departures', () => {
     expect(completeSave.currentSeason).toEqual(beforeSeason);
     expect(afterRoster.players.map((player) => [player.id, player.ratings])).toEqual(
       beforeRoster.players.map((player) => [player.id, player.ratings]),
+    );
+  });
+
+  it('rejects malformed offseason previews, history rows, and next-season metadata', () => {
+    const save = createCompletedSave('dynasty-offseason-validation');
+    const departurePreview = createDynastyOffseasonDeparturePreview({ save });
+    const incomingClassPreview = createDynastyOffseasonIncomingClassPreview({ save });
+    const rosterReview = createDynastyOffseasonRosterReview({ save });
+    const shell = createDynastyOffseasonNextSeasonShell({ save });
+    const departure = departurePreview.departureCandidates[0]!;
+    const incoming = incomingClassPreview.incomingCandidates[0]!;
+    const row = rosterReview.reviewRows[0]!;
+    const historyRow = shell.currentSeasonHistory.teamRows[0]!;
+    const game = shell.nextSeason.weeks[0]!.games[0]!;
+
+    expect(validateDynastyOffseasonDeparturePreview(departurePreview)).toEqual([]);
+    expect(validateDynastyOffseasonIncomingClassPreview(incomingClassPreview)).toEqual([]);
+    expect(validateDynastyOffseasonRosterReview(rosterReview)).toEqual([]);
+    expect(validateDynastyOffseasonSeasonHistorySnapshot(shell.currentSeasonHistory)).toEqual([]);
+    expect(validateDynastyOffseasonNextSeasonShell(shell)).toEqual([]);
+
+    expect(validateDynastyOffseasonDeparturePreview({
+      ...departurePreview,
+      departureCandidates: [departure, { ...departure }],
+    }).map((issue) => issue.message)).toContain(
+      `Dynasty offseason departure duplicates ${departure.playerId}`,
+    );
+    expect(validateDynastyOffseasonDeparturePreview({
+      ...departurePreview,
+      departureCandidates: [{ ...departure, departureRisk: 101 }],
+    }).map((issue) => issue.message)).toContain(
+      `Dynasty offseason departure ${departure.playerId} has invalid risk`,
+    );
+    expect(validateDynastyOffseasonIncomingClassPreview({
+      ...incomingClassPreview,
+      incomingCandidates: [incoming, { ...incoming }],
+    }).map((issue) => issue.message)).toContain(
+      `Dynasty offseason incoming class duplicates ${incoming.prospectId}`,
+    );
+    expect(validateDynastyOffseasonIncomingClassPreview({
+      ...incomingClassPreview,
+      projectedRosterCount: incomingClassPreview.projectedRosterCount + 1,
+    }).map((issue) => issue.message)).toContain(
+      'Dynasty offseason incoming class projected roster count does not match candidates',
+    );
+    expect(validateDynastyOffseasonRosterReview({
+      ...rosterReview,
+      reviewRows: [{ ...row, projectedRosterCount: row.projectedRosterCount + 1 }],
+    }).map((issue) => issue.message)).toContain(
+      `Dynasty offseason roster review ${row.room} has mismatched projected count`,
+    );
+    expect(validateDynastyOffseasonRosterReview({
+      ...rosterReview,
+      totalProjectedRosterCount: rosterReview.totalProjectedRosterCount + 1,
+    }).map((issue) => issue.message)).toContain(
+      'Dynasty offseason roster review totalProjectedRosterCount does not match rows',
+    );
+    expect(validateDynastyOffseasonSeasonHistorySnapshot({
+      ...shell.currentSeasonHistory,
+      teamRows: [historyRow, { ...historyRow }],
+    }).map((issue) => issue.message)).toContain(
+      `Dynasty offseason season history duplicates ${historyRow.teamId}`,
+    );
+    expect(validateDynastyOffseasonSeasonHistorySnapshot({
+      ...shell.currentSeasonHistory,
+      teamRows: [{ ...historyRow, gamesPlayed: historyRow.gamesPlayed + 1 }],
+    }).map((issue) => issue.message)).toContain(
+      `Dynasty offseason season history ${historyRow.teamId} has mismatched games played`,
+    );
+    expect(validateDynastyOffseasonNextSeasonShell({
+      ...shell,
+      nextSeasonYear: shell.nextSeasonYear + 1,
+    }).map((issue) => issue.message)).toContain(
+      'Dynasty offseason next-season shell has invalid next-season year',
+    );
+    expect(validateDynastyOffseasonNextSeasonShell({
+      ...shell,
+      nextSeason: {
+        ...shell.nextSeason,
+        weeks: [{
+          ...shell.nextSeason.weeks[0]!,
+          games: [{ ...game, status: 'final' }],
+        }],
+      },
+    }).map((issue) => issue.message)).toContain(
+      `Dynasty offseason next-season game ${game.gameId} must be scheduled without a result`,
     );
   });
 });

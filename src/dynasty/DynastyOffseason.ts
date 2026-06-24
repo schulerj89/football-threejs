@@ -128,6 +128,11 @@ export interface DynastyOffseasonNextSeasonShell {
   readonly teamId: string;
 }
 
+export interface DynastyOffseasonValidationIssue {
+  readonly message: string;
+  readonly severity: 'error' | 'warning';
+}
+
 const ROSTER_REVIEW_ROOMS: readonly {
   readonly positions: readonly FootballPosition[];
   readonly room: string;
@@ -328,6 +333,177 @@ export function createDynastyOffseasonNextSeasonShell(options: {
   };
 }
 
+export function validateDynastyOffseasonDeparturePreview(
+  preview: unknown,
+): DynastyOffseasonValidationIssue[] {
+  const issues: DynastyOffseasonValidationIssue[] = [];
+  if (!isRecord(preview)) {
+    return [error('Dynasty offseason departure preview is malformed')];
+  }
+  if (!Array.isArray(preview.departureCandidates)) {
+    issues.push(error('Dynasty offseason departure candidates must be an array'));
+    return issues;
+  }
+  const playerIds = new Set<string>();
+  for (const candidate of preview.departureCandidates) {
+    validateDepartureCandidate(issues, candidate, playerIds);
+  }
+  if (preview.departureCandidates.length > DYNASTY_OFFSEASON_DEPARTURE_PREVIEW_COUNT) {
+    issues.push(error('Dynasty offseason departure preview has too many candidates'));
+  }
+  if (typeof preview.teamId !== 'string' || preview.teamId.length === 0) {
+    issues.push(error('Dynasty offseason departure preview is missing teamId'));
+  }
+  if (!Number.isInteger(preview.seasonYear)) {
+    issues.push(error('Dynasty offseason departure preview has invalid season year'));
+  }
+  if (typeof preview.seasonComplete !== 'boolean') {
+    issues.push(error('Dynasty offseason departure preview has invalid season status'));
+  }
+  return issues;
+}
+
+export function validateDynastyOffseasonIncomingClassPreview(
+  preview: unknown,
+): DynastyOffseasonValidationIssue[] {
+  const issues: DynastyOffseasonValidationIssue[] = [];
+  if (!isRecord(preview)) {
+    return [error('Dynasty offseason incoming class preview is malformed')];
+  }
+  if (!Array.isArray(preview.incomingCandidates)) {
+    issues.push(error('Dynasty offseason incoming candidates must be an array'));
+    return issues;
+  }
+  const prospectIds = new Set<string>();
+  for (const candidate of preview.incomingCandidates) {
+    validateIncomingCandidate(issues, candidate, prospectIds);
+  }
+  if (!isBoundedInteger(preview.currentRosterCount, 0, 99)) {
+    issues.push(error('Dynasty offseason incoming class has invalid current roster count'));
+  }
+  if (!isBoundedInteger(preview.projectedRosterCount, 0, 120)) {
+    issues.push(error('Dynasty offseason incoming class has invalid projected roster count'));
+  } else if (
+    typeof preview.currentRosterCount === 'number' &&
+    preview.projectedRosterCount !== preview.currentRosterCount + preview.incomingCandidates.length
+  ) {
+    issues.push(error('Dynasty offseason incoming class projected roster count does not match candidates'));
+  }
+  if (!isBoundedInteger(preview.addressedNeedCount, 0, preview.incomingCandidates.length)) {
+    issues.push(error('Dynasty offseason incoming class has invalid addressed need count'));
+  }
+  if (!isBoundedInteger(preview.classFitScore, 0, 100)) {
+    issues.push(error('Dynasty offseason incoming class has invalid class fit score'));
+  }
+  if (typeof preview.teamId !== 'string' || preview.teamId.length === 0) {
+    issues.push(error('Dynasty offseason incoming class is missing teamId'));
+  }
+  if (!Number.isInteger(preview.seasonYear)) {
+    issues.push(error('Dynasty offseason incoming class has invalid season year'));
+  }
+  return issues;
+}
+
+export function validateDynastyOffseasonRosterReview(
+  review: unknown,
+): DynastyOffseasonValidationIssue[] {
+  const issues: DynastyOffseasonValidationIssue[] = [];
+  if (!isRecord(review)) {
+    return [error('Dynasty offseason roster review is malformed')];
+  }
+  issues.push(...validateDynastyOffseasonDeparturePreview(review.departurePreview));
+  issues.push(...validateDynastyOffseasonIncomingClassPreview(review.incomingClassPreview));
+  if (!Array.isArray(review.reviewRows)) {
+    issues.push(error('Dynasty offseason roster review rows must be an array'));
+    return issues;
+  }
+  const rooms = new Set<string>();
+  for (const row of review.reviewRows) {
+    validateRosterReviewRow(issues, row, rooms);
+  }
+  validateRosterReviewTotal(issues, review, 'totalCurrentRosterCount', 'currentRosterCount');
+  validateRosterReviewTotal(issues, review, 'totalDepartureCandidateCount', 'departureCandidateCount');
+  validateRosterReviewTotal(issues, review, 'totalIncomingCandidateCount', 'incomingCandidateCount');
+  validateRosterReviewTotal(issues, review, 'totalProjectedRosterCount', 'projectedRosterCount');
+  if (typeof review.teamId !== 'string' || review.teamId.length === 0) {
+    issues.push(error('Dynasty offseason roster review is missing teamId'));
+  }
+  if (!Number.isInteger(review.seasonYear)) {
+    issues.push(error('Dynasty offseason roster review has invalid season year'));
+  }
+  return issues;
+}
+
+export function validateDynastyOffseasonSeasonHistorySnapshot(
+  history: unknown,
+): DynastyOffseasonValidationIssue[] {
+  const issues: DynastyOffseasonValidationIssue[] = [];
+  if (!isRecord(history)) {
+    return [error('Dynasty offseason season history is malformed')];
+  }
+  if (!Array.isArray(history.teamRows)) {
+    issues.push(error('Dynasty offseason season history rows must be an array'));
+    return issues;
+  }
+  const teamIds = new Set<string>();
+  const ranks = new Set<number>();
+  for (const row of history.teamRows) {
+    validateHistoryRow(issues, row, teamIds, ranks);
+  }
+  const championTeamId = typeof history.championTeamId === 'string' ? history.championTeamId : '';
+  if (!teamIds.has(championTeamId)) {
+    issues.push(error(`Dynasty offseason season history has unknown champion ${String(history.championTeamId)}`));
+  }
+  const userTeamId = typeof history.userTeamId === 'string' ? history.userTeamId : '';
+  if (!teamIds.has(userTeamId)) {
+    issues.push(error(`Dynasty offseason season history has unknown user team ${String(history.userTeamId)}`));
+  }
+  if (typeof history.seasonId !== 'string' || history.seasonId.length === 0) {
+    issues.push(error('Dynasty offseason season history is missing seasonId'));
+  }
+  if (!Number.isInteger(history.year)) {
+    issues.push(error('Dynasty offseason season history has invalid year'));
+  }
+  if (typeof history.seasonComplete !== 'boolean') {
+    issues.push(error('Dynasty offseason season history has invalid completion status'));
+  }
+  return issues;
+}
+
+export function validateDynastyOffseasonNextSeasonShell(
+  shell: unknown,
+): DynastyOffseasonValidationIssue[] {
+  const issues: DynastyOffseasonValidationIssue[] = [];
+  if (!isRecord(shell)) {
+    return [error('Dynasty offseason next-season shell is malformed')];
+  }
+  issues.push(...validateDynastyOffseasonRosterReview(shell.rosterReview));
+  issues.push(...validateDynastyOffseasonSeasonHistorySnapshot(shell.currentSeasonHistory));
+  if (!isRecord(shell.nextSeason)) {
+    issues.push(error('Dynasty offseason next-season shell is missing nextSeason'));
+    return issues;
+  }
+  if (!Number.isInteger(shell.nextSeasonYear) || shell.nextSeasonYear !== shell.nextSeason.year) {
+    issues.push(error('Dynasty offseason next-season shell has invalid next-season year'));
+  }
+  if (
+    isRecord(shell.currentSeasonHistory) &&
+    Number.isInteger(shell.currentSeasonHistory.year) &&
+    Number.isInteger(shell.nextSeasonYear) &&
+    shell.nextSeasonYear !== Number(shell.currentSeasonHistory.year) + 1
+  ) {
+    issues.push(error('Dynasty offseason next-season shell year does not follow history'));
+  }
+  validateNextSeasonMetadata(issues, shell.nextSeason);
+  if (typeof shell.teamId !== 'string' || shell.teamId.length === 0) {
+    issues.push(error('Dynasty offseason next-season shell is missing teamId'));
+  }
+  if (typeof shell.seasonComplete !== 'boolean') {
+    issues.push(error('Dynasty offseason next-season shell has invalid completion status'));
+  }
+  return issues;
+}
+
 function createDepartureRisk(options: {
   readonly isReserve: boolean;
   readonly isStarter: boolean;
@@ -488,6 +664,230 @@ function createGapLabel(projectedRosterCount: number, targetRosterCount: number)
   return `${Math.abs(gap)} below target`;
 }
 
+function validateDepartureCandidate(
+  issues: DynastyOffseasonValidationIssue[],
+  candidate: unknown,
+  playerIds: Set<string>,
+): void {
+  if (!isRecord(candidate)) {
+    issues.push(error('Dynasty offseason departure candidate is malformed'));
+    return;
+  }
+  const playerId = typeof candidate.playerId === 'string' ? candidate.playerId : '';
+  if (!playerId) {
+    issues.push(error('Dynasty offseason departure candidate is missing playerId'));
+  } else if (playerIds.has(playerId)) {
+    issues.push(error(`Dynasty offseason departure duplicates ${playerId}`));
+  } else {
+    playerIds.add(playerId);
+  }
+  if (!isFootballPosition(candidate.footballPosition)) {
+    issues.push(error(`Dynasty offseason departure ${playerId || 'unknown'} has invalid position`));
+  }
+  if (!isBoundedInteger(candidate.departureRisk, 0, 100)) {
+    issues.push(error(`Dynasty offseason departure ${playerId || 'unknown'} has invalid risk`));
+  }
+  if (!isBoundedInteger(candidate.overall, 0, 99)) {
+    issues.push(error(`Dynasty offseason departure ${playerId || 'unknown'} has invalid overall`));
+  }
+  if (!isDepartureReason(candidate.reason)) {
+    issues.push(error(`Dynasty offseason departure ${playerId || 'unknown'} has invalid reason`));
+  }
+  if (typeof candidate.playerName !== 'string' || candidate.playerName.length === 0) {
+    issues.push(error(`Dynasty offseason departure ${playerId || 'unknown'} has invalid name`));
+  }
+}
+
+function validateIncomingCandidate(
+  issues: DynastyOffseasonValidationIssue[],
+  candidate: unknown,
+  prospectIds: Set<string>,
+): void {
+  if (!isRecord(candidate)) {
+    issues.push(error('Dynasty offseason incoming candidate is malformed'));
+    return;
+  }
+  const prospectId = typeof candidate.prospectId === 'string' ? candidate.prospectId : '';
+  if (!prospectId) {
+    issues.push(error('Dynasty offseason incoming candidate is missing prospectId'));
+  } else if (prospectIds.has(prospectId)) {
+    issues.push(error(`Dynasty offseason incoming class duplicates ${prospectId}`));
+  } else {
+    prospectIds.add(prospectId);
+  }
+  if (!isFootballPosition(candidate.footballPosition)) {
+    issues.push(error(`Dynasty offseason incoming ${prospectId || 'unknown'} has invalid position`));
+  }
+  if (!isBoundedInteger(candidate.projectedGrade, 58, 91)) {
+    issues.push(error(`Dynasty offseason incoming ${prospectId || 'unknown'} has invalid projected grade`));
+  }
+  if (!isBoundedInteger(candidate.signingConfidence, 0, 100)) {
+    issues.push(error(`Dynasty offseason incoming ${prospectId || 'unknown'} has invalid signing confidence`));
+  }
+  if (!isBoundedInteger(candidate.starRating, 1, 5)) {
+    issues.push(error(`Dynasty offseason incoming ${prospectId || 'unknown'} has invalid star rating`));
+  }
+  if (typeof candidate.prospectName !== 'string' || candidate.prospectName.length === 0) {
+    issues.push(error(`Dynasty offseason incoming ${prospectId || 'unknown'} has invalid name`));
+  }
+  if (candidate.rosterActionLabel !== 'Preview only' && candidate.rosterActionLabel !== 'Ready for offseason review') {
+    issues.push(error(`Dynasty offseason incoming ${prospectId || 'unknown'} has invalid roster action`));
+  }
+}
+
+function validateRosterReviewRow(
+  issues: DynastyOffseasonValidationIssue[],
+  row: unknown,
+  rooms: Set<string>,
+): void {
+  if (!isRecord(row)) {
+    issues.push(error('Dynasty offseason roster review row is malformed'));
+    return;
+  }
+  const room = typeof row.room === 'string' ? row.room : '';
+  if (!room) {
+    issues.push(error('Dynasty offseason roster review row is missing room'));
+  } else if (rooms.has(room)) {
+    issues.push(error(`Dynasty offseason roster review duplicates ${room}`));
+  } else {
+    rooms.add(room);
+  }
+  if (!Array.isArray(row.positions) || row.positions.some((position) => !isFootballPosition(position))) {
+    issues.push(error(`Dynasty offseason roster review ${room || 'unknown'} has invalid positions`));
+  }
+  const numericFields = [
+    'averageOverall',
+    'currentRosterCount',
+    'departureCandidateCount',
+    'incomingCandidateCount',
+    'positionGap',
+    'projectedRosterCount',
+    'returningRosterCount',
+    'targetRosterCount',
+    'weakestOverall',
+  ] as const;
+  for (const field of numericFields) {
+    if (!isBoundedInteger(row[field], 0, field.includes('Overall') ? 99 : 120)) {
+      issues.push(error(`Dynasty offseason roster review ${room || 'unknown'} has invalid ${field}`));
+    }
+  }
+  if (
+    typeof row.currentRosterCount === 'number' &&
+    typeof row.departureCandidateCount === 'number' &&
+    typeof row.returningRosterCount === 'number' &&
+    row.returningRosterCount !== row.currentRosterCount - row.departureCandidateCount
+  ) {
+    issues.push(error(`Dynasty offseason roster review ${room || 'unknown'} has mismatched returning count`));
+  }
+  if (
+    typeof row.returningRosterCount === 'number' &&
+    typeof row.incomingCandidateCount === 'number' &&
+    typeof row.projectedRosterCount === 'number' &&
+    row.projectedRosterCount !== row.returningRosterCount + row.incomingCandidateCount
+  ) {
+    issues.push(error(`Dynasty offseason roster review ${room || 'unknown'} has mismatched projected count`));
+  }
+}
+
+function validateRosterReviewTotal(
+  issues: DynastyOffseasonValidationIssue[],
+  review: Record<string, unknown>,
+  totalKey: string,
+  rowKey: string,
+): void {
+  if (!isBoundedInteger(review[totalKey], 0, 240)) {
+    issues.push(error(`Dynasty offseason roster review has invalid ${totalKey}`));
+    return;
+  }
+  const rows = Array.isArray(review.reviewRows) ? review.reviewRows : [];
+  const total = rows
+    .filter(isRecord)
+    .reduce((sum, row) => sum + (typeof row[rowKey] === 'number' ? row[rowKey] : 0), 0);
+  if (review[totalKey] !== total) {
+    issues.push(error(`Dynasty offseason roster review ${totalKey} does not match rows`));
+  }
+}
+
+function validateHistoryRow(
+  issues: DynastyOffseasonValidationIssue[],
+  row: unknown,
+  teamIds: Set<string>,
+  ranks: Set<number>,
+): void {
+  if (!isRecord(row)) {
+    issues.push(error('Dynasty offseason season history row is malformed'));
+    return;
+  }
+  const teamId = typeof row.teamId === 'string' ? row.teamId : '';
+  if (!teamId) {
+    issues.push(error('Dynasty offseason season history row is missing teamId'));
+  } else if (teamIds.has(teamId)) {
+    issues.push(error(`Dynasty offseason season history duplicates ${teamId}`));
+  } else {
+    teamIds.add(teamId);
+  }
+  if (!isBoundedInteger(row.rank, 1, 120)) {
+    issues.push(error(`Dynasty offseason season history ${teamId || 'unknown'} has invalid rank`));
+  } else if (ranks.has(row.rank)) {
+    issues.push(error(`Dynasty offseason season history duplicates rank ${String(row.rank)}`));
+  } else {
+    ranks.add(row.rank);
+  }
+  for (const field of ['gamesPlayed', 'losses', 'pointsAgainst', 'pointsFor', 'wins'] as const) {
+    if (!isBoundedInteger(row[field], 0, 9999)) {
+      issues.push(error(`Dynasty offseason season history ${teamId || 'unknown'} has invalid ${field}`));
+    }
+  }
+  if (
+    typeof row.gamesPlayed === 'number' &&
+    typeof row.wins === 'number' &&
+    typeof row.losses === 'number' &&
+    row.gamesPlayed !== row.wins + row.losses
+  ) {
+    issues.push(error(`Dynasty offseason season history ${teamId || 'unknown'} has mismatched games played`));
+  }
+  if (
+    typeof row.pointsFor === 'number' &&
+    typeof row.pointsAgainst === 'number' &&
+    row.pointsMargin !== row.pointsFor - row.pointsAgainst
+  ) {
+    issues.push(error(`Dynasty offseason season history ${teamId || 'unknown'} has mismatched points margin`));
+  }
+}
+
+function validateNextSeasonMetadata(
+  issues: DynastyOffseasonValidationIssue[],
+  season: Record<string, unknown>,
+): void {
+  if (typeof season.seasonId !== 'string' || season.seasonId.length === 0) {
+    issues.push(error('Dynasty offseason next-season shell has invalid seasonId'));
+  }
+  if (!Array.isArray(season.teamIds) || season.teamIds.length === 0) {
+    issues.push(error('Dynasty offseason next-season shell has invalid teams'));
+  } else if (new Set(season.teamIds).size !== season.teamIds.length) {
+    issues.push(error('Dynasty offseason next-season shell duplicates teams'));
+  }
+  if (!Array.isArray(season.weeks) || season.weeks.length === 0) {
+    issues.push(error('Dynasty offseason next-season shell has invalid weeks'));
+  } else {
+    for (const week of season.weeks) {
+      if (!isRecord(week) || !Array.isArray(week.games)) {
+        issues.push(error('Dynasty offseason next-season shell has malformed week'));
+        continue;
+      }
+      for (const game of week.games) {
+        if (!isRecord(game)) {
+          issues.push(error('Dynasty offseason next-season shell has malformed game'));
+          continue;
+        }
+        if (game.status !== 'scheduled' || game.result !== null) {
+          issues.push(error(`Dynasty offseason next-season game ${String(game.gameId)} must be scheduled without a result`));
+        }
+      }
+    }
+  }
+}
+
 function formatDepartureReason(reason: DynastyDepartureReason): string {
   switch (reason) {
     case 'draftInterest':
@@ -497,6 +897,27 @@ function formatDepartureReason(reason: DynastyDepartureReason): string {
     case 'roleChurn':
       return 'Role churn';
   }
+}
+
+function error(message: string): DynastyOffseasonValidationIssue {
+  return { message, severity: 'error' };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isBoundedInteger(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
+}
+
+function isFootballPosition(value: unknown): value is FootballPosition {
+  return typeof value === 'string' && ROSTER_REVIEW_ROOMS.some((room) =>
+    room.positions.includes(value as FootballPosition));
+}
+
+function isDepartureReason(value: unknown): value is DynastyDepartureReason {
+  return value === 'draftInterest' || value === 'eligibility' || value === 'roleChurn';
 }
 
 function clampRisk(value: number): number {
