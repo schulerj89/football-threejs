@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.14] - 2026-06-24
+
+### Added
+
+- Started Dynasty Phase 1 with a typed season-core save contract and deterministic six-team round-robin schedule generator.
+- Added the Phase 1 rollout breakdown with four minor updates and two patch-hardening passes in the dynasty decision map.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyDecisions.test.ts tests/dynastySeason.test.ts`, `npm run build`, and `npm run test:unit`.
+
 ## [1.22.13] - 2026-06-23
 
 ### Fixed

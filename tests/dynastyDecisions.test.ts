@@ -10,5 +10,8 @@ describe('dynasty decision roadmap', () => {
     expect(decisionDoc).toContain('### Phase 0: Dynasty Shell');
     expect(decisionDoc).toContain('Status: Complete in `1.22.0`.');
     expect(decisionDoc).toContain('The Dynasty destination is a non-playable planning shell.');
+    expect(decisionDoc).toContain('Status: In progress. Minor update 1 starts in `1.22.14`.');
+    expect(decisionDoc).toContain('Season-core contract: add the `DynastySaveData` schema');
+    expect(decisionDoc).toContain('Patch hardening plan:');
   });
 });
