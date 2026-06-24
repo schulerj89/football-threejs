@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.56] - 2026-06-24
+
+### Fixed
+
+- Preserved the active user drive state across Q1 and Q3 quarter breaks so a play ending before the break resumes with the correct down and distance instead of resetting to 1st-and-10.
+- Added a match-flow regression covering a short Q1 play that resumes in Q2 as 2nd-and-7.
+
+### Tests
+
+- Verified `npx vitest run tests/matchModel.test.ts -t "preserves down and distance"`, `npx vitest run tests/matchModel.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.55] - 2026-06-24
 
 ### Added

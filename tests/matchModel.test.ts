@@ -133,6 +133,59 @@ describe('offense-only exhibition match model', () => {
     );
   });
 
+  it('preserves down and distance when a user drive carries from Q1 into Q2', () => {
+    const gameplay = createGameplayModel({
+      challengeMode: 'exhibition',
+      playbookId: '11v11',
+    });
+    const controller = createController({
+      quarterDurationSeconds: 1,
+      seed: 20260620,
+    });
+    const startingPosition = createOwnYardLinePosition(37);
+    const startingSpot = possessionFieldPositionToOffenseSpot(startingPosition);
+
+    controller.start(gameplay);
+    resetOffensePossession(gameplay, startingSpot);
+    expect(startPlay(gameplay)).toBe(true);
+    controller.update(2, gameplay, snapshotGameplayModel(gameplay));
+    controller.model.clock.remainingSeconds = 0;
+
+    gameplay.player.position.z = startingSpot.z + 3;
+    const defender = gameplay.players.find((player) => player.team === 'defense');
+    if (!defender) {
+      throw new Error('Expected a defender for Q1 clock-expiry setup');
+    }
+    defender.position = { ...gameplay.player.position };
+    updateGameplayModel(gameplay, 1 / 60);
+    const deadBallSnapshot = snapshotGameplayModel(gameplay);
+
+    expect(deadBallSnapshot.playState).toBe('dead');
+    expect(deadBallSnapshot.drive.currentDown).toBe(2);
+    expect(deadBallSnapshot.drive.yardsToFirstDown).toBe(7);
+
+    controller.update(0, gameplay, deadBallSnapshot);
+    expect(controller.getSnapshot()).toMatchObject({
+      phase: 'quarterBreak',
+      possession: 'user',
+      quarter: 1,
+    });
+
+    resetPlay(gameplay);
+    expect(snapshotGameplayModel(gameplay).drive.currentDown).toBe(2);
+    controller.continue(gameplay);
+
+    const resumedGameplay = snapshotGameplayModel(gameplay);
+    expect(controller.getSnapshot()).toMatchObject({
+      phase: 'userPossession',
+      possession: 'user',
+      quarter: 2,
+    });
+    expect(resumedGameplay.drive.currentDown).toBe(2);
+    expect(resumedGameplay.drive.yardsToFirstDown).toBe(7);
+    expect(resumedGameplay.drive.lineOfScrimmage.z).toBeCloseTo(startingSpot.z + 3);
+  });
+
   it('simulates opponent drives deterministically from the same input', () => {
     const input = {
       difficulty: 'pro' as const,

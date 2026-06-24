@@ -481,7 +481,7 @@ export class MatchFlowController {
         return;
       }
       const nextPhase = this.model.phase as string;
-      if (nextPhase === 'userPossession') {
+      if (nextPhase === 'userPossession' && wasHalftime) {
         this.resetGameplayForMatchPosition(gameplay, this.model.currentFieldPosition);
       } else if (nextPhase === 'opponentDriveSimulation') {
         this.simulateOpponentPossessionOnce();
