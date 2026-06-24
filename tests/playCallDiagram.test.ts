@@ -286,14 +286,13 @@ describe('play call diagrams', () => {
   it('draws added 11v11 passing plays from real route and protection data', () => {
     for (const playId of ['twin-slants-11', 'curl-flat-11', 'four-verts-out-flat-11'] as const) {
       const play = getPlay(playId);
-      const expectedRouteCount = playId === 'four-verts-out-flat-11' ? 3 : 5;
 
       for (const snapPlacement of createSnapPlacements()) {
         const diagram = createPlayCallDiagramModel(play, snapPlacement);
         const resolvedRoutes = resolveEligibleReceiverRoutes(play, snapPlacement);
 
         expect(diagram.runDirection).toBeNull();
-        expect(diagram.receiverRoutes).toHaveLength(expectedRouteCount);
+        expect(diagram.receiverRoutes).toHaveLength(5);
         expect(diagram.receiverRoutes.map((route) => route.receiverId)).toEqual(getEligibleReceiverIds(play));
         expect(diagram.blockerAssignments).toHaveLength(4);
         expect(diagram.blockerAssignments.every((assignment) => assignment.kind === 'passProtection')).toBe(true);
@@ -373,7 +372,7 @@ describe('play call diagrams', () => {
     expect(createPlayCardAccessibilityLabel(getPlay('curl-flat-11'), 6))
       .toBe('Curl Flat 11, pass play, shortcut 6');
     expect(createPlayCardAccessibilityLabel(getPlay('four-verts-out-flat-11'), 7))
-      .toBe('Four Verts Out Flat 11, pass play, shortcut 7');
+      .toBe('3 Verts Out 11, pass play, shortcut 7');
     expect(createPlayCardAccessibilityLabel(getPlay('inside-zone-11'), 1))
       .toBe('Inside Zone 11, run play, shortcut 1');
   });

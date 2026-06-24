@@ -520,15 +520,13 @@ describe('playbook', () => {
       const play = getPlay(playId);
       const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
       const assignedRushers = Object.values(play.protectionAssignments ?? {});
-      const expectedReceiverIds = playId === 'four-verts-out-flat-11'
-        ? ['offense-wr-left', 'offense-wr-right', 'offense-slot']
-        : [
-            'offense-wr-left',
-            'offense-wr-right',
-            'offense-slot',
-            'offense-tight-end',
-            'offense-rb',
-          ];
+      const expectedReceiverIds = [
+        'offense-wr-left',
+        'offense-wr-right',
+        'offense-slot',
+        'offense-tight-end',
+        'offense-rb',
+      ];
 
       expect(play).toMatchObject({
         ballCarrierRole: 'quarterback',
@@ -542,13 +540,9 @@ describe('playbook', () => {
       expect(getEligibleReceiverIds(play)).toEqual(expectedReceiverIds);
       expect(getNextEligibleReceiverId(play, 'offense-wr-left')).toBe('offense-wr-right');
       expect(getNextEligibleReceiverId(play, 'offense-wr-right')).toBe('offense-slot');
-      if (playId === 'four-verts-out-flat-11') {
-        expect(getNextEligibleReceiverId(play, 'offense-slot')).toBe('offense-wr-left');
-      } else {
-        expect(getNextEligibleReceiverId(play, 'offense-slot')).toBe('offense-tight-end');
-        expect(getNextEligibleReceiverId(play, 'offense-tight-end')).toBe('offense-rb');
-        expect(getNextEligibleReceiverId(play, 'offense-rb')).toBe('offense-wr-left');
-      }
+      expect(getNextEligibleReceiverId(play, 'offense-slot')).toBe('offense-tight-end');
+      expect(getNextEligibleReceiverId(play, 'offense-tight-end')).toBe('offense-rb');
+      expect(getNextEligibleReceiverId(play, 'offense-rb')).toBe('offense-wr-left');
       expect(Object.keys(play.protectionAssignments ?? {}).sort()).toEqual([
         'offense-center',
         'offense-line-left',
@@ -566,8 +560,7 @@ describe('playbook', () => {
       expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-tight-end');
       expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-right')).toBe('offense-slot');
       expect(getDeepHelpReceiverIds(play, 'defense-safety')).toEqual(expectedReceiverIds);
-      expect(getReceiverDisplayName(play, playId === 'four-verts-out-flat-11' ? 'offense-slot' : 'offense-rb'))
-        .toBe(playId === 'four-verts-out-flat-11' ? 'Slot' : 'Running Back');
+      expect(getReceiverDisplayName(play, 'offense-rb')).toBe('Running Back');
     }
   });
 
@@ -643,7 +636,7 @@ describe('playbook', () => {
     }
   });
 
-  it('keeps Four Verts Out Flat 11 as three straight vertical routes', () => {
+  it('keeps 3 Verts Out 11 as three verticals with a tight-end out and running-back flat', () => {
     const play = getPlay('four-verts-out-flat-11');
 
     for (const lane of ['leftHash', 'middle', 'rightHash'] as const) {
@@ -652,11 +645,16 @@ describe('playbook', () => {
       const leftStreak = routes.find((route) => route.receiverId === 'offense-wr-left');
       const rightStreak = routes.find((route) => route.receiverId === 'offense-wr-right');
       const slotStreak = routes.find((route) => route.receiverId === 'offense-slot');
+      const tightEndOut = routes.find((route) => route.receiverId === 'offense-tight-end');
+      const runningBackFlat = routes.find((route) => route.receiverId === 'offense-rb');
+      const fieldDirection = lane === 'rightHash' ? -1 : 1;
 
       expect(routes.map((route) => route.receiverId)).toEqual([
         'offense-wr-left',
         'offense-wr-right',
         'offense-slot',
+        'offense-tight-end',
+        'offense-rb',
       ]);
       for (const streak of [leftStreak, rightStreak, slotStreak]) {
         expect(streak?.points).toHaveLength(3);
@@ -666,6 +664,14 @@ describe('playbook', () => {
         expect(Math.abs(streak!.points[2].x - streak!.points[0].x)).toBeLessThan(0.01);
         expect(Math.abs(streak!.points[1].x - streak!.points[0].x)).toBeLessThan(0.01);
       }
+
+      expect(tightEndOut?.points).toHaveLength(3);
+      expect(runningBackFlat?.points).toHaveLength(3);
+      expect(tightEndOut!.points[1].z).toBeGreaterThan(tightEndOut!.points[0].z);
+      expect(tightEndOut!.points[2].z).toBeGreaterThan(tightEndOut!.points[0].z);
+      expect(Math.sign(tightEndOut!.points[2].x - tightEndOut!.points[0].x)).toBe(fieldDirection);
+      expect(Math.sign(runningBackFlat!.points[2].x - runningBackFlat!.points[0].x)).toBe(-fieldDirection);
+      expect(runningBackFlat!.points[2].z).toBeLessThan(tightEndOut!.points[2].z);
     }
   });
 

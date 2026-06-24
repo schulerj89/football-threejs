@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.68] - 2026-06-24
+
+### Changed
+
+- Renamed the 11v11 `Four Verts Out Flat` play card to `3 Verts Out 11` while keeping its internal play ID stable.
+- Restored the tight-end out and running-back flat routes so the concept now shows three vertical routes plus the TE/RB underneath answers.
+- Restored five eligible targets for the play so target cycling, route art, play-card art, and deep-help coverage data match the full concept.
+
+### Added
+
+- Added `artifacts/route-art-validation-1.22.68/` and `artifacts/play-card-validation-1.22.68/` with screenshots validating the renamed play and restored five-route art.
+
+### Tests
+
+- Verified `npx vitest run tests/playbook.test.ts tests/playCallDiagram.test.ts tests/receiverRoutes.test.ts tests/routeArtRenderer.test.ts`, `npx playwright test tests/scene-smoke.spec.ts -g "starts playable 11v11 plays and throws Spread Quick to the selected target"`, `npm run artifacts:route-art`, `npm run artifacts:play-cards`, and `npm run build`.
+
 ## [1.22.67] - 2026-06-24
 
 ### Fixed

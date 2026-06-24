@@ -68,7 +68,7 @@ const REPO_ROOT = resolve(fileURLToPath(new URL('../../', import.meta.url)));
 const VIEWPORT = { width: 1600, height: 900 };
 const DEVICE_SCALE_FACTOR = 1;
 const PLAYBOOK_IDS: PlaybookId[] = ['5v5', '7v7', '11v11'];
-const CAPTURE_VERSION = '1.22.66';
+const CAPTURE_VERSION = '1.22.68';
 const outputDir = join(REPO_ROOT, 'artifacts', `route-art-validation-${CAPTURE_VERSION}`);
 
 const passPlays = PLAYBOOK_IDS.flatMap((playbookId) =>

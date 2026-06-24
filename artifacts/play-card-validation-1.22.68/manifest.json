@@ -1,0 +1,369 @@
+{
+  "baseUrl": "http://127.0.0.1:5174",
+  "capturedAt": "2026-06-24T22:51:54.895Z",
+  "captures": [
+    {
+      "fileName": "5v5-inside-run.png",
+      "label": "Inside Run play card",
+      "metrics": {
+        "cardHeight": 304,
+        "cardWidth": 514,
+        "diagramHeight": 240,
+        "fieldPanelHeight": 244,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Run",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [],
+        "runDirectionStrokeWidths": [
+          4.8
+        ],
+        "titleText": "Inside Run"
+      },
+      "playbookId": "5v5",
+      "playId": "inside-run"
+    },
+    {
+      "fileName": "5v5-outside-run.png",
+      "label": "Outside Run play card",
+      "metrics": {
+        "cardHeight": 304,
+        "cardWidth": 514,
+        "diagramHeight": 240,
+        "fieldPanelHeight": 244,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Run",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [],
+        "runDirectionStrokeWidths": [
+          4.8
+        ],
+        "titleText": "Outside Run"
+      },
+      "playbookId": "5v5",
+      "playId": "outside-run"
+    },
+    {
+      "fileName": "5v5-quick-pass.png",
+      "label": "Quick Pass play card",
+      "metrics": {
+        "cardHeight": 304,
+        "cardWidth": 514,
+        "diagramHeight": 240,
+        "fieldPanelHeight": 244,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Pass",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [
+          4.6
+        ],
+        "runDirectionStrokeWidths": [],
+        "titleText": "Quick Pass"
+      },
+      "playbookId": "5v5",
+      "playId": "quick-pass"
+    },
+    {
+      "fileName": "5v5-slant-flat.png",
+      "label": "Slant Flat play card",
+      "metrics": {
+        "cardHeight": 304,
+        "cardWidth": 514,
+        "diagramHeight": 240,
+        "fieldPanelHeight": 244,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Pass",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [
+          4.6,
+          4.6
+        ],
+        "runDirectionStrokeWidths": [],
+        "titleText": "Slant Flat"
+      },
+      "playbookId": "5v5",
+      "playId": "slant-flat"
+    },
+    {
+      "fileName": "7v7-inside-zone-7.png",
+      "label": "Inside Zone 7 play card",
+      "metrics": {
+        "cardHeight": 304,
+        "cardWidth": 514,
+        "diagramHeight": 240,
+        "fieldPanelHeight": 244,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Run",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [],
+        "runDirectionStrokeWidths": [
+          4.8
+        ],
+        "titleText": "Inside Zone 7"
+      },
+      "playbookId": "7v7",
+      "playId": "inside-zone-7"
+    },
+    {
+      "fileName": "7v7-outside-zone-7.png",
+      "label": "Outside Zone 7 play card",
+      "metrics": {
+        "cardHeight": 304,
+        "cardWidth": 514,
+        "diagramHeight": 240,
+        "fieldPanelHeight": 244,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Run",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [],
+        "runDirectionStrokeWidths": [
+          4.8
+        ],
+        "titleText": "Outside Zone 7"
+      },
+      "playbookId": "7v7",
+      "playId": "outside-zone-7"
+    },
+    {
+      "fileName": "7v7-quick-pass-7.png",
+      "label": "Quick Pass 7 play card",
+      "metrics": {
+        "cardHeight": 304,
+        "cardWidth": 514,
+        "diagramHeight": 240,
+        "fieldPanelHeight": 244,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Pass",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [
+          4.6,
+          4.6,
+          4.6
+        ],
+        "runDirectionStrokeWidths": [],
+        "titleText": "Quick Pass 7"
+      },
+      "playbookId": "7v7",
+      "playId": "quick-pass-7"
+    },
+    {
+      "fileName": "7v7-twin-slants-flat.png",
+      "label": "Twin Slants Flat play card",
+      "metrics": {
+        "cardHeight": 304,
+        "cardWidth": 514,
+        "diagramHeight": 240,
+        "fieldPanelHeight": 244,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Pass",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [
+          4.6,
+          4.6,
+          4.6
+        ],
+        "runDirectionStrokeWidths": [],
+        "titleText": "Twin Slants Flat"
+      },
+      "playbookId": "7v7",
+      "playId": "twin-slants-flat"
+    },
+    {
+      "fileName": "11v11-inside-zone-11.png",
+      "label": "Inside Zone 11 play card",
+      "metrics": {
+        "cardHeight": 224,
+        "cardWidth": 514,
+        "diagramHeight": 160,
+        "fieldPanelHeight": 164,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Run",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [],
+        "runDirectionStrokeWidths": [
+          4.8
+        ],
+        "titleText": "Inside Zone 11"
+      },
+      "playbookId": "11v11",
+      "playId": "inside-zone-11"
+    },
+    {
+      "fileName": "11v11-spread-quick-11.png",
+      "label": "Spread Quick 11 play card",
+      "metrics": {
+        "cardHeight": 224,
+        "cardWidth": 514,
+        "diagramHeight": 160,
+        "fieldPanelHeight": 164,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Pass",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [
+          4.6,
+          4.6,
+          4.6,
+          4.6,
+          4.6
+        ],
+        "runDirectionStrokeWidths": [],
+        "titleText": "Spread Quick 11"
+      },
+      "playbookId": "11v11",
+      "playId": "spread-quick-11"
+    },
+    {
+      "fileName": "11v11-outside-zone-11.png",
+      "label": "Outside Zone 11 play card",
+      "metrics": {
+        "cardHeight": 224,
+        "cardWidth": 514,
+        "diagramHeight": 160,
+        "fieldPanelHeight": 164,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Run",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [],
+        "runDirectionStrokeWidths": [
+          4.8
+        ],
+        "titleText": "Outside Zone 11"
+      },
+      "playbookId": "11v11",
+      "playId": "outside-zone-11"
+    },
+    {
+      "fileName": "11v11-off-tackle-11.png",
+      "label": "Off Tackle 11 play card",
+      "metrics": {
+        "cardHeight": 224,
+        "cardWidth": 514,
+        "diagramHeight": 160,
+        "fieldPanelHeight": 164,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Run",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [],
+        "runDirectionStrokeWidths": [
+          4.8
+        ],
+        "titleText": "Off Tackle 11"
+      },
+      "playbookId": "11v11",
+      "playId": "off-tackle-11"
+    },
+    {
+      "fileName": "11v11-twin-slants-11.png",
+      "label": "Twin Slants 11 play card",
+      "metrics": {
+        "cardHeight": 224,
+        "cardWidth": 514,
+        "diagramHeight": 160,
+        "fieldPanelHeight": 164,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Pass",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [
+          4.6,
+          4.6,
+          4.6,
+          4.6,
+          4.6
+        ],
+        "runDirectionStrokeWidths": [],
+        "titleText": "Twin Slants 11"
+      },
+      "playbookId": "11v11",
+      "playId": "twin-slants-11"
+    },
+    {
+      "fileName": "11v11-curl-flat-11.png",
+      "label": "Curl Flat 11 play card",
+      "metrics": {
+        "cardHeight": 224,
+        "cardWidth": 514,
+        "diagramHeight": 160,
+        "fieldPanelHeight": 164,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Pass",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [
+          4.6,
+          4.6,
+          4.6,
+          4.6,
+          4.6
+        ],
+        "runDirectionStrokeWidths": [],
+        "titleText": "Curl Flat 11"
+      },
+      "playbookId": "11v11",
+      "playId": "curl-flat-11"
+    },
+    {
+      "fileName": "11v11-four-verts-out-flat-11.png",
+      "label": "3 Verts Out 11 play card",
+      "metrics": {
+        "cardHeight": 224,
+        "cardWidth": 514,
+        "diagramHeight": 160,
+        "fieldPanelHeight": 164,
+        "fieldPanelOverflow": "hidden",
+        "footerHeight": 58,
+        "hasLegacyHeader": false,
+        "kindBadgeText": "Pass",
+        "passProtectionVisibleCount": 0,
+        "receiverRouteStrokeWidths": [
+          4.6,
+          4.6,
+          4.6,
+          4.6,
+          4.6
+        ],
+        "runDirectionStrokeWidths": [],
+        "titleText": "3 Verts Out 11"
+      },
+      "playbookId": "11v11",
+      "playId": "four-verts-out-flat-11"
+    }
+  ],
+  "notes": [
+    "Captured with Playwright from actual .play-card components at a 1600x1000 viewport.",
+    "The capture validates card structure and computed styles before writing each screenshot.",
+    "Validation requires the reference-style field panel, bottom title band, kind chip, thick route/run strokes, and no legacy header.",
+    "Pass-protection helper SVG remains in DOM for tests but is hidden visually to keep pass cards clean."
+  ],
+  "playCount": 15,
+  "viewport": {
+    "deviceScaleFactor": 1,
+    "height": 1000,
+    "width": 1600
+  }
+}

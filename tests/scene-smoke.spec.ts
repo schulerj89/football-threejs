@@ -3230,7 +3230,7 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
     'Off Tackle 11',
     'Twin Slants 11',
     'Curl Flat 11',
-    'Four Verts Out Flat 11',
+    '3 Verts Out 11',
   ]);
   await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-run-direction')).toHaveCount(1);
   await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-blocker-assignment')).toHaveCount(9);
@@ -3244,7 +3244,7 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
   await expect(page.locator('.play-card[data-play-id="twin-slants-11"] .play-card-blocker-assignment')).toHaveCount(4);
   await expect(page.locator('.play-card[data-play-id="curl-flat-11"] .play-card-receiver-route')).toHaveCount(5);
   await expect(page.locator('.play-card[data-play-id="curl-flat-11"] .play-card-blocker-assignment')).toHaveCount(4);
-  await expect(page.locator('.play-card[data-play-id="four-verts-out-flat-11"] .play-card-receiver-route')).toHaveCount(3);
+  await expect(page.locator('.play-card[data-play-id="four-verts-out-flat-11"] .play-card-receiver-route')).toHaveCount(5);
   await expect(page.locator('.play-card[data-play-id="four-verts-out-flat-11"] .play-card-blocker-assignment')).toHaveCount(4);
   await expect(page.locator('.play-card .play-card-coverage-zone')).toHaveCount(0);
   await expectNonBlankCanvas(page);
