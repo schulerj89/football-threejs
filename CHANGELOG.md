@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.35] - 2026-06-24
+
+### Added
+
+- Added a Dynasty signing class preview that projects likely signees from current weekly recruiting allocations, class fit, addressed needs, prospect grades, and signing confidence.
+- Included the signing preview in the recruiting board contract without mutating saves, prospects, rosters, or gameplay lineups.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyRecruiting.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.34] - 2026-06-24
 
 ### Added

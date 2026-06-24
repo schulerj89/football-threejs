@@ -5,6 +5,7 @@ import {
   DYNASTY_WEEKLY_RECRUITING_ALLOCATION_LIMIT,
   DYNASTY_WEEKLY_RECRUITING_POINTS,
   createDynastyRecruitingBoard,
+  createDynastySigningClassPreview,
   createDynastyRecruitingTeamNeeds,
   createDynastyWeeklyRecruitingPlan,
 } from '../src/dynasty/DynastyRecruiting';
@@ -25,6 +26,9 @@ describe('dynasty recruiting-lite board', () => {
     expect(first.pitchStyles).toEqual(DYNASTY_RECRUITING_PITCH_STYLES);
     expect(first.prospects).toHaveLength(DYNASTY_RECRUITING_PROSPECT_COUNT);
     expect(first.recruitingPlan.totalPoints).toBe(DYNASTY_WEEKLY_RECRUITING_POINTS);
+    expect(first.signingClassPreview.projectedSignees).toHaveLength(
+      DYNASTY_WEEKLY_RECRUITING_ALLOCATION_LIMIT,
+    );
     expect(first.teamNeeds).toHaveLength(7);
     expect(new Set(first.prospects.map((prospect) => prospect.id)).size)
       .toBe(DYNASTY_RECRUITING_PROSPECT_COUNT);
@@ -133,6 +137,50 @@ describe('dynasty recruiting-lite board', () => {
       expect(first.allocations[index - 1]!.allocatedPoints)
         .toBeGreaterThanOrEqual(first.allocations[index]!.allocatedPoints);
     }
+  });
+
+  it('summarizes a likely signing class from current recruiting allocations without mutating rosters', () => {
+    const save = createSave('dynasty-recruiting-signing-preview');
+    const beforeSizes = STARTER_TEAM_ROSTERS.map((roster) => roster.players.length);
+    const board = createDynastyRecruitingBoard({ save });
+    const first = createDynastySigningClassPreview({
+      prospects: board.prospects,
+      recruitingPlan: board.recruitingPlan,
+    });
+    const second = createDynastySigningClassPreview({
+      prospects: board.prospects,
+      recruitingPlan: board.recruitingPlan,
+    });
+    const alternateTeam = save.currentSeason.teamIds.find((teamId) => teamId !== DEFAULT_USER_TEAM_ID)!;
+    const alternateBoard = createDynastyRecruitingBoard({ save, teamId: alternateTeam });
+    const afterSizes = STARTER_TEAM_ROSTERS.map((roster) => roster.players.length);
+
+    expect(board.signingClassPreview).toEqual(first);
+    expect(first).toEqual(second);
+    expect(first).not.toEqual(alternateBoard.signingClassPreview);
+    expect(first.teamId).toBe(DEFAULT_USER_TEAM_ID);
+    expect(first.projectedSignees).toHaveLength(board.recruitingPlan.allocations.length);
+    expect(first.addressedNeedCount).toBeGreaterThan(0);
+    expect(first.addressedNeedCount).toBeLessThanOrEqual(first.projectedSignees.length);
+    expect(first.classFitScore).toBeGreaterThanOrEqual(0);
+    expect(first.classFitScore).toBeLessThanOrEqual(100);
+    expect(first.summaryLabel).toBe(`${first.projectedSignees.length} projected signees | ${first.classFitScore} class fit`);
+    expect(new Set(first.projectedSignees.map((signee) => signee.prospectId))).toEqual(
+      new Set(board.recruitingPlan.allocations.map((allocation) => allocation.prospectId)),
+    );
+    expect(first.projectedSignees.every((signee) =>
+      signee.fitLabel.length > 0 &&
+      signee.projectedGrade >= 58 &&
+      signee.projectedGrade <= 91 &&
+      signee.signingConfidence >= 0 &&
+      signee.signingConfidence <= 100 &&
+      signee.starRating >= 1 &&
+      signee.starRating <= 5)).toBe(true);
+    for (let index = 1; index < first.projectedSignees.length; index += 1) {
+      expect(first.projectedSignees[index - 1]!.signingConfidence)
+        .toBeGreaterThanOrEqual(first.projectedSignees[index]!.signingConfidence);
+    }
+    expect(afterSizes).toEqual(beforeSizes);
   });
 
   it('does not change current roster size constraints while generating prospects', () => {

@@ -49,6 +49,7 @@ export interface DynastyRecruitingBoard {
   readonly pitchStyles: readonly DynastyRecruitingPitchStyle[];
   readonly prospects: readonly DynastyRecruitingProspect[];
   readonly recruitingPlan: DynastyWeeklyRecruitingPlan;
+  readonly signingClassPreview: DynastySigningClassPreview;
   readonly summaryLabel: string;
   readonly teamNeeds: readonly DynastyRecruitingTeamNeed[];
 }
@@ -82,6 +83,25 @@ export interface DynastyWeeklyRecruitingPlan {
   readonly teamId: string;
   readonly totalPoints: number;
   readonly weekIndex: number;
+}
+
+export interface DynastySigningClassPreviewRow {
+  readonly fitLabel: string;
+  readonly footballPosition: FootballPosition;
+  readonly projectedGrade: number;
+  readonly prospectId: string;
+  readonly prospectName: string;
+  readonly room: string;
+  readonly signingConfidence: number;
+  readonly starRating: number;
+}
+
+export interface DynastySigningClassPreview {
+  readonly addressedNeedCount: number;
+  readonly classFitScore: number;
+  readonly projectedSignees: readonly DynastySigningClassPreviewRow[];
+  readonly summaryLabel: string;
+  readonly teamId: string;
 }
 
 const PROSPECT_SLOTS: readonly {
@@ -200,15 +220,21 @@ export function createDynastyRecruitingBoard(options: {
       ...prospect,
       nationalRank: index + 1,
     }));
+  const recruitingPlan = createDynastyWeeklyRecruitingPlan({
+    prospects,
+    save: options.save,
+    teamId,
+    teamNeeds,
+  });
 
   return {
     pitchStyles: DYNASTY_RECRUITING_PITCH_STYLES,
     prospects,
-    recruitingPlan: createDynastyWeeklyRecruitingPlan({
+    recruitingPlan,
+    signingClassPreview: createDynastySigningClassPreview({
       prospects,
-      save: options.save,
+      recruitingPlan,
       teamId,
-      teamNeeds,
     }),
     summaryLabel: `${prospects.length} fictional prospects | deterministic board`,
     teamNeeds,
@@ -280,6 +306,68 @@ export function createDynastyWeeklyRecruitingPlan(options: {
     teamId,
     totalPoints: DYNASTY_WEEKLY_RECRUITING_POINTS,
     weekIndex: options.save.currentWeekIndex,
+  };
+}
+
+export function createDynastySigningClassPreview(options: {
+  readonly prospects?: readonly DynastyRecruitingProspect[];
+  readonly recruitingPlan?: DynastyWeeklyRecruitingPlan;
+  readonly save?: DynastySaveData;
+  readonly teamId?: string;
+}): DynastySigningClassPreview {
+  if (!options.recruitingPlan && !options.save) {
+    throw new Error('Dynasty signing class preview requires a recruiting plan or save');
+  }
+  const teamId = options.teamId ?? options.recruitingPlan?.teamId ?? options.save!.userTeamId;
+  const prospects = options.prospects ?? createDynastyRecruitingBoard({
+    save: options.save!,
+    teamId,
+  }).prospects;
+  const recruitingPlan = options.recruitingPlan ?? createDynastyWeeklyRecruitingPlan({
+    prospects,
+    save: options.save!,
+    teamId,
+  });
+  const prospectsById = new Map(prospects.map((prospect) => [prospect.id, prospect]));
+  const projectedSignees = recruitingPlan.allocations
+    .map((allocation): DynastySigningClassPreviewRow | null => {
+      const prospect = prospectsById.get(allocation.prospectId);
+      if (!prospect) {
+        return null;
+      }
+      const signingConfidence = clampPriority(Math.round(
+        allocation.allocatedPoints * 0.45 +
+        allocation.totalFitScore * 0.35 +
+        allocation.needPriorityScore * 0.2,
+      ));
+
+      return {
+        fitLabel: createFitLabel(signingConfidence),
+        footballPosition: prospect.footballPosition,
+        projectedGrade: prospect.overallGrade,
+        prospectId: prospect.id,
+        prospectName: prospect.displayName,
+        room: allocation.room,
+        signingConfidence,
+        starRating: prospect.starRating,
+      };
+    })
+    .filter((row): row is DynastySigningClassPreviewRow => row !== null)
+    .sort((a, b) =>
+      b.signingConfidence - a.signingConfidence ||
+      b.projectedGrade - a.projectedGrade ||
+      a.prospectName.localeCompare(b.prospectName));
+  const addressedNeedCount = new Set(projectedSignees.map((row) => row.room)).size;
+  const classFitScore = projectedSignees.length > 0
+    ? Math.round(projectedSignees.reduce((sum, row) => sum + row.signingConfidence, 0) / projectedSignees.length)
+    : 0;
+
+  return {
+    addressedNeedCount,
+    classFitScore,
+    projectedSignees,
+    summaryLabel: `${projectedSignees.length} projected signees | ${classFitScore} class fit`,
+    teamId,
   };
 }
 
@@ -439,6 +527,19 @@ function createPointSchedule(totalPoints: number, targetCount: number): number[]
     remainder -= 1;
   }
   return preliminary;
+}
+
+function createFitLabel(signingConfidence: number): string {
+  if (signingConfidence >= 70) {
+    return 'Strong fit';
+  }
+  if (signingConfidence >= 55) {
+    return 'Good fit';
+  }
+  if (signingConfidence >= 40) {
+    return 'Development fit';
+  }
+  return 'Long shot';
 }
 
 function gradeToStars(grade: number): number {
