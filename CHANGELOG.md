@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.33] - 2026-06-24
+
+### Added
+
+- Added a Dynasty recruiting team-needs view that ranks roster rooms by current depth, starter count, average overall, weakest overall, and bounded priority score.
+- Included the user program's team needs in the recruiting board contract while keeping the prospect pool and rosters unchanged.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyRecruiting.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.32] - 2026-06-24
 
 ### Added

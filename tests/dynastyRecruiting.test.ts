@@ -3,6 +3,7 @@ import {
   DYNASTY_RECRUITING_PITCH_STYLES,
   DYNASTY_RECRUITING_PROSPECT_COUNT,
   createDynastyRecruitingBoard,
+  createDynastyRecruitingTeamNeeds,
 } from '../src/dynasty/DynastyRecruiting';
 import { createDynastySeasonCore } from '../src/dynasty/DynastySchedule';
 import { generateLeagueData } from '../src/league/LeagueGenerator';
@@ -20,6 +21,7 @@ describe('dynasty recruiting-lite board', () => {
     expect(first.summaryLabel).toBe('18 fictional prospects | deterministic board');
     expect(first.pitchStyles).toEqual(DYNASTY_RECRUITING_PITCH_STYLES);
     expect(first.prospects).toHaveLength(DYNASTY_RECRUITING_PROSPECT_COUNT);
+    expect(first.teamNeeds).toHaveLength(7);
     expect(new Set(first.prospects.map((prospect) => prospect.id)).size)
       .toBe(DYNASTY_RECRUITING_PROSPECT_COUNT);
     expect(first.prospects.map((prospect) => prospect.nationalRank))
@@ -50,6 +52,47 @@ describe('dynasty recruiting-lite board', () => {
       }
       expect(prospect.interest[0]!.score).toBeGreaterThanOrEqual(prospect.interest.at(-1)!.score);
     }
+  });
+
+  it('derives compact team needs from roster composition and ratings', () => {
+    const save = createSave('dynasty-recruiting-needs');
+    const first = createDynastyRecruitingTeamNeeds({ save });
+    const second = createDynastyRecruitingTeamNeeds({ save });
+    const alternateTeam = save.currentSeason.teamIds.find((teamId) => teamId !== DEFAULT_USER_TEAM_ID)!;
+    const alternate = createDynastyRecruitingTeamNeeds({ save, teamId: alternateTeam });
+
+    expect(first).toEqual(second);
+    expect(first).not.toEqual(alternate);
+    expect(first.map((need) => need.room).sort()).toEqual([
+      'Backfield',
+      'Front Seven',
+      'Line',
+      'Quarterbacks',
+      'Receivers',
+      'Secondary',
+      'Specialists',
+    ]);
+    expect(first.every((need) =>
+      need.averageOverall >= 0 &&
+      need.averageOverall <= 99 &&
+      need.weakestOverall >= 0 &&
+      need.weakestOverall <= 99 &&
+      need.priorityScore >= 0 &&
+      need.priorityScore <= 100 &&
+      need.rosterCount > 0 &&
+      need.targetRosterCount > 0 &&
+      need.starterCount > 0 &&
+      need.summaryLabel.includes(`${need.rosterCount}/${need.targetRosterCount} rostered`))).toBe(true);
+    for (let index = 1; index < first.length; index += 1) {
+      expect(first[index - 1]!.priorityScore).toBeGreaterThanOrEqual(first[index]!.priorityScore);
+    }
+    expect(first.find((need) => need.room === 'Quarterbacks')).toMatchObject({
+      positions: ['QB'],
+      rosterCount: 1,
+      starterCount: 1,
+      targetRosterCount: 2,
+    });
+    expect(first.find((need) => need.room === 'Line')?.positions).toEqual(['C', 'LG', 'LT', 'RG', 'RT', 'LS']);
   });
 
   it('does not change current roster size constraints while generating prospects', () => {

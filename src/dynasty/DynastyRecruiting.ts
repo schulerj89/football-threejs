@@ -1,4 +1,7 @@
+import { calculateOverallRating } from '../ratings/OverallRatingCalculator';
 import type { FootballPosition, PlayerArchetype } from '../roster/RosterPlayer';
+import { getTeamRosterOrDefault } from '../roster/RosterRegistry';
+import type { TeamRoster } from '../roster/TeamRoster';
 import type { DynastySaveData } from './DynastyTypes';
 
 export const DYNASTY_RECRUITING_PROSPECT_COUNT = 18;
@@ -44,6 +47,19 @@ export interface DynastyRecruitingBoard {
   readonly pitchStyles: readonly DynastyRecruitingPitchStyle[];
   readonly prospects: readonly DynastyRecruitingProspect[];
   readonly summaryLabel: string;
+  readonly teamNeeds: readonly DynastyRecruitingTeamNeed[];
+}
+
+export interface DynastyRecruitingTeamNeed {
+  readonly averageOverall: number;
+  readonly priorityScore: number;
+  readonly positions: readonly FootballPosition[];
+  readonly room: string;
+  readonly rosterCount: number;
+  readonly starterCount: number;
+  readonly summaryLabel: string;
+  readonly targetRosterCount: number;
+  readonly weakestOverall: number;
 }
 
 const PROSPECT_SLOTS: readonly {
@@ -68,6 +84,20 @@ const PROSPECT_SLOTS: readonly {
   { archetype: 'specialist', footballPosition: 'K' },
   { archetype: 'specialist', footballPosition: 'P' },
   { archetype: 'utility', footballPosition: 'LS' },
+];
+
+const TEAM_NEED_ROOMS: readonly {
+  readonly positions: readonly FootballPosition[];
+  readonly room: string;
+  readonly targetRosterCount: number;
+}[] = [
+  { positions: ['QB'], room: 'Quarterbacks', targetRosterCount: 2 },
+  { positions: ['RB'], room: 'Backfield', targetRosterCount: 3 },
+  { positions: ['WR', 'SLOT', 'TE'], room: 'Receivers', targetRosterCount: 6 },
+  { positions: ['C', 'LG', 'LT', 'RG', 'RT', 'LS'], room: 'Line', targetRosterCount: 8 },
+  { positions: ['DL', 'ILB', 'OLB'], room: 'Front Seven', targetRosterCount: 8 },
+  { positions: ['CB', 'FS', 'SS'], room: 'Secondary', targetRosterCount: 6 },
+  { positions: ['K', 'P'], room: 'Specialists', targetRosterCount: 2 },
 ];
 
 const FIRST_NAMES = [
@@ -127,7 +157,9 @@ const REGIONS = [
 
 export function createDynastyRecruitingBoard(options: {
   readonly save: DynastySaveData;
+  readonly teamId?: string;
 }): DynastyRecruitingBoard {
+  const teamId = options.teamId ?? options.save.userTeamId;
   const prospects = PROSPECT_SLOTS.map((slot, index) =>
     createProspect({
       index,
@@ -147,7 +179,32 @@ export function createDynastyRecruitingBoard(options: {
     pitchStyles: DYNASTY_RECRUITING_PITCH_STYLES,
     prospects,
     summaryLabel: `${prospects.length} fictional prospects | deterministic board`,
+    teamNeeds: createDynastyRecruitingTeamNeeds({
+      save: options.save,
+      teamId,
+    }),
   };
+}
+
+export function createDynastyRecruitingTeamNeeds(options: {
+  readonly save: DynastySaveData;
+  readonly teamId?: string;
+}): DynastyRecruitingTeamNeed[] {
+  const teamId = options.teamId ?? options.save.userTeamId;
+  const roster = getTeamRosterOrDefault(teamId);
+  const starterIds = new Set([
+    ...roster.offensiveStarterIds,
+    ...roster.defensiveStarterIds,
+    roster.kickerId,
+    roster.punterId,
+    roster.longSnapperId,
+  ]);
+
+  return TEAM_NEED_ROOMS.map((room) => createTeamNeed(room, roster, starterIds))
+    .sort((a, b) =>
+      b.priorityScore - a.priorityScore ||
+      a.averageOverall - b.averageOverall ||
+      a.room.localeCompare(b.room));
 }
 
 function createProspect(options: {
@@ -206,6 +263,40 @@ function createTeamInterest(
     a.teamId.localeCompare(b.teamId));
 }
 
+function createTeamNeed(
+  room: {
+    readonly positions: readonly FootballPosition[];
+    readonly room: string;
+    readonly targetRosterCount: number;
+  },
+  roster: TeamRoster,
+  starterIds: ReadonlySet<string>,
+): DynastyRecruitingTeamNeed {
+  const players = roster.players.filter((player) => room.positions.includes(player.footballPosition));
+  const overalls = players.map((player) => calculateOverallRating(player.footballPosition, player.ratings));
+  const averageOverall = overalls.length > 0
+    ? Math.round(overalls.reduce((sum, overall) => sum + overall, 0) / overalls.length)
+    : 0;
+  const weakestOverall = overalls.length > 0 ? Math.min(...overalls) : 0;
+  const starterCount = players.filter((player) => starterIds.has(player.id)).length;
+  const depthGap = Math.max(0, room.targetRosterCount - players.length);
+  const qualityGap = Math.max(0, 78 - averageOverall);
+  const floorGap = Math.max(0, 70 - weakestOverall);
+  const priorityScore = clampPriority(Math.round(depthGap * 18 + qualityGap + floorGap * 0.5));
+
+  return {
+    averageOverall,
+    positions: room.positions,
+    priorityScore,
+    room: room.room,
+    rosterCount: players.length,
+    starterCount,
+    summaryLabel: `${room.room}: ${players.length}/${room.targetRosterCount} rostered | ${averageOverall} avg OVR`,
+    targetRosterCount: room.targetRosterCount,
+    weakestOverall,
+  };
+}
+
 function gradeToStars(grade: number): number {
   if (grade >= 88) {
     return 5;
@@ -229,6 +320,10 @@ function pickIndex(seed: string, length: number): number {
 function hashToRange(seed: string, min: number, max: number): number {
   const span = max - min + 1;
   return min + (hashString(seed) % span);
+}
+
+function clampPriority(value: number): number {
+  return Math.max(0, Math.min(100, value));
 }
 
 function hashText(seed: string): string {
