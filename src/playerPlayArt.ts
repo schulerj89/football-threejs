@@ -1,4 +1,8 @@
 import type { SnapPlacement } from './ballSpotting';
+import {
+  resolveCoverageZones,
+  type CoverageZone,
+} from './coverageShell';
 import type { FootballSpot } from './fieldScale';
 import {
   resolveFormation,
@@ -18,6 +22,7 @@ export interface PlayerPlayArtInput {
 }
 
 export interface PlayerPlayArtModel {
+  coverageZones: CoverageZone[];
   formation: ResolvedFormation;
   playerPositions: ReadonlyMap<string, FootballSpot>;
   receiverRoutes: ResolvedReceiverRoute[];
@@ -39,8 +44,13 @@ export function createPlayerPlayArtModel(
     formation,
     playerPositions,
   });
+  const coverageZones = resolveCoverageZones(play, snapPlacement, {
+    formation,
+    playerPositions,
+  });
 
   return {
+    coverageZones,
     formation,
     playerPositions,
     receiverRoutes,

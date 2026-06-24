@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.62] - 2026-06-24
+
+### Added
+
+- Added defender anchor metadata to debug coverage-zone play art so each zone reports the defender ID, formation position, active defender position, and anchor source.
+
+### Fixed
+
+- Anchored defensive coverage-zone field art to current gameplay defender positions through the shared play-art model so defensive play art shifts with the player coordinates instead of only the formation shell.
+
+### Tests
+
+- Verified `npx vitest run tests/routeArtRenderer.test.ts tests/teamSimulation.test.ts`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows on-field receiver routes before snap and supports route audit mode"`.
+
 ## [1.22.61] - 2026-06-24
 
 ### Changed

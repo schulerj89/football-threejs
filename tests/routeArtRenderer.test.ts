@@ -204,6 +204,42 @@ describe('route art renderer', () => {
     normalRenderer.dispose();
     debugRenderer.dispose();
   });
+
+  it('anchors pre-snap coverage zones to the current defender position', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+    selectPlay(gameplay, 'twin-slants-flat');
+    const baselineRenderer = new RouteArtRenderer({ coverageShellEnabled: true });
+    const movedRenderer = new RouteArtRenderer({ coverageShellEnabled: true });
+    const defender = gameplay.players.find((player) => player.id === 'defense-corner-left');
+
+    if (!defender) {
+      throw new Error('Expected defense-corner-left in twin-slants-flat formation');
+    }
+
+    baselineRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    const baselineZone = getCoverageZone(baselineRenderer.getSnapshot(), 'defense-corner-left');
+
+    defender.position = {
+      x: defender.position.x + 2.5,
+      z: defender.position.z + 1.75,
+    };
+    movedRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    const movedZone = getCoverageZone(movedRenderer.getSnapshot(), 'defense-corner-left');
+
+    expect(movedZone.anchor).toEqual({
+      formationPosition: expect.any(Object),
+      playerId: 'defense-corner-left',
+      position: defender.position,
+      source: 'player',
+    });
+    expect(movedZone.landmark.x - baselineZone.landmark.x).toBeCloseTo(2.5);
+    expect(movedZone.landmark.z - baselineZone.landmark.z).toBeCloseTo(1.75);
+    expect(movedZone.points[0].x - baselineZone.points[0].x).toBeCloseTo(2.5);
+    expect(movedZone.points[0].z - baselineZone.points[0].z).toBeCloseTo(1.75);
+
+    baselineRenderer.dispose();
+    movedRenderer.dispose();
+  });
 });
 
 function createSnapshotForLane(
@@ -236,6 +272,19 @@ function getRoute(
   }
 
   return route;
+}
+
+function getCoverageZone(
+  snapshot: ReturnType<RouteArtRenderer['getSnapshot']>,
+  defenderId: string,
+) {
+  const zone = snapshot.coverageZones.find((candidate) => candidate.defenderId === defenderId);
+
+  if (!zone) {
+    throw new Error(`Missing coverage zone ${defenderId}`);
+  }
+
+  return zone;
 }
 
 function getLineFootballPoints(object: unknown) {

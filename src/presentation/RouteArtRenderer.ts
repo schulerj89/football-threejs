@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import type { SnapPlacement } from '../ballSpotting';
 import {
-  resolveCoverageZones,
   type CoverageZone,
+  type CoverageZoneAnchor,
 } from '../coverageShell';
 import type { FootballSpot } from '../fieldScale';
 import type { GameplaySnapshot } from '../playState';
@@ -45,6 +45,7 @@ export interface RouteArtRendererSnapshot {
 }
 
 export interface RouteArtCoverageZoneSnapshot {
+  anchor: CoverageZoneAnchor;
   defenderId: string;
   kind: CoverageZone['kind'];
   label: string;
@@ -245,7 +246,7 @@ export class RouteArtRenderer {
     });
     const routes = playArt.receiverRoutes;
     const coverageZones = coverageShellEnabled
-      ? resolveCoverageZones(play, snapPlacement)
+      ? playArt.coverageZones
       : [];
     const rebuildKey = createRouteRebuildKey(play, snapPlacement, routes, coverageZones);
 
@@ -274,6 +275,12 @@ export class RouteArtRenderer {
       })),
       coverageZones: this.snapshot.coverageZones.map((zone) => ({
         ...zone,
+        anchor: {
+          formationPosition: { ...zone.anchor.formationPosition },
+          playerId: zone.anchor.playerId,
+          position: { ...zone.anchor.position },
+          source: zone.anchor.source,
+        },
         landmark: { ...zone.landmark },
         points: zone.points.map((point) => ({ ...point })),
       })),
@@ -563,6 +570,12 @@ export class RouteArtRenderer {
       auditEnabled: this.options.auditEnabled === true,
       coverageShellEnabled,
       coverageZones: this.coverageZoneVisuals.map((visual) => ({
+        anchor: {
+          formationPosition: { ...visual.zone.anchor.formationPosition },
+          playerId: visual.zone.anchor.playerId,
+          position: { ...visual.zone.anchor.position },
+          source: visual.zone.anchor.source,
+        },
         defenderId: visual.zone.defenderId,
         kind: visual.zone.kind,
         label: visual.zone.label,

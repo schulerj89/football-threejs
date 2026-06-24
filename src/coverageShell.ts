@@ -3,6 +3,7 @@ import { FIELD_DIRECTION, PLAYABLE_FIELD_BOUNDS } from './fieldSpec';
 import type { FootballSpot } from './fieldScale';
 import {
   resolveFormation,
+  type ResolvedFormation,
   type ResolvedFormationSlot,
 } from './formationLayout';
 import type { PlayerModel } from './playerModel';
@@ -12,12 +13,27 @@ export type CoverageShell = 'man' | 'cover2Zone';
 export type CoverageZoneKind = 'deepHalf' | 'deepMiddle' | 'flat' | 'hookCurl';
 
 export interface CoverageZone {
+  anchor: CoverageZoneAnchor;
   defenderId: string;
   footballPoints: FootballSpot[];
   kind: CoverageZoneKind;
   label: string;
   landmark: FootballSpot;
 }
+
+export interface CoverageZoneAnchor {
+  formationPosition: FootballSpot;
+  playerId: string;
+  position: FootballSpot;
+  source: 'formation' | 'player';
+}
+
+export interface ResolveCoverageZonesOptions {
+  formation?: ResolvedFormation;
+  playerPositions?: ReadonlyMap<string, FootballSpot>;
+}
+
+type CoverageZoneShape = Omit<CoverageZone, 'anchor'>;
 
 export const COVERAGE_SHELL_CONFIG = {
   flatDepthEndYards: 10,
@@ -66,19 +82,22 @@ export function resolveCoverageShell(play: PlayDefinition): CoverageShell {
 export function resolveCoverageZones(
   play: PlayDefinition,
   snapPlacement: SnapPlacement = createCenterSnapPlacement({ x: 0, z: 0 }),
+  options: ResolveCoverageZonesOptions = {},
 ): CoverageZone[] {
   if (resolveCoverageShell(play) !== 'cover2Zone') {
     return [];
   }
 
-  const formation = resolveFormation(play, snapPlacement);
+  const formation = options.formation ?? resolveFormation(play, snapPlacement);
   const coverageSlots = formation.slots.filter((slot) =>
     slot.team === 'defense' && slot.role === 'coverageDefender');
   const hasStrongSafety = coverageSlots.some((slot) => slot.id === 'defense-safety-strong');
 
   return coverageSlots.flatMap((slot) => {
     const zone = resolveCoverageZoneForSlot(slot, snapPlacement, formation.fieldSide, hasStrongSafety);
-    return zone ? [zone] : [];
+    return zone
+      ? [anchorCoverageZone(zone, slot, options.playerPositions?.get(slot.id))]
+      : [];
   });
 }
 
@@ -130,7 +149,7 @@ function resolveCoverageZoneForSlot(
   snapPlacement: SnapPlacement,
   fieldSide: 'left' | 'right',
   hasStrongSafety: boolean,
-): CoverageZone | null {
+): CoverageZoneShape | null {
   if (LEFT_ZONE_DEFENDER_IDS.has(slot.id)) {
     return createFlatZone(slot.id, 'left', snapPlacement);
   }
@@ -166,7 +185,7 @@ function createFlatZone(
   defenderId: string,
   side: 'left' | 'right',
   snapPlacement: SnapPlacement,
-): CoverageZone {
+): CoverageZoneShape {
   const { minX, maxX } = resolveSnapRelativeBounds(
     snapPlacement,
     side,
@@ -183,7 +202,7 @@ function createHookCurlZone(
   defenderId: string,
   side: 'left' | 'right',
   snapPlacement: SnapPlacement,
-): CoverageZone {
+): CoverageZoneShape {
   const direction = side === 'left' ? -1 : 1;
   const { minX, maxX } = resolveSnapRelativeBounds(
     snapPlacement,
@@ -202,7 +221,7 @@ function createDeepHalfZone(
   defenderId: string,
   side: 'left' | 'right',
   snapPlacement: SnapPlacement,
-): CoverageZone {
+): CoverageZoneShape {
   const { minX, maxX } = resolveSnapRelativeBounds(
     snapPlacement,
     side,
@@ -218,7 +237,7 @@ function createDeepHalfZone(
 function createDeepMiddleZone(
   defenderId: string,
   snapPlacement: SnapPlacement,
-): CoverageZone {
+): CoverageZoneShape {
   const minX = snapPlacement.spot.x - COVERAGE_SHELL_CONFIG.deepHalfWidthYards;
   const maxX = snapPlacement.spot.x + COVERAGE_SHELL_CONFIG.deepHalfWidthYards;
   const minZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.deepDepthStartYards);
@@ -235,7 +254,7 @@ function createZone(
   maxX: number,
   firstZ: number,
   secondZ: number,
-): CoverageZone {
+): CoverageZoneShape {
   const minZ = Math.min(firstZ, secondZ);
   const maxZ = Math.max(firstZ, secondZ);
   const clampedMinX = Math.max(PLAYABLE_FIELD_BOUNDS.minX, Math.min(minX, maxX));
@@ -257,6 +276,38 @@ function createZone(
     landmark: {
       x: (clampedMinX + clampedMaxX) / 2,
       z: (clampedMinZ + clampedMaxZ) / 2,
+    },
+  };
+}
+
+function anchorCoverageZone(
+  zone: CoverageZoneShape,
+  slot: ResolvedFormationSlot,
+  playerPosition: FootballSpot | undefined,
+): CoverageZone {
+  const anchorPosition = playerPosition
+    ? { ...playerPosition }
+    : { ...slot.position };
+  const offset = {
+    x: anchorPosition.x - slot.position.x,
+    z: anchorPosition.z - slot.position.z,
+  };
+
+  return {
+    ...zone,
+    anchor: {
+      formationPosition: { ...slot.position },
+      playerId: slot.id,
+      position: anchorPosition,
+      source: playerPosition ? 'player' : 'formation',
+    },
+    footballPoints: zone.footballPoints.map((point) => ({
+      x: point.x + offset.x,
+      z: point.z + offset.z,
+    })),
+    landmark: {
+      x: zone.landmark.x + offset.x,
+      z: zone.landmark.z + offset.z,
     },
   };
 }

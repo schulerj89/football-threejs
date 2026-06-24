@@ -390,6 +390,12 @@ interface RouteArtRendererSnapshot {
   auditEnabled: boolean;
   coverageShellEnabled: boolean;
   coverageZones: Array<{
+    anchor: {
+      formationPosition: FootballSpot;
+      playerId: string;
+      position: FootballSpot;
+      source: 'formation' | 'player';
+    };
     defenderId: string;
     kind: 'deepHalf' | 'deepMiddle' | 'flat' | 'hookCurl';
     label: string;
