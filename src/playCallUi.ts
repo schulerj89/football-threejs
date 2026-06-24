@@ -4,6 +4,7 @@ import {
   createPlayCallDiagramModel,
   type PlayCallBlockerAssignment,
   type PlayCallDiagramModel,
+  type PlayCallPlayerMarker,
   type PlayCallRoute,
   type SvgPoint,
 } from './playCallDiagram';
@@ -291,20 +292,33 @@ function createPlayCard(
   card.setAttribute('aria-pressed', selected ? 'true' : 'false');
   applyCardTheme(card, teamTheme);
 
-  const cardHeader = document.createElement('div');
-  cardHeader.className = 'play-card-header';
-  const title = document.createElement('div');
-  title.className = 'play-card-title';
-  title.textContent = play.displayName;
+  const fieldPanel = document.createElement('div');
+  fieldPanel.className = 'play-card-field-panel';
+  fieldPanel.appendChild(createDiagramSvg(model, teamTheme));
+
   const badge = document.createElement('span');
   badge.className = 'play-card-kind-badge';
   badge.textContent = play.kind === 'pass' ? 'Pass' : 'Run';
+  const stats = document.createElement('span');
+  stats.className = 'play-card-stats';
+  stats.textContent = '0 Calls | 0.0 Avg Yds';
   const shortcut = document.createElement('span');
   shortcut.className = 'play-card-shortcut';
   shortcut.textContent = shortcutNumber.toString();
-  cardHeader.append(title, badge, shortcut);
-  card.appendChild(cardHeader);
-  card.appendChild(createDiagramSvg(model, teamTheme));
+  fieldPanel.append(badge, stats, shortcut);
+
+  const footer = document.createElement('div');
+  footer.className = 'play-card-footer';
+  const title = document.createElement('div');
+  title.className = 'play-card-title';
+  title.textContent = play.displayName;
+  const favorite = document.createElement('span');
+  favorite.className = 'play-card-favorite';
+  favorite.setAttribute('aria-hidden', 'true');
+  favorite.textContent = '☆';
+  footer.append(title, favorite);
+
+  card.append(fieldPanel, footer);
 
   return card;
 }
@@ -377,31 +391,20 @@ function createDiagramSvg(
       'play-card-run-direction',
       runMarkerId,
     );
-    if (teamTheme) {
-      runPath.style.stroke = teamTheme.offense.uniform.stripe;
-    }
     svg.appendChild(runPath);
   }
 
   for (const route of model.receiverRoutes) {
     const routePath = createArrowPath(route.points, 'play-card-receiver-route', routeMarkerId);
-    if (teamTheme) {
-      routePath.style.stroke = teamTheme.offense.uniform.number;
-    }
     svg.appendChild(routePath);
     for (const point of route.breakPoints) {
       const marker = createBreakMarker(point);
-      if (teamTheme) {
-        marker.style.fill = teamTheme.offense.uniform.number;
-      }
       svg.appendChild(marker);
     }
   }
 
   for (const player of model.players) {
-    svg.appendChild(player.role === 'quarterback'
-      ? createQuarterbackMarker(player.point, teamTheme)
-      : createPlayerMarker(player.point, teamTheme));
+    svg.appendChild(createPlayerGlyph(player, teamTheme));
   }
 
   svg.appendChild(createBallMarker(model.ball));
@@ -421,15 +424,16 @@ function createArrowMarker(id: string, className: string): SVGMarkerElement {
   const marker = createSvgElement('marker');
   marker.classList.add(className);
   marker.id = id;
-  marker.setAttribute('markerHeight', '7');
-  marker.setAttribute('markerWidth', '8');
+  marker.setAttribute('markerHeight', '9');
+  marker.setAttribute('markerUnits', 'userSpaceOnUse');
+  marker.setAttribute('markerWidth', '9');
   marker.setAttribute('orient', 'auto');
-  marker.setAttribute('refX', '7');
-  marker.setAttribute('refY', '3.5');
-  marker.setAttribute('viewBox', '0 0 8 7');
+  marker.setAttribute('refX', '8.2');
+  marker.setAttribute('refY', '4.5');
+  marker.setAttribute('viewBox', '0 0 9 9');
 
   const path = createSvgElement('path');
-  path.setAttribute('d', 'M0,0 L8,3.5 L0,7 Z');
+  path.setAttribute('d', 'M0,0 L9,4.5 L0,9 L2.1,4.5 Z');
   marker.appendChild(path);
 
   return marker;
@@ -446,7 +450,7 @@ function createFieldBackground(): SVGGElement {
   background.setAttribute('y', '0');
   group.appendChild(background);
 
-  for (let index = 1; index < 5; index += 1) {
+  for (let index = 0; index <= 5; index += 1) {
     const y = (PLAY_CALL_DIAGRAM_SIZE.height / 5) * index;
     const stripe = createLine(
       { x: 0, y },
@@ -456,23 +460,70 @@ function createFieldBackground(): SVGGElement {
     group.appendChild(stripe);
   }
 
+  for (let index = 1; index < 8; index += 1) {
+    const x = (PLAY_CALL_DIAGRAM_SIZE.width / 8) * index;
+    const hash = createLine(
+      { x, y: 0 },
+      { x, y: PLAY_CALL_DIAGRAM_SIZE.height },
+      'play-card-field-hash-column',
+    );
+    group.appendChild(hash);
+  }
+
+  group.appendChild(createFieldNumber('20', 28, 30));
+  group.appendChild(createFieldNumber('30', 28, 82));
+  group.appendChild(createFieldNumber('20', 156, 30));
+  group.appendChild(createFieldNumber('30', 156, 82));
+  group.appendChild(createFieldWatermark());
+
   return group;
 }
 
-function createPlayerMarker(
-  point: SvgPoint,
+function createPlayerGlyph(
+  player: { point: SvgPoint; role: PlayCallPlayerMarker['role'] },
   teamTheme: TeamPresentationTheme | null,
-): SVGCircleElement {
+): SVGElement {
+  if (player.role === 'quarterback') {
+    return createQuarterbackMarker(player.point, teamTheme);
+  }
+
+  if (player.role === 'receiver' || player.role === 'runner') {
+    return createSkillPlayerMarker(player.point);
+  }
+
+  return createPlayerMarker(player.point, teamTheme);
+}
+
+function createPlayerMarker(point: SvgPoint, teamTheme: TeamPresentationTheme | null): SVGCircleElement {
   const circle = createSvgElement('circle');
   circle.classList.add('play-card-offense-marker');
   circle.setAttribute('cx', point.x.toFixed(2));
   circle.setAttribute('cy', point.y.toFixed(2));
-  circle.setAttribute('r', '4.1');
+  circle.setAttribute('r', '3.9');
   if (teamTheme) {
-    circle.style.fill = teamTheme.offense.uniform.jersey;
+    circle.style.fill = '#f7fbf8';
   }
 
   return circle;
+}
+
+function createSkillPlayerMarker(point: SvgPoint): SVGGElement {
+  const group = createSvgElement('g');
+  group.classList.add('play-card-skill-marker');
+  const halfSize = 3.4;
+
+  group.appendChild(createLine(
+    { x: point.x - halfSize, y: point.y - halfSize },
+    { x: point.x + halfSize, y: point.y + halfSize },
+    'play-card-skill-marker-stroke',
+  ));
+  group.appendChild(createLine(
+    { x: point.x + halfSize, y: point.y - halfSize },
+    { x: point.x - halfSize, y: point.y + halfSize },
+    'play-card-skill-marker-stroke',
+  ));
+
+  return group;
 }
 
 function createQuarterbackMarker(
@@ -490,7 +541,7 @@ function createQuarterbackMarker(
   marker.classList.add('play-card-quarterback-marker');
   marker.setAttribute('points', points.join(' '));
   if (teamTheme) {
-    marker.style.fill = teamTheme.offense.uniform.helmetShell;
+    marker.style.fill = '#f7fbf8';
   }
 
   return marker;
@@ -594,6 +645,29 @@ function createBreakMarker(point: SvgPoint): SVGCircleElement {
   circle.setAttribute('r', '2.15');
 
   return circle;
+}
+
+function createFieldNumber(text: string, x: number, y: number): SVGTextElement {
+  const number = createSvgElement('text');
+  number.classList.add('play-card-field-number');
+  number.setAttribute('x', x.toFixed(2));
+  number.setAttribute('y', y.toFixed(2));
+  number.setAttribute('text-anchor', 'middle');
+  number.setAttribute('transform', `rotate(90 ${x.toFixed(2)} ${y.toFixed(2)})`);
+  number.textContent = text;
+
+  return number;
+}
+
+function createFieldWatermark(): SVGTextElement {
+  const watermark = createSvgElement('text');
+  watermark.classList.add('play-card-field-watermark');
+  watermark.setAttribute('x', (PLAY_CALL_DIAGRAM_SIZE.width / 2).toFixed(2));
+  watermark.setAttribute('y', (PLAY_CALL_DIAGRAM_SIZE.height * 0.58).toFixed(2));
+  watermark.setAttribute('text-anchor', 'middle');
+  watermark.textContent = 'FOOTBALL';
+
+  return watermark;
 }
 
 function insetArrowEndpoint(points: readonly SvgPoint[]): SvgPoint[] {

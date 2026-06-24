@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.64] - 2026-06-24
+
+### Changed
+
+- Reworked play-call cards into a cleaner reference-style layout with a dark field panel, bottom title band, pass/run chip, stats strip, fixed-size SVG arrowheads, stronger route strokes, and simplified white player markers.
+- Hid pass-protection helper lines on pass cards so route concepts read cleanly while keeping the SVG elements in the DOM for existing play-art tests.
+
+### Added
+
+- Added `artifacts/play-card-validation-1.22.64/` with Playwright screenshots for all 15 play cards across 5v5, 7v7, and 11v11.
+- Added `npm run artifacts:play-cards` to regenerate play-card screenshots and a manifest with DOM/style validation metrics that catch footer clipping, legacy headers, thin route strokes, and visible pass-protection clutter.
+
+### Tests
+
+- Verified `npm run artifacts:play-cards`, `npx vitest run tests/playCallDiagram.test.ts`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "renders graphical play cards and selects plays through the shared request path"`.
+
 ## [1.22.63] - 2026-06-24
 
 ### Added

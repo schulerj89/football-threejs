@@ -471,32 +471,42 @@ canvas[hidden] {
 }
 
 .play-card {
+  position: relative;
   display: flex;
   min-width: 0;
-  min-height: 178px;
+  min-height: 224px;
   flex-direction: column;
-  gap: 7px;
   align-items: stretch;
-  padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 8px;
-  background: rgba(9, 15, 18, 0.82);
+  gap: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 3px;
+  background: #050607;
   color: #f3f5f6;
   cursor: pointer;
   font: inherit;
   text-align: left;
+  overflow: hidden;
+  box-shadow:
+    0 12px 26px rgba(0, 0, 0, 0.34),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .play-card:hover,
 .play-card:focus-visible {
-  border-color: rgba(242, 217, 75, 0.58);
+  border-color: rgba(84, 198, 255, 0.72);
   outline: none;
+  box-shadow:
+    0 0 0 1px rgba(84, 198, 255, 0.34),
+    0 14px 30px rgba(0, 0, 0, 0.38);
 }
 
 .play-card[data-selected="true"] {
-  border-color: color-mix(in srgb, var(--play-card-accent, #f2d94b) 82%, white 10%);
-  background: rgba(22, 29, 24, 0.9);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--play-card-accent, #f2d94b) 42%, transparent);
+  border-color: #54c6ff;
+  box-shadow:
+    inset 0 -4px 0 #54c6ff,
+    0 0 0 1px rgba(84, 198, 255, 0.34),
+    0 14px 30px rgba(0, 0, 0, 0.4);
 }
 
 .play-call-ui[data-selection-locked="true"] .play-card {
@@ -508,59 +518,107 @@ canvas[hidden] {
   opacity: 1;
 }
 
-.play-card-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 6px;
-  align-items: center;
+.play-card-field-panel {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-bottom: 4px solid #54c6ff;
+  background: #111519;
+  overflow: hidden;
 }
 
 .play-card-title {
   overflow: hidden;
-  color: #f3f5f6;
-  font-size: 13px;
-  font-weight: 800;
+  color: #f7f7f7;
+  font-size: clamp(20px, 2.4vw, 28px);
+  font-weight: 900;
   letter-spacing: 0;
-  line-height: 1.1;
+  line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.play-card-kind-badge,
-.play-card-shortcut {
+.play-card-kind-badge {
+  position: absolute;
+  left: 0;
+  bottom: 0;
   display: inline-grid;
   place-items: center;
-  min-width: 28px;
-  height: 20px;
-  padding: 0 7px;
-  border-radius: 4px;
-  font-size: 10px;
+  min-width: 48px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 0 5px 0 0;
+  background: #0f31ff;
+  color: #f7fbf8;
+  font-size: 14px;
   font-weight: 900;
   line-height: 1;
   text-transform: uppercase;
+  z-index: 2;
 }
 
-.play-card-kind-badge {
-  background: var(--play-card-team, rgba(255, 255, 255, 0.14));
-  color: var(--play-card-team-text, #f7fbf8);
+.play-card[data-kind="run"] .play-card-kind-badge {
+  background: #d20f46;
 }
 
 .play-card-shortcut {
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  background: rgba(255, 255, 255, 0.08);
-  color: #f7fbf8;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(84, 198, 255, 0.45);
+  border-radius: 5px;
+  background: rgba(3, 7, 11, 0.64);
+  color: #dff2ff;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  z-index: 2;
+}
+
+.play-card-stats {
+  position: absolute;
+  right: 10px;
+  bottom: 7px;
+  color: rgba(239, 242, 245, 0.78);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 2;
+}
+
+.play-card-footer {
+  display: grid;
+  min-height: 58px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 0 16px;
+  background: #080808;
+}
+
+.play-card-favorite {
+  color: #83cfff;
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(84, 198, 255, 0.24);
 }
 
 .play-card-diagram {
   display: block;
   width: 100%;
+  height: 100%;
   aspect-ratio: 184 / 112;
-  border-radius: 5px;
   background:
-    linear-gradient(rgba(2, 8, 7, 0.08), rgba(2, 8, 7, 0.26)),
+    linear-gradient(rgba(2, 3, 6, 0.44), rgba(2, 3, 6, 0.55)),
     url("/branding/play-art/football-js-play-card-field.webp"),
-    linear-gradient(135deg, #17351f 0%, #244f32 48%, #102318 100%);
+    linear-gradient(135deg, #15181c 0%, #252c31 52%, #11161a 100%);
   background-position: center;
   background-size: cover;
   overflow: hidden;
@@ -598,88 +656,114 @@ canvas[hidden] {
 }
 
 .play-card-field-background {
-  fill: rgba(20, 58, 34, 0.26);
+  fill: rgba(5, 8, 12, 0.28);
 }
 
 .play-card-field-stripe {
-  stroke: rgba(255, 255, 255, 0.16);
-  stroke-width: 1;
-}
-
-.play-card-line-of-scrimmage {
-  stroke: #84c6ff;
-  stroke-width: 2.2;
-}
-
-.play-card-blocker-line {
-  stroke: rgba(242, 217, 75, 0.72);
-  stroke-linecap: round;
-  stroke-width: 2;
-}
-
-.play-card-blocker-bar {
-  stroke: #f2d94b;
-  stroke-linecap: round;
-  stroke-width: 2.4;
-}
-
-.play-card-pass-protection-line {
-  stroke: rgba(132, 198, 255, 0.76);
-  stroke-dasharray: 3 2.3;
-  stroke-linecap: round;
-  stroke-width: 2;
-}
-
-.play-card-pass-protection-bar {
-  stroke: #84c6ff;
-  stroke-linecap: round;
-  stroke-width: 2.25;
-}
-
-.play-card-receiver-route {
-  stroke: var(--play-card-route, #f3f5f6);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
-}
-
-.play-card-run-direction {
-  stroke: #f2d94b;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3.6;
-}
-
-.play-card-route-break {
-  fill: var(--play-card-route, #f3f5f6);
-  stroke: rgba(8, 12, 14, 0.9);
+  stroke: rgba(255, 255, 255, 0.2);
   stroke-width: 0.8;
 }
 
+.play-card-field-hash-column {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-dasharray: 2 3;
+  stroke-width: 0.7;
+}
+
+.play-card-field-number {
+  fill: rgba(245, 247, 249, 0.42);
+  font-size: 23px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.play-card-field-watermark {
+  fill: rgba(255, 255, 255, 0.07);
+  font-size: 36px;
+  font-style: italic;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.play-card-line-of-scrimmage {
+  stroke: rgba(255, 255, 255, 0.78);
+  stroke-dasharray: 2 1.6;
+  stroke-width: 1.5;
+}
+
+.play-card-blocker-line {
+  stroke: rgba(247, 251, 248, 0.82);
+  stroke-linecap: round;
+  stroke-width: 3.2;
+}
+
+.play-card-blocker-bar {
+  stroke: #f7fbf8;
+  stroke-linecap: round;
+  stroke-width: 3.8;
+}
+
+.play-card-pass-protection-line {
+  display: none;
+}
+
+.play-card-pass-protection-bar {
+  display: none;
+}
+
+.play-card-receiver-route {
+  stroke: #dce873;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4.6;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
+}
+
+.play-card-run-direction {
+  stroke: #c50846;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4.8;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
+}
+
+.play-card-route-break {
+  fill: #dce873;
+  stroke: rgba(7, 8, 10, 0.9);
+  stroke-width: 1;
+}
+
 .play-card-route-arrowhead path {
-  fill: var(--play-card-route, #f3f5f6);
+  fill: #dce873;
 }
 
 .play-card-run-arrowhead path {
-  fill: #f2d94b;
+  fill: #c50846;
 }
 
 .play-card-offense-marker {
-  fill: #f3f5f6;
-  stroke: rgba(8, 12, 14, 0.9);
-  stroke-width: 1.4;
+  fill: #f7fbf8;
+  stroke: rgba(5, 6, 8, 0.94);
+  stroke-width: 1.2;
 }
 
 .play-card-quarterback-marker {
-  fill: #f2d94b;
-  stroke: rgba(8, 12, 14, 0.9);
-  stroke-width: 1.4;
+  fill: #f7fbf8;
+  stroke: rgba(5, 6, 8, 0.94);
+  stroke-width: 1.2;
+}
+
+.play-card-skill-marker-stroke {
+  stroke: #f7fbf8;
+  stroke-linecap: round;
+  stroke-width: 3;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
 }
 
 .play-card-ball-marker {
-  fill: #c6543d;
-  stroke: rgba(255, 255, 255, 0.82);
-  stroke-width: 0.9;
+  fill: #f7fbf8;
+  stroke: rgba(5, 6, 8, 0.94);
+  stroke-width: 1.1;
 }
 
 .game-clock,
