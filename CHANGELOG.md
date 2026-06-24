@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.63] - 2026-06-24
+
+### Added
+
+- Added `artifacts/route-art-validation-1.22.63/` with Playwright screenshots for all eight pass plays across 5v5, 7v7, and 11v11 showing receiver route art and rounded defensive coverage zones.
+- Added `npm run artifacts:route-art` to regenerate the route-art validation screenshots and manifest.
+
+### Tests
+
+- Verified `npm run artifacts:route-art`, `npx vitest run tests/routeArtRenderer.test.ts`, and `npm run build`.
+
 ## [1.22.62] - 2026-06-24
 
 ### Added
