@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.50] - 2026-06-24
+
+### Fixed
+
+- Normalized the Dynasty Phase 0 roadmap with three shipped minor updates and one shell-isolation hardening pass so every completed phase documents its rollout shape.
+- Extended the Dynasty decision-map guardrail test to enforce the Phase 0 minor and hardening entries.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyOffseason.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.49] - 2026-06-24
 
 ### Fixed

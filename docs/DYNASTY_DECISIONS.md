@@ -75,6 +75,16 @@ Acceptance:
 - No duplicate team-selection path is introduced.
 - Build passes.
 
+Minor update plan:
+
+1. Hub destination: add the Dynasty button in Football Hub while keeping Play Now as the playable path. Shipped in `1.22.0`.
+2. Planning overview: show a non-playable Dynasty overview that explains the intended long-term mode direction. Shipped in `1.22.0`.
+3. Decision-map link: point the Dynasty shell at this decision file so the rollout stays visible. Shipped in `1.22.0`.
+
+Patch hardening plan:
+
+1. Shell isolation hardening: keep Dynasty non-playable, avoid duplicate team-selection state, and leave Play Now flow unchanged. Shipped in `1.22.0`.
+
 Completion notes:
 
 - The Football Hub contains a Dynasty destination.

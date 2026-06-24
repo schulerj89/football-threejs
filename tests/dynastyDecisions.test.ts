@@ -9,6 +9,10 @@ describe('dynasty decision roadmap', () => {
     expect(DYNASTY_DECISION_DOC_PATH).toBe('docs/DYNASTY_DECISIONS.md');
     expect(decisionDoc).toContain('### Phase 0: Dynasty Shell');
     expect(decisionDoc).toContain('Status: Complete in `1.22.0`.');
+    expect(decisionDoc).toContain('Hub destination: add the Dynasty button in Football Hub while keeping Play Now as the playable path. Shipped in `1.22.0`.');
+    expect(decisionDoc).toContain('Planning overview: show a non-playable Dynasty overview that explains the intended long-term mode direction. Shipped in `1.22.0`.');
+    expect(decisionDoc).toContain('Decision-map link: point the Dynasty shell at this decision file so the rollout stays visible. Shipped in `1.22.0`.');
+    expect(decisionDoc).toContain('Shell isolation hardening: keep Dynasty non-playable, avoid duplicate team-selection state, and leave Play Now flow unchanged. Shipped in `1.22.0`.');
     expect(decisionDoc).toContain('The Dynasty destination is a non-playable planning shell.');
     expect(decisionDoc).toContain('Status: Complete in `1.22.19`.');
     expect(decisionDoc).toContain('Season-core contract: add the `DynastySaveData` schema');
