@@ -21,6 +21,7 @@ import {
 import { createSnapPlacementForLane } from '../src/formationPreview';
 import { resolveFormation } from '../src/formationLayout';
 import { resolveEligibleReceiverRoutes } from '../src/receiverRoutes';
+import { ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS } from '../src/elevenOnElevenFormation';
 import {
   ELEVEN_ON_ELEVEN_PLAYER_IDS,
   SEVEN_ON_SEVEN_PLAYER_IDS,
@@ -675,29 +676,25 @@ describe('playbook', () => {
       const snapPlacement = createSnapPlacementForLane(lane);
       const formation = resolveFormation(play, snapPlacement);
       const players = createFormationPlayers(snapPlacement.spot, play);
-      const leftReceiverSlot = getPlayer(formation.slots, 'offense-wr-left');
-      const rightReceiverSlot = getPlayer(formation.slots, 'offense-wr-right');
-      const slotSlot = getPlayer(formation.slots, 'offense-slot');
-      const tightEndSlot = getPlayer(formation.slots, 'offense-tight-end');
-      const runningBackSlot = getPlayer(formation.slots, 'offense-rb');
       const freeSafety = getPlayer(formation.slots, 'defense-safety');
+      const strongSafety = getPlayer(formation.slots, 'defense-safety-strong');
       const leftReceiver = getPlayer(players, 'offense-wr-left');
       const rightReceiver = getPlayer(players, 'offense-wr-right');
       const slot = getPlayer(players, 'offense-slot');
       const tightEnd = getPlayer(players, 'offense-tight-end');
       const runningBack = getPlayer(players, 'offense-rb');
-      const expectedSafetyX =
-        (leftReceiverSlot.position.x +
-          rightReceiverSlot.position.x +
-          slotSlot.position.x +
-          tightEndSlot.position.x +
-          runningBackSlot.position.x) / 5;
       const leftRoute = getReceiverRouteTarget(leftReceiver, snapPlacement.spot, play);
       const tightEndRoute = getReceiverRouteTarget(tightEnd, snapPlacement.spot, play);
       const runningBackRoute = getReceiverRouteTarget(runningBack, snapPlacement.spot, play);
 
       expect(formation.issues).toEqual([]);
-      expect(freeSafety.position.x).toBeCloseTo(expectedSafetyX);
+      expect(freeSafety.position.x).toBeCloseTo(
+        snapPlacement.spot.x - ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.deepSafetyOffset,
+      );
+      expect(strongSafety.position.x).toBeCloseTo(
+        snapPlacement.spot.x + ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.deepSafetyOffset,
+      );
+      expect(freeSafety.position.z).toBeCloseTo(strongSafety.position.z);
       expect(leftRoute?.z).toBeGreaterThan(leftReceiver.position.z);
       expect(leftRoute?.x).toBeCloseTo(
         lane === 'rightHash' ? snapPlacement.spot.x - 4 : snapPlacement.spot.x + 4,

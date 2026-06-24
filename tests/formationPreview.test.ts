@@ -272,18 +272,11 @@ describe('11v11 formation preview', () => {
     });
   });
 
-  it('aligns corners to outside receivers and safeties to receiving threat midpoints', () => {
+  it('aligns corners outside and safeties as a balanced two-high shell', () => {
     const formation = createFormationPreviewModel('11v11', 'middle').formation;
-    const eligibleThreatMidpoint = average(
-      ELEVEN_ON_ELEVEN_ELIGIBLE_RECEIVER_IDS.map((playerId) =>
-        getSlot(formation, playerId).position.x,
-      ),
-    );
-    const strongSafetyThreatMidpoint = average(
-      ['offense-tight-end', 'offense-slot', 'offense-rb'].map((playerId) =>
-        getSlot(formation, playerId).position.x,
-      ),
-    );
+    const center = getSlot(formation, 'offense-center');
+    const freeSafety = getSlot(formation, 'defense-safety');
+    const strongSafety = getSlot(formation, 'defense-safety-strong');
 
     expect(getSlot(formation, 'defense-corner-left').position.x).toBeCloseTo(
       getSlot(formation, 'offense-wr-left').position.x,
@@ -291,11 +284,12 @@ describe('11v11 formation preview', () => {
     expect(getSlot(formation, 'defense-corner-right').position.x).toBeCloseTo(
       getSlot(formation, 'offense-wr-right').position.x,
     );
-    expect(getSlot(formation, 'defense-safety').position.x).toBeCloseTo(
-      eligibleThreatMidpoint,
-    );
-    expect(getSlot(formation, 'defense-safety-strong').position.x).toBeCloseTo(
-      strongSafetyThreatMidpoint,
+    expect(freeSafety.position.x).toBeCloseTo(-ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.deepSafetyOffset);
+    expect(strongSafety.position.x).toBeCloseTo(ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.deepSafetyOffset);
+    expect(freeSafety.position.z).toBeCloseTo(strongSafety.position.z);
+    expect(strongSafety.position.z - center.position.z).toBeCloseTo(
+      ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.safetyDepth +
+        ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.offensiveLineSetback,
     );
   });
 
@@ -378,8 +372,4 @@ function sidelineInset(slot: ResolvedFormationSlot): number {
 
 function distance(first: ResolvedFormationSlot, second: ResolvedFormationSlot): number {
   return Math.hypot(first.position.x - second.position.x, first.position.z - second.position.z);
-}
-
-function average(values: number[]): number {
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }

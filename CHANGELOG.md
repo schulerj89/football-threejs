@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.67] - 2026-06-24
+
+### Fixed
+
+- Restored 11v11 Cover 2 to a true two-high shell with both FS and SS aligned at the same deep safety depth.
+- Restored the strong safety to a deep-half zone and anchored safety deep halves to each safety's actual side of the ball.
+- Updated 11v11 safety formation validation to require balanced high safety offsets instead of receiver-midpoint alignment.
+
+### Added
+
+- Added `npm run artifacts:coverage-art` and `artifacts/cover2-zone-art-1.22.67/` with a validated screenshot of the Cover 2 defensive zone art.
+
+### Tests
+
+- Verified `npx vitest run tests/formationPreview.test.ts tests/playbook.test.ts tests/teamSimulation.test.ts tests/routeArtRenderer.test.ts`, `npm run build`, `npm run artifacts:coverage-art`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows on-field receiver routes before snap and supports route audit mode"`.
+
 ## [1.22.66] - 2026-06-24
 
 ### Fixed

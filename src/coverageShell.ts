@@ -94,7 +94,7 @@ export function resolveCoverageZones(
   const hasStrongSafety = coverageSlots.some((slot) => slot.id === 'defense-safety-strong');
 
   return coverageSlots.flatMap((slot) => {
-    const zone = resolveCoverageZoneForSlot(slot, snapPlacement, formation.fieldSide, hasStrongSafety);
+    const zone = resolveCoverageZoneForSlot(slot, snapPlacement, hasStrongSafety);
     return zone
       ? [anchorCoverageZone(zone, slot, options.playerPositions?.get(slot.id))]
       : [];
@@ -147,7 +147,6 @@ export function isPointInsideCoverageZone(point: FootballSpot, zone: CoverageZon
 function resolveCoverageZoneForSlot(
   slot: ResolvedFormationSlot,
   snapPlacement: SnapPlacement,
-  fieldSide: 'left' | 'right',
   hasStrongSafety: boolean,
 ): CoverageZoneShape | null {
   if (LEFT_ZONE_DEFENDER_IDS.has(slot.id)) {
@@ -160,12 +159,12 @@ function resolveCoverageZoneForSlot(
 
   if (slot.id === 'defense-safety') {
     return hasStrongSafety
-      ? createDeepHalfZone(slot.id, fieldSide === 'left' ? 'left' : 'right', snapPlacement)
+      ? createDeepHalfZone(slot.id, slot.position.x <= snapPlacement.spot.x ? 'left' : 'right', snapPlacement)
       : createDeepMiddleZone(slot.id, snapPlacement);
   }
 
   if (slot.id === 'defense-safety-strong') {
-    return createHookCurlZone(slot.id, fieldSide === 'left' ? 'right' : 'left', snapPlacement);
+    return createDeepHalfZone(slot.id, slot.position.x <= snapPlacement.spot.x ? 'left' : 'right', snapPlacement);
   }
 
   if (LEFT_HOOK_DEFENDER_IDS.has(slot.id)) {

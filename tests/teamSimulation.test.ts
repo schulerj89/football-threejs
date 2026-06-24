@@ -342,15 +342,16 @@ describe('five-on-five rushing drill simulation', () => {
     expect(rightHashSafety.landmark.x).toBeLessThanOrEqual(6);
   });
 
-  it('rotates the 11v11 strong safety into lower hook support instead of a second deep-half zone', () => {
+  it('keeps both 11v11 safeties in high Cover 2 deep-half zones', () => {
     const play = getPlay('spread-quick-11');
     const zones = resolveCoverageZones(play, resolveSnapPlacement(INITIAL_BALL_SPOT));
     const freeSafety = getZone(zones, 'defense-safety');
     const strongSafety = getZone(zones, 'defense-safety-strong');
 
     expect(freeSafety.kind).toBe('deepHalf');
-    expect(strongSafety.kind).toBe('hookCurl');
-    expect(strongSafety.landmark.z).toBeLessThan(freeSafety.landmark.z);
+    expect(strongSafety.kind).toBe('deepHalf');
+    expect(strongSafety.landmark.z).toBeCloseTo(freeSafety.landmark.z);
+    expect(strongSafety.landmark.x).toBeGreaterThan(freeSafety.landmark.x);
   });
 
   it('turns coverage defenders into carrier pursuit after a Twin Slants Flat completion', () => {

@@ -1,6 +1,6 @@
 {
   "name": "football-threejs",
-  "version": "1.22.66",
+  "version": "1.22.67",
   "private": true,
   "type": "module",
   "description": "Low-poly 3D American football prototype built with Three.js.",
@@ -57,6 +57,7 @@
     "test:perf": "npm run perf:11v11",
     "test:smoke": "playwright test",
     "test:smoke:extended": "tsx tools/test/runExtendedSmoke.ts",
+    "artifacts:coverage-art": "tsx tools/artifacts/captureCoverageArtArtifact.ts",
     "artifacts:game-screens": "tsx tools/artifacts/captureGameArtifacts.ts",
     "artifacts:play-cards": "tsx tools/artifacts/capturePlayCardArtifacts.ts",
     "artifacts:route-art": "tsx tools/artifacts/captureRouteArtArtifacts.ts"

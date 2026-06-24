@@ -51,6 +51,7 @@ export interface ElevenOnElevenPlayerMetadata {
 export const ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS = {
   centerOffsetFromSnap: 0,
   cornerCushion: 7.2,
+  deepSafetyOffset: 11.5,
   defensiveLineDepth: 3.8,
   defensiveLineGap: 3.4,
   defensiveLineInteriorGap: 1.7,
@@ -69,7 +70,7 @@ export const ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS = {
   safetyDepth: 17,
   slotAlignment: 10.8,
   slotDepth: 2.0,
-  strongSafetyDepth: 12,
+  strongSafetyDepth: 17,
   tackleSpacing: 4.4,
   tightEndSpacing: 6.8,
 } as const;
@@ -103,12 +104,6 @@ export const ELEVEN_ON_ELEVEN_ELIGIBLE_RECEIVER_IDS = [
   'offense-wr-left',
   'offense-tight-end',
   'offense-wr-right',
-  'offense-slot',
-  'offense-rb',
-] as const;
-
-const STRONG_SAFETY_THREAT_IDS = [
-  'offense-tight-end',
   'offense-slot',
   'offense-rb',
 ] as const;
@@ -261,8 +256,8 @@ export function createElevenOnElevenPreviewFormation(
       defenseSlot('defense-linebacker-right', 'defender', point(snapSide('right', ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.outsideLinebackerOffset), defenseDepth(ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.linebackerDepth))),
       defenseSlot('defense-corner-left', 'coverageDefender', point(alignedTo('offense-wr-left'), defenseDepth(ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.cornerCushion))),
       defenseSlot('defense-corner-right', 'coverageDefender', point(alignedTo('offense-wr-right'), defenseDepth(ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.cornerCushion))),
-      defenseSlot('defense-safety', 'coverageDefender', point(midpointOf([...ELEVEN_ON_ELEVEN_ELIGIBLE_RECEIVER_IDS]), defenseDepth(ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.safetyDepth))),
-      defenseSlot('defense-safety-strong', 'coverageDefender', point(midpointOf([...STRONG_SAFETY_THREAT_IDS]), defenseDepth(ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.strongSafetyDepth))),
+      defenseSlot('defense-safety', 'coverageDefender', point(snapSide(weakSide, ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.deepSafetyOffset), defenseDepth(ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.safetyDepth))),
+      defenseSlot('defense-safety-strong', 'coverageDefender', point(snapSide(strongSide, ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.deepSafetyOffset), defenseDepth(ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.strongSafetyDepth))),
     ],
     pass: {
       coverageAssignments: {
@@ -484,20 +479,36 @@ function validateSafetyAlignment(
   slotsById: Map<string, ResolvedFormationSlot>,
   issues: FormationValidationIssue[],
 ): void {
-  validateMidpointAlignment(
-    slotsById,
-    'defense-safety',
-    [...ELEVEN_ON_ELEVEN_ELIGIBLE_RECEIVER_IDS],
-    'Free safety must align to the eligible threat midpoint',
-    issues,
-  );
-  validateMidpointAlignment(
-    slotsById,
-    'defense-safety-strong',
-    [...STRONG_SAFETY_THREAT_IDS],
-    'Strong safety must align to the strong-side receiving threat midpoint',
-    issues,
-  );
+  const center = slotsById.get('offense-center');
+  const freeSafety = slotsById.get('defense-safety');
+  const strongSafety = slotsById.get('defense-safety-strong');
+
+  if (!center || !freeSafety || !strongSafety) {
+    return;
+  }
+
+  const tolerance = ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.lineOfScrimmageTolerance;
+  const expectedOffset = ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.deepSafetyOffset;
+  const freeOffset = freeSafety.position.x - center.position.x;
+  const strongOffset = strongSafety.position.x - center.position.x;
+
+  if (
+    Math.abs(Math.abs(freeOffset) - expectedOffset) > tolerance ||
+    Math.abs(Math.abs(strongOffset) - expectedOffset) > tolerance ||
+    Math.sign(freeOffset) === Math.sign(strongOffset)
+  ) {
+    issues.push({
+      message: 'Cover 2 safeties must align as balanced two-high deep-half defenders',
+      playerIds: ['defense-safety', 'defense-safety-strong', 'offense-center'],
+    });
+  }
+
+  if (Math.abs(freeSafety.position.z - strongSafety.position.z) > tolerance) {
+    issues.push({
+      message: 'Cover 2 safeties must align at the same high depth',
+      playerIds: ['defense-safety', 'defense-safety-strong'],
+    });
+  }
 }
 
 function validateAlignedPair(
@@ -520,32 +531,6 @@ function validateAlignedPair(
     issues.push({
       message: `${defenderId} is not aligned to outside receiver ${receiverId}`,
       playerIds: [defenderId, receiverId],
-    });
-  }
-}
-
-function validateMidpointAlignment(
-  slotsById: Map<string, ResolvedFormationSlot>,
-  playerId: string,
-  threatIds: string[],
-  message: string,
-  issues: FormationValidationIssue[],
-): void {
-  const player = slotsById.get(playerId);
-  const threats = getPresentSlots(threatIds, slotsById);
-
-  if (!player || threats.length !== threatIds.length) {
-    return;
-  }
-
-  const expectedX = average(threats.map((slot) => slot.position.x));
-  if (
-    Math.abs(player.position.x - expectedX) >
-    ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.lineOfScrimmageTolerance
-  ) {
-    issues.push({
-      message,
-      playerIds: [playerId, ...threatIds],
     });
   }
 }
@@ -628,8 +613,4 @@ function lineOfScrimmageDepth(
     kind: 'lineOfScrimmage',
     side,
   };
-}
-
-function average(values: number[]): number {
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }

@@ -1260,8 +1260,8 @@ function createElevenOnElevenFieldRunFormation(): FormationSlot[] {
     defenseSlot('defense-linebacker-right', 'defender', point(snapSide('field', ELEVEN.outsideLinebackerOffset), defenseDepth(ELEVEN.linebackerDepth))),
     defenseSlot('defense-corner-left', 'defender', point(alignedTo('offense-wr-left'), defenseDepth(ELEVEN.cornerCushion))),
     defenseSlot('defense-corner-right', 'defender', point(alignedTo('offense-wr-right'), defenseDepth(ELEVEN.cornerCushion))),
-    defenseSlot('defense-safety', 'defender', point(midpointOf(['offense-wr-left', 'offense-wr-right']), defenseDepth(ELEVEN.safetyDepth))),
-    defenseSlot('defense-safety-strong', 'defender', point(snapSide('field', ELEVEN.slotAlignment * 0.55), defenseDepth(ELEVEN.strongSafetyDepth))),
+    defenseSlot('defense-safety', 'defender', point(snapSide('boundary', ELEVEN.deepSafetyOffset), defenseDepth(ELEVEN.safetyDepth))),
+    defenseSlot('defense-safety-strong', 'defender', point(snapSide('field', ELEVEN.deepSafetyOffset), defenseDepth(ELEVEN.strongSafetyDepth))),
   ];
 }
 
@@ -1287,8 +1287,8 @@ function createElevenOnElevenFieldPassFormation(): FormationSlot[] {
     defenseSlot('defense-linebacker-right', 'coverageDefender', point(alignedTo('offense-slot'), defenseDepth(ELEVEN.linebackerDepth))),
     defenseSlot('defense-corner-left', 'coverageDefender', point(alignedTo('offense-wr-left'), defenseDepth(ELEVEN.cornerCushion))),
     defenseSlot('defense-corner-right', 'coverageDefender', point(alignedTo('offense-wr-right'), defenseDepth(ELEVEN.cornerCushion))),
-    defenseSlot('defense-safety', 'coverageDefender', point(midpointOf([...SPREAD_QUICK_ELEVEN_RECEIVER_IDS]), defenseDepth(ELEVEN.safetyDepth))),
-    defenseSlot('defense-safety-strong', 'coverageDefender', point(alignedTo('offense-slot'), defenseDepth(ELEVEN.strongSafetyDepth))),
+    defenseSlot('defense-safety', 'coverageDefender', point(snapSide('boundary', ELEVEN.deepSafetyOffset), defenseDepth(ELEVEN.safetyDepth))),
+    defenseSlot('defense-safety-strong', 'coverageDefender', point(snapSide('field', ELEVEN.deepSafetyOffset), defenseDepth(ELEVEN.strongSafetyDepth))),
   ];
 }
 

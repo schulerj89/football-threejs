@@ -1,0 +1,61 @@
+{
+  "baseUrl": "http://127.0.0.1:5174",
+  "capturedAt": "2026-06-24T22:25:17.054Z",
+  "captures": [
+    {
+      "fileName": "cover2-zone-art-spread-quick-11.png",
+      "label": "Spread Quick 11 Cover 2 defensive zone art",
+      "playId": "spread-quick-11",
+      "playbookId": "11v11"
+    }
+  ],
+  "notes": [
+    "Captured with coverageArt=1 from the real 11v11 play-card selection path.",
+    "Validation requires FS and SS to be visible deepHalf zones at matching deep depth.",
+    "Validation requires the safety zone anchors to remain player-sourced and split left/right of the snap."
+  ],
+  "safetyZones": [
+    {
+      "defenderId": "defense-safety",
+      "kind": "deepHalf",
+      "landmark": {
+        "x": -13,
+        "z": 28
+      },
+      "playerAnchor": {
+        "formationPosition": {
+          "x": -11.5,
+          "z": 26
+        },
+        "playerId": "defense-safety",
+        "position": {
+          "x": -11.5,
+          "z": 26
+        },
+        "source": "player"
+      },
+      "visible": true
+    },
+    {
+      "defenderId": "defense-safety-strong",
+      "kind": "deepHalf",
+      "landmark": {
+        "x": 13,
+        "z": 28
+      },
+      "playerAnchor": {
+        "formationPosition": {
+          "x": 11.5,
+          "z": 26
+        },
+        "playerId": "defense-safety-strong",
+        "position": {
+          "x": 11.5,
+          "z": 26
+        },
+        "source": "player"
+      },
+      "visible": true
+    }
+  ]
+}
