@@ -19,12 +19,14 @@ describe('dynasty decision roadmap', () => {
     expect(decisionDoc).toContain('Flow hardening: prevent Play Now and Dynasty state from leaking into each other');
     expect(decisionDoc).toContain('Dynasty matchup launch settings are runtime-only');
     expect(decisionDoc).toContain('### Phase 2: Stats, Stories, and Awards');
-    expect(decisionDoc).toContain('Minor updates 1-4 shipped in `1.22.20`, `1.22.21`, `1.22.22`, and `1.22.23`; patch hardening 1 shipped in `1.22.24`.');
+    expect(decisionDoc).toContain('Status: Complete in `1.22.25`.');
     expect(decisionDoc).toContain('Season stats contract: add team-level season stat rows');
     expect(decisionDoc).toContain('Weekly leaders: expose passing, rushing, scoring, turnover, and yardage leaders');
     expect(decisionDoc).toContain('Story hooks: add compact Dynasty context summaries');
     expect(decisionDoc).toContain('Award watch lists: add deterministic offensive, defensive, and special teams watch rows');
     expect(decisionDoc).toContain('Stat validation hardening: reject missing, negative, mismatched, or impossible aggregate stat rows');
+    expect(decisionDoc).toContain('Story presentation hardening: keep Dynasty story copy generic, factual, and absent from Play Now');
+    expect(decisionDoc).toContain('Dynasty story copy is suppressed for Play Now and for malformed Dynasty context.');
     expect(decisionDoc).toContain('Patch hardening plan:');
   });
 });

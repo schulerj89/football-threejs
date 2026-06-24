@@ -35,7 +35,31 @@ describe('halftime presentation', () => {
 
     const story = resolveHalftimeStory(match);
 
-    expect(story.contextSummary).toBe('Dynasty Week 2: Metro entered 1-0 against Lights (0-1).');
+    expect(story.contextSummary).toBe('Dynasty Week 2: vs Lakefront Lights; records 1-0 and 0-1.');
+  });
+
+  it('omits Dynasty context from Play Now halftime stories', () => {
+    const story = resolveHalftimeStory(createMatchSnapshot({
+      opponentPoints: 10,
+      userPoints: 14,
+    }));
+
+    expect(story.contextSummary).toBeNull();
+  });
+
+  it('suppresses malformed Dynasty context before halftime presentation copy', () => {
+    const match = {
+      ...createMatchSnapshot({
+        opponentPoints: 10,
+        userPoints: 14,
+      }),
+      dynastyStoryContext: {
+        ...createDynastyStoryContext(),
+        matchupLabel: 'vs Lakefront Lights - guaranteed title run',
+      },
+    };
+
+    expect(resolveHalftimeStory(match).contextSummary).toBeNull();
   });
 
   it('builds the comparative stats panel from GameStatsModel data', () => {
@@ -390,7 +414,7 @@ async function flushPromises(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-function createDynastyStoryContext(): MatchSnapshot['dynastyStoryContext'] {
+function createDynastyStoryContext(): NonNullable<MatchSnapshot['dynastyStoryContext']> {
   return {
     halftimeSummary: 'Dynasty Week 2: Metro entered 1-0 against Lights (0-1).',
     hubSummary: 'Week 2: Metro host Lights.',

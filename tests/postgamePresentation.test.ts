@@ -48,8 +48,32 @@ describe('postgame presentation', () => {
 
     const story = resolvePostgameStory(match);
 
-    expect(story.contextSummary).toBe('Dynasty Week 2: Metro started this matchup 1-0, with Lights at 0-1.');
+    expect(story.contextSummary).toBe('Dynasty Week 2: vs Lakefront Lights opened with records 1-0 and 0-1.');
     expect(story.caption).not.toContain('Dynasty Week 2');
+  });
+
+  it('omits Dynasty context from Play Now postgame stories', () => {
+    const story = resolvePostgameStory(createGameOverSnapshot({
+      opponentPoints: 17,
+      userPoints: 24,
+    }));
+
+    expect(story.contextSummary).toBeNull();
+  });
+
+  it('suppresses malformed Dynasty context before postgame presentation copy', () => {
+    const match = {
+      ...createGameOverSnapshot({
+        opponentPoints: 17,
+        userPoints: 24,
+      }),
+      dynastyStoryContext: {
+        ...createDynastyStoryContext(),
+        userRecordLabel: 'undefeated',
+      },
+    };
+
+    expect(resolvePostgameStory(match).contextSummary).toBeNull();
   });
 
   it('selects a quarterback-dominance story from actual player passing stats', () => {
@@ -172,7 +196,7 @@ function resolveWinner(
   return userScore > opponentScore ? 'user' : 'opponent';
 }
 
-function createDynastyStoryContext(): MatchSnapshot['dynastyStoryContext'] {
+function createDynastyStoryContext(): NonNullable<MatchSnapshot['dynastyStoryContext']> {
   return {
     halftimeSummary: 'Dynasty Week 2: Metro entered 1-0 against Lights (0-1).',
     hubSummary: 'Week 2: Metro host Lights.',

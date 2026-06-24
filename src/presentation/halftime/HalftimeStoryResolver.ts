@@ -2,6 +2,7 @@ import {
   HALFTIME_SCRIPT_IDS,
 } from '../../audio/voicePacks/VoicePackRegistry';
 import type { HalftimeCategory } from '../../audio/voicePacks/VoicePackTypes';
+import { createDynastyPresentationSummary } from '../../dynasty/DynastyStoryContext';
 import type { MatchPossession, MatchSnapshot } from '../../match/MatchTypes';
 import type { GameStatsSnapshot } from '../../stats/GameStatsTypes';
 import type { HalftimeStory } from './HalftimePresentationTypes';
@@ -51,7 +52,7 @@ export function resolveHalftimeStory(match: MatchSnapshot): HalftimeStory {
 
   return {
     category,
-    contextSummary: match.dynastyStoryContext?.halftimeSummary ?? null,
+    contextSummary: createDynastyPresentationSummary(match.dynastyStoryContext, 'halftime'),
     scriptId: selectScriptId(category, match.deterministicSeed),
     supportingStatKeys,
     supportingTeam,

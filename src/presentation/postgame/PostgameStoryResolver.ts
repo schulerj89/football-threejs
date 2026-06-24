@@ -2,6 +2,7 @@ import {
   POSTGAME_SCRIPT_IDS,
 } from '../../audio/voicePacks/VoicePackRegistry';
 import type { PostgameCategory } from '../../audio/voicePacks/VoicePackTypes';
+import { createDynastyPresentationSummary } from '../../dynasty/DynastyStoryContext';
 import type { MatchPossession, MatchSnapshot } from '../../match/MatchTypes';
 import { getRosterPlayer } from '../../roster/TeamRoster';
 import { getTeamRosterOrDefault } from '../../roster/RosterRegistry';
@@ -40,7 +41,7 @@ export function resolvePostgameStory(match: MatchSnapshot): PostgameStory {
   return {
     caption,
     category: candidate.category,
-    contextSummary: match.dynastyStoryContext?.postgameSummary ?? null,
+    contextSummary: createDynastyPresentationSummary(match.dynastyStoryContext, 'postgame'),
     scriptId,
     supportingPlayerId: candidate.supportingPlayerId ?? null,
     supportingStatKeys: candidate.supportingStatKeys,

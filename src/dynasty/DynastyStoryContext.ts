@@ -7,6 +7,8 @@ import type {
   DynastyTeamRecord,
 } from './DynastyTypes';
 
+export type DynastyPresentationSummaryPhase = 'halftime' | 'postgame';
+
 export function createDynastyMatchStoryContext(options: {
   readonly game: DynastyScheduledGame;
   readonly league: LeagueData;
@@ -45,6 +47,22 @@ export function createDynastyMatchStoryContext(options: {
   };
 }
 
+export function createDynastyPresentationSummary(
+  context: DynastyMatchStoryContext | null,
+  phase: DynastyPresentationSummaryPhase,
+): string | null {
+  const safeContext = context ? normalizePresentationContext(context) : null;
+  if (!safeContext) {
+    return null;
+  }
+
+  if (phase === 'halftime') {
+    return `Dynasty ${safeContext.weekLabel}: ${safeContext.matchupLabel}; records ${safeContext.userRecordLabel} and ${safeContext.opponentRecordLabel}.`;
+  }
+
+  return `Dynasty ${safeContext.weekLabel}: ${safeContext.matchupLabel} opened with records ${safeContext.userRecordLabel} and ${safeContext.opponentRecordLabel}.`;
+}
+
 export function createDynastyHubStorySummary(options: {
   readonly league: LeagueData;
   readonly save: DynastySaveData;
@@ -80,6 +98,40 @@ function formatRecord(record: DynastyTeamRecord | undefined): string {
 
 function formatStanding(rank: number | undefined): string {
   return rank ? `No. ${rank}` : 'Unranked';
+}
+
+function normalizePresentationContext(
+  context: DynastyMatchStoryContext,
+): Pick<DynastyMatchStoryContext, 'matchupLabel' | 'opponentRecordLabel' | 'userRecordLabel' | 'weekLabel'> | null {
+  const weekLabel = normalizeWeekLabel(context.weekLabel);
+  const matchupLabel = normalizeMatchupLabel(context.matchupLabel);
+  const userRecordLabel = normalizeRecordLabel(context.userRecordLabel);
+  const opponentRecordLabel = normalizeRecordLabel(context.opponentRecordLabel);
+  if (!weekLabel || !matchupLabel || !userRecordLabel || !opponentRecordLabel) {
+    return null;
+  }
+
+  return {
+    matchupLabel,
+    opponentRecordLabel,
+    userRecordLabel,
+    weekLabel,
+  };
+}
+
+function normalizeWeekLabel(value: string): string | null {
+  const trimmed = value.trim();
+  return /^Week [1-9]\d*$/.test(trimmed) ? trimmed : null;
+}
+
+function normalizeMatchupLabel(value: string): string | null {
+  const trimmed = value.trim();
+  return /^(?:at|vs) [A-Za-z0-9 .']{2,48}$/.test(trimmed) ? trimmed : null;
+}
+
+function normalizeRecordLabel(value: string): string | null {
+  const trimmed = value.trim();
+  return /^(?:0|[1-9]\d*)-(?:0|[1-9]\d*)$/.test(trimmed) ? trimmed : null;
 }
 
 function resolveTeam(

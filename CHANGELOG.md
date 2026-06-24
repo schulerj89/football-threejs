@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.25] - 2026-06-24
+
+### Fixed
+
+- Hardened Dynasty halftime and postgame story presentation so visible Dynasty copy is built from structured week, matchup, and record fields instead of free-form summary text.
+- Suppressed Dynasty presentation copy when match context is missing or malformed, preserving Play Now halftime and postgame stories without Dynasty labels.
+- Marked Dynasty Phase 2 complete after shipping all four minor updates and both hardening passes.
+
+### Tests
+
+- Verified `npx vitest run tests/halftimePresentation.test.ts tests/postgamePresentation.test.ts tests/footballHubLaunch.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.24] - 2026-06-24
 
 ### Fixed

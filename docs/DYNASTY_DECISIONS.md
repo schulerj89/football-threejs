@@ -122,7 +122,7 @@ Completion notes:
 
 ### Phase 2: Stats, Stories, and Awards
 
-Status: In progress. Minor updates 1-4 shipped in `1.22.20`, `1.22.21`, `1.22.22`, and `1.22.23`; patch hardening 1 shipped in `1.22.24`.
+Status: Complete in `1.22.25`.
 
 Goal: Let the season feel persistent through stats and commentary.
 
@@ -149,7 +149,13 @@ Minor update plan:
 Patch hardening plan:
 
 1. Stat validation hardening: reject missing, negative, mismatched, or impossible aggregate stat rows and preserve migration safety. Shipped in `1.22.24`.
-2. Story presentation hardening: keep Dynasty story copy generic, factual, and absent from Play Now unless a Dynasty context exists.
+2. Story presentation hardening: keep Dynasty story copy generic, factual, and absent from Play Now unless a Dynasty context exists. Shipped in `1.22.25`.
+
+Completion notes:
+
+- Dynasty saves now carry cumulative team season stats, weekly leaders, award watch rows, and compact story context for the hub, halftime report, and postgame stats.
+- Dynasty validation rejects corrupt stat aggregates and missing, duplicate, negative, or mismatched stat rows.
+- Dynasty story copy is suppressed for Play Now and for malformed Dynasty context.
 
 ### Phase 3: Player Progression
 
