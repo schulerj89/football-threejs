@@ -460,7 +460,7 @@ describe('playbook', () => {
     }
   });
 
-  it('defines Spread Quick 11 with five ordered receivers, protection, and coverage', () => {
+  it('defines Spread Quick 11 with five ordered receivers, 4-3 protection, and coverage', () => {
     const play = getPlay('spread-quick-11');
     const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
     const assignedRushers = Object.values(play.protectionAssignments ?? {});
@@ -492,19 +492,18 @@ describe('playbook', () => {
       'offense-center',
       'offense-line-left',
       'offense-line-right',
-      'offense-tackle-left',
       'offense-tackle-right',
     ]);
-    expect(assignedRushers).toHaveLength(5);
-    expect(new Set(assignedRushers).size).toBe(5);
+    expect(assignedRushers).toHaveLength(4);
+    expect(new Set(assignedRushers).size).toBe(4);
     expect(getProtectionAssignmentDefenderId(play, 'offense-center')).toBe('defense-line-middle');
-    expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-left')).toBe('defense-linebacker-left');
-    expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-right')).toBe('defense-linebacker-right');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-line-right')).toBe('defense-linebacker-inside');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-right')).toBe('defense-line-right');
     expect(getCoverageAssignmentReceiverId(play, 'defense-corner-left')).toBe('offense-wr-left');
     expect(getCoverageAssignmentReceiverId(play, 'defense-corner-right')).toBe('offense-wr-right');
-    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-rb');
-    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-inside')).toBe('offense-tight-end');
-    expect(getCoverageAssignmentReceiverId(play, 'defense-safety-strong')).toBe('offense-slot');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-left')).toBe('offense-rb');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-tight-end');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-right')).toBe('offense-slot');
     expect(getDeepHelpReceiverIds(play, 'defense-safety')).toEqual([
       'offense-wr-left',
       'offense-wr-right',
@@ -515,7 +514,7 @@ describe('playbook', () => {
     expect(getReceiverDisplayName(play, 'offense-tight-end')).toBe('Tight End');
   });
 
-  it('defines added 11v11 passing plays with five ordered receivers, protection, and coverage', () => {
+  it('defines added 11v11 passing plays with five ordered receivers, 4-3 protection, and coverage', () => {
     for (const playId of ['twin-slants-11', 'curl-flat-11', 'four-verts-out-flat-11'] as const) {
       const play = getPlay(playId);
       const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
@@ -546,19 +545,18 @@ describe('playbook', () => {
         'offense-center',
         'offense-line-left',
         'offense-line-right',
-        'offense-tackle-left',
         'offense-tackle-right',
       ]);
-      expect(assignedRushers).toHaveLength(5);
-      expect(new Set(assignedRushers).size).toBe(5);
+      expect(assignedRushers).toHaveLength(4);
+      expect(new Set(assignedRushers).size).toBe(4);
       expect(getProtectionAssignmentDefenderId(play, 'offense-center')).toBe('defense-line-middle');
-      expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-left')).toBe('defense-linebacker-left');
-      expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-right')).toBe('defense-linebacker-right');
+      expect(getProtectionAssignmentDefenderId(play, 'offense-line-right')).toBe('defense-linebacker-inside');
+      expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-right')).toBe('defense-line-right');
       expect(getCoverageAssignmentReceiverId(play, 'defense-corner-left')).toBe('offense-wr-left');
       expect(getCoverageAssignmentReceiverId(play, 'defense-corner-right')).toBe('offense-wr-right');
-      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-rb');
-      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-inside')).toBe('offense-tight-end');
-      expect(getCoverageAssignmentReceiverId(play, 'defense-safety-strong')).toBe('offense-slot');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-left')).toBe('offense-rb');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-tight-end');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-right')).toBe('offense-slot');
       expect(getDeepHelpReceiverIds(play, 'defense-safety')).toEqual([
         'offense-wr-left',
         'offense-wr-right',
@@ -759,7 +757,7 @@ describe('playbook', () => {
     expect(assignedDefenders).not.toContain('defense-safety-strong');
     expect(getProtectionAssignmentDefenderId(play, 'offense-center')).toBe('defense-line-middle');
     expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-left')).toBe('defense-linebacker-left');
-    expect(getProtectionAssignmentDefenderId(play, 'offense-tight-end')).toBe('defense-linebacker-inside');
+    expect(getProtectionAssignmentDefenderId(play, 'offense-tight-end')).toBe('defense-line-right');
     expect(getProtectionAssignmentDefenderId(play, 'offense-slot')).toBe('defense-linebacker');
   });
 

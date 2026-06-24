@@ -233,10 +233,10 @@ describe('five-on-five rushing drill simulation', () => {
       expect.arrayContaining([
         { blockerId: 'offense-center', defenderId: 'defense-line-middle' },
         { blockerId: 'offense-line-left', defenderId: 'defense-line-left' },
-        { blockerId: 'offense-line-right', defenderId: 'defense-line-right' },
+        { blockerId: 'offense-line-right', defenderId: 'defense-linebacker-inside' },
         { blockerId: 'offense-tackle-left', defenderId: 'defense-linebacker-left' },
         { blockerId: 'offense-tackle-right', defenderId: 'defense-linebacker-right' },
-        { blockerId: 'offense-tight-end', defenderId: 'defense-linebacker-inside' },
+        { blockerId: 'offense-tight-end', defenderId: 'defense-line-right' },
         { blockerId: 'offense-slot', defenderId: 'defense-linebacker' },
         { blockerId: 'offense-wr-left', defenderId: 'defense-corner-left' },
         { blockerId: 'offense-wr-right', defenderId: 'defense-corner-right' },

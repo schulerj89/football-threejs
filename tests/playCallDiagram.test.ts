@@ -294,7 +294,7 @@ describe('play call diagrams', () => {
         expect(diagram.runDirection).toBeNull();
         expect(diagram.receiverRoutes).toHaveLength(5);
         expect(diagram.receiverRoutes.map((route) => route.receiverId)).toEqual(getEligibleReceiverIds(play));
-        expect(diagram.blockerAssignments).toHaveLength(5);
+        expect(diagram.blockerAssignments).toHaveLength(4);
         expect(diagram.blockerAssignments.every((assignment) => assignment.kind === 'passProtection')).toBe(true);
         expect(indexAssignments(diagram.blockerAssignments)).toEqual(play.protectionAssignments);
 

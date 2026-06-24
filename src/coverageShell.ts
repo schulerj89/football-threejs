@@ -46,12 +46,13 @@ const RIGHT_ZONE_DEFENDER_IDS = new Set([
 ]);
 
 const LEFT_HOOK_DEFENDER_IDS = new Set([
+  'defense-linebacker-left',
   'defense-linebacker',
   'defense-cover-rb',
 ]);
 
 const RIGHT_HOOK_DEFENDER_IDS = new Set([
-  'defense-linebacker-inside',
+  'defense-linebacker-right',
 ]);
 
 export function resolveCoverageShell(play: PlayDefinition): CoverageShell {

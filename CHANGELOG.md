@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.59] - 2026-06-24
+
+### Changed
+
+- Reworked the 11v11 defense into a 4-3 base front with four down linemen and three linebacker-level defenders for clearer pre-snap spacing.
+- Updated 11v11 pass protection to target the four down linemen instead of five rushers, while moving underneath coverage responsibility to the three linebackers.
+- Updated 11v11 run, pass, play-card, roster lineup, Cover 2, and audit expectations to match the 4-3 defensive shell.
+
+### Artifacts
+
+- Added `artifacts/formation-proof/formation-11v11-4-3-presnap.png` as the tactical pre-snap formation proof.
+
+### Tests
+
+- Verified `npx vitest run tests/formationPreview.test.ts tests/playbook.test.ts tests/teamSimulation.test.ts tests/routeArtRenderer.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "starts playable 11v11 plays and throws Spread Quick to the selected target|stages a static 11v11 formation preview across snap lanes and camera modes"`.
+
 ## [1.22.58] - 2026-06-24
 
 ### Fixed

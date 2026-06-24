@@ -164,13 +164,13 @@ describe('eleven-on-eleven hardening matrix', () => {
       const protectionDefenders = Object.keys(play.protectionAssignments ?? {})
         .map((blockerId) => getProtectionAssignmentDefenderId(play, blockerId));
 
-      expect(protectionDefenders).toHaveLength(5);
-      expect(new Set(protectionDefenders).size).toBe(5);
+      expect(protectionDefenders).toHaveLength(4);
+      expect(new Set(protectionDefenders).size).toBe(4);
       expect(getCoverageAssignmentReceiverId(play, 'defense-corner-left')).toBe('offense-wr-left');
       expect(getCoverageAssignmentReceiverId(play, 'defense-corner-right')).toBe('offense-wr-right');
-      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-rb');
-      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-inside')).toBe('offense-tight-end');
-      expect(getCoverageAssignmentReceiverId(play, 'defense-safety-strong')).toBe('offense-slot');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-left')).toBe('offense-rb');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-tight-end');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-right')).toBe('offense-slot');
 
       for (const snapLane of SNAP_LANES) {
         const routes = resolveEligibleReceiverRoutes(play, {

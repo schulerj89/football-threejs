@@ -232,6 +232,46 @@ describe('11v11 formation preview', () => {
     }
   });
 
+  it('uses a 4-3 defensive front with four down linemen and three linebackers', () => {
+    const formation = createFormationPreviewModel('11v11', 'middle').formation;
+    const defensiveLineIds = [
+      'defense-line-left',
+      'defense-line-middle',
+      'defense-linebacker-inside',
+      'defense-line-right',
+    ];
+    const linebackerIds = [
+      'defense-linebacker-left',
+      'defense-linebacker',
+      'defense-linebacker-right',
+    ];
+
+    for (const playerId of defensiveLineIds) {
+      expect(getSlot(formation, playerId).distanceFromLineOfScrimmage).toBeCloseTo(
+        ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.defensiveLineDepth,
+      );
+    }
+    for (const playerId of linebackerIds) {
+      expect(getSlot(formation, playerId).distanceFromLineOfScrimmage).toBeCloseTo(
+        ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.linebackerDepth,
+      );
+    }
+    expect(defensiveLineIds.map((playerId) => ELEVEN_ON_ELEVEN_PLAYER_METADATA[playerId].footballPosition))
+      .toEqual(['DL', 'DL', 'DL', 'DL']);
+    expect(linebackerIds.map((playerId) => ELEVEN_ON_ELEVEN_PLAYER_METADATA[playerId].footballPosition))
+      .toEqual(['OLB', 'ILB', 'OLB']);
+    const defensiveLineOffsets = defensiveLineIds.map((playerId) =>
+      getSlot(formation, playerId).lateralDistanceFromSnap);
+    [
+      -ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.defensiveLineEdgeGap,
+      -ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.defensiveLineInteriorGap,
+      ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.defensiveLineInteriorGap,
+      ELEVEN_ON_ELEVEN_FORMATION_MEASUREMENTS.defensiveLineEdgeGap,
+    ].forEach((expectedOffset, index) => {
+      expect(defensiveLineOffsets[index]).toBeCloseTo(expectedOffset);
+    });
+  });
+
   it('aligns corners to outside receivers and safeties to receiving threat midpoints', () => {
     const formation = createFormationPreviewModel('11v11', 'middle').formation;
     const eligibleThreatMidpoint = average(
