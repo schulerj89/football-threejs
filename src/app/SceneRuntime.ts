@@ -15,6 +15,7 @@ import {
 import {
   WeatherPresentationController,
 } from '../weather/WeatherPresentationController';
+import { createWeatherModel } from '../weather/WeatherModel';
 import type { WeatherPresentationSnapshot } from '../weather/WeatherTypes';
 
 export interface SceneRuntimeOptions {
@@ -61,6 +62,7 @@ export class SceneRuntime {
     this.weatherController = new WeatherPresentationController({
       hemisphereLight: this.ambientLight,
       keyLight: this.directionalLight,
+      model: createWeatherModel(searchParams.get('weather') ?? searchParams.get('pregameWeather')),
     });
     this.scene.add(this.weatherController.group);
 

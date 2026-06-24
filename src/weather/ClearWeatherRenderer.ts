@@ -70,6 +70,7 @@ export class ClearWeatherRenderer {
       color: profile.sky.sunGlowColor,
       depthWrite: false,
       opacity: 0.34,
+      side: THREE.DoubleSide,
       transparent: true,
       toneMapped: false,
     });
@@ -84,6 +85,7 @@ export class ClearWeatherRenderer {
       color: profile.sky.sunColor,
       depthWrite: false,
       opacity: 1,
+      side: THREE.DoubleSide,
       transparent: true,
       toneMapped: false,
     });

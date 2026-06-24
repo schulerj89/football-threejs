@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.71] - 2026-06-24
+
+### Changed
+
+- Moved the clear-weather sun into the visible pregame stadium-orbit sky.
+- Allowed `weather` and `pregameWeather` query params to keep the normal title-to-pregame launch flow.
+- Added selectable `overcast` weather rendering with a grey sky, cloudiness snapshot, and muted stadium lighting.
+
+### Fixed
+
+- Made the sun disc and glow double-sided so the pregame camera can see the visual billboard.
+
+### Added
+
+- Added `artifacts/weather-pregame-validation-1.22.71/` with clear-sun and overcast pregame screenshots.
+
+### Tests
+
+- Verified `npx vitest run tests/weather/weatherModel.test.ts tests/weather/weatherPresentation.test.ts tests/pregamePresentation.test.ts tests/pregameCommentaryCatalog.test.ts` and `npm run build`.
+
 ## [1.22.70] - 2026-06-24
 
 ### Fixed

@@ -1,6 +1,7 @@
 import {
   CLEAR_WEATHER_PROFILE,
   cloneWeatherSnapshot,
+  resolveWeatherProfile,
 } from './WeatherProfile';
 import type {
   WeatherProfile,
@@ -22,6 +23,10 @@ export class WeatherModel {
 
 export function createClearWeatherModel(): WeatherModel {
   return new WeatherModel(CLEAR_WEATHER_PROFILE);
+}
+
+export function createWeatherModel(condition: string | null | undefined): WeatherModel {
+  return new WeatherModel(resolveWeatherProfile(condition));
 }
 
 export function calculateSunWorldDirection(

@@ -1,4 +1,4 @@
-export type WeatherCondition = 'clear';
+export type WeatherCondition = 'clear' | 'overcast';
 
 export interface WeatherSnapshot {
   condition: WeatherCondition;

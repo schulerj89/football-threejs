@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-06-24T23:27:08.540Z",
+  "version": "1.22.71",
+  "source": "Local Playwright captures through title screen > Play Now > Play Game into pregame stadiumCenterOrbit.",
+  "notes": [
+    "Clear pregame capture validates the sun disc/glow is visible during the stadium orbit.",
+    "Overcast capture validates weather=overcast renders a grey sky and the pregame overlay/commentary condition resolves to overcast."
+  ],
+  "captures": [
+    {
+      "fileName": "pregame-weather-clear-sun.png",
+      "label": "Clear pregame with visible sun",
+      "condition": "clear"
+    },
+    {
+      "fileName": "pregame-weather-overcast.png",
+      "label": "Grey overcast pregame",
+      "condition": "overcast",
+      "pregameWeather": "overcast"
+    }
+  ]
+}

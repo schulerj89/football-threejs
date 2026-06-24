@@ -225,7 +225,11 @@ export class ApplicationLifecycle {
 function shouldShowTitleForSearchParams(searchParams: URLSearchParams): boolean {
   const keys = [...searchParams.keys()];
   return keys.length === 0 ||
-    keys.every((key) => key === 'matchSeed' || key === 'seed');
+    keys.every((key) =>
+      key === 'matchSeed' ||
+      key === 'pregameWeather' ||
+      key === 'seed' ||
+      key === 'weather');
 }
 
 function canOpenPauseSettings(playState: PlayState): boolean {

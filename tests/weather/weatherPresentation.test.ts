@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { createGameplayModel, snapshotGameplayModel } from '../../src/playState';
-import { CLEAR_WEATHER_PROFILE } from '../../src/weather/WeatherProfile';
-import { calculateSunWorldDirection } from '../../src/weather/WeatherModel';
+import { CLEAR_WEATHER_PROFILE, OVERCAST_WEATHER_PROFILE } from '../../src/weather/WeatherProfile';
+import { WeatherModel, calculateSunWorldDirection } from '../../src/weather/WeatherModel';
 import { WeatherPresentationController } from '../../src/weather/WeatherPresentationController';
 
 describe('clear weather presentation', () => {
@@ -51,11 +51,43 @@ describe('clear weather presentation', () => {
 
     expect(sunDisc).toBeInstanceOf(THREE.Mesh);
     expect(sunGlow).toBeInstanceOf(THREE.Mesh);
+    expect((sunDisc as THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>).material.side).toBe(THREE.DoubleSide);
+    expect((sunGlow as THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>).material.side).toBe(THREE.DoubleSide);
     expect(sunDisc?.renderOrder).toBeGreaterThan(controller.group.getObjectByName('clear-weather-sky-dome')?.renderOrder ?? -1000);
     expect(sunGlow?.renderOrder).toBeGreaterThan(controller.group.getObjectByName('clear-weather-sky-dome')?.renderOrder ?? -1000);
     expect(CLEAR_WEATHER_PROFILE.sky.sunDiscRadius).toBeGreaterThanOrEqual(14);
     expect(CLEAR_WEATHER_PROFILE.sky.sunGlowRadius).toBeGreaterThan(
       CLEAR_WEATHER_PROFILE.sky.sunDiscRadius * 2,
+    );
+
+    controller.dispose();
+  });
+
+  it('can render a grey overcast sky profile with muted stadium lighting', () => {
+    const keyLight = new THREE.DirectionalLight();
+    const hemisphereLight = new THREE.HemisphereLight();
+    const controller = new WeatherPresentationController({
+      hemisphereLight,
+      keyLight,
+      model: new WeatherModel(OVERCAST_WEATHER_PROFILE),
+    });
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
+
+    controller.update(camera);
+
+    expect(controller.getSnapshot()).toMatchObject({
+      cloudiness: 0.9,
+      condition: 'overcast',
+      lightingIntensity: OVERCAST_WEATHER_PROFILE.lighting.keyLightIntensity,
+      skyObjectCount: 3,
+    });
+    expect(keyLight.color.getHex()).toBe(OVERCAST_WEATHER_PROFILE.lighting.keyLightColor);
+    expect(hemisphereLight.color.getHex()).toBe(OVERCAST_WEATHER_PROFILE.lighting.hemisphereSkyColor);
+    expect(saturation(OVERCAST_WEATHER_PROFILE.sky.overheadColor)).toBeLessThan(
+      saturation(CLEAR_WEATHER_PROFILE.sky.overheadColor),
+    );
+    expect(luminance(OVERCAST_WEATHER_PROFILE.sky.horizonColor)).toBeLessThan(
+      luminance(CLEAR_WEATHER_PROFILE.sky.horizonColor),
     );
 
     controller.dispose();
@@ -119,4 +151,22 @@ function createControllerFixture(): {
 
 function toVector3(vector: { x: number; y: number; z: number }): THREE.Vector3 {
   return new THREE.Vector3(vector.x, vector.y, vector.z);
+}
+
+function luminance(color: number): number {
+  const red = (color >> 16) & 0xff;
+  const green = (color >> 8) & 0xff;
+  const blue = color & 0xff;
+
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function saturation(color: number): number {
+  const red = (color >> 16) & 0xff;
+  const green = (color >> 8) & 0xff;
+  const blue = color & 0xff;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+
+  return max === 0 ? 0 : (max - min) / max;
 }
