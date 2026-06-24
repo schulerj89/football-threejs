@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.41] - 2026-06-24
+
+### Added
+
+- Added Dynasty staff modifier previews with small deterministic future bonuses for recruiting, training, facilities, and game management.
+- Surfaced staff modifier previews in the Dynasty hub view model and Football Hub Dynasty panel with source labels and future-effect labels.
+- Updated the Phase 5 decision map to mark all four Program Management minor updates shipped.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyProgramManagement.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.40] - 2026-06-24
 
 ### Added

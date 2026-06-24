@@ -20,6 +20,7 @@ describe('dynasty program management', () => {
     expect(first.summaryLabel).toBe('0/4 coach goals complete | visible targets only');
     expect(first.strengthsSummaryLabel).toContain('leads the current identity profile');
     expect(first.budgetSummaryLabel).toBe('100 budget points | future-phase allocations only');
+    expect(first.staffSummaryLabel).toBe('4 staff previews | no current-play effects');
     expect(first.coachGoals.map((goal) => goal.category)).toEqual([
       'season',
       'offense',
@@ -66,6 +67,20 @@ describe('dynasty program management', () => {
       allocation.futureEffectLabel.startsWith('Future ') &&
       allocation.priorityLabel.endsWith(' priority') &&
       allocation.rationaleLabel.length > 0)).toBe(true);
+    expect(first.staffModifiers).toHaveLength(4);
+    expect(first.staffModifiers.map((modifier) => modifier.rank)).toEqual([1, 2, 3, 4]);
+    expect(first.staffModifiers.map((modifier) => modifier.category).sort()).toEqual([
+      'facilities',
+      'gameManagement',
+      'recruiting',
+      'training',
+    ]);
+    expect(first.staffModifiers.every((modifier) =>
+      modifier.bonusLabel === `+${modifier.bonusValue} future bonus` &&
+      modifier.bonusValue >= 1 &&
+      modifier.bonusValue <= 5 &&
+      modifier.futureEffectLabel.startsWith('Future ') &&
+      modifier.sourceLabel.length > 0)).toBe(true);
   });
 
   it('updates coach goal and program strength progress from season stats without changing gameplay outcomes', () => {
@@ -81,6 +96,8 @@ describe('dynasty program management', () => {
     const momentumStrength = plan.programStrengths.find((strength) => strength.category === 'seasonMomentum')!;
     const staffBudget = plan.budgetAllocations.find((allocation) => allocation.category === 'staff')!;
     const recruitingBudget = plan.budgetAllocations.find((allocation) => allocation.category === 'recruiting')!;
+    const gameManagementStaff = plan.staffModifiers.find((modifier) => modifier.category === 'gameManagement')!;
+    const recruitingStaff = plan.staffModifiers.find((modifier) => modifier.category === 'recruiting')!;
     const userStats = save.currentSeason.teamStats.find((row) => row.teamId === DEFAULT_USER_TEAM_ID)!;
     const userRecord = save.currentSeason.standings.find((row) => row.teamId === DEFAULT_USER_TEAM_ID)!;
 
@@ -100,6 +117,9 @@ describe('dynasty program management', () => {
     expect(plan.budgetAllocations[0]!.allocationPoints).toBeGreaterThanOrEqual(
       plan.budgetAllocations[1]!.allocationPoints,
     );
+    expect(gameManagementStaff.sourceLabel).toContain('goals complete');
+    expect(recruitingStaff.sourceLabel).toBe(recruitingBudget.rationaleLabel);
+    expect(plan.staffModifiers[0]!.bonusValue).toBeGreaterThanOrEqual(plan.staffModifiers[1]!.bonusValue);
     expect(save.currentSeason.weeks[save.currentWeekIndex]?.games.some((game) =>
       game.status === 'scheduled')).toBe(false);
   });

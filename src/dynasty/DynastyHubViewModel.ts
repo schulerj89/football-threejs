@@ -16,6 +16,7 @@ import {
   type DynastyCoachGoal,
   type DynastyProgramBudgetAllocation,
   type DynastyProgramStrength,
+  type DynastyStaffModifierPreview,
 } from './DynastyProgramManagement';
 import { createDynastyHubStorySummary } from './DynastyStoryContext';
 
@@ -75,6 +76,8 @@ export interface DynastyHubViewModel {
   readonly program: DynastyHubTeamView;
   readonly programStrengths: readonly DynastyProgramStrength[];
   readonly progressionPreview: readonly DynastyProgressionPreviewRow[];
+  readonly staffModifiers: readonly DynastyStaffModifierPreview[];
+  readonly staffSummaryLabel: string;
   readonly progressionSummaryLabel: string;
   readonly schedule: readonly DynastyHubGameView[];
   readonly seasonLabel: string;
@@ -149,6 +152,8 @@ export function createDynastyHubViewModel(options: {
     progressionSummaryLabel: progression.summaryLabel,
     schedule,
     seasonLabel: `${options.save.currentSeason.year} Season`,
+    staffModifiers: programManagement.staffModifiers,
+    staffSummaryLabel: programManagement.staffSummaryLabel,
     standings,
     storySummary: createDynastyHubStorySummary({
       league: options.league,

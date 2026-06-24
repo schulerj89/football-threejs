@@ -56,11 +56,29 @@ export interface DynastyProgramBudgetAllocation {
   readonly title: string;
 }
 
+export type DynastyStaffModifierCategory =
+  | 'facilities'
+  | 'gameManagement'
+  | 'recruiting'
+  | 'training';
+
+export interface DynastyStaffModifierPreview {
+  readonly bonusLabel: string;
+  readonly bonusValue: number;
+  readonly category: DynastyStaffModifierCategory;
+  readonly futureEffectLabel: string;
+  readonly rank: number;
+  readonly sourceLabel: string;
+  readonly title: string;
+}
+
 export interface DynastyProgramManagementPlan {
   readonly budgetAllocations: readonly DynastyProgramBudgetAllocation[];
   readonly budgetSummaryLabel: string;
   readonly coachGoals: readonly DynastyCoachGoal[];
   readonly programStrengths: readonly DynastyProgramStrength[];
+  readonly staffModifiers: readonly DynastyStaffModifierPreview[];
+  readonly staffSummaryLabel: string;
   readonly summaryLabel: string;
   readonly strengthsSummaryLabel: string;
   readonly teamId: string;
@@ -135,16 +153,102 @@ export function createDynastyProgramManagementPlan(options: {
     stats,
     teamId,
   });
+  const staffModifiers = createStaffModifierPreviews({
+    budgetAllocations,
+    coachGoals,
+    programStrengths,
+  });
 
   return {
     budgetAllocations,
     budgetSummaryLabel: `${budgetAllocations.reduce((sum, allocation) => sum + allocation.allocationPoints, 0)} budget points | future-phase allocations only`,
     coachGoals,
     programStrengths,
+    staffModifiers,
+    staffSummaryLabel: `${staffModifiers.length} staff previews | no current-play effects`,
     summaryLabel: `${completedGoals}/${coachGoals.length} coach goals complete | visible targets only`,
     strengthsSummaryLabel: `${programStrengths[0]?.title ?? 'Program'} leads the current identity profile`,
     teamId,
     weekIndex: options.save.currentWeekIndex,
+  };
+}
+
+function createStaffModifierPreviews(options: {
+  readonly budgetAllocations: readonly DynastyProgramBudgetAllocation[];
+  readonly coachGoals: readonly DynastyCoachGoal[];
+  readonly programStrengths: readonly DynastyProgramStrength[];
+}): DynastyStaffModifierPreview[] {
+  const budgetByCategory = new Map(options.budgetAllocations.map((allocation) => [
+    allocation.category,
+    allocation,
+  ]));
+  const completedGoals = options.coachGoals.filter((goal) => goal.statusLabel === 'Complete').length;
+  const topStrength = options.programStrengths[0];
+  const rows = [
+    createStaffModifier({
+      budget: budgetByCategory.get('recruiting'),
+      category: 'recruiting',
+      futureEffectLabel: 'Future recruiting board bonus',
+      sourceLabel: budgetByCategory.get('recruiting')?.rationaleLabel ?? 'Recruiting budget pending',
+      title: 'Recruiting Coordinator',
+    }),
+    createStaffModifier({
+      budget: budgetByCategory.get('training'),
+      category: 'training',
+      futureEffectLabel: 'Future weekly training bonus',
+      sourceLabel: budgetByCategory.get('training')?.rationaleLabel ?? 'Training budget pending',
+      title: 'Player Development Lead',
+    }),
+    createStaffModifier({
+      budget: budgetByCategory.get('facilities'),
+      category: 'facilities',
+      futureEffectLabel: 'Future facilities bonus',
+      sourceLabel: budgetByCategory.get('facilities')?.rationaleLabel ?? 'Facilities budget pending',
+      title: 'Facilities Director',
+    }),
+    createStaffModifier({
+      budget: budgetByCategory.get('staff'),
+      category: 'gameManagement',
+      futureEffectLabel: 'Future staff planning bonus',
+      sourceLabel: `${completedGoals}/${options.coachGoals.length} goals complete | ${topStrength?.title ?? 'No strength'} identity`,
+      title: 'Game Management Analyst',
+    }),
+  ] as const satisfies readonly Omit<DynastyStaffModifierPreview, 'bonusLabel' | 'bonusValue' | 'rank'>[];
+
+  return rows
+    .map((row) => {
+      const bonusValue = clampStaffBonus(Math.round((row.budget?.allocationPoints ?? 0) / 8));
+      const { budget, ...staffRow } = row;
+      return {
+        ...staffRow,
+        bonusLabel: `+${bonusValue} future bonus`,
+        bonusValue,
+      };
+    })
+    .sort((a, b) =>
+      b.bonusValue - a.bonusValue ||
+      a.title.localeCompare(b.title))
+    .map((row, index) => ({
+      ...row,
+      rank: index + 1,
+    }));
+}
+
+function createStaffModifier(options: {
+  readonly budget: DynastyProgramBudgetAllocation | undefined;
+  readonly category: DynastyStaffModifierCategory;
+  readonly futureEffectLabel: string;
+  readonly sourceLabel: string;
+  readonly title: string;
+}): Omit<DynastyStaffModifierPreview, 'bonusLabel' | 'bonusValue' | 'rank'> & {
+  readonly budget: DynastyProgramBudgetAllocation | undefined;
+} {
+  return {
+    budget: options.budget,
+    category: options.category,
+    futureEffectLabel: options.futureEffectLabel,
+    sourceLabel: options.sourceLabel,
+    title: options.title,
   };
 }
 
@@ -390,6 +494,10 @@ function clampPercent(value: number): number {
 
 function clampProgramScore(value: number): number {
   return Math.max(0, Math.min(99, value));
+}
+
+function clampStaffBonus(value: number): number {
+  return Math.max(1, Math.min(5, value));
 }
 
 function normalizeRange(value: number, min: number, max: number): number {

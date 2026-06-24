@@ -2610,6 +2610,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-leaders,
 .football-hub-dynasty-program-strengths,
 .football-hub-dynasty-progression,
+.football-hub-dynasty-staff-modifiers,
 .football-hub-dynasty-standings,
 .football-hub-dynasty-schedule,
 .football-hub-dynasty-training {
@@ -2653,6 +2654,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-leaders h3,
 .football-hub-dynasty-program-strengths h3,
 .football-hub-dynasty-progression h3,
+.football-hub-dynasty-staff-modifiers h3,
 .football-hub-dynasty-standings h3,
 .football-hub-dynasty-schedule h3,
 .football-hub-dynasty-training h3 {
@@ -2672,6 +2674,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-coach-goals p,
 .football-hub-dynasty-program-strengths p,
 .football-hub-dynasty-progression p,
+.football-hub-dynasty-staff-modifiers p,
 .football-hub-dynasty-upcoming p {
   margin: 0;
   color: #d5dfd8;
@@ -2694,6 +2697,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-leaders li span,
 .football-hub-dynasty-program-strengths li span,
 .football-hub-dynasty-progression li span,
+.football-hub-dynasty-staff-modifiers li span,
 .football-hub-dynasty-schedule li span,
 .football-hub-dynasty-training li span {
   color: #aeb9b1;
@@ -2751,6 +2755,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-leaders ol,
 .football-hub-dynasty-program-strengths ol,
 .football-hub-dynasty-progression ol,
+.football-hub-dynasty-staff-modifiers ol,
 .football-hub-dynasty-schedule ol,
 .football-hub-dynasty-training ol {
   display: grid;
@@ -2766,6 +2771,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-leaders li,
 .football-hub-dynasty-program-strengths li,
 .football-hub-dynasty-progression li,
+.football-hub-dynasty-staff-modifiers li,
 .football-hub-dynasty-schedule li,
 .football-hub-dynasty-training li {
   display: grid;
@@ -2785,6 +2791,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-leaders li,
 .football-hub-dynasty-program-strengths li,
 .football-hub-dynasty-progression li,
+.football-hub-dynasty-staff-modifiers li,
 .football-hub-dynasty-training li {
   grid-template-columns: 120px minmax(0, 1fr) auto;
 }
@@ -2795,6 +2802,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-leaders li strong,
 .football-hub-dynasty-program-strengths li strong,
 .football-hub-dynasty-progression li strong,
+.football-hub-dynasty-staff-modifiers li strong,
 .football-hub-dynasty-schedule li strong,
 .football-hub-dynasty-training li strong {
   overflow: hidden;
@@ -4159,6 +4167,7 @@ body[data-game-mode="exhibition"] .score-counter {
   .football-hub-dynasty-program-strengths li,
   .football-hub-dynasty-progression li,
   .football-hub-dynasty-schedule li,
+  .football-hub-dynasty-staff-modifiers li,
   .football-hub-dynasty-training li {
     grid-template-columns: 1fr;
     gap: 4px;

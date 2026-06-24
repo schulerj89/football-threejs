@@ -38,6 +38,9 @@ describe('dynasty hub view model', () => {
     expect(view.budgetSummaryLabel).toBe('100 budget points | future-phase allocations only');
     expect(view.budgetAllocations).toHaveLength(4);
     expect(view.budgetAllocations.reduce((sum, allocation) => sum + allocation.allocationPoints, 0)).toBe(100);
+    expect(view.staffSummaryLabel).toBe('4 staff previews | no current-play effects');
+    expect(view.staffModifiers).toHaveLength(4);
+    expect(view.staffModifiers.every((modifier) => modifier.bonusValue >= 1 && modifier.bonusValue <= 5)).toBe(true);
     expect(view.schedule).toHaveLength(5);
     expect(view.schedule.every((game) => game.matchupLabel.includes(' at '))).toBe(true);
     expect(view.standings).toHaveLength(6);
