@@ -19,8 +19,9 @@ describe('dynasty decision roadmap', () => {
     expect(decisionDoc).toContain('Flow hardening: prevent Play Now and Dynasty state from leaking into each other');
     expect(decisionDoc).toContain('Dynasty matchup launch settings are runtime-only');
     expect(decisionDoc).toContain('### Phase 2: Stats, Stories, and Awards');
-    expect(decisionDoc).toContain('Status: In progress. Minor update 1 shipped in `1.22.20`.');
+    expect(decisionDoc).toContain('Minor updates 1-2 shipped in `1.22.20` and `1.22.21`.');
     expect(decisionDoc).toContain('Season stats contract: add team-level season stat rows');
+    expect(decisionDoc).toContain('Weekly leaders: expose passing, rushing, scoring, turnover, and yardage leaders');
     expect(decisionDoc).toContain('Patch hardening plan:');
   });
 });

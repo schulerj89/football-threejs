@@ -2604,6 +2604,7 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-dynasty-program,
 .football-hub-dynasty-upcoming,
+.football-hub-dynasty-leaders,
 .football-hub-dynasty-standings,
 .football-hub-dynasty-schedule {
   display: grid;
@@ -2640,6 +2641,7 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-dynasty-program h3,
+.football-hub-dynasty-leaders h3,
 .football-hub-dynasty-standings h3,
 .football-hub-dynasty-schedule h3 {
   margin: 0;
@@ -2666,6 +2668,7 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-dynasty-upcoming > span,
+.football-hub-dynasty-leaders li span,
 .football-hub-dynasty-schedule li span {
   color: #aeb9b1;
   font-size: 12px;
@@ -2716,6 +2719,7 @@ body[data-game-mode="exhibition"] .score-counter {
   text-transform: uppercase;
 }
 
+.football-hub-dynasty-leaders ol,
 .football-hub-dynasty-schedule ol {
   display: grid;
   gap: 8px;
@@ -2724,6 +2728,7 @@ body[data-game-mode="exhibition"] .score-counter {
   list-style: none;
 }
 
+.football-hub-dynasty-leaders li,
 .football-hub-dynasty-schedule li {
   display: grid;
   grid-template-columns: 70px minmax(0, 1fr) auto;
@@ -2736,6 +2741,11 @@ body[data-game-mode="exhibition"] .score-counter {
   color: #f6faf6;
 }
 
+.football-hub-dynasty-leaders li {
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+}
+
+.football-hub-dynasty-leaders li strong,
 .football-hub-dynasty-schedule li strong {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4092,6 +4102,7 @@ body[data-game-mode="exhibition"] .score-counter {
     grid-template-columns: 1fr;
   }
 
+  .football-hub-dynasty-leaders li,
   .football-hub-dynasty-schedule li {
     grid-template-columns: 1fr;
     gap: 4px;

@@ -122,7 +122,7 @@ Completion notes:
 
 ### Phase 2: Stats, Stories, and Awards
 
-Status: In progress. Minor update 1 shipped in `1.22.20`.
+Status: In progress. Minor updates 1-2 shipped in `1.22.20` and `1.22.21`.
 
 Goal: Let the season feel persistent through stats and commentary.
 
@@ -142,7 +142,7 @@ Acceptance:
 Minor update plan:
 
 1. Season stats contract: add team-level season stat rows, deterministic per-game stat lines, aggregate rebuilds, and legacy stat hydration. Shipped in `1.22.20`.
-2. Weekly leaders: expose passing, rushing, scoring, turnover, and yardage leaders from the current Dynasty save.
+2. Weekly leaders: expose passing, rushing, scoring, turnover, and yardage leaders from the current Dynasty save. Shipped in `1.22.21`.
 3. Story hooks: add compact Dynasty context summaries for halftime, postgame, and weekly hub copy.
 4. Award watch lists: add deterministic offensive, defensive, and special teams watch rows based on season stats.
 

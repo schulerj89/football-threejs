@@ -4,6 +4,7 @@ import type {
   DynastySaveData,
   DynastyScheduledGame,
   DynastyTeamRecord,
+  DynastyTeamSeasonStats,
 } from './DynastyTypes';
 
 export interface DynastyHubTeamView {
@@ -34,8 +35,18 @@ export interface DynastyHubStandingsRow {
   readonly wins: number;
 }
 
+export interface DynastyHubLeaderRow {
+  readonly category: string;
+  readonly leaderLabel: string;
+  readonly rank: number;
+  readonly team: DynastyHubTeamView;
+  readonly value: number;
+  readonly valueLabel: string;
+}
+
 export interface DynastyHubViewModel {
   readonly currentWeekLabel: string;
+  readonly leaders: readonly DynastyHubLeaderRow[];
   readonly program: DynastyHubTeamView;
   readonly schedule: readonly DynastyHubGameView[];
   readonly seasonLabel: string;
@@ -80,9 +91,15 @@ export function createDynastyHubViewModel(options: {
       ...row,
       rank: index + 1,
     }));
+  const leaders = createLeaderRows({
+    records,
+    stats: options.save.currentSeason.teamStats,
+    teamProfiles,
+  });
 
   return {
     currentWeekLabel: currentWeek?.label ?? 'Season Complete',
+    leaders,
     program,
     schedule,
     seasonLabel: `${options.save.currentSeason.year} Season`,
@@ -97,6 +114,67 @@ export function createDynastyHubViewModel(options: {
         })
       : null,
   };
+}
+
+function createLeaderRows(options: {
+  readonly records: ReadonlyMap<string, DynastyTeamRecord>;
+  readonly stats: readonly DynastyTeamSeasonStats[];
+  readonly teamProfiles: ReadonlyMap<string, TeamProfile>;
+}): DynastyHubLeaderRow[] {
+  return [
+    createLeaderRow(options, 'Total Offense', 'offensiveYards', 'yds'),
+    createLeaderRow(options, 'Passing', 'passingYards', 'yds'),
+    createLeaderRow(options, 'Rushing', 'rushingYards', 'yds'),
+    createLeaderRow(options, 'Scoring', 'pointsFor', 'pts'),
+    createLeaderRow(options, 'Turnover Margin', (stats) => stats.takeaways - stats.giveaways, ''),
+  ];
+}
+
+function createLeaderRow(
+  options: {
+    readonly records: ReadonlyMap<string, DynastyTeamRecord>;
+    readonly stats: readonly DynastyTeamSeasonStats[];
+    readonly teamProfiles: ReadonlyMap<string, TeamProfile>;
+  },
+  category: string,
+  statKey: keyof Pick<
+    DynastyTeamSeasonStats,
+    'offensiveYards' | 'passingYards' | 'pointsFor' | 'rushingYards'
+  > | ((stats: DynastyTeamSeasonStats) => number),
+  suffix: string,
+): DynastyHubLeaderRow {
+  const sorted = [...options.stats]
+    .map((stats) => ({
+      stats,
+      value: typeof statKey === 'function' ? statKey(stats) : stats[statKey],
+    }))
+    .sort((a, b) =>
+      b.value - a.value ||
+      resolveTeam(options.teamProfiles, a.stats.teamId).displayName.localeCompare(
+        resolveTeam(options.teamProfiles, b.stats.teamId).displayName,
+      ));
+  const leader = sorted[0];
+  if (!leader) {
+    throw new Error(`Dynasty leader ${category} could not be resolved`);
+  }
+  const team = createTeamView(
+    resolveTeam(options.teamProfiles, leader.stats.teamId),
+    options.records.get(leader.stats.teamId),
+  );
+
+  return {
+    category,
+    leaderLabel: `${team.displayName} ${formatLeaderValue(leader.value, suffix)}`,
+    rank: 1,
+    team,
+    value: leader.value,
+    valueLabel: formatLeaderValue(leader.value, suffix),
+  };
+}
+
+function formatLeaderValue(value: number, suffix: string): string {
+  const formatted = value > 0 && suffix === '' ? `+${value}` : String(value);
+  return suffix ? `${formatted} ${suffix}` : formatted;
 }
 
 function createGameView(options: {

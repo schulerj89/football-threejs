@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.21] - 2026-06-24
+
+### Added
+
+- Added Dynasty weekly leader rows for total offense, passing, rushing, scoring, and turnover margin from the current save's season team stats.
+- Added a Weekly Leaders panel to the Dynasty hub and browser smoke coverage for the new panel.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyHubViewModel.test.ts tests/dynastyDecisions.test.ts tests/dynastySeason.test.ts tests/dynastySaveRepository.test.ts tests/dynastyWeekAdvance.test.ts`, `npm run build`, `npm run test:unit`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.20] - 2026-06-24
 
 ### Added
