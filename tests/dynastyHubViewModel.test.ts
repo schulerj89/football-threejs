@@ -168,4 +168,93 @@ describe('dynasty hub view model', () => {
     expect(turnoverLeader?.value).toBe(3);
     expect(turnoverLeader?.valueLabel).toBe('+3');
   });
+
+  it('builds award watch rows from season team stats', () => {
+    const league = generateLeagueData({ seed: 'dynasty-hub-league' });
+    const save = createDynastySeasonCore({
+      createdAt: '2026-06-24T12:00:00.000Z',
+      seed: 'dynasty-hub-awards',
+      teams: league.teams,
+      userTeamId: DEFAULT_USER_TEAM_ID,
+    });
+    const [firstTeam, secondTeam, thirdTeam, ...rest] = save.currentSeason.teamIds;
+    const view = createDynastyHubViewModel({
+      league,
+      save: {
+        ...save,
+        currentSeason: {
+          ...save.currentSeason,
+          teamStats: [
+            {
+              defensiveYards: 320,
+              fieldGoals: 0,
+              gamesPlayed: 1,
+              giveaways: 1,
+              offensiveYards: 520,
+              passingYards: 330,
+              pointsAgainst: 28,
+              pointsFor: 42,
+              rushingYards: 190,
+              takeaways: 1,
+              teamId: firstTeam!,
+              touchdowns: 6,
+            },
+            {
+              defensiveYards: 90,
+              fieldGoals: 1,
+              gamesPlayed: 1,
+              giveaways: 0,
+              offensiveYards: 210,
+              passingYards: 130,
+              pointsAgainst: 7,
+              pointsFor: 17,
+              rushingYards: 80,
+              takeaways: 10,
+              teamId: secondTeam!,
+              touchdowns: 2,
+            },
+            {
+              defensiveYards: 240,
+              fieldGoals: 5,
+              gamesPlayed: 1,
+              giveaways: 1,
+              offensiveYards: 260,
+              passingYards: 180,
+              pointsAgainst: 20,
+              pointsFor: 22,
+              rushingYards: 80,
+              takeaways: 2,
+              teamId: thirdTeam!,
+              touchdowns: 1,
+            },
+            ...rest.map((teamId) => ({
+              defensiveYards: 300,
+              fieldGoals: 0,
+              gamesPlayed: 0,
+              giveaways: 0,
+              offensiveYards: 0,
+              passingYards: 0,
+              pointsAgainst: 28,
+              pointsFor: 0,
+              rushingYards: 0,
+              takeaways: 0,
+              teamId,
+              touchdowns: 0,
+            })),
+          ],
+        },
+      },
+    });
+
+    expect(view.awardWatch.map((row) => row.award)).toEqual([
+      'Offensive Unit',
+      'Defensive Unit',
+      'Special Teams',
+    ]);
+    expect(view.awardWatch.find((row) => row.award === 'Offensive Unit')?.team.teamId).toBe(firstTeam);
+    expect(view.awardWatch.find((row) => row.award === 'Defensive Unit')?.team.teamId).toBe(secondTeam);
+    expect(view.awardWatch.find((row) => row.award === 'Special Teams')?.team.teamId).toBe(thirdTeam);
+    expect(view.awardWatch.find((row) => row.award === 'Defensive Unit')?.valueLabel)
+      .toBe('90 yds allowed, 10 takeaways');
+  });
 });

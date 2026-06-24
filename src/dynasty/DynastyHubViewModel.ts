@@ -45,7 +45,16 @@ export interface DynastyHubLeaderRow {
   readonly valueLabel: string;
 }
 
+export interface DynastyHubAwardWatchRow {
+  readonly award: string;
+  readonly candidateLabel: string;
+  readonly team: DynastyHubTeamView;
+  readonly value: number;
+  readonly valueLabel: string;
+}
+
 export interface DynastyHubViewModel {
+  readonly awardWatch: readonly DynastyHubAwardWatchRow[];
   readonly currentWeekLabel: string;
   readonly leaders: readonly DynastyHubLeaderRow[];
   readonly program: DynastyHubTeamView;
@@ -98,8 +107,14 @@ export function createDynastyHubViewModel(options: {
     stats: options.save.currentSeason.teamStats,
     teamProfiles,
   });
+  const awardWatch = createAwardWatchRows({
+    records,
+    stats: options.save.currentSeason.teamStats,
+    teamProfiles,
+  });
 
   return {
+    awardWatch,
     currentWeekLabel: currentWeek?.label ?? 'Season Complete',
     leaders,
     program,
@@ -120,6 +135,72 @@ export function createDynastyHubViewModel(options: {
           weekLabel: currentWeek?.label ?? 'Season Complete',
         })
       : null,
+  };
+}
+
+function createAwardWatchRows(options: {
+  readonly records: ReadonlyMap<string, DynastyTeamRecord>;
+  readonly stats: readonly DynastyTeamSeasonStats[];
+  readonly teamProfiles: ReadonlyMap<string, TeamProfile>;
+}): DynastyHubAwardWatchRow[] {
+  return [
+    createAwardWatchRow(
+      options,
+      'Offensive Unit',
+      (stats) => stats.offensiveYards + stats.pointsFor * 4 + stats.touchdowns * 20,
+      (stats) => `${stats.offensiveYards} yds, ${stats.pointsFor} pts`,
+    ),
+    createAwardWatchRow(
+      options,
+      'Defensive Unit',
+      (stats) => stats.takeaways * 40 - stats.pointsAgainst * 4 - stats.defensiveYards,
+      (stats) => `${stats.defensiveYards} yds allowed, ${stats.takeaways} takeaways`,
+    ),
+    createAwardWatchRow(
+      options,
+      'Special Teams',
+      (stats) => stats.fieldGoals * 12 + Math.max(0, stats.pointsFor - stats.touchdowns * 7),
+      (stats) => `${stats.fieldGoals} FG, ${stats.touchdowns} TD`,
+    ),
+  ];
+}
+
+function createAwardWatchRow(
+  options: {
+    readonly records: ReadonlyMap<string, DynastyTeamRecord>;
+    readonly stats: readonly DynastyTeamSeasonStats[];
+    readonly teamProfiles: ReadonlyMap<string, TeamProfile>;
+  },
+  award: string,
+  score: (stats: DynastyTeamSeasonStats) => number,
+  formatValue: (stats: DynastyTeamSeasonStats) => string,
+): DynastyHubAwardWatchRow {
+  const sorted = [...options.stats]
+    .map((stats) => ({
+      score: score(stats),
+      stats,
+    }))
+    .sort((a, b) =>
+      b.score - a.score ||
+      resolveTeam(options.teamProfiles, a.stats.teamId).displayName.localeCompare(
+        resolveTeam(options.teamProfiles, b.stats.teamId).displayName,
+      ));
+  const leader = sorted[0];
+  if (!leader) {
+    throw new Error(`Dynasty award ${award} could not be resolved`);
+  }
+  const team = createTeamView(
+    resolveTeam(options.teamProfiles, leader.stats.teamId),
+    options.records.get(leader.stats.teamId),
+  );
+  const valueLabel = formatValue(leader.stats);
+
+  return {
+    award,
+    candidateLabel: `${team.displayName} ${valueLabel}`,
+    team,
+    value: leader.score,
+    valueLabel,
   };
 }
 

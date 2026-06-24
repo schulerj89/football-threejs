@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.23] - 2026-06-24
+
+### Added
+
+- Added a Dynasty Award Watch panel to the hub with deterministic offensive, defensive, and special teams candidates from the current save's season team stats.
+- Added award watch rows to the Dynasty hub view model with focused coverage for team stat scoring and rendered hub smoke coverage.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyHubViewModel.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.22] - 2026-06-24
 
 ### Added
