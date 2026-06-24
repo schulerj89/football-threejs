@@ -31,6 +31,10 @@ describe('dynasty hub view model', () => {
       'Set Defensive Standard',
       'Develop Roster Identity',
     ]);
+    expect(view.strengthsSummaryLabel).toContain('leads the current identity profile');
+    expect(view.programStrengths).toHaveLength(4);
+    expect(view.programStrengths.map((strength) => strength.rank)).toEqual([1, 2, 3, 4]);
+    expect(view.programStrengths[0]?.score).toBeGreaterThanOrEqual(view.programStrengths[1]?.score ?? 0);
     expect(view.schedule).toHaveLength(5);
     expect(view.schedule.every((game) => game.matchupLabel.includes(' at '))).toBe(true);
     expect(view.standings).toHaveLength(6);

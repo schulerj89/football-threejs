@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.39] - 2026-06-24
+
+### Added
+
+- Added Dynasty Program Strengths as a ranked identity view derived from roster ratings, current season stats, and standings.
+- Surfaced the top program strengths and evidence labels in the Dynasty hub view model and Football Hub Dynasty panel.
+- Updated the Phase 5 decision map to mark Program Management minor update 2 shipped.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyProgramManagement.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.38] - 2026-06-24
 
 ### Added

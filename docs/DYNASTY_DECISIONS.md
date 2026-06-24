@@ -234,7 +234,7 @@ Completion notes:
 
 ### Phase 5: Program Management
 
-Status: In progress. Minor update 1 shipped in `1.22.38`.
+Status: In progress. Minor updates 1-2 shipped in `1.22.38` and `1.22.39`.
 
 Goal: Add strategic program identity without overwhelming the player.
 
@@ -254,7 +254,7 @@ Acceptance:
 Minor update plan:
 
 1. Coach goals contract: add visible weekly and season program goals derived from save state without changing gameplay outcomes. Shipped in `1.22.38`.
-2. Program strengths view: summarize the user program's identity from roster ratings, team stats, and standings.
+2. Program strengths view: summarize the user program's identity from roster ratings, team stats, and standings. Shipped in `1.22.39`.
 3. Budget allocation model: add a simple visible allocation between recruiting, training, facilities, and staff.
 4. Staff modifiers preview: show small deterministic staff bonuses as future-phase inputs, not current-play effects.
 

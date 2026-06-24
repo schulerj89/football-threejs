@@ -14,6 +14,7 @@ import {
 import {
   createDynastyProgramManagementPlan,
   type DynastyCoachGoal,
+  type DynastyProgramStrength,
 } from './DynastyProgramManagement';
 import { createDynastyHubStorySummary } from './DynastyStoryContext';
 
@@ -69,12 +70,14 @@ export interface DynastyHubViewModel {
   readonly currentWeekLabel: string;
   readonly leaders: readonly DynastyHubLeaderRow[];
   readonly program: DynastyHubTeamView;
+  readonly programStrengths: readonly DynastyProgramStrength[];
   readonly progressionPreview: readonly DynastyProgressionPreviewRow[];
   readonly progressionSummaryLabel: string;
   readonly schedule: readonly DynastyHubGameView[];
   readonly seasonLabel: string;
   readonly standings: readonly DynastyHubStandingsRow[];
   readonly storySummary: string;
+  readonly strengthsSummaryLabel: string;
   readonly trainingSummary: readonly DynastyTrainingSummaryRow[];
   readonly upcomingGame: DynastyHubGameView | null;
 }
@@ -136,6 +139,7 @@ export function createDynastyHubViewModel(options: {
     currentWeekLabel: currentWeek?.label ?? 'Season Complete',
     leaders,
     program,
+    programStrengths: programManagement.programStrengths.slice(0, 4),
     progressionPreview: progression.rows.slice(0, 5),
     progressionSummaryLabel: progression.summaryLabel,
     schedule,
@@ -146,6 +150,7 @@ export function createDynastyHubViewModel(options: {
       save: options.save,
       userGame: upcomingGame,
     }),
+    strengthsSummaryLabel: programManagement.strengthsSummaryLabel,
     trainingSummary: progression.trainingSummary.slice(0, 4),
     upcomingGame: upcomingGame
       ? createGameView({
