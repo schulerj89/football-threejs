@@ -24,6 +24,13 @@ describe('dynasty hub view model', () => {
     expect(view.upcomingGame?.userOpponentLabel).toMatch(/^(at|vs) .+/);
     expect(view.storySummary).toContain('Week 1');
     expect(view.storySummary).toContain('0-0');
+    expect(view.coachGoalsSummaryLabel).toBe('0/4 coach goals complete | visible targets only');
+    expect(view.coachGoals.map((goal) => goal.title)).toEqual([
+      'Reach Winning Standard',
+      'Establish Offensive Identity',
+      'Set Defensive Standard',
+      'Develop Roster Identity',
+    ]);
     expect(view.schedule).toHaveLength(5);
     expect(view.schedule.every((game) => game.matchupLabel.includes(' at '))).toBe(true);
     expect(view.standings).toHaveLength(6);

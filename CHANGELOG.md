@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.38] - 2026-06-24
+
+### Added
+
+- Started Dynasty Phase 5 Program Management with a deterministic coach-goals contract for season wins, offensive identity, defensive standard, and roster development.
+- Surfaced coach goals and their visible progress labels in the Dynasty hub view model and Football Hub Dynasty panel.
+- Added the Phase 5 rollout plan with four minor updates and two patch-hardening passes in the Dynasty decision map.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyProgramManagement.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.37] - 2026-06-24
 
 ### Fixed

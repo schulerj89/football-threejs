@@ -2605,6 +2605,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-program,
 .football-hub-dynasty-upcoming,
 .football-hub-dynasty-awards,
+.football-hub-dynasty-coach-goals,
 .football-hub-dynasty-leaders,
 .football-hub-dynasty-progression,
 .football-hub-dynasty-standings,
@@ -2645,6 +2646,7 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-dynasty-program h3,
 .football-hub-dynasty-awards h3,
+.football-hub-dynasty-coach-goals h3,
 .football-hub-dynasty-leaders h3,
 .football-hub-dynasty-progression h3,
 .football-hub-dynasty-standings h3,
@@ -2662,6 +2664,7 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-dynasty-program p,
+.football-hub-dynasty-coach-goals p,
 .football-hub-dynasty-progression p,
 .football-hub-dynasty-upcoming p {
   margin: 0;
@@ -2680,6 +2683,7 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-dynasty-upcoming > span,
 .football-hub-dynasty-awards li span,
+.football-hub-dynasty-coach-goals li span,
 .football-hub-dynasty-leaders li span,
 .football-hub-dynasty-progression li span,
 .football-hub-dynasty-schedule li span,
@@ -2734,6 +2738,7 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-dynasty-awards ol,
+.football-hub-dynasty-coach-goals ol,
 .football-hub-dynasty-leaders ol,
 .football-hub-dynasty-progression ol,
 .football-hub-dynasty-schedule ol,
@@ -2746,6 +2751,7 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-dynasty-awards li,
+.football-hub-dynasty-coach-goals li,
 .football-hub-dynasty-leaders li,
 .football-hub-dynasty-progression li,
 .football-hub-dynasty-schedule li,
@@ -2762,6 +2768,7 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-dynasty-awards li,
+.football-hub-dynasty-coach-goals li,
 .football-hub-dynasty-leaders li,
 .football-hub-dynasty-progression li,
 .football-hub-dynasty-training li {
@@ -2769,6 +2776,7 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-dynasty-awards li strong,
+.football-hub-dynasty-coach-goals li strong,
 .football-hub-dynasty-leaders li strong,
 .football-hub-dynasty-progression li strong,
 .football-hub-dynasty-schedule li strong,
@@ -4129,6 +4137,7 @@ body[data-game-mode="exhibition"] .score-counter {
   }
 
   .football-hub-dynasty-awards li,
+  .football-hub-dynasty-coach-goals li,
   .football-hub-dynasty-leaders li,
   .football-hub-dynasty-progression li,
   .football-hub-dynasty-schedule li,

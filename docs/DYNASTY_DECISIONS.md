@@ -234,6 +234,8 @@ Completion notes:
 
 ### Phase 5: Program Management
 
+Status: In progress. Minor update 1 shipped in `1.22.38`.
+
 Goal: Add strategic program identity without overwhelming the player.
 
 Scope:
@@ -248,6 +250,18 @@ Acceptance:
 - Every modifier is visible and testable.
 - No hidden comeback or rubber-band logic.
 - Budget choices affect future phases, not current-play outcomes.
+
+Minor update plan:
+
+1. Coach goals contract: add visible weekly and season program goals derived from save state without changing gameplay outcomes. Shipped in `1.22.38`.
+2. Program strengths view: summarize the user program's identity from roster ratings, team stats, and standings.
+3. Budget allocation model: add a simple visible allocation between recruiting, training, facilities, and staff.
+4. Staff modifiers preview: show small deterministic staff bonuses as future-phase inputs, not current-play effects.
+
+Patch hardening plan:
+
+1. Program management validation hardening: reject malformed goals, budget totals, hidden modifiers, and out-of-range bonus values.
+2. Gameplay isolation hardening: prove program goals, budgets, and staff modifiers cannot alter current-play ratings, movement, or simulation results before approved apply paths exist.
 
 ### Phase 6: Offseason and Multi-Year Saves
 

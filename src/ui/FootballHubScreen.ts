@@ -664,6 +664,25 @@ export class FootballHubScreen {
     }
     awards.append(awardList);
 
+    const coachGoals = document.createElement('section');
+    coachGoals.className = 'football-hub-dynasty-coach-goals';
+    coachGoals.append(createSectionLabel('Coach Goals'));
+    const coachGoalsMeta = document.createElement('p');
+    coachGoalsMeta.textContent = view.coachGoalsSummaryLabel;
+    const coachGoalList = document.createElement('ol');
+    for (const goal of view.coachGoals) {
+      const item = document.createElement('li');
+      const title = document.createElement('span');
+      title.textContent = goal.title;
+      const status = document.createElement('strong');
+      status.textContent = `${goal.statusLabel} | ${goal.progressLabel}`;
+      const progress = document.createElement('span');
+      progress.textContent = `${goal.progressPercent}%`;
+      item.append(title, status, progress);
+      coachGoalList.append(item);
+    }
+    coachGoals.append(coachGoalsMeta, coachGoalList);
+
     const training = document.createElement('section');
     training.className = 'football-hub-dynasty-training';
     training.append(createSectionLabel('Weekly Training'));
@@ -723,7 +742,7 @@ export class FootballHubScreen {
       ? `${this.dynastySaveWarning} Decision map: ${DYNASTY_DECISION_DOC_PATH}`
       : `Save: ${formatDynastySaveSource(this.dynastySaveSource)} | Decision map: ${DYNASTY_DECISION_DOC_PATH}`;
 
-    this.dynastyView.append(header, upcoming, standings, leaders, awards, training, progression, schedule, note);
+    this.dynastyView.append(header, upcoming, standings, leaders, awards, coachGoals, training, progression, schedule, note);
   }
 
   private renderDynastyLoading(): void {
