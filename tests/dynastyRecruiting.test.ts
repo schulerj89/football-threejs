@@ -5,6 +5,7 @@ import {
   DYNASTY_WEEKLY_RECRUITING_ALLOCATION_LIMIT,
   DYNASTY_WEEKLY_RECRUITING_POINTS,
   createDynastyRecruitingBoard,
+  createDynastyRecruitingRosterSafetySnapshot,
   createDynastySigningClassPreview,
   createDynastyRecruitingTeamNeeds,
   createDynastyWeeklyRecruitingPlan,
@@ -12,7 +13,9 @@ import {
 } from '../src/dynasty/DynastyRecruiting';
 import { createDynastySeasonCore } from '../src/dynasty/DynastySchedule';
 import { generateLeagueData } from '../src/league/LeagueGenerator';
+import { createGameplayRosterBinding } from '../src/roster/GameplayRosterBinding';
 import { STARTER_TEAM_ROSTERS } from '../src/roster/RosterRegistry';
+import { DEFAULT_TEAM_PROFILE_SETTINGS } from '../src/teams/TeamProfileStore';
 import { DEFAULT_USER_TEAM_ID } from '../src/teams/TeamRegistry';
 
 describe('dynasty recruiting-lite board', () => {
@@ -249,14 +252,47 @@ describe('dynasty recruiting-lite board', () => {
     }
   });
 
-  it('does not change current roster size constraints while generating prospects', () => {
-    const beforeSizes = STARTER_TEAM_ROSTERS.map((roster) => roster.players.length);
-    const board = createDynastyRecruitingBoard({ save: createSave('dynasty-recruiting-roster-safety') });
-    const afterSizes = STARTER_TEAM_ROSTERS.map((roster) => roster.players.length);
+  it('keeps saved recruiting allocations isolated from roster sizes and gameplay lineups', () => {
+    const save = createSave('dynasty-recruiting-roster-safety');
+    const beforeRosterSnapshot = createDynastyRecruitingRosterSafetySnapshot({
+      teamIds: save.currentSeason.teamIds,
+    });
+    const beforeBinding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
+    const board = createDynastyRecruitingBoard({ save });
+    const savedAllocationDraft = structuredClone(board.recruitingPlan);
+    const previewFromSavedAllocations = createDynastySigningClassPreview({
+      prospects: board.prospects,
+      recruitingPlan: savedAllocationDraft,
+      teamId: save.userTeamId,
+    });
+    const alternateTeamId = save.currentSeason.teamIds.find((teamId) => teamId !== save.userTeamId)!;
+    const alternatePlan = createDynastyWeeklyRecruitingPlan({
+      prospects: board.prospects,
+      save,
+      teamId: alternateTeamId,
+    });
+    const afterRosterSnapshot = createDynastyRecruitingRosterSafetySnapshot({
+      teamIds: save.currentSeason.teamIds,
+    });
+    const afterBinding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
+    const activeRosterPlayerIds = new Set(beforeRosterSnapshot.teams.flatMap((team) => team.playerIds));
 
+    expect(beforeRosterSnapshot.summaryLabel).toBe('6 roster snapshots | 192 active players');
+    expect(beforeRosterSnapshot.teams.map((team) => team.playerIds.length)).toEqual([32, 32, 32, 32, 32, 32]);
     expect(board.prospects).toHaveLength(18);
-    expect(beforeSizes).toEqual([32, 32, 32, 32, 32, 32]);
-    expect(afterSizes).toEqual(beforeSizes);
+    expect(savedAllocationDraft).toEqual(board.recruitingPlan);
+    expect(previewFromSavedAllocations.projectedSignees).toEqual(board.signingClassPreview.projectedSignees);
+    expect(alternatePlan.teamId).toBe(alternateTeamId);
+    expect(afterRosterSnapshot).toEqual(beforeRosterSnapshot);
+    expect(afterBinding.activeLineup.bindings).toEqual(beforeBinding.activeLineup.bindings);
+    expect(afterBinding.userRoster.offensiveStarterIds).toEqual(beforeBinding.userRoster.offensiveStarterIds);
+    expect(afterBinding.userRoster.defensiveStarterIds).toEqual(beforeBinding.userRoster.defensiveStarterIds);
+    expect(afterBinding.opponentRoster.offensiveStarterIds).toEqual(beforeBinding.opponentRoster.offensiveStarterIds);
+    expect(afterBinding.opponentRoster.defensiveStarterIds).toEqual(beforeBinding.opponentRoster.defensiveStarterIds);
+    expect(savedAllocationDraft.allocations.every((allocation) =>
+      !activeRosterPlayerIds.has(allocation.prospectId))).toBe(true);
+    expect(previewFromSavedAllocations.projectedSignees.every((signee) =>
+      !activeRosterPlayerIds.has(signee.prospectId))).toBe(true);
   });
 });
 

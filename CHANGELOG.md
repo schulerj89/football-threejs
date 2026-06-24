@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.37] - 2026-06-24
+
+### Fixed
+
+- Added a Dynasty recruiting roster-safety snapshot that records roster sizes, starter IDs, specialist IDs, reserve IDs, and active player IDs for isolation checks.
+- Hardened recruiting allocation and signing-preview coverage so saved weekly allocations cannot change active roster sizes or 11v11 gameplay lineup bindings before an offseason apply path exists.
+- Marked Dynasty Phase 4 Recruiting-Lite complete in the decision map with completion notes for prospect generation, validation, and roster safety.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyRecruiting.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.36] - 2026-06-24
 
 ### Fixed

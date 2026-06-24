@@ -196,7 +196,7 @@ Completion notes:
 
 ### Phase 4: Recruiting-Lite
 
-Status: In progress. Minor updates 1-4 shipped in `1.22.32`, `1.22.33`, `1.22.34`, and `1.22.35`; patch hardening update 1 shipped in `1.22.36`.
+Status: Complete in `1.22.37`.
 
 Goal: Add a compact college-style roster-building layer.
 
@@ -224,7 +224,13 @@ Minor update plan:
 Patch hardening plan:
 
 1. Recruiting validation hardening: reject duplicate prospects, invalid pitch scores, impossible grades, and malformed interest rows. Shipped in `1.22.36`.
-2. Roster safety hardening: prove recruiting views and saved allocations cannot change active roster size or gameplay lineups before the offseason apply path.
+2. Roster safety hardening: prove recruiting views and saved allocations cannot change active roster size or gameplay lineups before the offseason apply path. Shipped in `1.22.37`.
+
+Completion notes:
+
+- Dynasty Recruiting-Lite now creates a deterministic fictional prospect pool, compact team needs, weekly point allocations, and a signing class preview without mutating active rosters.
+- Recruiting validation rejects malformed prospects, duplicate IDs, duplicate team interest rows, impossible grades, and invalid pitch fit scores.
+- Recruiting roster safety snapshots and gameplay binding checks prove recruiting allocations and signing previews remain isolated from roster sizes, starter IDs, specialist IDs, and active gameplay lineups until a future offseason apply path exists.
 
 ### Phase 5: Program Management
 

@@ -1,6 +1,6 @@
 import { calculateOverallRating } from '../ratings/OverallRatingCalculator';
 import type { FootballPosition, PlayerArchetype } from '../roster/RosterPlayer';
-import { getTeamRosterOrDefault } from '../roster/RosterRegistry';
+import { getTeamRoster, getTeamRosterOrDefault, listTeamRosters } from '../roster/RosterRegistry';
 import type { TeamRoster } from '../roster/TeamRoster';
 import type { DynastySaveData } from './DynastyTypes';
 
@@ -107,6 +107,23 @@ export interface DynastySigningClassPreview {
 export interface DynastyRecruitingValidationIssue {
   readonly message: string;
   readonly severity: 'error' | 'warning';
+}
+
+export interface DynastyRecruitingRosterSafetyTeamSnapshot {
+  readonly defensiveStarterIds: readonly string[];
+  readonly kickerId: string;
+  readonly longSnapperId: string;
+  readonly offensiveStarterIds: readonly string[];
+  readonly playerIds: readonly string[];
+  readonly punterId: string;
+  readonly reserveIds: readonly string[];
+  readonly teamId: string;
+}
+
+export interface DynastyRecruitingRosterSafetySnapshot {
+  readonly summaryLabel: string;
+  readonly teams: readonly DynastyRecruitingRosterSafetyTeamSnapshot[];
+  readonly totalPlayers: number;
 }
 
 const PROSPECT_SLOTS: readonly {
@@ -400,6 +417,24 @@ export function validateDynastyRecruitingBoard(
   return issues;
 }
 
+export function createDynastyRecruitingRosterSafetySnapshot(options?: {
+  readonly teamIds?: readonly string[];
+}): DynastyRecruitingRosterSafetySnapshot {
+  const rosters = options?.teamIds
+    ? options.teamIds
+      .map((teamId) => getTeamRoster(teamId))
+      .filter((roster): roster is TeamRoster => roster !== null)
+    : listTeamRosters();
+  const teams = rosters.map(createRosterSafetyTeamSnapshot);
+  const totalPlayers = teams.reduce((sum, team) => sum + team.playerIds.length, 0);
+
+  return {
+    summaryLabel: `${teams.length} roster snapshots | ${totalPlayers} active players`,
+    teams,
+    totalPlayers,
+  };
+}
+
 function createProspect(options: {
   readonly index: number;
   readonly save: DynastySaveData;
@@ -665,6 +700,19 @@ function validateRecruitingInterest(
       issues.push(error(`Dynasty recruiting prospect ${prospectId} has invalid ${style} pitch fit`));
     }
   }
+}
+
+function createRosterSafetyTeamSnapshot(roster: TeamRoster): DynastyRecruitingRosterSafetyTeamSnapshot {
+  return {
+    defensiveStarterIds: [...roster.defensiveStarterIds],
+    kickerId: roster.kickerId,
+    longSnapperId: roster.longSnapperId,
+    offensiveStarterIds: [...roster.offensiveStarterIds],
+    playerIds: roster.players.map((player) => player.id),
+    punterId: roster.punterId,
+    reserveIds: [...roster.reserveIds],
+    teamId: roster.teamId,
+  };
 }
 
 function error(message: string): DynastyRecruitingValidationIssue {
