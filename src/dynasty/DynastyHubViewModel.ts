@@ -6,6 +6,10 @@ import type {
   DynastyTeamRecord,
   DynastyTeamSeasonStats,
 } from './DynastyTypes';
+import {
+  createDynastyProgressionPreview,
+  type DynastyProgressionPreviewRow,
+} from './DynastyProgressionPreview';
 import { createDynastyHubStorySummary } from './DynastyStoryContext';
 
 export interface DynastyHubTeamView {
@@ -58,6 +62,8 @@ export interface DynastyHubViewModel {
   readonly currentWeekLabel: string;
   readonly leaders: readonly DynastyHubLeaderRow[];
   readonly program: DynastyHubTeamView;
+  readonly progressionPreview: readonly DynastyProgressionPreviewRow[];
+  readonly progressionSummaryLabel: string;
   readonly schedule: readonly DynastyHubGameView[];
   readonly seasonLabel: string;
   readonly standings: readonly DynastyHubStandingsRow[];
@@ -112,12 +118,15 @@ export function createDynastyHubViewModel(options: {
     stats: options.save.currentSeason.teamStats,
     teamProfiles,
   });
+  const progression = createDynastyProgressionPreview({ save: options.save });
 
   return {
     awardWatch,
     currentWeekLabel: currentWeek?.label ?? 'Season Complete',
     leaders,
     program,
+    progressionPreview: progression.rows.slice(0, 5),
+    progressionSummaryLabel: progression.summaryLabel,
     schedule,
     seasonLabel: `${options.save.currentSeason.year} Season`,
     standings,

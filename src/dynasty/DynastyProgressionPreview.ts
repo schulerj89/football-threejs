@@ -1,0 +1,160 @@
+import { calculateOverallRating } from '../ratings/OverallRatingCalculator';
+import type { PlayerArchetype, RosterPlayer } from '../roster/RosterPlayer';
+import { getTeamRosterOrDefault } from '../roster/RosterRegistry';
+import type { DynastySaveData, DynastyTeamSeasonStats } from './DynastyTypes';
+
+export interface DynastyProgressionPreviewRow {
+  readonly archetype: PlayerArchetype;
+  readonly currentOverall: number;
+  readonly developmentNote: string;
+  readonly performancePoints: number;
+  readonly playerId: string;
+  readonly playerName: string;
+  readonly position: string;
+}
+
+export interface DynastyProgressionPreview {
+  readonly rows: readonly DynastyProgressionPreviewRow[];
+  readonly summaryLabel: string;
+  readonly teamId: string;
+}
+
+export function createDynastyProgressionPreview(options: {
+  readonly save: DynastySaveData;
+  readonly teamId?: string;
+}): DynastyProgressionPreview {
+  const teamId = options.teamId ?? options.save.userTeamId;
+  const roster = getTeamRosterOrDefault(teamId);
+  const stats = options.save.currentSeason.teamStats.find((row) => row.teamId === teamId) ??
+    createEmptyStats(teamId);
+  const rows = roster.players
+    .map((player) => createProgressionRow(player, stats, options.save.seed))
+    .sort((a, b) =>
+      b.performancePoints - a.performancePoints ||
+      b.currentOverall - a.currentOverall ||
+      a.playerName.localeCompare(b.playerName));
+
+  return {
+    rows,
+    summaryLabel: stats.gamesPlayed > 0
+      ? `${stats.gamesPlayed} game sample | presentation-only points`
+      : 'No completed games | presentation-only points',
+    teamId,
+  };
+}
+
+function createProgressionRow(
+  player: RosterPlayer,
+  stats: DynastyTeamSeasonStats,
+  dynastySeed: string,
+): DynastyProgressionPreviewRow {
+  const currentOverall = calculateOverallRating(player.footballPosition, player.ratings);
+  const roleScore = calculateRoleScore(player, stats);
+  const stabilityBonus = hashToRange(`${dynastySeed}:${player.id}:progression`, 0, 8);
+  const performancePoints = clampPoints(Math.round(roleScore + stabilityBonus));
+
+  return {
+    archetype: player.archetype,
+    currentOverall,
+    developmentNote: createDevelopmentNote(player, performancePoints),
+    performancePoints,
+    playerId: player.id,
+    playerName: player.displayName,
+    position: player.footballPosition,
+  };
+}
+
+function calculateRoleScore(
+  player: RosterPlayer,
+  stats: DynastyTeamSeasonStats,
+): number {
+  if (stats.gamesPlayed <= 0) {
+    return 0;
+  }
+
+  const games = Math.max(1, stats.gamesPlayed);
+  const offensiveYardsPerGame = stats.offensiveYards / games;
+  const passingYardsPerGame = stats.passingYards / games;
+  const rushingYardsPerGame = stats.rushingYards / games;
+  const defensiveYardsAllowedPerGame = stats.defensiveYards / games;
+  const pointsPerGame = stats.pointsFor / games;
+  const fieldGoalsPerGame = stats.fieldGoals / games;
+  const takeawaysPerGame = stats.takeaways / games;
+
+  switch (player.footballPosition) {
+    case 'QB':
+      return passingYardsPerGame * 0.12 + pointsPerGame * 0.7;
+    case 'RB':
+      return rushingYardsPerGame * 0.16 + pointsPerGame * 0.35;
+    case 'WR':
+    case 'SLOT':
+    case 'TE':
+      return passingYardsPerGame * 0.08 + offensiveYardsPerGame * 0.035;
+    case 'C':
+    case 'LG':
+    case 'LT':
+    case 'RG':
+    case 'RT':
+    case 'LS':
+      return offensiveYardsPerGame * 0.045 + rushingYardsPerGame * 0.055;
+    case 'K':
+    case 'P':
+      return fieldGoalsPerGame * 10 + pointsPerGame * 0.12;
+    case 'DL':
+    case 'ILB':
+    case 'OLB':
+      return Math.max(0, 260 - defensiveYardsAllowedPerGame) * 0.06 + takeawaysPerGame * 9;
+    case 'CB':
+    case 'FS':
+    case 'SS':
+      return Math.max(0, 240 - defensiveYardsAllowedPerGame) * 0.055 + takeawaysPerGame * 10;
+  }
+}
+
+function createDevelopmentNote(player: RosterPlayer, points: number): string {
+  if (points >= 40) {
+    return `${player.archetype} surge`;
+  }
+  if (points >= 20) {
+    return `${player.archetype} progress`;
+  }
+  if (points > 0) {
+    return `${player.archetype} tracked`;
+  }
+  return `${player.archetype} pending`;
+}
+
+function createEmptyStats(teamId: string): DynastyTeamSeasonStats {
+  return {
+    defensiveYards: 0,
+    fieldGoals: 0,
+    gamesPlayed: 0,
+    giveaways: 0,
+    offensiveYards: 0,
+    passingYards: 0,
+    pointsAgainst: 0,
+    pointsFor: 0,
+    rushingYards: 0,
+    takeaways: 0,
+    teamId,
+    touchdowns: 0,
+  };
+}
+
+function clampPoints(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
+
+function hashToRange(seed: string, min: number, max: number): number {
+  const span = max - min + 1;
+  return min + (hashString(seed) % span);
+}
+
+function hashString(value: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}

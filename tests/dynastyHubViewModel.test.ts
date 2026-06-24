@@ -98,6 +98,11 @@ describe('dynasty hub view model', () => {
     expect(view.leaders.every((leader) => leader.rank === 1)).toBe(true);
     expect(view.leaders[0]?.value).toBeGreaterThan(0);
     expect(view.leaders[0]?.valueLabel).toMatch(/yds$/);
+    expect(view.progressionPreview).toHaveLength(5);
+    expect(view.progressionPreview[0]?.performancePoints).toBeGreaterThanOrEqual(
+      view.progressionPreview[4]?.performancePoints ?? 0,
+    );
+    expect(view.progressionSummaryLabel).toContain('presentation-only points');
   });
 
   it('formats turnover margin leaders with a signed value', () => {

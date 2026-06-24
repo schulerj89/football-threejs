@@ -654,6 +654,25 @@ export class FootballHubScreen {
     }
     awards.append(awardList);
 
+    const progression = document.createElement('section');
+    progression.className = 'football-hub-dynasty-progression';
+    progression.append(createSectionLabel('Progression Preview'));
+    const progressionMeta = document.createElement('p');
+    progressionMeta.textContent = view.progressionSummaryLabel;
+    const progressionList = document.createElement('ol');
+    for (const player of view.progressionPreview) {
+      const item = document.createElement('li');
+      const position = document.createElement('span');
+      position.textContent = player.position;
+      const name = document.createElement('strong');
+      name.textContent = `${player.playerName} (${player.currentOverall} OVR)`;
+      const points = document.createElement('span');
+      points.textContent = `${player.performancePoints} pts`;
+      item.append(position, name, points);
+      progressionList.append(item);
+    }
+    progression.append(progressionMeta, progressionList);
+
     const schedule = document.createElement('section');
     schedule.className = 'football-hub-dynasty-schedule';
     schedule.append(createSectionLabel('Schedule'));
@@ -677,7 +696,7 @@ export class FootballHubScreen {
       ? `${this.dynastySaveWarning} Decision map: ${DYNASTY_DECISION_DOC_PATH}`
       : `Save: ${formatDynastySaveSource(this.dynastySaveSource)} | Decision map: ${DYNASTY_DECISION_DOC_PATH}`;
 
-    this.dynastyView.append(header, upcoming, standings, leaders, awards, schedule, note);
+    this.dynastyView.append(header, upcoming, standings, leaders, awards, progression, schedule, note);
   }
 
   private renderDynastyLoading(): void {

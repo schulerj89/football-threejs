@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.26] - 2026-06-24
+
+### Added
+
+- Started Dynasty Phase 3 with a presentation-only progression preview model that assigns deterministic bounded performance points from current season team stats.
+- Added a Dynasty hub Progression Preview panel showing top player point rows with current overall ratings without mutating roster ratings or gameplay behavior.
+- Added the Phase 3 rollout plan with four minor updates and two patch-hardening passes in the dynasty decision map.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyProgressionPreview.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.25] - 2026-06-24
 
 ### Fixed
