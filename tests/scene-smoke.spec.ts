@@ -404,6 +404,7 @@ interface RouteArtRendererSnapshot {
     visible: boolean;
   }>;
   enabled: boolean;
+  playArtMode: 'offense' | 'defense' | 'both';
   rebuildKey: string;
   routeCount: number;
   routes: Array<{
@@ -3039,14 +3040,31 @@ test('shows on-field receiver routes before snap and supports route audit mode',
   expect(preSnapRoutes.routes.map((route) => route.receiverId)).toEqual(['offense-wr', 'offense-rb']);
   expect(preSnapRoutes.routes.every((route) => route.points.length >= 3)).toBe(true);
   expect(preSnapRoutes.routes.find((route) => route.receiverId === 'offense-wr')?.selected).toBe(true);
-  expect(preSnapRoutes.coverageShellEnabled).toBe(true);
-  expect(preSnapRoutes.coverageZones.map((zone) => zone.kind)).toEqual([
+  expect(preSnapRoutes.playArtMode).toBe('offense');
+  expect(preSnapRoutes.coverageShellEnabled).toBe(false);
+  expect(preSnapRoutes.coverageZones).toEqual([]);
+
+  await page.goto('/?debug=1&readback=1&experience=performance&coverageArt=1&playbook=5v5');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.keyboard.press('4');
+  await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({
+    coverageShellEnabled: true,
+    playArtMode: 'defense',
+    routeCount: 0,
+    visible: true,
+  });
+  const defensiveArt = await getRouteArtSnapshot(page);
+  expect(defensiveArt.routes).toEqual([]);
+  expect(defensiveArt.coverageZones.map((zone) => zone.kind)).toEqual([
     'flat',
     'hookCurl',
     'deepMiddle',
   ]);
-  expect(preSnapRoutes.coverageZones.every((zone) => zone.visible)).toBe(true);
+  expect(defensiveArt.coverageZones.every((zone) => zone.visible)).toBe(true);
 
+  await page.goto('/?debug=1&readback=1&experience=performance&routeArt=1&playbook=5v5');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await page.keyboard.press('4');
   await page.keyboard.press('e');
   await expect.poll(async () =>
     (await getRouteArtSnapshot(page)).routes.find((route) => route.receiverId === 'offense-rb')?.selected,
@@ -3071,7 +3089,8 @@ test('shows on-field receiver routes before snap and supports route audit mode',
   await page.keyboard.press('3');
   await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({
     auditEnabled: true,
-    coverageShellEnabled: true,
+    coverageShellEnabled: false,
+    playArtMode: 'offense',
     routeCount: 1,
     visible: true,
   });

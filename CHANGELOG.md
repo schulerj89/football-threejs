@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.65] - 2026-06-24
+
+### Fixed
+
+- Split pre-snap play-art rendering so `routeArt=1` shows offense-only receiver routes instead of mixing defensive coverage zones into the same field overlay.
+- Added explicit `coverageArt=1` / `defenseArt=1` defensive coverage-art mode, with `bothPlayArt=1` reserved for deliberate comparison overlays.
+- Changed 11v11 Cover 2 debug art so the free safety remains deep while the strong safety rotates into lower hook/curl support instead of drawing both safeties as high deep-half zones.
+
+### Added
+
+- Added `artifacts/route-art-validation-1.22.65/` with Playwright screenshots proving offensive route art renders without defensive coverage-zone conflicts.
+
+### Tests
+
+- Verified `npx vitest run tests/routeArtRenderer.test.ts tests/teamSimulation.test.ts tests/playCallDiagram.test.ts`, `npx playwright test tests/scene-smoke.spec.ts -g "shows on-field receiver routes before snap and supports route audit mode"`, `npm run build`, and `npm run artifacts:route-art`.
+
 ## [1.22.64] - 2026-06-24
 
 ### Changed

@@ -21,8 +21,11 @@ export interface RouteArtRendererOptions {
   auditEnabled?: boolean;
   coverageShellEnabled?: boolean;
   enabled?: boolean;
+  playArtMode?: RouteArtMode;
   toleranceYards?: number;
 }
+
+export type RouteArtMode = 'offense' | 'defense' | 'both';
 
 export interface RouteArtRouteSnapshot {
   anchor: ReceiverRouteAnchor;
@@ -38,6 +41,7 @@ export interface RouteArtRendererSnapshot {
   coverageShellEnabled: boolean;
   coverageZones: RouteArtCoverageZoneSnapshot[];
   enabled: boolean;
+  playArtMode: RouteArtMode;
   rebuildKey: string;
   routeCount: number;
   routes: RouteArtRouteSnapshot[];
@@ -221,13 +225,18 @@ export class RouteArtRenderer {
   update(gameplay: GameplaySnapshot, play: PlayDefinition): void {
     const enabled = this.enabled || this.options.auditEnabled === true;
     const auditEnabled = this.options.auditEnabled === true;
+    const playArtMode = this.resolvePlayArtMode();
+    const receiverRoutesEnabled = playArtMode === 'offense' || playArtMode === 'both';
     const coverageShellEnabled = this.options.coverageShellEnabled === true;
+    const coverageZonesEnabled =
+      coverageShellEnabled && (playArtMode === 'defense' || playArtMode === 'both');
     const shouldShow = enabled &&
       play.kind === 'pass' &&
       (gameplay.playState === 'preSnap' || (auditEnabled && gameplay.playState === 'live'));
-    const shouldShowCoverage = shouldShow && coverageShellEnabled && gameplay.playState === 'preSnap';
+    const shouldShowCoverage = shouldShow && coverageZonesEnabled && gameplay.playState === 'preSnap';
+    const shouldShowRoutes = shouldShow && receiverRoutesEnabled;
 
-    this.group.visible = shouldShow;
+    this.group.visible = shouldShowRoutes || shouldShowCoverage;
 
     if (!enabled || play.kind !== 'pass') {
       this.snapshot = this.createSnapshot(false);
@@ -244,8 +253,10 @@ export class RouteArtRenderer {
         position: player.position,
       })),
     });
-    const routes = playArt.receiverRoutes;
-    const coverageZones = coverageShellEnabled
+    const routes = receiverRoutesEnabled
+      ? playArt.receiverRoutes
+      : [];
+    const coverageZones = coverageZonesEnabled
       ? playArt.coverageZones
       : [];
     const rebuildKey = createRouteRebuildKey(play, snapPlacement, routes, coverageZones);
@@ -256,7 +267,7 @@ export class RouteArtRenderer {
 
     this.syncCoverageZoneVisualStates(shouldShowCoverage);
     this.syncRouteVisualStates(gameplay, auditEnabled);
-    this.snapshot = this.createSnapshot(shouldShow);
+    this.snapshot = this.createSnapshot(this.group.visible);
   }
 
   getSnapshot(): RouteArtRendererSnapshot {
@@ -584,6 +595,7 @@ export class RouteArtRenderer {
         visible: visible && visual.shell.visible && coverageShellEnabled,
       })),
       enabled: this.enabled || this.options.auditEnabled === true,
+      playArtMode: this.resolvePlayArtMode(),
       rebuildKey: this.lastRebuildKey,
       routeCount: this.routeVisuals.size,
       routes: [...this.routeVisuals.values()].map((visual) => ({
@@ -601,6 +613,10 @@ export class RouteArtRenderer {
       })),
       visible,
     };
+  }
+
+  private resolvePlayArtMode(): RouteArtMode {
+    return this.options.playArtMode ?? 'offense';
   }
 
   private clearRouteVisuals(): void {

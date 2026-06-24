@@ -168,48 +168,61 @@ describe('route art renderer', () => {
     renderer.dispose();
   });
 
-  it('draws Cover 2 zones on the field only for debug route art before the snap', () => {
+  it('keeps offensive route art separate from defensive coverage art before the snap', () => {
     const gameplay = createGameplayModel({ playbookId: '7v7' });
     selectPlay(gameplay, 'twin-slants-flat');
     const normalRenderer = new RouteArtRenderer();
-    const debugRenderer = new RouteArtRenderer({ coverageShellEnabled: true });
+    const defenseRenderer = new RouteArtRenderer({
+      coverageShellEnabled: true,
+      playArtMode: 'defense',
+    });
 
     normalRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    expect(normalRenderer.getSnapshot().routeCount).toBe(getEligibleReceiverIds(gameplay.selectedPlay).length);
     expect(normalRenderer.getSnapshot().coverageZones).toEqual([]);
 
-    debugRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
-    const preSnapCoverage = debugRenderer.getSnapshot().coverageZones;
+    defenseRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    const defenseSnapshot = defenseRenderer.getSnapshot();
+    const preSnapCoverage = defenseSnapshot.coverageZones;
 
+    expect(defenseSnapshot.routeCount).toBe(0);
+    expect(defenseSnapshot.routes).toEqual([]);
     expect(preSnapCoverage).toHaveLength(4);
     expect(preSnapCoverage.every((zone) => zone.visible)).toBe(true);
     expect(
-      debugRenderer.group.getObjectByName('route-art-coverage-zone-defense-corner-left'),
+      defenseRenderer.group.getObjectByName('route-art-coverage-zone-defense-corner-left'),
     ).toBeDefined();
     expect(
       getGeometryPositionCount(
-        debugRenderer.group.getObjectByName('route-art-coverage-zone-defense-corner-left'),
+        defenseRenderer.group.getObjectByName('route-art-coverage-zone-defense-corner-left'),
       ),
     ).toBeGreaterThan(24);
     expect(
       getGeometryPositionCount(
-        debugRenderer.group.getObjectByName('route-art-coverage-zone-outline-defense-corner-left'),
+        defenseRenderer.group.getObjectByName('route-art-coverage-zone-outline-defense-corner-left'),
       ),
     ).toBeGreaterThan(12);
 
     startPlay(gameplay);
-    debugRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    defenseRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
 
-    expect(debugRenderer.getSnapshot().coverageZones.every((zone) => !zone.visible)).toBe(true);
+    expect(defenseRenderer.getSnapshot().coverageZones.every((zone) => !zone.visible)).toBe(true);
 
     normalRenderer.dispose();
-    debugRenderer.dispose();
+    defenseRenderer.dispose();
   });
 
   it('anchors pre-snap coverage zones to the current defender position', () => {
     const gameplay = createGameplayModel({ playbookId: '7v7' });
     selectPlay(gameplay, 'twin-slants-flat');
-    const baselineRenderer = new RouteArtRenderer({ coverageShellEnabled: true });
-    const movedRenderer = new RouteArtRenderer({ coverageShellEnabled: true });
+    const baselineRenderer = new RouteArtRenderer({
+      coverageShellEnabled: true,
+      playArtMode: 'defense',
+    });
+    const movedRenderer = new RouteArtRenderer({
+      coverageShellEnabled: true,
+      playArtMode: 'defense',
+    });
     const defender = gameplay.players.find((player) => player.id === 'defense-corner-left');
 
     if (!defender) {

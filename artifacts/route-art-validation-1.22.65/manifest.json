@@ -1,0 +1,82 @@
+{
+  "baseUrl": "http://127.0.0.1:5174",
+  "capturedAt": "2026-06-24T21:56:45.276Z",
+  "captures": [
+    {
+      "coverageZoneCount": 0,
+      "fileName": "5v5-quick-pass.png",
+      "label": "Quick Pass route art",
+      "playbookId": "5v5",
+      "playId": "quick-pass",
+      "routeCount": 1
+    },
+    {
+      "coverageZoneCount": 0,
+      "fileName": "5v5-slant-flat.png",
+      "label": "Slant Flat route art",
+      "playbookId": "5v5",
+      "playId": "slant-flat",
+      "routeCount": 2
+    },
+    {
+      "coverageZoneCount": 0,
+      "fileName": "7v7-quick-pass-7.png",
+      "label": "Quick Pass 7 route art",
+      "playbookId": "7v7",
+      "playId": "quick-pass-7",
+      "routeCount": 3
+    },
+    {
+      "coverageZoneCount": 0,
+      "fileName": "7v7-twin-slants-flat.png",
+      "label": "Twin Slants Flat route art",
+      "playbookId": "7v7",
+      "playId": "twin-slants-flat",
+      "routeCount": 3
+    },
+    {
+      "coverageZoneCount": 0,
+      "fileName": "11v11-spread-quick-11.png",
+      "label": "Spread Quick 11 route art",
+      "playbookId": "11v11",
+      "playId": "spread-quick-11",
+      "routeCount": 5
+    },
+    {
+      "coverageZoneCount": 0,
+      "fileName": "11v11-twin-slants-11.png",
+      "label": "Twin Slants 11 route art",
+      "playbookId": "11v11",
+      "playId": "twin-slants-11",
+      "routeCount": 5
+    },
+    {
+      "coverageZoneCount": 0,
+      "fileName": "11v11-curl-flat-11.png",
+      "label": "Curl Flat 11 route art",
+      "playbookId": "11v11",
+      "playId": "curl-flat-11",
+      "routeCount": 5
+    },
+    {
+      "coverageZoneCount": 0,
+      "fileName": "11v11-four-verts-out-flat-11.png",
+      "label": "Four Verts Out Flat 11 route art",
+      "playbookId": "11v11",
+      "playId": "four-verts-out-flat-11",
+      "routeCount": 5
+    }
+  ],
+  "notes": [
+    "Captured with Playwright at a 1600x900 viewport.",
+    "Each screenshot selects the pass play through the real play-card UI with routeArt=1 and debug/readback enabled.",
+    "The route-art snapshot is verified before capture so offensive routes are visible without defensive coverage-zone art.",
+    "Defensive coverage art is validated separately with coverageArt=1 so offensive and defensive play art do not conflict."
+  ],
+  "passPlayCount": 8,
+  "viewport": {
+    "deviceScaleFactor": 1,
+    "height": 900,
+    "width": 1600
+  }
+}

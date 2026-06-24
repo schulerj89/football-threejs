@@ -427,10 +427,18 @@ export class PresentationRuntime {
     this.ballVisual.visible = !this.crowdPreviewController;
     this.scene.add(this.ballVisual);
 
+    const defensiveCoverageArtEnabled =
+      searchParams.has('coverageArt') || searchParams.has('defenseArt');
+    const combinedPlayArtEnabled = searchParams.has('bothPlayArt');
     this.routeArtRenderer = new RouteArtRenderer({
       auditEnabled: routeAuditEnabled,
-      coverageShellEnabled: searchParams.has('debug') || routeAuditEnabled,
+      coverageShellEnabled: defensiveCoverageArtEnabled || combinedPlayArtEnabled,
       enabled: gameExperience.settings.routeArtEnabled,
+      playArtMode: combinedPlayArtEnabled
+        ? 'both'
+        : defensiveCoverageArtEnabled
+          ? 'defense'
+          : 'offense',
     });
     this.scene.add(this.routeArtRenderer.group);
 

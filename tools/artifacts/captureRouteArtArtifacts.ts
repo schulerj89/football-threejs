@@ -27,6 +27,7 @@ interface RouteArtSnapshot {
     points: FootballSpot[];
     visible: boolean;
   }>;
+  playArtMode: 'offense' | 'defense' | 'both';
   routeCount: number;
   routes: Array<{
     anchor: {
@@ -67,7 +68,7 @@ const REPO_ROOT = resolve(fileURLToPath(new URL('../../', import.meta.url)));
 const VIEWPORT = { width: 1600, height: 900 };
 const DEVICE_SCALE_FACTOR = 1;
 const PLAYBOOK_IDS: PlaybookId[] = ['5v5', '7v7', '11v11'];
-const CAPTURE_VERSION = '1.22.63';
+const CAPTURE_VERSION = '1.22.65';
 const outputDir = join(REPO_ROOT, 'artifacts', `route-art-validation-${CAPTURE_VERSION}`);
 
 const passPlays = PLAYBOOK_IDS.flatMap((playbookId) =>
@@ -83,8 +84,8 @@ const manifest: CaptureManifest = {
   notes: [
     'Captured with Playwright at a 1600x900 viewport.',
     'Each screenshot selects the pass play through the real play-card UI with routeArt=1 and debug/readback enabled.',
-    'The route-art snapshot is verified before capture so offensive routes and defensive coverage zones are visible.',
-    'Coverage-zone snapshots are checked for player-sourced defender anchors, which proves the debug zone art is tied to active defender coordinates.',
+    'The route-art snapshot is verified before capture so offensive routes are visible without defensive coverage-zone art.',
+    'Defensive coverage art is validated separately with coverageArt=1 so offensive and defensive play art do not conflict.',
   ],
   passPlayCount: passPlays.length,
   viewport: {
@@ -191,14 +192,13 @@ async function waitForRouteArt(page: Page, play: PlayDefinition): Promise<void> 
 
       return Boolean(
         snapshot?.visible &&
-          snapshot.coverageShellEnabled &&
+          snapshot.playArtMode === 'offense' &&
+          !snapshot.coverageShellEnabled &&
           snapshot.routeCount === routeCount &&
           snapshot.routes.length === routeCount &&
           snapshot.routes.every((route) =>
             route.points.length >= 2 && route.anchor.source === 'player') &&
-          snapshot.coverageZones.length > 0 &&
-          snapshot.coverageZones.every((zone) =>
-            zone.visible && zone.points.length >= 4 && zone.anchor.source === 'player'),
+          snapshot.coverageZones.length === 0,
       );
     },
     { routeCount: eligibleCount },

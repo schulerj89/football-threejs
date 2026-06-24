@@ -165,7 +165,7 @@ function resolveCoverageZoneForSlot(
   }
 
   if (slot.id === 'defense-safety-strong') {
-    return createDeepHalfZone(slot.id, fieldSide === 'left' ? 'right' : 'left', snapPlacement);
+    return createHookCurlZone(slot.id, fieldSide === 'left' ? 'right' : 'left', snapPlacement);
   }
 
   if (LEFT_HOOK_DEFENDER_IDS.has(slot.id)) {
