@@ -108,6 +108,10 @@ import {
   type ControlledPlayerLabelSnapshot,
 } from '../presentation/ControlledPlayerLabel';
 import {
+  SelectedReceiverTargetIndicator,
+  type SelectedReceiverTargetIndicatorSnapshot,
+} from '../presentation/SelectedReceiverTargetIndicator';
+import {
   SidelineTeamController,
   type SidelineTeamControllerSnapshot,
 } from '../presentation/teams/SidelineTeamController';
@@ -270,6 +274,7 @@ export class PresentationRuntime {
   readonly pregameWarmupController: PregameWarmupController;
   readonly qbShowcaseCard: QBShowcaseCard;
   readonly routeArtRenderer: RouteArtRenderer;
+  readonly selectedReceiverTargetIndicator: SelectedReceiverTargetIndicator;
   readonly stadiumController: StadiumController;
   readonly sidelineTeamController: SidelineTeamController;
   readonly titleMusicController: MenuMusicPlaylistController;
@@ -427,6 +432,9 @@ export class PresentationRuntime {
       enabled: gameExperience.settings.routeArtEnabled,
     });
     this.scene.add(this.routeArtRenderer.group);
+
+    this.selectedReceiverTargetIndicator = new SelectedReceiverTargetIndicator();
+    this.scene.add(this.selectedReceiverTargetIndicator.group);
 
     this.controlledPlayerLabels = new ControlledPlayerLabelRenderer({
       binding: this.rosterBinding,
@@ -657,6 +665,7 @@ export class PresentationRuntime {
       syncBallVisual(this.ballVisual, ball);
     }
     this.routeArtRenderer.group.visible = false;
+    this.selectedReceiverTargetIndicator.group.visible = false;
     this.controlledPlayerLabels.setApplicationPhase(appPhase);
   }
 
@@ -689,6 +698,7 @@ export class PresentationRuntime {
       syncBallVisual(this.ballVisual, ball);
     }
     this.routeArtRenderer.update(gameplaySnapshot, selectedPlay);
+    this.selectedReceiverTargetIndicator.update(gameplaySnapshot, deltaSeconds);
     if (profiler?.enabled) {
       profiler.measure('proceduralPlayerPosing', () => {
         this.playerPoseController.update(gameplaySnapshot, playerVisuals, deltaSeconds);
@@ -857,6 +867,7 @@ export class PresentationRuntime {
     this.keysToGameOverlay.hide('hidden');
     this.ballVisual.visible = false;
     this.routeArtRenderer.group.visible = false;
+    this.selectedReceiverTargetIndicator.group.visible = false;
     this.controlledPlayerLabels.group.visible = false;
     this.officialsController?.group && (this.officialsController.group.visible = false);
     this.coinTossController.start(matchSnapshot);
@@ -907,6 +918,7 @@ export class PresentationRuntime {
     this.placeKickMeter.hide();
     this.ballVisual.visible = false;
     this.routeArtRenderer.group.visible = false;
+    this.selectedReceiverTargetIndicator.group.visible = false;
     this.controlledPlayerLabels.group.visible = false;
     this.officialsController?.group && (this.officialsController.group.visible = false);
     this.syncKickoffResultMessage(null);
@@ -962,6 +974,7 @@ export class PresentationRuntime {
     this.placeKickMeter.hide();
     this.ballVisual.visible = false;
     this.routeArtRenderer.group.visible = false;
+    this.selectedReceiverTargetIndicator.group.visible = false;
     this.controlledPlayerLabels.group.visible = false;
     this.officialsController?.group && (this.officialsController.group.visible = false);
     this.placeKickPresentationDirector.start(matchSnapshot);
@@ -1025,6 +1038,7 @@ export class PresentationRuntime {
     this.placeKickMeter.hide();
     this.ballVisual.visible = false;
     this.routeArtRenderer.group.visible = false;
+    this.selectedReceiverTargetIndicator.group.visible = false;
     this.controlledPlayerLabels.group.visible = false;
     this.officialsController?.group && (this.officialsController.group.visible = false);
     if (matchSnapshot) {
@@ -1053,6 +1067,7 @@ export class PresentationRuntime {
     this.officialsController?.group && (this.officialsController.group.visible = false);
     this.ballVisual.visible = false;
     this.routeArtRenderer.group.visible = false;
+    this.selectedReceiverTargetIndicator.group.visible = false;
     this.controlledPlayerLabels.group.visible = false;
     const result = this.halftimePresentationDirector.update({
       deltaSeconds,
@@ -1382,6 +1397,10 @@ export class PresentationRuntime {
     return this.routeArtRenderer.getSnapshot();
   }
 
+  getSelectedReceiverTargetIndicatorSnapshot(): SelectedReceiverTargetIndicatorSnapshot {
+    return this.selectedReceiverTargetIndicator.getSnapshot();
+  }
+
   getControlledPlayerLabelSnapshot(): ControlledPlayerLabelSnapshot {
     return this.controlledPlayerLabels.getSnapshot();
   }
@@ -1398,8 +1417,10 @@ export class PresentationRuntime {
     this.resetPostgamePresentation();
     this.scene.remove(this.ballVisual);
     this.scene.remove(this.routeArtRenderer.group);
+    this.scene.remove(this.selectedReceiverTargetIndicator.group);
     this.scene.remove(this.controlledPlayerLabels.group);
     this.routeArtRenderer.dispose();
+    this.selectedReceiverTargetIndicator.dispose();
     this.controlledPlayerLabels.dispose();
     this.pregameLowerThird.dispose();
     this.keysToGameOverlay.dispose();

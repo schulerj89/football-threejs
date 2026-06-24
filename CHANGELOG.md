@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.55] - 2026-06-24
+
+### Added
+
+- Added a pulsing green field reticle under the currently selected receiver after the snap so users can see who is targeted while cycling receivers before throwing.
+- Hid the selected-receiver reticle before the snap, after the pass is released, and outside live pass plays.
+- Added unit coverage for selected receiver reticle visibility, live cycling updates, and field-space positioning.
+
+### Tests
+
+- Verified `npx vitest run tests/selectedReceiverTargetIndicator.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.54] - 2026-06-24
 
 ### Fixed
