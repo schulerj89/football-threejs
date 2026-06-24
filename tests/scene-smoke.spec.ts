@@ -1,4 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { MENU_MUSIC_TRACKS } from '../src/audio/MusicCatalog';
 import { GAME_SETTINGS_SCHEMA_VERSION } from '../src/config/GameSettingsStore';
 import { listTeamProfiles } from '../src/teams/TeamRegistry';
 
@@ -1156,16 +1157,23 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.football-hub-screen')).toBeVisible();
   await expect(page.locator('body[data-app-phase="footballHub"]')).toBeAttached();
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
+  const menuMusicAssetIds = new Set(MENU_MUSIC_TRACKS.map((track) => track.assetId));
   await expect.poll(() =>
     getAudioSnapshot(page).then((snapshot) =>
-      snapshot.streamedAssetIds.includes('football-js-title'),
+      snapshot.streamedAssetIds.some((assetId) => menuMusicAssetIds.has(assetId)),
     ),
   ).toBe(true);
   await expect(page.locator('.football-hub-nav button')).toHaveText([
     'Play Now',
+    'Dynasty',
     'Rosters',
     'Settings',
   ]);
+  await page.locator('.football-hub-nav').getByRole('button', { name: 'Dynasty' }).click();
+  const dynastyHub = page.locator('.football-hub-dynasty');
+  await expect(dynastyHub).toContainText('Season Core');
+  await expect(dynastyHub).toContainText('Standings');
+  await expect(dynastyHub.locator('.football-hub-dynasty-schedule li')).toHaveCount(5);
   await page.locator('.football-hub-nav').getByRole('button', { name: 'Settings' }).click();
   const hubSettings = page.locator('.football-hub-settings-view');
   await expect(hubSettings.locator('.settings-navigation button')).toHaveText([
@@ -1290,7 +1298,8 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.play-call-ui')).toBeHidden();
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
   await expect.poll(() =>
-    getAudioSnapshot(page).then((snapshot) => snapshot.activeLoops.includes('football-js-title')),
+    getAudioSnapshot(page).then((snapshot) =>
+      snapshot.activeLoops.some((assetId) => menuMusicAssetIds.has(assetId))),
   ).toBe(true);
   await expect.poll(() =>
     getAudioSnapshot(page).then((snapshot) => snapshot.titleMusic?.state),

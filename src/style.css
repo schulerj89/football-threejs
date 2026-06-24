@@ -2596,23 +2596,35 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-dynasty {
-  min-height: min(620px, 62vh);
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 14px;
+  align-items: start;
 }
 
-.football-hub-dynasty-hero {
+.football-hub-dynasty-program,
+.football-hub-dynasty-upcoming,
+.football-hub-dynasty-standings,
+.football-hub-dynasty-schedule {
   display: grid;
-  align-content: center;
-  gap: 18px;
-  min-height: inherit;
-  padding: clamp(22px, 4vw, 52px);
-  border: 1px solid color-mix(in srgb, var(--hub-accent, #2f66d8) 42%, rgba(255, 255, 255, 0.18));
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(9, 16, 15, 0.98), rgba(9, 16, 15, 0.76)),
-    radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--hub-accent, #2f66d8) 22%, transparent), transparent 32%),
-    radial-gradient(circle at 14% 82%, color-mix(in srgb, var(--hub-accent-2, #b83737) 18%, transparent), transparent 34%),
-    #09100f;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 48px rgba(0, 0, 0, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.football-hub-dynasty-program {
+  grid-column: 1 / -1;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  border-color: color-mix(in srgb, var(--hub-accent, #2f66d8) 42%, rgba(255, 255, 255, 0.18));
+  background: linear-gradient(90deg, rgba(11, 19, 17, 0.96), rgba(255, 255, 255, 0.06));
+}
+
+.football-hub-dynasty-logo {
+  width: 92px;
+  height: 92px;
 }
 
 .football-hub-dynasty-eyebrow {
@@ -2627,62 +2639,94 @@ body[data-game-mode="exhibition"] .score-counter {
   text-transform: uppercase;
 }
 
-.football-hub-dynasty-hero h3 {
-  max-width: 780px;
+.football-hub-dynasty-program h3,
+.football-hub-dynasty-standings h3,
+.football-hub-dynasty-schedule h3 {
   margin: 0;
   color: #f8fcf7;
-  font-size: clamp(34px, 5vw, 70px);
-  line-height: 0.96;
+  font-size: 18px;
+  line-height: 1.1;
 }
 
-.football-hub-dynasty-hero p {
-  max-width: 760px;
+.football-hub-dynasty-program h3 {
+  margin-top: 8px;
+  font-size: clamp(26px, 3vw, 42px);
+}
+
+.football-hub-dynasty-program p,
+.football-hub-dynasty-upcoming p {
   margin: 0;
   color: #d5dfd8;
-  font-size: clamp(15px, 1.5vw, 18px);
+  font-size: 14px;
   line-height: 1.45;
 }
 
-.football-hub-dynasty-phases {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  max-width: 920px;
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: dynasty-phase;
+.football-hub-dynasty-upcoming {
+  min-height: 150px;
 }
 
-.football-hub-dynasty-phases li {
-  counter-increment: dynasty-phase;
+.football-hub-dynasty-upcoming > span,
+.football-hub-dynasty-schedule li span {
+  color: #aeb9b1;
+  font-size: 12px;
+  font-weight: 840;
+  text-transform: uppercase;
+}
+
+.football-hub-dynasty-upcoming strong {
+  color: #f8fcf7;
+  font-size: clamp(24px, 3vw, 38px);
+  line-height: 1.05;
+}
+
+.football-hub-dynasty-standings table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.football-hub-dynasty-standings th,
+.football-hub-dynasty-standings td {
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  color: #eef5ef;
+  font-size: 13px;
+  text-align: left;
+}
+
+.football-hub-dynasty-standings th {
+  color: #aeb9b1;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.football-hub-dynasty-schedule ol {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  min-height: 58px;
-  padding: 11px 13px;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.football-hub-dynasty-schedule li {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 9px 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
   color: #f6faf6;
-  font-weight: 760;
 }
 
-.football-hub-dynasty-phases li::before {
-  content: counter(dynasty-phase);
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--hub-accent, #2f66d8) 68%, #f8fcf7 18%);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 950;
+.football-hub-dynasty-schedule li strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .football-hub-dynasty-note {
+  grid-column: 1 / -1;
   color: #aeb9b1 !important;
   font-size: 13px !important;
   font-weight: 760;
@@ -4024,11 +4068,16 @@ body[data-game-mode="exhibition"] .score-counter {
   }
 
   .football-hub-dynasty {
-    min-height: auto;
+    grid-template-columns: 1fr;
   }
 
-  .football-hub-dynasty-phases {
+  .football-hub-dynasty-program {
     grid-template-columns: 1fr;
+  }
+
+  .football-hub-dynasty-schedule li {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 
   .football-hub-player-detail {

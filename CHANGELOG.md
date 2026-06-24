@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.16] - 2026-06-24
+
+### Added
+
+- Added the Dynasty hub season view with current program, current week, upcoming matchup, five-game user schedule, and league standings.
+- Added a deterministic Dynasty hub view model and smoke coverage for the Dynasty tab.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyDecisions.test.ts tests/dynastySeason.test.ts tests/dynastySaveRepository.test.ts tests/dynastyHubViewModel.test.ts`, `npm run build`, `npm run test:unit`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.15] - 2026-06-24
 
 ### Added
