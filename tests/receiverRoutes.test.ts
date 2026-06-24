@@ -26,6 +26,12 @@ describe('receiver routes', () => {
     const route = expectResolvedRoute(resolveReceiverRoute(play, 'offense-wr', snapPlacement));
 
     expect(route.points[0]).toEqual(receiver.position);
+    expect(route.anchor).toEqual({
+      formationPosition: receiver.position,
+      playerId: 'offense-wr',
+      position: receiver.position,
+      source: 'formation',
+    });
     expect(route.points[1]).toEqual({
       x: receiver.position.x,
       z: snapPlacement.spot.z + 4,
@@ -33,6 +39,29 @@ describe('receiver routes', () => {
     expect(route.points[2]).toEqual({
       x: 0,
       z: snapPlacement.spot.z + 11,
+    });
+  });
+
+  it('can anchor a route to the current player position while preserving formation metadata', () => {
+    const play = getPlay('slant-flat');
+    const snapPlacement = createSnapPlacementForLane('middle');
+    const formation = resolveFormation(play, snapPlacement);
+    const receiver = getSlot(formation, 'offense-wr');
+    const playerPosition = {
+      x: receiver.position.x + 2.25,
+      z: receiver.position.z - 1.5,
+    };
+    const route = expectResolvedRoute(resolveReceiverRoute(play, 'offense-wr', snapPlacement, {
+      formation,
+      playerPositions: new Map([['offense-wr', playerPosition]]),
+    }));
+
+    expect(route.points[0]).toEqual(playerPosition);
+    expect(route.anchor).toEqual({
+      formationPosition: receiver.position,
+      playerId: 'offense-wr',
+      position: playerPosition,
+      source: 'player',
     });
   });
 
@@ -247,6 +276,12 @@ function makeRoute(points: ResolvedReceiverRoute['points']): ResolvedReceiverRou
   }
 
   return {
+    anchor: {
+      formationPosition: { ...points[0] },
+      playerId: 'receiver',
+      position: { ...points[0] },
+      source: 'formation',
+    },
     cumulativeLengths,
     id: 'test-route',
     points,

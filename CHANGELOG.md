@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.60] - 2026-06-24
+
+### Added
+
+- Added a player-anchored play-art model so receiver routes resolve with explicit player anchor metadata instead of relying on separately resolved start points.
+- Added route anchor readback for play cards and field route-art snapshots, including formation position, active player position, anchor source, and player ID.
+
+### Fixed
+
+- Anchored pre-snap field route art to current gameplay player positions so route starts stay attached to receivers even when formation/player positioning changes.
+- Reused the same resolved formation through play-card route generation so offensive play art starts remain aligned with each player marker.
+
+### Tests
+
+- Verified `npx vitest run tests/receiverRoutes.test.ts tests/playCallDiagram.test.ts tests/routeArtRenderer.test.ts`, `npm run build`, `npx playwright test tests/scene-smoke.spec.ts -g "starts playable 11v11 plays and throws Spread Quick to the selected target|shows on-field receiver routes before snap and supports route audit mode"`, and `npm run test:unit`.
+
 ## [1.22.59] - 2026-06-24
 
 ### Changed

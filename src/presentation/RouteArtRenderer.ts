@@ -6,12 +6,13 @@ import {
 } from '../coverageShell';
 import type { FootballSpot } from '../fieldScale';
 import type { GameplaySnapshot } from '../playState';
+import { createPlayerPlayArtModel } from '../playerPlayArt';
 import type { PlayDefinition } from '../playbook';
 import {
   RECEIVER_ROUTE_AUDIT_CONFIG,
   createReceiverRouteAuditSnapshot,
-  resolveEligibleReceiverRoutes,
   type ReceiverRouteAuditSnapshot,
+  type ReceiverRouteAnchor,
   type ReceiverRouteState,
   type ResolvedReceiverRoute,
 } from '../receiverRoutes';
@@ -24,6 +25,7 @@ export interface RouteArtRendererOptions {
 }
 
 export interface RouteArtRouteSnapshot {
+  anchor: ReceiverRouteAnchor;
   audit: ReceiverRouteAuditSnapshot | null;
   points: FootballSpot[];
   receiverId: string;
@@ -234,7 +236,13 @@ export class RouteArtRenderer {
       lane: gameplay.drive.snapLane,
       spot: gameplay.drive.lineOfScrimmage,
     };
-    const routes = resolveEligibleReceiverRoutes(play, snapPlacement);
+    const playArt = createPlayerPlayArtModel(play, snapPlacement, {
+      playerPositions: gameplay.players.map((player) => ({
+        id: player.id,
+        position: player.position,
+      })),
+    });
+    const routes = playArt.receiverRoutes;
     const coverageZones = coverageShellEnabled
       ? resolveCoverageZones(play, snapPlacement)
       : [];
@@ -254,6 +262,12 @@ export class RouteArtRenderer {
       ...this.snapshot,
       routes: this.snapshot.routes.map((route) => ({
         ...route,
+        anchor: {
+          formationPosition: { ...route.anchor.formationPosition },
+          playerId: route.anchor.playerId,
+          position: { ...route.anchor.position },
+          source: route.anchor.source,
+        },
         audit: route.audit ? cloneAuditSnapshot(route.audit) : null,
         points: route.points.map((point) => ({ ...point })),
       })),
@@ -559,6 +573,12 @@ export class RouteArtRenderer {
       rebuildKey: this.lastRebuildKey,
       routeCount: this.routeVisuals.size,
       routes: [...this.routeVisuals.values()].map((visual) => ({
+        anchor: {
+          formationPosition: { ...visual.route.anchor.formationPosition },
+          playerId: visual.route.anchor.playerId,
+          position: { ...visual.route.anchor.position },
+          source: visual.route.anchor.source,
+        },
         audit: visual.audit ? cloneAuditSnapshot(visual.audit) : null,
         points: visual.route.points.map((point) => ({ ...point })),
         receiverId: visual.receiverId,

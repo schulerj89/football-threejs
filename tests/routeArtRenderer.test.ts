@@ -47,6 +47,38 @@ describe('route art renderer', () => {
     renderer.dispose();
   });
 
+  it('anchors pre-snap field route art to the current player position', () => {
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
+    selectPlay(gameplay, 'slant-flat');
+    const receiver = gameplay.players.find((player) => player.id === 'offense-wr');
+    const renderer = new RouteArtRenderer();
+
+    if (!receiver) {
+      throw new Error('Expected offense-wr in slant-flat formation');
+    }
+
+    receiver.position = {
+      x: receiver.position.x + 3,
+      z: receiver.position.z - 1.25,
+    };
+    renderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    const routeArt = renderer.getSnapshot();
+    const renderedRoute = routeArt.routes.find((route) => route.receiverId === 'offense-wr');
+    const path = renderer.group.getObjectByName('route-art-path-offense-wr');
+
+    expect(renderedRoute?.anchor).toEqual({
+      formationPosition: expect.any(Object),
+      playerId: 'offense-wr',
+      position: receiver.position,
+      source: 'player',
+    });
+    expect(renderedRoute?.points[0]).toEqual(receiver.position);
+    expectFootballPointsClose(getLineFootballPoints(path).slice(0, 1), [receiver.position]);
+
+    renderer.dispose();
+  });
+
+
   it('marks the selected receiver route with selected visual state', () => {
     const gameplay = createGameplayModel({ playbookId: '5v5' });
     selectPlay(gameplay, 'slant-flat');

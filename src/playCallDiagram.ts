@@ -2,17 +2,14 @@ import type { SnapPlacement } from './ballSpotting';
 import { FIELD_DIRECTION } from './fieldSpec';
 import type { FootballSpot } from './fieldScale';
 import {
-  resolveFormation,
   resolveFormationTarget,
   type ResolvedFormationSlot,
 } from './formationLayout';
+import { createPlayerPlayArtModel } from './playerPlayArt';
 import {
   type PlayDefinition,
 } from './playbook';
-import {
-  resolveEligibleReceiverRoutes,
-  type ResolvedReceiverRoute,
-} from './receiverRoutes';
+import type { ReceiverRouteAnchor, ResolvedReceiverRoute } from './receiverRoutes';
 
 export interface SvgPoint {
   x: number;
@@ -47,6 +44,7 @@ export interface PlayCallPlayerMarker {
 }
 
 export interface PlayCallRoute {
+  anchor: ReceiverRouteAnchor;
   breakPoints: readonly SvgPoint[];
   footballBreakPoints: readonly FootballSpot[];
   footballPoints: FootballSpot[];
@@ -124,7 +122,8 @@ export function createPlayCallDiagramModel(
   snapPlacement: SnapPlacement,
   size: DiagramSize = PLAY_CALL_DIAGRAM_SIZE,
 ): PlayCallDiagramModel {
-  const formation = resolveFormation(play, snapPlacement);
+  const playArt = createPlayerPlayArtModel(play, snapPlacement);
+  const formation = playArt.formation;
   const ballCarrier = getBallCarrierSlot(play, formation.slots);
   const blockerTargets = resolveBlockerTargets(play, snapPlacement);
   const blockerAssignments = createPlayCallBlockerAssignments(
@@ -132,7 +131,7 @@ export function createPlayCallDiagramModel(
     formation.slots,
     blockerTargets,
   );
-  const receiverRoutes = resolveEligibleReceiverRoutes(play, snapPlacement);
+  const receiverRoutes = playArt.receiverRoutes;
   const runTarget = play.kind === 'run'
     ? resolveRunTarget(play, ballCarrier.position, blockerTargets)
     : null;
@@ -188,6 +187,12 @@ export function createPlayCallDiagramModel(
     receiverRoutes: receiverRoutes.map((route) => createPlayCallRoute(route, transform)),
     runDirection: runTarget
       ? {
+          anchor: {
+            formationPosition: { ...ballCarrier.position },
+            playerId: ballCarrier.id,
+            position: { ...ballCarrier.position },
+            source: 'formation' as const,
+          },
           footballPoints: [
             { ...ballCarrier.position },
             { ...runTarget },
@@ -488,6 +493,12 @@ function createPlayCallRoute(
   const footballBreakPoints = route.points.slice(1, -1).map((point) => ({ ...point }));
 
   return {
+    anchor: {
+      formationPosition: { ...route.anchor.formationPosition },
+      playerId: route.anchor.playerId,
+      position: { ...route.anchor.position },
+      source: route.anchor.source,
+    },
     breakPoints,
     footballBreakPoints,
     footballPoints: route.points.map((point) => ({ ...point })),

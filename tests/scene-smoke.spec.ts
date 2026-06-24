@@ -401,6 +401,12 @@ interface RouteArtRendererSnapshot {
   rebuildKey: string;
   routeCount: number;
   routes: Array<{
+    anchor: {
+      formationPosition: FootballSpot;
+      playerId: string;
+      position: FootballSpot;
+      source: 'formation' | 'player';
+    };
     audit: null | {
       completionPercentage: number;
       crossTrackErrorYards: number;

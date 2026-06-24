@@ -5,6 +5,7 @@ import {
   resolveFormationTarget,
   type FormationPlayDefinition,
   type FormationPoint,
+  type ResolvedFormation,
 } from './formationLayout';
 
 export interface ReceiverRouteDefinition {
@@ -19,12 +20,20 @@ export interface RouteWaypointDefinition {
 }
 
 export interface ResolvedReceiverRoute {
+  anchor: ReceiverRouteAnchor;
   cumulativeLengths: readonly number[];
   id: string;
   points: readonly FootballSpot[];
   receiverId: string;
   segmentLengths: readonly number[];
   totalLength: number;
+}
+
+export interface ReceiverRouteAnchor {
+  formationPosition: FootballSpot;
+  playerId: string;
+  position: FootballSpot;
+  source: 'formation' | 'player';
 }
 
 export interface ReceiverRouteState {
@@ -44,6 +53,11 @@ export type ReceiverRouteRuntimeMap = Record<string, ReceiverRouteRuntime>;
 
 export interface ReceiverRoutePlayDefinition extends FormationPlayDefinition {
   receiverRoutes?: Record<string, ReceiverRouteDefinition>;
+}
+
+export interface ResolveReceiverRouteOptions {
+  formation?: ResolvedFormation;
+  playerPositions?: ReadonlyMap<string, FootballSpot>;
 }
 
 export interface RouteProjection {
@@ -77,6 +91,7 @@ export function resolveReceiverRoute(
   play: ReceiverRoutePlayDefinition,
   receiverId: string,
   snapPlacement: SnapPlacement,
+  options: ResolveReceiverRouteOptions = {},
 ): ResolvedReceiverRoute | null {
   const route = play.receiverRoutes?.[receiverId];
 
@@ -84,15 +99,22 @@ export function resolveReceiverRoute(
     return null;
   }
 
-  const formation = resolveFormation(play, snapPlacement);
+  const formation = options.formation ?? resolveFormation(play, snapPlacement);
   const receiver = formation.slots.find((slot) => slot.id === receiverId);
 
   if (!receiver) {
     throw new Error(`Cannot resolve route ${route.id} for missing receiver ${receiverId}`);
   }
 
+  const playerPosition = options.playerPositions?.get(receiverId);
+  const anchor: ReceiverRouteAnchor = {
+    formationPosition: { ...receiver.position },
+    playerId: receiverId,
+    position: { ...(playerPosition ?? receiver.position) },
+    source: playerPosition ? 'player' : 'formation',
+  };
   const points = [
-    { ...receiver.position },
+    { ...anchor.position },
     ...route.waypoints.map((waypoint) => ({
       ...resolveFormationTarget(play, waypoint.point, snapPlacement),
     })),
@@ -102,6 +124,7 @@ export function resolveReceiverRoute(
   const totalLength = cumulativeLengths[cumulativeLengths.length - 1] ?? 0;
 
   return {
+    anchor,
     cumulativeLengths,
     id: route.id,
     points,
@@ -138,6 +161,7 @@ export function createReceiverRouteStateMap(
 export function createReceiverRouteRuntimeMap(
   play: ReceiverRoutePlayDefinition,
   snapPlacement: SnapPlacement,
+  options: ResolveReceiverRouteOptions = {},
 ): ReceiverRouteRuntimeMap {
   const runtimeMap: ReceiverRouteRuntimeMap = {};
   const receiverRoutes = play.receiverRoutes;
@@ -147,7 +171,7 @@ export function createReceiverRouteRuntimeMap(
   }
 
   for (const receiverId of Object.keys(receiverRoutes)) {
-    const route = resolveReceiverRoute(play, receiverId, snapPlacement);
+    const route = resolveReceiverRoute(play, receiverId, snapPlacement, options);
 
     if (!route) {
       continue;
@@ -165,11 +189,12 @@ export function createReceiverRouteRuntimeMap(
 export function resolveEligibleReceiverRoutes(
   play: ReceiverRoutePlayDefinition,
   snapPlacement: SnapPlacement,
+  options: ResolveReceiverRouteOptions = {},
 ): ResolvedReceiverRoute[] {
   const receiverIds = play.pass?.eligibleReceiverIds ?? Object.keys(play.receiverRoutes ?? {});
 
   return receiverIds.flatMap((receiverId) => {
-    const route = resolveReceiverRoute(play, receiverId, snapPlacement);
+    const route = resolveReceiverRoute(play, receiverId, snapPlacement, options);
 
     return route ? [route] : [];
   });
