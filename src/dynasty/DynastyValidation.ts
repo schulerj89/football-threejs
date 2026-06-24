@@ -3,7 +3,6 @@ import {
   DYNASTY_SEASON_CORE_VERSION,
   type DynastySaveData,
   type DynastyGameTeamStats,
-  type DynastyProgressionApplication,
   type DynastyTeamRecord,
   type DynastyTeamSeasonStats,
 } from './DynastyTypes';
@@ -63,6 +62,9 @@ export function validateDynastySaveData(save: DynastySaveData): DynastyValidatio
   if (!Array.isArray(season.progressionApplications)) {
     issues.push(error('Dynasty progression applications must be an array'));
   }
+  const progressionApplications = Array.isArray(season.progressionApplications)
+    ? season.progressionApplications
+    : [];
   const standingsTeamIds = new Set<string>();
   for (const record of season.standings) {
     if (!teamIds.has(record.teamId)) {
@@ -184,7 +186,7 @@ export function validateDynastySaveData(save: DynastySaveData): DynastyValidatio
   }
   validateAggregateRecords(issues, season.standings, expectedRecords);
   validateAggregateStats(issues, season.teamStats ?? [], expectedStats);
-  validateProgressionApplications(issues, season.progressionApplications ?? [], teamIds, season.weeks.length);
+  validateProgressionApplications(issues, progressionApplications, teamIds, season.weeks.length);
 
   return issues;
 }
@@ -359,66 +361,92 @@ function validateAggregateStats(
 
 function validateProgressionApplications(
   issues: DynastyValidationIssue[],
-  applications: readonly DynastyProgressionApplication[],
+  applications: readonly unknown[],
   teamIds: ReadonlySet<string>,
   weekCount: number,
 ): void {
   const appliedKeys = new Set<string>();
   for (const application of applications) {
-    const key = `${application.teamId}:${application.weekIndex}:${application.playerId}`;
-    if (appliedKeys.has(key)) {
-      issues.push(error(`Dynasty progression application duplicates ${key}`));
+    if (!isRecord(application)) {
+      issues.push(error('Dynasty progression application row is malformed'));
+      continue;
     }
-    appliedKeys.add(key);
-    if (!teamIds.has(application.teamId)) {
-      issues.push(error(`Dynasty progression application includes unknown team ${application.teamId}`));
+    const teamId = typeof application.teamId === 'string' ? application.teamId : '';
+    const playerId = typeof application.playerId === 'string' ? application.playerId : '';
+    const weekIndex = application.weekIndex;
+    if (teamId && playerId && Number.isInteger(weekIndex)) {
+      const key = `${teamId}:${weekIndex}:${playerId}`;
+      if (appliedKeys.has(key)) {
+        issues.push(error(`Dynasty progression application duplicates ${key}`));
+      }
+      appliedKeys.add(key);
+    }
+    if (!teamIds.has(teamId)) {
+      issues.push(error(`Dynasty progression application includes unknown team ${String(application.teamId)}`));
     }
     if (
-      !Number.isInteger(application.weekIndex) ||
-      application.weekIndex < 0 ||
-      application.weekIndex >= weekCount
+      typeof weekIndex !== 'number' ||
+      !Number.isInteger(weekIndex) ||
+      weekIndex < 0 ||
+      weekIndex >= weekCount
     ) {
-      issues.push(error(`Dynasty progression application ${application.playerId} has invalid week ${application.weekIndex}`));
+      issues.push(error(`Dynasty progression application ${String(application.playerId)} has invalid week ${String(weekIndex)}`));
     }
-    if (!application.playerId) {
+    if (!playerId) {
       issues.push(error('Dynasty progression application is missing a playerId'));
     }
-    if (!application.appliedAt) {
-      issues.push(error(`Dynasty progression application ${application.playerId} is missing appliedAt`));
+    if (typeof application.appliedAt !== 'string' || application.appliedAt.length === 0) {
+      issues.push(error(`Dynasty progression application ${String(application.playerId)} is missing appliedAt`));
     }
     if (
       !isBoundedInteger(application.performancePoints, 0, 100) ||
       !isBoundedInteger(application.currentOverall, 0, 99) ||
       !isBoundedInteger(application.projectedOverall, 0, 99)
     ) {
-      issues.push(error(`Dynasty progression application ${application.playerId} contains invalid points or overall values`));
+      issues.push(error(`Dynasty progression application ${String(application.playerId)} contains invalid points or overall values`));
     }
-    if (application.projectedOverall < application.currentOverall) {
-      issues.push(error(`Dynasty progression application ${application.playerId} regresses projected overall`));
+    if (
+      typeof application.projectedOverall === 'number' &&
+      typeof application.currentOverall === 'number' &&
+      application.projectedOverall < application.currentOverall
+    ) {
+      issues.push(error(`Dynasty progression application ${String(application.playerId)} regresses projected overall`));
     }
-    if (!Array.isArray(application.ratingDeltas) || application.ratingDeltas.length > 3) {
-      issues.push(error(`Dynasty progression application ${application.playerId} has invalid rating deltas`));
+    if (
+      !Array.isArray(application.ratingDeltas) ||
+      application.ratingDeltas.length < 1 ||
+      application.ratingDeltas.length > 3
+    ) {
+      issues.push(error(`Dynasty progression application ${String(application.playerId)} has invalid rating deltas`));
       continue;
     }
     const attributes = new Set<string>();
     for (const delta of application.ratingDeltas) {
+      if (!isRecord(delta)) {
+        issues.push(error(`Dynasty progression application ${String(application.playerId)} has malformed rating delta`));
+        continue;
+      }
       if (!isPlayerAttributeKey(delta.attribute)) {
-        issues.push(error(`Dynasty progression application ${application.playerId} has unknown attribute ${String(delta.attribute)}`));
+        issues.push(error(`Dynasty progression application ${String(application.playerId)} has unknown attribute ${String(delta.attribute)}`));
+      } else if (attributes.has(delta.attribute)) {
+        issues.push(error(`Dynasty progression application ${String(application.playerId)} duplicates attribute ${delta.attribute}`));
+      } else {
+        attributes.add(delta.attribute);
       }
-      if (attributes.has(delta.attribute)) {
-        issues.push(error(`Dynasty progression application ${application.playerId} duplicates attribute ${delta.attribute}`));
-      }
-      attributes.add(delta.attribute);
       if (
         !isBoundedInteger(delta.currentValue, 0, 99) ||
         !isBoundedInteger(delta.projectedValue, 0, 99) ||
         !isBoundedInteger(delta.delta, 1, 3) ||
         delta.projectedValue - delta.currentValue !== delta.delta
       ) {
-        issues.push(error(`Dynasty progression application ${application.playerId} has invalid ${String(delta.attribute)} delta`));
+        issues.push(error(`Dynasty progression application ${String(application.playerId)} has invalid ${String(delta.attribute)} delta`));
       }
     }
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 function isBoundedInteger(value: unknown, min: number, max: number): value is number {

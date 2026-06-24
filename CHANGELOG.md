@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.30] - 2026-06-24
+
+### Fixed
+
+- Hardened Dynasty progression save validation to reject malformed, negative, non-integer, oversized, empty-delta, duplicate-row, duplicate-attribute, and invalid-delta application history.
+- Kept corrupt progression histories on the normal validation path instead of allowing malformed non-array or non-object payloads to throw during validation.
+- Marked the first Phase 3 patch hardening update complete in the Dynasty decision map.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyProgressionPreview.test.ts tests/dynastySaveRepository.test.ts tests/dynastyWeekAdvance.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.29] - 2026-06-24
 
 ### Added

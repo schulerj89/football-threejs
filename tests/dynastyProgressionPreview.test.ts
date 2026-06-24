@@ -124,6 +124,69 @@ describe('dynasty progression preview', () => {
     expect(duplicate.save.currentSeason.progressionApplications)
       .toHaveLength(first.save.currentSeason.progressionApplications.length);
   });
+
+  it('rejects malformed, oversized, and duplicate progression applications during validation', () => {
+    const approved = approveCurrentDynastyWeekProgression({
+      appliedAt: '2026-06-24T13:00:00.000Z',
+      save: createCompletedCurrentWeekSave('dynasty-progression-validation'),
+    });
+    const application = approved.applications[0]!;
+    const delta = application.ratingDeltas[0]!;
+    const duplicateKey = `${application.teamId}:${application.weekIndex}:${application.playerId}`;
+    const cases: readonly [string, unknown, string][] = [
+      [
+        'non-array history',
+        'bad-history',
+        'Dynasty progression applications must be an array',
+      ],
+      [
+        'malformed row',
+        [null],
+        'Dynasty progression application row is malformed',
+      ],
+      [
+        'duplicate row',
+        [application, application],
+        `Dynasty progression application duplicates ${duplicateKey}`,
+      ],
+      [
+        'negative points',
+        [{ ...application, performancePoints: -1 }],
+        `Dynasty progression application ${application.playerId} contains invalid points or overall values`,
+      ],
+      [
+        'non-integer overall',
+        [{ ...application, currentOverall: application.currentOverall + 0.5 }],
+        `Dynasty progression application ${application.playerId} contains invalid points or overall values`,
+      ],
+      [
+        'empty deltas',
+        [{ ...application, ratingDeltas: [] }],
+        `Dynasty progression application ${application.playerId} has invalid rating deltas`,
+      ],
+      [
+        'oversized deltas',
+        [{ ...application, ratingDeltas: [delta, delta, delta, delta] }],
+        `Dynasty progression application ${application.playerId} has invalid rating deltas`,
+      ],
+      [
+        'duplicate attributes',
+        [{ ...application, ratingDeltas: [delta, { ...delta }] }],
+        `Dynasty progression application ${application.playerId} duplicates attribute ${delta.attribute}`,
+      ],
+      [
+        'invalid delta math',
+        [{ ...application, ratingDeltas: [{ ...delta, projectedValue: delta.projectedValue + 1 }] }],
+        `Dynasty progression application ${application.playerId} has invalid ${delta.attribute} delta`,
+      ],
+    ];
+
+    expect(validateDynastySaveData(approved.save)).toEqual([]);
+    for (const [label, progressionApplications, expectedMessage] of cases) {
+      expect(validateDynastySaveData(withProgressionApplications(approved.save, progressionApplications))
+        .map((issue) => issue.message), label).toContain(expectedMessage);
+    }
+  });
 });
 
 function createSave(seed: string) {
@@ -140,4 +203,17 @@ function createCompletedCurrentWeekSave(seed: string) {
   return simulateCurrentDynastyUserGame(simulateCurrentDynastyWeekNonUserGames(
     createSave(seed),
   ).save).save;
+}
+
+function withProgressionApplications(
+  save: ReturnType<typeof createSave>,
+  progressionApplications: unknown,
+): ReturnType<typeof createSave> {
+  return {
+    ...save,
+    currentSeason: {
+      ...save.currentSeason,
+      progressionApplications,
+    },
+  } as ReturnType<typeof createSave>;
 }

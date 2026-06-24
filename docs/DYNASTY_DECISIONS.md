@@ -159,7 +159,7 @@ Completion notes:
 
 ### Phase 3: Player Progression
 
-Status: In progress. Minor updates 1-4 shipped in `1.22.26`, `1.22.27`, `1.22.28`, and `1.22.29`.
+Status: In progress. Minor updates 1-4 shipped in `1.22.26`, `1.22.27`, `1.22.28`, and `1.22.29`; patch hardening update 1 shipped in `1.22.30`.
 
 Goal: Make roster identity matter over time.
 
@@ -185,7 +185,7 @@ Minor update plan:
 
 Patch hardening plan:
 
-1. Progression bounds hardening: reject negative, non-integer, oversized, or duplicate progression rows during save validation.
+1. Progression bounds hardening: reject negative, non-integer, oversized, or duplicate progression rows during save validation. Shipped in `1.22.30`.
 2. Gameplay isolation hardening: prove progression previews and saved deltas cannot alter live gameplay ratings until explicitly applied through the approved path.
 
 ### Phase 4: Recruiting-Lite
