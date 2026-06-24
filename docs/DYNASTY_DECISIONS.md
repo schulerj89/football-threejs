@@ -234,7 +234,7 @@ Completion notes:
 
 ### Phase 5: Program Management
 
-Status: In progress. Minor updates 1-4 shipped in `1.22.38`, `1.22.39`, `1.22.40`, and `1.22.41`; patch hardening update 1 shipped in `1.22.42`.
+Status: Complete in `1.22.43`.
 
 Goal: Add strategic program identity without overwhelming the player.
 
@@ -261,7 +261,13 @@ Minor update plan:
 Patch hardening plan:
 
 1. Program management validation hardening: reject malformed goals, budget totals, hidden modifiers, and out-of-range bonus values. Shipped in `1.22.42`.
-2. Gameplay isolation hardening: prove program goals, budgets, and staff modifiers cannot alter current-play ratings, movement, or simulation results before approved apply paths exist.
+2. Gameplay isolation hardening: prove program goals, budgets, and staff modifiers cannot alter current-play ratings, movement, or simulation results before approved apply paths exist. Shipped in `1.22.43`.
+
+Completion notes:
+
+- Dynasty Program Management now exposes visible coach goals, ranked program strengths, 100-point budget allocations, and small staff modifier previews.
+- Program Management validation rejects malformed goals, duplicate categories, invalid budget totals, hidden current-play modifier labels, and out-of-range staff bonuses.
+- Program Management previews are future-phase-only and gameplay isolation coverage proves they do not alter roster ratings, movement profiles, active lineup bindings, or deterministic simulation results.
 
 ### Phase 6: Offseason and Multi-Year Saves
 

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.43] - 2026-06-24
+
+### Fixed
+
+- Added Program Management gameplay isolation coverage proving goals, strengths, budgets, and staff previews do not alter roster ratings, active lineup bindings, movement profiles, or deterministic simulation results.
+- Marked Dynasty Phase 5 Program Management complete in the decision map with completion notes for visibility, validation, and isolation.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyProgramManagement.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.42] - 2026-06-24
 
 ### Fixed

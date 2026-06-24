@@ -9,6 +9,10 @@ import {
   simulateCurrentDynastyWeekNonUserGames,
 } from '../src/dynasty/DynastyWeekAdvance';
 import { generateLeagueData } from '../src/league/LeagueGenerator';
+import { createGameplayModel, snapshotGameplayModel } from '../src/playState';
+import { createGameplayRosterBinding } from '../src/roster/GameplayRosterBinding';
+import { getTeamRosterOrDefault } from '../src/roster/RosterRegistry';
+import { DEFAULT_TEAM_PROFILE_SETTINGS } from '../src/teams/TeamProfileStore';
 import { DEFAULT_USER_TEAM_ID } from '../src/teams/TeamRegistry';
 
 describe('dynasty program management', () => {
@@ -202,6 +206,41 @@ describe('dynasty program management', () => {
       expect(validateDynastyProgramManagementPlan(invalidPlan).map((issue) => issue.message), label)
         .toContain(expectedMessage);
     }
+  });
+
+  it('keeps goals, budgets, strengths, and staff previews isolated from gameplay ratings and simulation', () => {
+    const save = createSave('dynasty-program-management-gameplay-isolation');
+    const baselineRoster = getTeamRosterOrDefault(DEFAULT_USER_TEAM_ID);
+    const baselineBinding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
+    const baselineGameplay = snapshotGameplayModel(createGameplayModel({
+      playbookId: '11v11',
+      rosterBinding: baselineBinding,
+    }));
+    const baselineSimulation = simulateCurrentDynastyUserGame(
+      simulateCurrentDynastyWeekNonUserGames(save).save,
+    );
+    const plan = createDynastyProgramManagementPlan({ save });
+    const afterBinding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
+    const afterGameplay = snapshotGameplayModel(createGameplayModel({
+      playbookId: '11v11',
+      rosterBinding: afterBinding,
+    }));
+    const afterRoster = getTeamRosterOrDefault(DEFAULT_USER_TEAM_ID);
+    const afterSimulation = simulateCurrentDynastyUserGame(
+      simulateCurrentDynastyWeekNonUserGames(save).save,
+    );
+
+    expect(validateDynastyProgramManagementPlan(plan)).toEqual([]);
+    expect(afterBinding.activeLineup.bindings).toEqual(baselineBinding.activeLineup.bindings);
+    expect(afterGameplay.players.map((player) => [player.id, player.movement])).toEqual(
+      baselineGameplay.players.map((player) => [player.id, player.movement]),
+    );
+    expect(afterRoster.players.map((player) => [player.id, player.ratings])).toEqual(
+      baselineRoster.players.map((player) => [player.id, player.ratings]),
+    );
+    expect(afterSimulation).toEqual(baselineSimulation);
+    expect(plan.budgetSummaryLabel).toContain('future-phase');
+    expect(plan.staffSummaryLabel).toContain('no current-play effects');
   });
 });
 
