@@ -43,7 +43,7 @@ canvas[hidden] {
   z-index: 13;
   display: grid;
   grid-template-columns: auto auto auto auto;
-  gap: 8px;
+  gap: 4px;
   align-items: center;
   max-width: calc(100vw - 24px);
   transform: translateX(-50%);
@@ -2673,10 +2673,10 @@ body[data-game-mode="exhibition"] .score-counter {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   place-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   aspect-ratio: 1;
-  padding: 16px 12px;
+  padding: 8px 6px 10px;
   border: 1px solid color-mix(in srgb, var(--team-choice-primary, #2f66d8) 48%, rgba(255, 255, 255, 0.24));
   border-radius: 8px;
   background:
@@ -2696,8 +2696,8 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-team-choice-logo {
   display: grid;
   place-items: center;
-  width: min(124px, 72%);
-  height: min(124px, 72%);
+  width: min(150px, 90%);
+  height: min(150px, 100%);
 }
 
 .football-hub-dynasty-team-choice-logo img {

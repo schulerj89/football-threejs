@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.53] - 2026-06-24
+
+### Fixed
+
+- Enlarged Dynasty wizard logo tiles further by reducing team-choice padding and letting each logo occupy more of its square.
+- Kept the larger logo treatment centered while preserving team names under each square and hiding abbreviation fallback text.
+
+### Tests
+
+- Verified `npm run test:unit`, `npm run build`, `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`, and a Playwright screenshot proof at `test-results/dynasty-team-wizard-reopened.png`.
+
 ## [1.22.52] - 2026-06-24
 
 ### Fixed
