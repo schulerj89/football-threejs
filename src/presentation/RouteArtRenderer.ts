@@ -75,6 +75,7 @@ interface RouteVisual {
 }
 
 interface CoverageZoneVisual {
+  assignmentLine: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
   landmark: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
   outline: THREE.LineLoop<THREE.BufferGeometry, THREE.LineBasicMaterial>;
   shell: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
@@ -182,6 +183,18 @@ export class RouteArtRenderer {
     depthTest: true,
     transparent: true,
     opacity: ROUTE_ART_CONFIG.coverageZoneOutlineOpacity,
+  });
+  private readonly coverageFlatAssignmentMaterial = new THREE.LineBasicMaterial({
+    color: 0x54d6ff,
+    depthTest: true,
+    transparent: true,
+    opacity: 0.92,
+  });
+  private readonly coverageDeepAssignmentMaterial = new THREE.LineBasicMaterial({
+    color: 0xf2d94b,
+    depthTest: true,
+    transparent: true,
+    opacity: 0.92,
   });
   private readonly coverageFlatLandmarkMaterial = new THREE.MeshBasicMaterial({
     color: 0x54d6ff,
@@ -317,6 +330,8 @@ export class RouteArtRenderer {
       this.coverageFlatOutlineMaterial,
       this.coverageDeepMaterial,
       this.coverageDeepOutlineMaterial,
+      this.coverageFlatAssignmentMaterial,
+      this.coverageDeepAssignmentMaterial,
       this.coverageFlatLandmarkMaterial,
       this.coverageDeepLandmarkMaterial,
     ]) {
@@ -342,7 +357,7 @@ export class RouteArtRenderer {
     for (const zone of coverageZones) {
       const visual = this.createCoverageZoneVisual(zone);
       this.coverageZoneVisuals.push(visual);
-      this.group.add(visual.shell, visual.outline, visual.landmark);
+      this.group.add(visual.shell, visual.outline, visual.assignmentLine, visual.landmark);
     }
   }
 
@@ -356,6 +371,9 @@ export class RouteArtRenderer {
     const landmarkMaterial = isDeepCoverageZone(zone)
       ? this.coverageDeepLandmarkMaterial
       : this.coverageFlatLandmarkMaterial;
+    const assignmentMaterial = isDeepCoverageZone(zone)
+      ? this.coverageDeepAssignmentMaterial
+      : this.coverageFlatAssignmentMaterial;
     const shell = new THREE.Mesh(createCoverageZoneGeometry(zone), material);
     shell.name = `route-art-coverage-zone-${zone.defenderId}`;
     shell.renderOrder = 4;
@@ -368,6 +386,12 @@ export class RouteArtRenderer {
     outline.userData.coverageZoneOutline = true;
     outline.userData.coverageZoneKind = zone.kind;
 
+    const assignmentLine = new THREE.Line(createCoverageAssignmentLineGeometry(zone), assignmentMaterial);
+    assignmentLine.name = `route-art-coverage-assignment-${zone.defenderId}`;
+    assignmentLine.renderOrder = 7;
+    assignmentLine.userData.coverageZoneAssignment = true;
+    assignmentLine.userData.coverageZoneKind = zone.kind;
+
     const landmark = new THREE.Mesh(this.coverageLandmarkGeometry, landmarkMaterial);
     landmark.name = `route-art-coverage-landmark-${zone.defenderId}`;
     landmark.position.set(zone.landmark.x, ROUTE_ART_CONFIG.heightY + 0.035, zone.landmark.z);
@@ -376,6 +400,7 @@ export class RouteArtRenderer {
     landmark.userData.coverageZoneLandmark = true;
 
     return {
+      assignmentLine,
       landmark,
       outline,
       shell,
@@ -509,6 +534,7 @@ export class RouteArtRenderer {
     for (const visual of this.coverageZoneVisuals) {
       visual.shell.visible = visible;
       visual.outline.visible = visible;
+      visual.assignmentLine.visible = visible;
       visual.landmark.visible = visible;
     }
   }
@@ -628,6 +654,7 @@ export class RouteArtRenderer {
     }
 
     for (const visual of this.coverageZoneVisuals) {
+      visual.assignmentLine.geometry.dispose();
       visual.shell.geometry.dispose();
       visual.outline.geometry.dispose();
     }
@@ -747,6 +774,21 @@ function createCoverageZoneOutlineGeometry(zone: CoverageZone): THREE.BufferGeom
   return new THREE.BufferGeometry().setFromPoints(
     createCoverageZoneOvalPoints(zone, ROUTE_ART_CONFIG.heightY + 0.01),
   );
+}
+
+function createCoverageAssignmentLineGeometry(zone: CoverageZone): THREE.BufferGeometry {
+  return new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(
+      zone.anchor.position.x,
+      ROUTE_ART_CONFIG.heightY + 0.03,
+      zone.anchor.position.z,
+    ),
+    new THREE.Vector3(
+      zone.landmark.x,
+      ROUTE_ART_CONFIG.heightY + 0.03,
+      zone.landmark.z,
+    ),
+  ]);
 }
 
 function createCoverageZoneOvalPoints(zone: CoverageZone, y: number): THREE.Vector3[] {

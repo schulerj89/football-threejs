@@ -144,9 +144,6 @@ const ELEVEN_ON_ELEVEN_PASS_PROTECTION_ASSIGNMENTS = {
 const ELEVEN_ON_ELEVEN_PASS_COVERAGE_ASSIGNMENTS = {
   'defense-corner-left': 'offense-wr-left',
   'defense-corner-right': 'offense-wr-right',
-  'defense-linebacker-left': 'offense-rb',
-  'defense-linebacker': 'offense-tight-end',
-  'defense-linebacker-right': 'offense-slot',
 } as const;
 const ELEVEN_ON_ELEVEN_RECEIVER_DISPLAY_NAMES = {
   'offense-rb': 'Running Back',
@@ -1068,6 +1065,10 @@ export function getCoverageAssignmentReceiverId(
     return assignment;
   }
 
+  if (play.pass?.coverageShell !== 'man') {
+    return null;
+  }
+
   return receiverIds[0] ?? null;
 }
 
@@ -1266,7 +1267,7 @@ function createElevenOnElevenFieldRunFormation(): FormationSlot[] {
     defenseSlot('defense-linebacker-inside', 'defender', point(snapSide('field', ELEVEN.defensiveLineInteriorGap), defenseDepth(ELEVEN.defensiveLineDepth))),
     defenseSlot('defense-line-right', 'defender', point(snapSide('field', ELEVEN.defensiveLineEdgeGap), defenseDepth(ELEVEN.defensiveLineDepth))),
     defenseSlot('defense-linebacker-left', 'defender', point(snapSide('boundary', ELEVEN.outsideLinebackerOffset), defenseDepth(ELEVEN.linebackerDepth))),
-    defenseSlot('defense-linebacker', 'defender', point(snapSide('boundary', ELEVEN.guardSpacing), defenseDepth(ELEVEN.linebackerDepth))),
+    defenseSlot('defense-linebacker', 'defender', point(snap(), defenseDepth(ELEVEN.linebackerDepth))),
     defenseSlot('defense-linebacker-right', 'defender', point(snapSide('field', ELEVEN.outsideLinebackerOffset), defenseDepth(ELEVEN.linebackerDepth))),
     defenseSlot('defense-corner-left', 'defender', point(alignedTo('offense-wr-left'), defenseDepth(ELEVEN.cornerCushion))),
     defenseSlot('defense-corner-right', 'defender', point(alignedTo('offense-wr-right'), defenseDepth(ELEVEN.cornerCushion))),
@@ -1292,9 +1293,9 @@ function createElevenOnElevenFieldPassFormation(): FormationSlot[] {
     defenseSlot('defense-line-middle', 'defender', point(snapSide('boundary', ELEVEN.defensiveLineInteriorGap), defenseDepth(ELEVEN.defensiveLineDepth))),
     defenseSlot('defense-linebacker-inside', 'defender', point(snapSide('field', ELEVEN.defensiveLineInteriorGap), defenseDepth(ELEVEN.defensiveLineDepth))),
     defenseSlot('defense-line-right', 'defender', point(snapSide('field', ELEVEN.defensiveLineEdgeGap), defenseDepth(ELEVEN.defensiveLineDepth))),
-    defenseSlot('defense-linebacker-left', 'coverageDefender', point(alignedTo('offense-rb'), defenseDepth(ELEVEN.linebackerDepth))),
-    defenseSlot('defense-linebacker', 'coverageDefender', point(alignedTo('offense-tight-end'), defenseDepth(ELEVEN.linebackerDepth))),
-    defenseSlot('defense-linebacker-right', 'coverageDefender', point(alignedTo('offense-slot'), defenseDepth(ELEVEN.linebackerDepth))),
+    defenseSlot('defense-linebacker-left', 'coverageDefender', point(snapSide('boundary', ELEVEN.outsideLinebackerOffset), defenseDepth(ELEVEN.linebackerDepth))),
+    defenseSlot('defense-linebacker', 'coverageDefender', point(snap(), defenseDepth(ELEVEN.linebackerDepth))),
+    defenseSlot('defense-linebacker-right', 'coverageDefender', point(snapSide('field', ELEVEN.outsideLinebackerOffset), defenseDepth(ELEVEN.linebackerDepth))),
     defenseSlot('defense-corner-left', 'coverageDefender', point(alignedTo('offense-wr-left'), defenseDepth(ELEVEN.cornerCushion))),
     defenseSlot('defense-corner-right', 'coverageDefender', point(alignedTo('offense-wr-right'), defenseDepth(ELEVEN.cornerCushion))),
     defenseSlot('defense-safety', 'coverageDefender', point(snapSide('boundary', ELEVEN.deepSafetyOffset), defenseDepth(ELEVEN.safetyDepth))),
@@ -1341,7 +1342,7 @@ function createElevenOnElevenPassFormation(
     if (slot.id === 'defense-linebacker-left') {
       return {
         ...slot,
-        ...point(alignedTo('offense-rb'), defenseDepth(ELEVEN.linebackerDepth)),
+        ...point(snapSide('boundary', ELEVEN.outsideLinebackerOffset), defenseDepth(ELEVEN.linebackerDepth)),
         role: 'coverageDefender',
       };
     }
@@ -1349,7 +1350,7 @@ function createElevenOnElevenPassFormation(
     if (slot.id === 'defense-linebacker') {
       return {
         ...slot,
-        ...point(alignedTo('offense-tight-end'), defenseDepth(ELEVEN.linebackerDepth)),
+        ...point(snap(), defenseDepth(ELEVEN.linebackerDepth)),
         role: 'coverageDefender',
       };
     }
@@ -1357,7 +1358,7 @@ function createElevenOnElevenPassFormation(
     if (slot.id === 'defense-linebacker-right') {
       return {
         ...slot,
-        ...point(alignedTo('offense-slot'), defenseDepth(ELEVEN.linebackerDepth)),
+        ...point(snapSide('field', ELEVEN.outsideLinebackerOffset), defenseDepth(ELEVEN.linebackerDepth)),
         role: 'coverageDefender',
       };
     }

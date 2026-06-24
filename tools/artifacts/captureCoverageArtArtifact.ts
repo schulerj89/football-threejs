@@ -20,6 +20,7 @@ interface CoverageZoneSnapshot {
   };
   defenderId: string;
   kind: string;
+  label: string;
   landmark: FootballSpot;
   points: FootballSpot[];
   visible: boolean;
@@ -35,7 +36,7 @@ interface RouteArtSnapshot {
 }
 
 const REPO_ROOT = resolve(fileURLToPath(new URL('../../', import.meta.url)));
-const CAPTURE_VERSION = '1.22.67';
+const CAPTURE_VERSION = '1.22.69';
 const outputDir = join(REPO_ROOT, 'artifacts', `cover2-zone-art-${CAPTURE_VERSION}`);
 const screenshotFileName = 'cover2-zone-art-spread-quick-11.png';
 
@@ -85,7 +86,19 @@ async function main(): Promise<void> {
           'Captured with coverageArt=1 from the real 11v11 play-card selection path.',
           'Validation requires FS and SS to be visible deepHalf zones at matching deep depth.',
           'Validation requires the safety zone anchors to remain player-sourced and split left/right of the snap.',
+          'Validation requires the 4-3 linebackers to resolve as left, middle, and right hook/curl zones.',
+          'Coverage art renders a same-color assignment line from each defender anchor to its zone landmark dot.',
         ],
+        linebackerZones: snapshot.coverageZones
+          .filter((zone) => zone.defenderId.startsWith('defense-linebacker'))
+          .map((zone) => ({
+            defenderId: zone.defenderId,
+            kind: zone.kind,
+            landmark: zone.landmark,
+            label: zone.label,
+            playerAnchor: zone.anchor,
+            visible: zone.visible,
+          })),
         safetyZones: snapshot.coverageZones
           .filter((zone) => zone.defenderId === 'defense-safety' || zone.defenderId === 'defense-safety-strong')
           .map((zone) => ({
@@ -121,19 +134,34 @@ async function waitForCoverageArt(page: Page): Promise<RouteArtSnapshot> {
     }
     const freeSafety = snapshot.coverageZones.find((zone) => zone.defenderId === 'defense-safety');
     const strongSafety = snapshot.coverageZones.find((zone) => zone.defenderId === 'defense-safety-strong');
+    const leftLinebacker = snapshot.coverageZones.find((zone) => zone.defenderId === 'defense-linebacker-left');
+    const middleLinebacker = snapshot.coverageZones.find((zone) => zone.defenderId === 'defense-linebacker');
+    const rightLinebacker = snapshot.coverageZones.find((zone) => zone.defenderId === 'defense-linebacker-right');
 
     return Boolean(
       freeSafety &&
         strongSafety &&
+        leftLinebacker &&
+        middleLinebacker &&
+        rightLinebacker &&
         freeSafety.visible &&
         strongSafety.visible &&
+        leftLinebacker.visible &&
+        middleLinebacker.visible &&
+        rightLinebacker.visible &&
         freeSafety.kind === 'deepHalf' &&
         strongSafety.kind === 'deepHalf' &&
+        leftLinebacker.kind === 'hookCurl' &&
+        middleLinebacker.kind === 'hookCurl' &&
+        rightLinebacker.kind === 'hookCurl' &&
         Math.abs(freeSafety.landmark.z - strongSafety.landmark.z) < 0.05 &&
         Math.abs(freeSafety.anchor.position.z - strongSafety.anchor.position.z) < 0.05 &&
         freeSafety.anchor.position.x < strongSafety.anchor.position.x &&
         freeSafety.anchor.source === 'player' &&
-        strongSafety.anchor.source === 'player',
+        strongSafety.anchor.source === 'player' &&
+        leftLinebacker.landmark.x < middleLinebacker.landmark.x &&
+        middleLinebacker.landmark.x < rightLinebacker.landmark.x &&
+        Math.abs(middleLinebacker.anchor.position.x) < 0.05,
     );
   }, undefined, { timeout: 20_000 });
 

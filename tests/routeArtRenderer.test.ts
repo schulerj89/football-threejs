@@ -202,6 +202,18 @@ describe('route art renderer', () => {
         defenseRenderer.group.getObjectByName('route-art-coverage-zone-outline-defense-corner-left'),
       ),
     ).toBeGreaterThan(12);
+    for (const zone of preSnapCoverage) {
+      const assignmentLine = defenseRenderer.group.getObjectByName(
+        `route-art-coverage-assignment-${zone.defenderId}`,
+      );
+
+      expect(assignmentLine).toBeDefined();
+      expect(getGeometryPositionCount(assignmentLine)).toBe(2);
+      expectFootballPointsClose(getLineFootballPoints(assignmentLine), [
+        zone.anchor.position,
+        zone.landmark,
+      ]);
+    }
 
     startPlay(gameplay);
     defenseRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);

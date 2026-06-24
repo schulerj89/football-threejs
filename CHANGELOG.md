@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.69] - 2026-06-24
+
+### Changed
+
+- Centered 11v11 Cover 2 linebackers on 4-3 gap-based landmarks instead of aligning them to offensive receivers.
+- Split 11v11 underneath Cover 2 responsibilities into distinct left, middle, and right hook/curl zones owned by the linebacker player objects.
+- Removed old man-style linebacker receiver assignments from 11v11 zone calls while keeping corner receiver assignments intact.
+
+### Added
+
+- Added same-color defensive assignment lines from each defender anchor to its coverage-zone landmark dot.
+- Added `artifacts/cover2-zone-art-1.22.69/` with a validated screenshot and manifest for the updated defensive zone art.
+
+### Tests
+
+- Verified `npx vitest run tests/routeArtRenderer.test.ts tests/teamSimulation.test.ts tests/playbook.test.ts tests/elevenOnElevenAudit.test.ts`, `npm run build`, and `npm run artifacts:coverage-art`.
+
 ## [1.22.68] - 2026-06-24
 
 ### Changed

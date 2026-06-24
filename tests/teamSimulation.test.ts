@@ -354,6 +354,24 @@ describe('five-on-five rushing drill simulation', () => {
     expect(strongSafety.landmark.x).toBeGreaterThan(freeSafety.landmark.x);
   });
 
+  it('splits 11v11 Cover 2 linebackers into left, middle, and right hook zones', () => {
+    const play = getPlay('spread-quick-11');
+    const zones = resolveCoverageZones(play, resolveSnapPlacement(INITIAL_BALL_SPOT));
+    const leftLinebacker = getZone(zones, 'defense-linebacker-left');
+    const middleLinebacker = getZone(zones, 'defense-linebacker');
+    const rightLinebacker = getZone(zones, 'defense-linebacker-right');
+
+    expect(leftLinebacker.kind).toBe('hookCurl');
+    expect(middleLinebacker.kind).toBe('hookCurl');
+    expect(rightLinebacker.kind).toBe('hookCurl');
+    expect(leftLinebacker.label).toBe('C2 left hook');
+    expect(middleLinebacker.label).toBe('C2 middle hook');
+    expect(rightLinebacker.label).toBe('C2 right hook');
+    expect(leftLinebacker.landmark.x).toBeLessThan(middleLinebacker.landmark.x);
+    expect(middleLinebacker.landmark.x).toBeLessThan(rightLinebacker.landmark.x);
+    expect(middleLinebacker.anchor.position.x).toBeCloseTo(INITIAL_BALL_SPOT.x);
+  });
+
   it('turns coverage defenders into carrier pursuit after a Twin Slants Flat completion', () => {
     const play = getPlay('twin-slants-flat');
     const players = createFormationPlayers(INITIAL_BALL_SPOT, play);

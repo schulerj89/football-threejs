@@ -502,9 +502,9 @@ describe('playbook', () => {
     expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-right')).toBe('defense-line-right');
     expect(getCoverageAssignmentReceiverId(play, 'defense-corner-left')).toBe('offense-wr-left');
     expect(getCoverageAssignmentReceiverId(play, 'defense-corner-right')).toBe('offense-wr-right');
-    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-left')).toBe('offense-rb');
-    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-tight-end');
-    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-right')).toBe('offense-slot');
+    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-left')).toBeNull();
+    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBeNull();
+    expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-right')).toBeNull();
     expect(getDeepHelpReceiverIds(play, 'defense-safety')).toEqual([
       'offense-wr-left',
       'offense-wr-right',
@@ -556,9 +556,9 @@ describe('playbook', () => {
       expect(getProtectionAssignmentDefenderId(play, 'offense-tackle-right')).toBe('defense-line-right');
       expect(getCoverageAssignmentReceiverId(play, 'defense-corner-left')).toBe('offense-wr-left');
       expect(getCoverageAssignmentReceiverId(play, 'defense-corner-right')).toBe('offense-wr-right');
-      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-left')).toBe('offense-rb');
-      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBe('offense-tight-end');
-      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-right')).toBe('offense-slot');
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-left')).toBeNull();
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker')).toBeNull();
+      expect(getCoverageAssignmentReceiverId(play, 'defense-linebacker-right')).toBeNull();
       expect(getDeepHelpReceiverIds(play, 'defense-safety')).toEqual(expectedReceiverIds);
       expect(getReceiverDisplayName(play, 'offense-rb')).toBe('Running Back');
     }

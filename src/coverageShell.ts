@@ -63,7 +63,6 @@ const RIGHT_ZONE_DEFENDER_IDS = new Set([
 
 const LEFT_HOOK_DEFENDER_IDS = new Set([
   'defense-linebacker-left',
-  'defense-linebacker',
   'defense-cover-rb',
 ]);
 
@@ -167,6 +166,10 @@ function resolveCoverageZoneForSlot(
     return createDeepHalfZone(slot.id, slot.position.x <= snapPlacement.spot.x ? 'left' : 'right', snapPlacement);
   }
 
+  if (hasStrongSafety && slot.id === 'defense-linebacker') {
+    return createMiddleHookZone(slot.id, snapPlacement);
+  }
+
   if (LEFT_HOOK_DEFENDER_IDS.has(slot.id)) {
     return createHookCurlZone(slot.id, slot.position.x <= snapPlacement.spot.x ? 'left' : 'right', snapPlacement);
   }
@@ -214,6 +217,19 @@ function createHookCurlZone(
   const label = direction < 0 ? 'C2 left hook' : 'C2 right hook';
 
   return createZone(defenderId, 'hookCurl', label, minX, maxX, minZ, maxZ);
+}
+
+function createMiddleHookZone(
+  defenderId: string,
+  snapPlacement: SnapPlacement,
+): CoverageZoneShape {
+  const halfWidth = COVERAGE_SHELL_CONFIG.hookHalfWidthYards - 2;
+  const minX = snapPlacement.spot.x - halfWidth;
+  const maxX = snapPlacement.spot.x + halfWidth;
+  const minZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.hookDepthStartYards);
+  const maxZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.hookDepthEndYards);
+
+  return createZone(defenderId, 'hookCurl', 'C2 middle hook', minX, maxX, minZ, maxZ);
 }
 
 function createDeepHalfZone(

@@ -1,0 +1,131 @@
+{
+  "baseUrl": "http://127.0.0.1:5174",
+  "capturedAt": "2026-06-24T23:00:10.913Z",
+  "captures": [
+    {
+      "fileName": "cover2-zone-art-spread-quick-11.png",
+      "label": "Spread Quick 11 Cover 2 defensive zone art",
+      "playId": "spread-quick-11",
+      "playbookId": "11v11"
+    }
+  ],
+  "notes": [
+    "Captured with coverageArt=1 from the real 11v11 play-card selection path.",
+    "Validation requires FS and SS to be visible deepHalf zones at matching deep depth.",
+    "Validation requires the safety zone anchors to remain player-sourced and split left/right of the snap.",
+    "Validation requires the 4-3 linebackers to resolve as left, middle, and right hook/curl zones.",
+    "Coverage art renders a same-color assignment line from each defender anchor to its zone landmark dot."
+  ],
+  "linebackerZones": [
+    {
+      "defenderId": "defense-linebacker-left",
+      "kind": "hookCurl",
+      "landmark": {
+        "x": -8,
+        "z": -13
+      },
+      "label": "C2 left hook",
+      "playerAnchor": {
+        "formationPosition": {
+          "x": -9.2,
+          "z": -14.6
+        },
+        "playerId": "defense-linebacker-left",
+        "position": {
+          "x": -9.2,
+          "z": -14.6
+        },
+        "source": "player"
+      },
+      "visible": true
+    },
+    {
+      "defenderId": "defense-linebacker",
+      "kind": "hookCurl",
+      "landmark": {
+        "x": 0,
+        "z": -13
+      },
+      "label": "C2 middle hook",
+      "playerAnchor": {
+        "formationPosition": {
+          "x": 0,
+          "z": -14.6
+        },
+        "playerId": "defense-linebacker",
+        "position": {
+          "x": 0,
+          "z": -14.6
+        },
+        "source": "player"
+      },
+      "visible": true
+    },
+    {
+      "defenderId": "defense-linebacker-right",
+      "kind": "hookCurl",
+      "landmark": {
+        "x": 8,
+        "z": -13
+      },
+      "label": "C2 right hook",
+      "playerAnchor": {
+        "formationPosition": {
+          "x": 9.2,
+          "z": -14.6
+        },
+        "playerId": "defense-linebacker-right",
+        "position": {
+          "x": 9.2,
+          "z": -14.6
+        },
+        "source": "player"
+      },
+      "visible": true
+    }
+  ],
+  "safetyZones": [
+    {
+      "defenderId": "defense-safety",
+      "kind": "deepHalf",
+      "landmark": {
+        "x": -13,
+        "z": -3
+      },
+      "playerAnchor": {
+        "formationPosition": {
+          "x": -11.5,
+          "z": -5
+        },
+        "playerId": "defense-safety",
+        "position": {
+          "x": -11.5,
+          "z": -5
+        },
+        "source": "player"
+      },
+      "visible": true
+    },
+    {
+      "defenderId": "defense-safety-strong",
+      "kind": "deepHalf",
+      "landmark": {
+        "x": 13,
+        "z": -3
+      },
+      "playerAnchor": {
+        "formationPosition": {
+          "x": 11.5,
+          "z": -5
+        },
+        "playerId": "defense-safety-strong",
+        "position": {
+          "x": 11.5,
+          "z": -5
+        },
+        "source": "player"
+      },
+      "visible": true
+    }
+  ]
+}
