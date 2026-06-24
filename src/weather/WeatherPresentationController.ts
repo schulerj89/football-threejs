@@ -41,10 +41,12 @@ export class WeatherPresentationController {
     return {
       ...snapshot,
       lightingIntensity: this.options.keyLight.intensity,
+      precipitationObjectCount: rendererSnapshot.precipitationObjectCount,
       skyEnabled: rendererSnapshot.skyEnabled,
       skyObjectCount: rendererSnapshot.skyObjectCount,
       sunDiscWorldPosition: rendererSnapshot.sunDiscWorldPosition,
       sunLightPosition: toSnapshot(this.options.keyLight.position),
+      sunVisible: rendererSnapshot.sunVisible,
       sunWorldDirection: rendererSnapshot.sunWorldDirection,
     };
   }
@@ -92,6 +94,8 @@ export function syncWeatherDebugOverlay(
     `SUN_EL ${snapshot.sunElevationRadians.toFixed(2)}`,
     `SUN_DIR ${formatVector(snapshot.sunWorldDirection)}`,
     `SUN_LIGHT ${formatVector(snapshot.sunLightPosition)}`,
+    `SUN_VISIBLE ${snapshot.sunVisible ? 'yes' : 'no'}`,
+    `RAIN ${snapshot.precipitation.toFixed(2)} objects ${snapshot.precipitationObjectCount}`,
     `WIND ${snapshot.windSpeedMph.toFixed(1)} mph @ ${snapshot.windDirectionRadians.toFixed(2)}`,
     `SKY ${snapshot.skyEnabled ? 'on' : 'off'}`,
     `LIGHT ${snapshot.lightingIntensity.toFixed(2)}`,

@@ -1,0 +1,34 @@
+{
+  "capturedAt": "2026-06-24T23:53:00.000Z",
+  "version": "1.22.73",
+  "source": "Local Playwright captures through title screen > Play Now > Play Game into pregame stadiumCenterOrbit.",
+  "notes": [
+    "Clear validates the sunny pregame sky keeps the visible sun disc and glow.",
+    "Overcast validates the grey sky renders without visible sun disc or glow.",
+    "Rain validates the darker sky renders without visible sun disc or glow and with precipitation streak geometry.",
+    "Pregame weather selection resolves to the same condition used by Grant Mercer weather commentary assets."
+  ],
+  "captures": [
+    {
+      "fileName": "pregame-weather-clear.png",
+      "condition": "clear",
+      "sunVisible": true,
+      "precipitationObjectCount": 0,
+      "skyObjectCount": 3
+    },
+    {
+      "fileName": "pregame-weather-overcast.png",
+      "condition": "overcast",
+      "sunVisible": false,
+      "precipitationObjectCount": 0,
+      "skyObjectCount": 1
+    },
+    {
+      "fileName": "pregame-weather-rain.png",
+      "condition": "rain",
+      "sunVisible": false,
+      "precipitationObjectCount": 1,
+      "skyObjectCount": 2
+    }
+  ]
+}

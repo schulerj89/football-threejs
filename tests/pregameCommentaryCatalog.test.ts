@@ -18,6 +18,7 @@ import {
   resolveWeatherLine,
   validatePregameCommentaryCatalog,
 } from '../src/audio/PregameCommentaryCatalog';
+import { isLocalPregameCommentaryAssetId } from '../src/audio/PregameLocalAudioAssets';
 import { createQuarterbackScoutingProfile } from '../src/roster/QuarterbackScoutingProfile';
 import { listTeamProfiles } from '../src/teams/TeamRegistry';
 import {
@@ -226,6 +227,30 @@ describe('pregame commentary catalog', () => {
     }
 
     expect(resolveWeatherLine({ condition: 'fog', matchSeed: 'weather' }).clip?.weatherCondition).toBe('clear');
+  });
+
+  it('selects local Grant Mercer overcast and rain weather intro audio', () => {
+    for (const condition of ['overcast', 'rain'] as const) {
+      const selection = resolveWeatherLine({ condition, matchSeed: `grant-${condition}` });
+
+      expect(selection.available).toBe(true);
+      expect(selection.clip).toMatchObject({
+        category: 'weather',
+        weatherCondition: condition,
+      });
+      expect(selection.assetId).toMatch(new RegExp(`^pregame_weather_${condition}_0[12]$`));
+      expect(isLocalPregameCommentaryAssetId(selection.assetId)).toBe(true);
+      expect(selection.caption).toMatch(condition === 'overcast' ? /overcast|cloud/i : /rain|slick/i);
+      const metadata = JSON.parse(readFileSync(
+        join(ORIGINAL_CWD, 'public/audio/announcer/pregame', `${selection.assetId}.mp3.json`),
+        'utf8',
+      ));
+      expect(metadata.metadata).toMatchObject({
+        announcerName: 'Grant Mercer',
+        pregameCategory: 'weather',
+        weatherCondition: condition,
+      });
+    }
   });
 
   it('selects deterministically and avoids immediate rematch repetition when alternatives exist', () => {

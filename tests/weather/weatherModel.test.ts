@@ -3,6 +3,7 @@ import {
   CLEAR_WEATHER_PROFILE,
   createClearWeatherSnapshot,
   createOvercastWeatherSnapshot,
+  createRainWeatherSnapshot,
 } from '../../src/weather/WeatherProfile';
 import {
   calculateSunWorldDirection,
@@ -38,16 +39,24 @@ describe('clear weather model', () => {
     expect(direction.z).toBeGreaterThan(0);
   });
 
-  it('resolves a deterministic overcast profile from weather selection', () => {
-    const snapshot = createWeatherModel('overcast').getSnapshot();
+  it('resolves deterministic weather profiles from weather selection', () => {
+    const overcastSnapshot = createWeatherModel('overcast').getSnapshot();
+    const rainSnapshot = createWeatherModel('rain').getSnapshot();
 
-    expect(snapshot).toEqual(createOvercastWeatherSnapshot());
-    expect(snapshot).toMatchObject({
+    expect(overcastSnapshot).toEqual(createOvercastWeatherSnapshot());
+    expect(overcastSnapshot).toMatchObject({
       cloudiness: 0.9,
       condition: 'overcast',
       precipitation: 0,
       windSpeedMph: 7,
     });
-    expect(createWeatherModel('rain').getSnapshot()).toEqual(createClearWeatherSnapshot());
+    expect(rainSnapshot).toEqual(createRainWeatherSnapshot());
+    expect(rainSnapshot).toMatchObject({
+      cloudiness: 1,
+      condition: 'rain',
+      precipitation: 0.72,
+      windSpeedMph: 11,
+    });
+    expect(createWeatherModel('fog').getSnapshot()).toEqual(createClearWeatherSnapshot());
   });
 });

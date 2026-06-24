@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { createGameplayModel, snapshotGameplayModel } from '../../src/playState';
-import { CLEAR_WEATHER_PROFILE, OVERCAST_WEATHER_PROFILE } from '../../src/weather/WeatherProfile';
+import {
+  CLEAR_WEATHER_PROFILE,
+  OVERCAST_WEATHER_PROFILE,
+  RAIN_WEATHER_PROFILE,
+} from '../../src/weather/WeatherProfile';
 import { WeatherModel, calculateSunWorldDirection } from '../../src/weather/WeatherModel';
 import { WeatherPresentationController } from '../../src/weather/WeatherPresentationController';
 
@@ -17,8 +21,10 @@ describe('clear weather presentation', () => {
     expect(controller.group.position.z).toBeCloseTo(camera.position.z);
     expect(controller.getSnapshot()).toMatchObject({
       condition: 'clear',
+      precipitationObjectCount: 0,
       skyEnabled: true,
       skyObjectCount: 3,
+      sunVisible: true,
     });
     controller.dispose();
   });
@@ -79,8 +85,12 @@ describe('clear weather presentation', () => {
       cloudiness: 0.9,
       condition: 'overcast',
       lightingIntensity: OVERCAST_WEATHER_PROFILE.lighting.keyLightIntensity,
-      skyObjectCount: 3,
+      precipitationObjectCount: 0,
+      skyObjectCount: 1,
+      sunVisible: false,
     });
+    expect(controller.group.getObjectByName('clear-weather-sun-disc')).toBeUndefined();
+    expect(controller.group.getObjectByName('clear-weather-sun-glow')).toBeUndefined();
     expect(keyLight.color.getHex()).toBe(OVERCAST_WEATHER_PROFILE.lighting.keyLightColor);
     expect(hemisphereLight.color.getHex()).toBe(OVERCAST_WEATHER_PROFILE.lighting.hemisphereSkyColor);
     expect(saturation(OVERCAST_WEATHER_PROFILE.sky.overheadColor)).toBeLessThan(
@@ -88,6 +98,38 @@ describe('clear weather presentation', () => {
     );
     expect(luminance(OVERCAST_WEATHER_PROFILE.sky.horizonColor)).toBeLessThan(
       luminance(CLEAR_WEATHER_PROFILE.sky.horizonColor),
+    );
+
+    controller.dispose();
+  });
+
+  it('can render rainy weather without a sun visual and with falling streak geometry', () => {
+    const keyLight = new THREE.DirectionalLight();
+    const hemisphereLight = new THREE.HemisphereLight();
+    const controller = new WeatherPresentationController({
+      hemisphereLight,
+      keyLight,
+      model: new WeatherModel(RAIN_WEATHER_PROFILE),
+    });
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
+
+    controller.update(camera);
+
+    expect(controller.getSnapshot()).toMatchObject({
+      cloudiness: 1,
+      condition: 'rain',
+      lightingIntensity: RAIN_WEATHER_PROFILE.lighting.keyLightIntensity,
+      precipitation: 0.72,
+      precipitationObjectCount: 1,
+      skyObjectCount: 2,
+      sunVisible: false,
+    });
+    expect(controller.group.getObjectByName('clear-weather-sun-disc')).toBeUndefined();
+    expect(controller.group.getObjectByName('rain-weather-streaks')).toBeInstanceOf(THREE.LineSegments);
+    expect(keyLight.color.getHex()).toBe(RAIN_WEATHER_PROFILE.lighting.keyLightColor);
+    expect(hemisphereLight.color.getHex()).toBe(RAIN_WEATHER_PROFILE.lighting.hemisphereSkyColor);
+    expect(luminance(RAIN_WEATHER_PROFILE.sky.horizonColor)).toBeLessThan(
+      luminance(OVERCAST_WEATHER_PROFILE.sky.horizonColor),
     );
 
     controller.dispose();

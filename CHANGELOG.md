@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.73] - 2026-06-24
+
+### Added
+
+- Added selectable `rain` weather with a darker sky, muted lighting, precipitation snapshot data, and visible rain streaks during pregame.
+- Added validation coverage that overcast and rain pregame weather selections resolve to local Grant Mercer weather intro audio assets.
+- Added `artifacts/weather-conditions-validation-1.22.73/` with clear, overcast, and rain pregame screenshots.
+
+### Changed
+
+- Kept the clear/sunny weather sun visible while hiding the sun disc and glow for overcast and rain.
+- Extended weather debug snapshots to report sun visibility and precipitation render object counts.
+
+### Tests
+
+- Verified `npx vitest run tests/weather/weatherModel.test.ts tests/weather/weatherPresentation.test.ts tests/pregameCommentaryCatalog.test.ts tests/pregamePresentation.test.ts` and `npm run build`.
+
 ## [1.22.72] - 2026-06-24
 
 ### Changed

@@ -18,6 +18,7 @@ export const CLEAR_WEATHER_PROFILE: WeatherProfile = {
     sunDistance: 330,
     sunGlowColor: 0xffd488,
     sunGlowRadius: 42,
+    sunVisible: true,
   },
   snapshot: {
     cloudiness: 0,
@@ -48,6 +49,7 @@ export const OVERCAST_WEATHER_PROFILE: WeatherProfile = {
     sunDistance: 330,
     sunGlowColor: 0xc7c3b4,
     sunGlowRadius: 56,
+    sunVisible: false,
   },
   snapshot: {
     cloudiness: 0.9,
@@ -60,6 +62,40 @@ export const OVERCAST_WEATHER_PROFILE: WeatherProfile = {
   },
 } as const;
 
+export const RAIN_WEATHER_PROFILE: WeatherProfile = {
+  id: 'rain',
+  lighting: {
+    hemisphereGroundColor: 0x30383b,
+    hemisphereIntensity: 1.55,
+    hemisphereSkyColor: 0x8f989d,
+    keyLightColor: 0xbac0c4,
+    keyLightIntensity: 0.95,
+  },
+  sky: {
+    horizonColor: 0x70797f,
+    overheadColor: 0x394248,
+    radius: 420,
+    rainColor: 0xb7c6cf,
+    rainOpacity: 0.46,
+    rainStreakCount: 420,
+    sunColor: 0xc7c9c5,
+    sunDiscRadius: 0,
+    sunDistance: 330,
+    sunGlowColor: 0x8f9694,
+    sunGlowRadius: 0,
+    sunVisible: false,
+  },
+  snapshot: {
+    cloudiness: 1,
+    condition: 'rain',
+    precipitation: 0.72,
+    sunAzimuthRadians: 1.32,
+    sunElevationRadians: 0.035,
+    windDirectionRadians: 0.5,
+    windSpeedMph: 11,
+  },
+} as const;
+
 export function createClearWeatherSnapshot(): WeatherSnapshot {
   return cloneWeatherSnapshot(CLEAR_WEATHER_PROFILE.snapshot);
 }
@@ -68,10 +104,20 @@ export function createOvercastWeatherSnapshot(): WeatherSnapshot {
   return cloneWeatherSnapshot(OVERCAST_WEATHER_PROFILE.snapshot);
 }
 
+export function createRainWeatherSnapshot(): WeatherSnapshot {
+  return cloneWeatherSnapshot(RAIN_WEATHER_PROFILE.snapshot);
+}
+
 export function resolveWeatherProfile(value: string | null | undefined): WeatherProfile {
-  return value === 'overcast'
-    ? OVERCAST_WEATHER_PROFILE
-    : CLEAR_WEATHER_PROFILE;
+  if (value === 'overcast') {
+    return OVERCAST_WEATHER_PROFILE;
+  }
+
+  if (value === 'rain') {
+    return RAIN_WEATHER_PROFILE;
+  }
+
+  return CLEAR_WEATHER_PROFILE;
 }
 
 export function cloneWeatherSnapshot(snapshot: WeatherSnapshot): WeatherSnapshot {

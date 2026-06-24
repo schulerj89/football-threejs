@@ -1,4 +1,4 @@
-export type WeatherCondition = 'clear' | 'overcast';
+export type WeatherCondition = 'clear' | 'overcast' | 'rain';
 
 export interface WeatherSnapshot {
   condition: WeatherCondition;
@@ -28,11 +28,15 @@ export interface WeatherSkyProfile {
   horizonColor: number;
   overheadColor: number;
   radius: number;
+  rainColor?: number;
+  rainOpacity?: number;
+  rainStreakCount?: number;
   sunColor: number;
   sunDiscRadius: number;
   sunDistance: number;
   sunGlowColor: number;
   sunGlowRadius: number;
+  sunVisible: boolean;
 }
 
 export interface WeatherProfile {
@@ -44,9 +48,11 @@ export interface WeatherProfile {
 
 export interface WeatherPresentationSnapshot extends WeatherSnapshot {
   lightingIntensity: number;
+  precipitationObjectCount: number;
   skyEnabled: boolean;
   skyObjectCount: number;
   sunDiscWorldPosition: WeatherVectorSnapshot;
   sunLightPosition: WeatherVectorSnapshot;
+  sunVisible: boolean;
   sunWorldDirection: WeatherVectorSnapshot;
 }
