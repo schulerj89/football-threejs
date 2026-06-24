@@ -2613,6 +2613,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-staff-modifiers,
 .football-hub-dynasty-standings,
 .football-hub-dynasty-schedule,
+.football-hub-dynasty-team-wizard,
 .football-hub-dynasty-training {
   display: grid;
   gap: 12px;
@@ -2633,6 +2634,78 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-logo {
   width: 92px;
   height: 92px;
+}
+
+.football-hub-dynasty-team-wizard {
+  grid-column: 1 / -1;
+}
+
+.football-hub-dynasty-team-wizard header {
+  display: grid;
+  gap: 8px;
+}
+
+.football-hub-dynasty-team-wizard h3 {
+  margin: 0;
+  color: #f8fcf7;
+  font-size: clamp(26px, 3vw, 42px);
+  line-height: 1.05;
+}
+
+.football-hub-dynasty-team-wizard p {
+  margin: 0;
+  color: #d5dfd8;
+  font-size: 14px;
+}
+
+.football-hub-dynasty-team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.football-hub-dynasty-team-choice {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  place-items: center;
+  gap: 10px;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 16px 12px;
+  border: 1px solid color-mix(in srgb, var(--team-choice-primary, #2f66d8) 48%, rgba(255, 255, 255, 0.24));
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035)),
+    color-mix(in srgb, var(--team-choice-primary, #2f66d8) 24%, #111a18);
+  color: #f8fcf7;
+  cursor: pointer;
+}
+
+.football-hub-dynasty-team-choice:hover,
+.football-hub-dynasty-team-choice:focus-visible {
+  border-color: color-mix(in srgb, var(--team-choice-secondary, #f2f4f6) 60%, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--team-choice-primary, #2f66d8) 36%, transparent);
+  transform: translateY(-1px);
+}
+
+.football-hub-dynasty-team-choice-logo {
+  width: min(88px, 48%);
+  height: min(88px, 48%);
+}
+
+.football-hub-dynasty-team-choice-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.football-hub-dynasty-team-choice strong {
+  max-width: 100%;
+  color: #f8fcf7;
+  font-size: clamp(12px, 1.4vw, 15px);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .football-hub-dynasty-eyebrow {

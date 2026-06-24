@@ -1171,6 +1171,11 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   ]);
   await page.locator('.football-hub-nav').getByRole('button', { name: 'Dynasty' }).click();
   const dynastyHub = page.locator('.football-hub-dynasty');
+  await expect(dynastyHub).toContainText('Choose Program');
+  await expect(dynastyHub.locator('.football-hub-dynasty-team-choice')).toHaveCount(6);
+  await expect(dynastyHub.locator('.football-hub-dynasty-team-choice-logo')).toHaveCount(6);
+  await expect(dynastyHub.getByRole('button', { name: 'Start Dynasty with Metro Meteors' })).toBeVisible();
+  await dynastyHub.getByRole('button', { name: 'Start Dynasty with Metro Meteors' }).click();
   await expect(dynastyHub).toContainText('Season Core');
   await expect(dynastyHub).toContainText('Standings');
   await expect(dynastyHub).toContainText('Weekly Leaders');

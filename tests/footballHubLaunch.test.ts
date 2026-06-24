@@ -1,10 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createDynastyTeamChoiceOptions,
   shouldPersistFootballHubLaunchSettings,
   type FootballHubLaunchOptions,
 } from '../src/ui/FootballHubScreen';
+import { generateLeagueData } from '../src/league/LeagueGenerator';
 
 describe('football hub launch policy', () => {
+  it('builds Dynasty team choice options with names and logos', () => {
+    const league = generateLeagueData({ seed: 'dynasty-team-choice' });
+    const options = createDynastyTeamChoiceOptions(league);
+
+    expect(options).toHaveLength(6);
+    expect(options.map((option) => option.teamId)).toEqual(league.teams.map((team) => team.id));
+    expect(options.every((option) =>
+      option.displayName.length > 0 &&
+      option.shortName.length > 0 &&
+      option.abbreviation.length > 0 &&
+      option.logoUrl === `/branding/teams/${option.teamId}/logo.webp` &&
+      option.primaryColor.startsWith('#') &&
+      option.secondaryColor.startsWith('#'))).toBe(true);
+  });
+
   it('persists Play Now settings but keeps Dynasty launch settings runtime-only', () => {
     expect(shouldPersistFootballHubLaunchSettings({ source: 'playNow' })).toBe(true);
     expect(shouldPersistFootballHubLaunchSettings({ source: 'dynasty' })).toBe(false);

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.51] - 2026-06-24
+
+### Added
+
+- Added a Dynasty start wizard that lets new saves choose a user program from square team logo tiles with the team name underneath.
+- Preserved existing active Dynasty saves while only creating a new save after the user selects a team.
+- Added team-choice option coverage for all six league teams and their logo URLs.
+
+### Tests
+
+- Verified `npx vitest run tests/footballHubLaunch.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.50] - 2026-06-24
 
 ### Fixed
