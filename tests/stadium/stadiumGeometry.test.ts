@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { FIELD_DIMENSIONS } from '../../src/fieldSpec';
 import { PRESENTATION_CONFIG } from '../../src/field/FieldMarkingLayout';
 import { DEFAULT_STADIUM_SPEC } from '../../src/stadium/StadiumSpec';
+import { createStadiumRows } from '../../src/stadium/StadiumLayout';
 import {
   buildStadiumGeometry,
 } from '../../src/stadium/StadiumGeometryBuilder';
@@ -85,6 +86,28 @@ describe('stadium geometry builder', () => {
     });
 
     expect(violations).toEqual([]);
+
+    disposeBuild(build, materials);
+  });
+
+  it('keeps the continuous exterior wall above the upper seating rim for 360 camera views', () => {
+    const materials = createStadiumMaterialLibrary({ imageMaterialsEnabled: false });
+    const build = buildStadiumGeometry({
+      materials,
+      spec: DEFAULT_STADIUM_SPEC,
+      upperTierEnabled: true,
+    });
+    const exteriorWall = build.group.getObjectByName('stadium-exterior-wall');
+    const upperRows = createStadiumRows(DEFAULT_STADIUM_SPEC, true)
+      .filter((row) => row.tier > 0);
+    const upperSeatTop = Math.max(
+      ...upperRows.map((row) => row.elevation + DEFAULT_STADIUM_SPEC.rowRise * 0.42),
+    );
+
+    expect(exteriorWall).toBeInstanceOf(THREE.Mesh);
+    const exteriorWallBounds = new THREE.Box3().setFromObject(exteriorWall!);
+
+    expect(exteriorWallBounds.max.y).toBeGreaterThanOrEqual(upperSeatTop + 6);
 
     disposeBuild(build, materials);
   });

@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.70] - 2026-06-24
+
+### Fixed
+
+- Raised the continuous stadium exterior shell above the upper seating rim so 360 camera views see stadium structure instead of the blue scene background through the bowl edge.
+- Added a stadium geometry regression check that keeps the exterior wall above the upper tier for orbit camera views.
+
+### Added
+
+- Added `artifacts/stadium-gap-validation-1.22.70/` with post-fix orbit screenshots and a manifest.
+
+### Tests
+
+- Verified `npx vitest run tests/stadium/stadiumGeometry.test.ts tests/stadium/stadiumPath.test.ts tests/stadium/seatLayout.test.ts` and `npm run build`.
+- Attempted `npx playwright test tests/scene-smoke.spec.ts -g "supports cinematic orbit shot settings without blocking gameplay input"`; it stopped before the 360 assertion because the existing test expects `activeShotName` to be `undefined` while the runtime returns `null` in the initial offense camera snapshot.
+
 ## [1.22.69] - 2026-06-24
 
 ### Changed

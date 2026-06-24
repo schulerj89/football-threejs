@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-06-24T23:11:21.632Z",
+  "version": "1.22.70",
+  "source": "Local Playwright capture from play-selection 360 orbit after raising the continuous stadium exterior shell.",
+  "notes": [
+    "The blue scene background is not a stadium material; it was visible through/over the stadium bowl edge during orbit camera views.",
+    "Validation frames cover the near-end-zone and right-upper-bowl angles after the exterior wall was raised above the upper seating rim."
+  ],
+  "captures": [
+    {
+      "fileName": "stadium-orbit-fixed-0.png",
+      "cameraState": "playSelectionOrbit",
+      "activeShotName": null
+    },
+    {
+      "fileName": "stadium-orbit-fixed-3.png",
+      "cameraState": "playSelectionOrbit",
+      "activeShotName": null
+    }
+  ]
+}

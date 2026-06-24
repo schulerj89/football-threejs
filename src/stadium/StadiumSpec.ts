@@ -16,7 +16,7 @@ export const DEFAULT_STADIUM_SPEC: StadiumSpec = {
   concourseHeight: 8,
   cornerRadius: CORNER_RADIUS,
   endZoneApron: END_ZONE_APRON,
-  exteriorWallHeight: 18,
+  exteriorWallHeight: 26,
   fasciaHeight: 1.35,
   fieldClearance: FIELD_CLEARANCE,
   innerBowlDepth: FIELD_DIMENSIONS.fieldLength + 2 * (FIELD_CLEARANCE + END_ZONE_APRON + CORNER_RADIUS),
