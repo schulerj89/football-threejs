@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.54] - 2026-06-24
+
+### Fixed
+
+- Reworked active Dynasty saves into a mode-specific left navigation with Week 1, Standings, Award Watch, Program Info, Training, Schedule, Current Roster, and Exit Dynasty pages.
+- Kept the Week 1 page focused on the current matchup and Dynasty actions while moving standings, awards, program management, training, progression, schedule, and roster details into their own pages.
+- Prevented the Dynasty Week 1 navigation from replacing the normal Play Now hub menu until the user actually selects Dynasty.
+
+### Tests
+
+- Verified `npx vitest run tests/footballHubLaunch.test.ts`, `npm run test:unit`, `npm run build`, `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`, and a Playwright screenshot proof at `test-results/dynasty-left-nav.png`.
+
 ## [1.22.53] - 2026-06-24
 
 ### Fixed

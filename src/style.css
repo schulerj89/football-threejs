@@ -2341,6 +2341,16 @@ body[data-game-mode="exhibition"] .score-counter {
   color: #fff;
 }
 
+.football-hub-nav[data-mode="dynasty"] {
+  gap: 7px;
+}
+
+.football-hub-nav[data-mode="dynasty"] .football-hub-dynasty-exit {
+  margin-top: 10px;
+  border-color: rgba(242, 217, 75, 0.34);
+  color: #f2d94b;
+}
+
 .football-hub-back:focus-visible,
 .football-hub-primary:focus-visible,
 .football-hub-secondary:focus-visible,
@@ -2597,7 +2607,6 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-dynasty {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
   gap: 14px;
   align-items: start;
 }
@@ -2607,6 +2616,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-awards,
 .football-hub-dynasty-budget,
 .football-hub-dynasty-coach-goals,
+.football-hub-dynasty-current-roster,
 .football-hub-dynasty-leaders,
 .football-hub-dynasty-program-strengths,
 .football-hub-dynasty-progression,
@@ -2629,6 +2639,10 @@ body[data-game-mode="exhibition"] .score-counter {
   align-items: center;
   border-color: color-mix(in srgb, var(--hub-accent, #2f66d8) 42%, rgba(255, 255, 255, 0.18));
   background: linear-gradient(90deg, rgba(11, 19, 17, 0.96), rgba(255, 255, 255, 0.06));
+}
+
+.football-hub-dynasty-current-roster {
+  overflow: auto;
 }
 
 .football-hub-dynasty-new {
@@ -2735,6 +2749,7 @@ body[data-game-mode="exhibition"] .score-counter {
 .football-hub-dynasty-awards h3,
 .football-hub-dynasty-budget h3,
 .football-hub-dynasty-coach-goals h3,
+.football-hub-dynasty-current-roster h3,
 .football-hub-dynasty-leaders h3,
 .football-hub-dynasty-program-strengths h3,
 .football-hub-dynasty-progression h3,
@@ -2813,11 +2828,14 @@ body[data-game-mode="exhibition"] .score-counter {
   padding-top: 0.85rem;
 }
 
+.football-hub-dynasty-current-roster table,
 .football-hub-dynasty-standings table {
   width: 100%;
   border-collapse: collapse;
 }
 
+.football-hub-dynasty-current-roster th,
+.football-hub-dynasty-current-roster td,
 .football-hub-dynasty-standings th,
 .football-hub-dynasty-standings td {
   padding: 8px 6px;
@@ -2827,6 +2845,7 @@ body[data-game-mode="exhibition"] .score-counter {
   text-align: left;
 }
 
+.football-hub-dynasty-current-roster th,
 .football-hub-dynasty-standings th {
   color: #aeb9b1;
   font-size: 11px;
@@ -4247,6 +4266,7 @@ body[data-game-mode="exhibition"] .score-counter {
   .football-hub-dynasty-awards li,
   .football-hub-dynasty-budget li,
   .football-hub-dynasty-coach-goals li,
+  .football-hub-dynasty-current-roster li,
   .football-hub-dynasty-leaders li,
   .football-hub-dynasty-program-strengths li,
   .football-hub-dynasty-progression li,

@@ -53,6 +53,7 @@ import {
 import type { UniformVariant } from '../teams/UniformPalette';
 
 type HubSection = 'playNow' | 'dynasty' | 'rosters' | 'settings';
+type DynastyPage = 'week' | 'standings' | 'awards' | 'program' | 'training' | 'schedule' | 'roster';
 type RosterTab = 'offense' | 'defense' | 'specialists';
 type RosterSort = 'number' | 'name' | 'overall' | 'position';
 
@@ -104,7 +105,9 @@ export interface FootballHubScreenOptions {
 export class FootballHubScreen {
   readonly root = document.createElement('div');
 
+  private readonly nav = document.createElement('nav');
   private readonly navButtons = new Map<HubSection, HTMLButtonElement>();
+  private readonly dynastyNavButtons = new Map<DynastyPage, HTMLButtonElement>();
   private readonly sectionTitle = document.createElement('h2');
   private readonly sectionSubtitle = document.createElement('p');
   private readonly content = document.createElement('div');
@@ -147,6 +150,7 @@ export class FootballHubScreen {
   private settings: GameExperienceSettings;
   private matchupSelection: MatchupSelection;
   private readonly dynastySaveStore: DynastySaveStore | null;
+  private dynastyPage: DynastyPage = 'week';
   private dynastySave: DynastySaveData | null = null;
   private dynastySaveLoadKey: string | null = null;
   private dynastySaveLoading = false;
@@ -233,9 +237,8 @@ export class FootballHubScreen {
 
     const body = document.createElement('div');
     body.className = 'football-hub-body';
-    const nav = document.createElement('nav');
-    nav.className = 'football-hub-nav';
-    nav.setAttribute('aria-label', 'Football hub sections');
+    this.nav.className = 'football-hub-nav';
+    this.nav.setAttribute('aria-label', 'Football hub sections');
     for (const [section, label] of [
       ['playNow', 'Play Now'],
       ['dynasty', 'Dynasty'],
@@ -247,7 +250,7 @@ export class FootballHubScreen {
       button.textContent = label;
       button.addEventListener('click', () => this.setSection(section));
       this.navButtons.set(section, button);
-      nav.append(button);
+      this.nav.append(button);
     }
 
     const main = document.createElement('main');
@@ -265,7 +268,7 @@ export class FootballHubScreen {
     this.content.append(this.playNowView, this.dynastyView, this.rostersView, this.settingsView);
     main.append(sectionHeader, this.content);
 
-    body.append(nav, main);
+    body.append(this.nav, main);
     panel.append(header, body);
     return panel;
   }
@@ -493,6 +496,14 @@ export class FootballHubScreen {
 
   private setSection(section: HubSection): void {
     this.activeSection = section;
+    if (section !== 'dynasty') {
+      this.dynastyPage = 'week';
+    }
+    this.sync();
+  }
+
+  private setDynastyPage(page: DynastyPage): void {
+    this.dynastyPage = page;
     this.sync();
   }
 
@@ -503,6 +514,7 @@ export class FootballHubScreen {
       return;
     }
 
+    this.renderHubNavigation();
     for (const [section, button] of this.navButtons) {
       button.dataset.active = String(section === this.activeSection);
       button.setAttribute('aria-current', section === this.activeSection ? 'page' : 'false');
@@ -519,9 +531,49 @@ export class FootballHubScreen {
     this.syncRosters();
   }
 
+  private renderHubNavigation(): void {
+    this.nav.dataset.mode = 'hub';
+    this.nav.setAttribute('aria-label', 'Football hub sections');
+    this.nav.replaceChildren(...this.navButtons.values());
+  }
+
+  private renderDynastyNavigation(currentWeekLabel: string): void {
+    this.nav.dataset.mode = 'dynasty';
+    this.nav.setAttribute('aria-label', 'Dynasty sections');
+    const pages: readonly { label: string; page: DynastyPage }[] = [
+      { label: currentWeekLabel, page: 'week' },
+      { label: 'Standings', page: 'standings' },
+      { label: 'Award Watch', page: 'awards' },
+      { label: 'Program Info', page: 'program' },
+      { label: 'Training', page: 'training' },
+      { label: 'Schedule', page: 'schedule' },
+      { label: 'Current Roster', page: 'roster' },
+    ];
+    const buttons = pages.map(({ label, page }) => {
+      let button = this.dynastyNavButtons.get(page);
+      if (!button) {
+        button = document.createElement('button');
+        button.type = 'button';
+        button.addEventListener('click', () => this.setDynastyPage(page));
+        this.dynastyNavButtons.set(page, button);
+      }
+      button.textContent = label;
+      button.dataset.active = String(page === this.dynastyPage);
+      button.setAttribute('aria-current', page === this.dynastyPage ? 'page' : 'false');
+      return button;
+    });
+    const exit = document.createElement('button');
+    exit.type = 'button';
+    exit.className = 'football-hub-dynasty-exit';
+    exit.textContent = 'Exit Dynasty';
+    exit.addEventListener('click', () => this.setSection('playNow'));
+    this.nav.replaceChildren(...buttons, exit);
+  }
+
   private syncUnavailable(): void {
     this.sectionTitle.textContent = 'Preparing League';
     this.sectionSubtitle.textContent = 'Team and roster data will appear as soon as the local league cache is ready.';
+    this.renderHubNavigation();
     for (const [section, button] of this.navButtons) {
       button.dataset.active = String(section === 'playNow');
       button.setAttribute('aria-current', section === 'playNow' ? 'page' : 'false');
@@ -546,6 +598,9 @@ export class FootballHubScreen {
       return;
     }
     const view = createDynastyHubViewModel({ league, save });
+    if (this.activeSection === 'dynasty') {
+      this.renderDynastyNavigation(view.currentWeekLabel);
+    }
     const programProfile = getTeam(league, view.program.teamId) ?? league.teams[0]!;
     this.dynastyLogo.sync(programProfile);
     this.dynastyLogo.root.classList.add('football-hub-dynasty-logo');
@@ -832,7 +887,62 @@ export class FootballHubScreen {
       ? `${this.dynastySaveWarning} Decision map: ${DYNASTY_DECISION_DOC_PATH}`
       : `Save: ${formatDynastySaveSource(this.dynastySaveSource)} | Decision map: ${DYNASTY_DECISION_DOC_PATH}`;
 
-    this.dynastyView.append(header, upcoming, standings, leaders, awards, coachGoals, programStrengths, budget, staffModifiers, training, progression, schedule, note);
+    const currentRoster = this.createDynastyRosterSection(league, save);
+    const pages: Record<DynastyPage, HTMLElement[]> = {
+      awards: [awards],
+      program: [coachGoals, programStrengths, budget, staffModifiers, note],
+      roster: [currentRoster],
+      schedule: [schedule],
+      standings: [standings, leaders],
+      training: [training, progression],
+      week: [upcoming],
+    };
+
+    this.dynastyView.append(header, ...pages[this.dynastyPage]);
+  }
+
+  private createDynastyRosterSection(league: LeagueData, save: DynastySaveData): HTMLElement {
+    const section = document.createElement('section');
+    section.className = 'football-hub-dynasty-current-roster';
+    section.append(createSectionLabel('Current Roster'));
+    const roster = getRoster(league, save.userTeamId);
+    if (!roster) {
+      section.append(createEmptyState('The current Dynasty roster is unavailable.'));
+      return section;
+    }
+
+    const table = document.createElement('table');
+    const head = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    for (const label of ['#', 'Name', 'Pos', 'OVR', 'Status']) {
+      const cell = document.createElement('th');
+      cell.textContent = label;
+      headRow.append(cell);
+    }
+    head.append(headRow);
+    const body = document.createElement('tbody');
+    body.append(...roster.players
+      .slice()
+      .sort(comparePlayersForDynastyRoster)
+      .map((player) => {
+        const row = document.createElement('tr');
+        const values = [
+          `#${player.jerseyNumber}`,
+          player.displayName,
+          player.footballPosition,
+          String(calculateOverallRating(player.footballPosition, player.ratings)),
+          resolveRosterPlayerStatus(roster, player),
+        ];
+        for (const value of values) {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.append(cell);
+        }
+        return row;
+      }));
+    table.append(head, body);
+    section.append(table);
+    return section;
   }
 
   private renderDynastyLoading(): void {
@@ -1045,6 +1155,7 @@ export class FootballHubScreen {
   }
 
   private startDynastyWithTeam(league: LeagueData, teamId: string): void {
+    this.dynastyPage = 'week';
     this.dynastySelectedTeamId = teamId;
     this.dynastyTeamChoiceRequired = false;
     this.dynastySaveLoading = true;
@@ -1057,6 +1168,7 @@ export class FootballHubScreen {
   }
 
   private openDynastyTeamChoice(): void {
+    this.dynastyPage = 'week';
     this.dynastySave = null;
     this.dynastySaveLoading = false;
     this.dynastyTeamChoiceRequired = true;
@@ -1561,6 +1673,13 @@ function comparePlayers(a: RosterPlayer, b: RosterPlayer, sort: RosterSort): num
   }
   return calculateOverallRating(b.footballPosition, b.ratings) -
     calculateOverallRating(a.footballPosition, a.ratings);
+}
+
+function comparePlayersForDynastyRoster(a: RosterPlayer, b: RosterPlayer): number {
+  return a.footballPosition.localeCompare(b.footballPosition) ||
+    calculateOverallRating(b.footballPosition, b.ratings) -
+      calculateOverallRating(a.footballPosition, a.ratings) ||
+    a.jerseyNumber - b.jerseyNumber;
 }
 
 function syncSelectOptions(
