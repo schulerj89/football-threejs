@@ -185,6 +185,16 @@ describe('route art renderer', () => {
     expect(
       debugRenderer.group.getObjectByName('route-art-coverage-zone-defense-corner-left'),
     ).toBeDefined();
+    expect(
+      getGeometryPositionCount(
+        debugRenderer.group.getObjectByName('route-art-coverage-zone-defense-corner-left'),
+      ),
+    ).toBeGreaterThan(24);
+    expect(
+      getGeometryPositionCount(
+        debugRenderer.group.getObjectByName('route-art-coverage-zone-outline-defense-corner-left'),
+      ),
+    ).toBeGreaterThan(12);
 
     startPlay(gameplay);
     debugRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
@@ -245,6 +255,16 @@ function getLineFootballPoints(object: unknown) {
   }
 
   return points;
+}
+
+function getGeometryPositionCount(object: unknown): number {
+  if (!object || !('geometry' in (object as object))) {
+    throw new Error('Missing geometry object');
+  }
+
+  const geometry = (object as { geometry: { getAttribute: (name: string) => { count: number } } }).geometry;
+
+  return geometry.getAttribute('position').count;
 }
 
 function expectFootballPointsClose(

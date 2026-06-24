@@ -86,6 +86,7 @@ export const ROUTE_ART_CONFIG = {
   startMarkerRadius: 0.3,
   waypointRadius: 0.22,
   coverageLandmarkRadius: 0.28,
+  coverageZoneSegments: 40,
   coverageZoneOpacity: 0.2,
   coverageZoneOutlineOpacity: 0.78,
 } as const;
@@ -684,27 +685,26 @@ function createDynamicLineGeometry(): THREE.BufferGeometry {
 }
 
 function createCoverageZoneGeometry(zone: CoverageZone): THREE.BufferGeometry {
-  const [first, second, third, fourth] = zone.footballPoints;
-  const vertices = new Float32Array([
-    first.x,
-    ROUTE_ART_CONFIG.heightY - 0.015,
-    first.z,
-    second.x,
-    ROUTE_ART_CONFIG.heightY - 0.015,
-    second.z,
-    third.x,
-    ROUTE_ART_CONFIG.heightY - 0.015,
-    third.z,
-    first.x,
-    ROUTE_ART_CONFIG.heightY - 0.015,
-    first.z,
-    third.x,
-    ROUTE_ART_CONFIG.heightY - 0.015,
-    third.z,
-    fourth.x,
-    ROUTE_ART_CONFIG.heightY - 0.015,
-    fourth.z,
-  ]);
+  const center = getCoverageZoneCenter(zone);
+  const outlinePoints = createCoverageZoneOvalPoints(zone, ROUTE_ART_CONFIG.heightY - 0.015);
+  const vertices = new Float32Array(outlinePoints.length * 9);
+
+  outlinePoints.forEach((point, index) => {
+    const next = outlinePoints[(index + 1) % outlinePoints.length];
+    const vertexOffset = index * 9;
+
+    vertices.set([
+      center.x,
+      ROUTE_ART_CONFIG.heightY - 0.015,
+      center.z,
+      point.x,
+      point.y,
+      point.z,
+      next.x,
+      next.y,
+      next.z,
+    ], vertexOffset);
+  });
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
@@ -716,10 +716,54 @@ function createCoverageZoneGeometry(zone: CoverageZone): THREE.BufferGeometry {
 
 function createCoverageZoneOutlineGeometry(zone: CoverageZone): THREE.BufferGeometry {
   return new THREE.BufferGeometry().setFromPoints(
-    zone.footballPoints.map((point) =>
-      new THREE.Vector3(point.x, ROUTE_ART_CONFIG.heightY + 0.01, point.z),
-    ),
+    createCoverageZoneOvalPoints(zone, ROUTE_ART_CONFIG.heightY + 0.01),
   );
+}
+
+function createCoverageZoneOvalPoints(zone: CoverageZone, y: number): THREE.Vector3[] {
+  const { centerX, centerZ, radiusX, radiusZ } = getCoverageZoneOvalMetrics(zone);
+  const points: THREE.Vector3[] = [];
+
+  for (let index = 0; index < ROUTE_ART_CONFIG.coverageZoneSegments; index += 1) {
+    const angle = (index / ROUTE_ART_CONFIG.coverageZoneSegments) * Math.PI * 2;
+    points.push(new THREE.Vector3(
+      centerX + Math.cos(angle) * radiusX,
+      y,
+      centerZ + Math.sin(angle) * radiusZ,
+    ));
+  }
+
+  return points;
+}
+
+function getCoverageZoneCenter(zone: CoverageZone): FootballSpot {
+  const { centerX, centerZ } = getCoverageZoneOvalMetrics(zone);
+
+  return {
+    x: centerX,
+    z: centerZ,
+  };
+}
+
+function getCoverageZoneOvalMetrics(zone: CoverageZone): {
+  centerX: number;
+  centerZ: number;
+  radiusX: number;
+  radiusZ: number;
+} {
+  const xs = zone.footballPoints.map((point) => point.x);
+  const zs = zone.footballPoints.map((point) => point.z);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minZ = Math.min(...zs);
+  const maxZ = Math.max(...zs);
+
+  return {
+    centerX: (minX + maxX) / 2,
+    centerZ: (minZ + maxZ) / 2,
+    radiusX: (maxX - minX) / 2,
+    radiusZ: (maxZ - minZ) / 2,
+  };
 }
 
 function writeLineGeometry(

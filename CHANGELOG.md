@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.61] - 2026-06-24
+
+### Changed
+
+- Changed debug Cover 2 coverage-zone field overlays from square/rectangular fills and outlines to oval zone areas while keeping the underlying zone bounds and landmarks stable for AI and snapshots.
+
+### Tests
+
+- Verified `npx vitest run tests/routeArtRenderer.test.ts`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows on-field receiver routes before snap and supports route audit mode"`.
+
 ## [1.22.60] - 2026-06-24
 
 ### Added
