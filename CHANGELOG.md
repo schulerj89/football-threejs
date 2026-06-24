@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.49] - 2026-06-24
+
+### Fixed
+
+- Added Dynasty offseason isolation coverage proving previews and next-season shells do not mutate roster registry snapshots, completed current-season results, valid save validation, or repository reload behavior.
+- Marked Phase 6 Offseason and Multi-Year Saves complete in the Dynasty decision map with completion notes for previews, validation, and save isolation.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyOffseason.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.48] - 2026-06-24
 
 ### Fixed

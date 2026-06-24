@@ -271,7 +271,7 @@ Completion notes:
 
 ### Phase 6: Offseason and Multi-Year Saves
 
-Status: In progress. Patch hardening update 1 shipped in `1.22.48`.
+Status: Complete in `1.22.49`.
 
 Goal: Close the long-term loop.
 
@@ -299,7 +299,13 @@ Minor update plan:
 Patch hardening plan:
 
 1. Offseason validation hardening: reject malformed departures, incoming class rows, roster review rows, duplicate history entries, and invalid next-season metadata. Shipped in `1.22.48`.
-2. Multi-year save isolation hardening: prove offseason previews and next-season shells cannot corrupt active roster registry, current-season results, or save migration paths.
+2. Multi-year save isolation hardening: prove offseason previews and next-season shells cannot corrupt active roster registry, current-season results, or save migration paths. Shipped in `1.22.49`.
+
+Completion notes:
+
+- Dynasty Offseason now exposes deterministic departure previews, incoming class previews, roster review rows, and next-season schedule/history shells without mutating active roster data.
+- Offseason validation rejects malformed departure candidates, incoming candidates, roster-review totals, duplicate history rows, bad history math, and invalid next-season metadata.
+- Multi-year isolation coverage proves offseason previews and next-season shells do not alter current-season results, roster registry snapshots, valid save validation, or save repository reload behavior.
 
 ## Open Decisions
 

@@ -14,12 +14,18 @@ import {
 import { createDynastySigningClassPreview } from '../src/dynasty/DynastyRecruiting';
 import { createDynastySeasonCore } from '../src/dynasty/DynastySchedule';
 import {
+  createMemoryDynastySaveStore,
+  loadDynastySave,
+  persistDynastySave,
+} from '../src/dynasty/DynastySaveRepository';
+import {
   advanceDynastyWeek,
   simulateCurrentDynastyUserGame,
   simulateCurrentDynastyWeekNonUserGames,
 } from '../src/dynasty/DynastyWeekAdvance';
+import { validateDynastySaveData } from '../src/dynasty/DynastyValidation';
 import { generateLeagueData } from '../src/league/LeagueGenerator';
-import { getTeamRosterOrDefault } from '../src/roster/RosterRegistry';
+import { getTeamRosterOrDefault, listTeamRosters } from '../src/roster/RosterRegistry';
 import { DEFAULT_USER_TEAM_ID } from '../src/teams/TeamRegistry';
 
 describe('dynasty offseason departures', () => {
@@ -317,6 +323,47 @@ describe('dynasty offseason departures', () => {
       `Dynasty offseason next-season game ${game.gameId} must be scheduled without a result`,
     );
   });
+
+  it('keeps offseason previews and next-season shells isolated from saves, results, rosters, and reloads', async () => {
+    const completeSave = createCompletedSave('dynasty-offseason-isolation');
+    const beforeRosterSnapshot = createRosterRegistrySnapshot();
+    const beforeSeason = structuredClone(completeSave.currentSeason);
+    const beforeSave = structuredClone(completeSave);
+    const departurePreview = createDynastyOffseasonDeparturePreview({ save: completeSave });
+    const incomingClassPreview = createDynastyOffseasonIncomingClassPreview({ save: completeSave });
+    const rosterReview = createDynastyOffseasonRosterReview({ save: completeSave });
+    const shell = createDynastyOffseasonNextSeasonShell({ save: completeSave });
+    const afterRosterSnapshot = createRosterRegistrySnapshot();
+    const store = createMemoryDynastySaveStore();
+    const persisted = await persistDynastySave(completeSave, {
+      now: () => new Date('2026-06-24T13:00:00.000Z'),
+      store,
+    });
+    const loaded = await loadDynastySave({ store });
+
+    expect(validateDynastyOffseasonDeparturePreview(departurePreview)).toEqual([]);
+    expect(validateDynastyOffseasonIncomingClassPreview(incomingClassPreview)).toEqual([]);
+    expect(validateDynastyOffseasonRosterReview(rosterReview)).toEqual([]);
+    expect(validateDynastyOffseasonNextSeasonShell(shell)).toEqual([]);
+    expect(completeSave).toEqual(beforeSave);
+    expect(completeSave.currentSeason).toEqual(beforeSeason);
+    expect(afterRosterSnapshot).toEqual(beforeRosterSnapshot);
+    expect(validateDynastySaveData(completeSave)).toEqual([]);
+    expect((shell.nextSeason as { readonly status?: unknown }).status).toBeUndefined();
+    expect(shell.nextSeason.weeks.flatMap((week) => week.games).some((game) => game.result !== null)).toBe(false);
+    expect(completeSave.currentSeason.weeks.flatMap((week) => week.games).every((game) =>
+      game.status === 'final' && game.result !== null)).toBe(true);
+    expect(persisted.warning).toBeNull();
+    expect(persisted.save.currentSeason).toEqual(beforeSeason);
+    expect(persisted.save.updatedAt).toBe('2026-06-24T13:00:00.000Z');
+    expect(loaded.warning).toBeNull();
+    expect(loaded.save?.currentSeason).toEqual(beforeSeason);
+    expect(loaded.save?.status).toBe('complete');
+    expect(validateDynastySaveData(loaded.save!)).toEqual([]);
+    expect('rosterReview' in loaded.save!).toBe(false);
+    expect('nextSeason' in loaded.save!.currentSeason).toBe(false);
+    expect(createRosterRegistrySnapshot()).toEqual(beforeRosterSnapshot);
+  });
 });
 
 function createSave(seed: string) {
@@ -337,4 +384,17 @@ function createCompletedSave(seed: string) {
     save = advanceDynastyWeek(save).save;
   }
   return save;
+}
+
+function createRosterRegistrySnapshot() {
+  return listTeamRosters().map((roster) => ({
+    defensiveStarterIds: [...roster.defensiveStarterIds],
+    kickerId: roster.kickerId,
+    longSnapperId: roster.longSnapperId,
+    offensiveStarterIds: [...roster.offensiveStarterIds],
+    playerRatings: roster.players.map((player) => [player.id, player.ratings]),
+    punterId: roster.punterId,
+    reserveIds: [...roster.reserveIds],
+    teamId: roster.teamId,
+  }));
 }
