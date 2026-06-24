@@ -54,6 +54,7 @@ describe('dynasty save repository', () => {
       ...created.save,
       currentSeason: {
         ...created.save.currentSeason,
+        progressionApplications: undefined,
         teamStats: undefined,
         weeks: [
           {
@@ -85,6 +86,7 @@ describe('dynasty save repository', () => {
     const loaded = await loadDynastySave({ store });
 
     expect(loaded.warning).toBeNull();
+    expect(loaded.save?.currentSeason.progressionApplications).toEqual([]);
     expect(loaded.save?.currentSeason.teamStats).toHaveLength(6);
     expect(loaded.save?.currentSeason.teamStats.find((stats) =>
       stats.teamId === game!.awayTeamId)).toMatchObject({

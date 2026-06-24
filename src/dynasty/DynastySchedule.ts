@@ -47,6 +47,7 @@ export function createDynastySeason(options: {
   const weeks = createRoundRobinWeeks(seededTeams, options.seed);
 
   return {
+    progressionApplications: [],
     seasonId: `dynasty-season-${options.year}-${hashText(`${options.seed}:${teamIds.join('|')}`)}`,
     standings: teamIds.map(createEmptyRecord),
     teamIds,

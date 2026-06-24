@@ -14,6 +14,7 @@ import {
   simulateCurrentDynastyUserGame,
   simulateCurrentDynastyWeekNonUserGames,
 } from '../dynasty/DynastyWeekAdvance';
+import { approveCurrentDynastyWeekProgression } from '../dynasty/DynastyProgressionPreview';
 import { IndexedDbDynastySaveStore } from '../dynasty/IndexedDbDynastySaveStore';
 import { createDynastyMatchStoryContext } from '../dynasty/DynastyStoryContext';
 import type { DynastySaveData, DynastySaveSource } from '../dynasty/DynastyTypes';
@@ -556,6 +557,9 @@ export class FootballHubScreen {
       game.awayTeamId !== save.userTeamId &&
       game.homeTeamId !== save.userTeamId).length ?? 0;
     const canAdvanceWeek = canAdvanceDynastyWeek(save);
+    const progressionSaved = (save.currentSeason.progressionApplications ?? []).some((application) =>
+      application.teamId === save.userTeamId &&
+      application.weekIndex === save.currentWeekIndex);
     const actions = document.createElement('div');
     actions.className = 'football-hub-dynasty-actions';
     const playButton = document.createElement('button');
@@ -576,13 +580,19 @@ export class FootballHubScreen {
     quickSimButton.textContent = 'Quick Sim User Game';
     quickSimButton.disabled = !userGame || userGame.status !== 'scheduled';
     quickSimButton.addEventListener('click', () => this.simulateDynastyUserGame(league));
+    const progressionButton = document.createElement('button');
+    progressionButton.type = 'button';
+    progressionButton.className = 'football-hub-secondary';
+    progressionButton.textContent = progressionSaved ? 'Progression Saved' : 'Save Progression';
+    progressionButton.disabled = !canAdvanceWeek || progressionSaved;
+    progressionButton.addEventListener('click', () => this.approveDynastyProgression(league));
     const advanceButton = document.createElement('button');
     advanceButton.type = 'button';
     advanceButton.className = 'football-hub-secondary';
     advanceButton.textContent = save.status === 'complete' ? 'Season Complete' : 'Advance Week';
     advanceButton.disabled = !canAdvanceWeek;
     advanceButton.addEventListener('click', () => this.advanceDynastyWeek(league));
-    actions.append(playButton, simOtherButton, quickSimButton, advanceButton);
+    actions.append(playButton, simOtherButton, quickSimButton, progressionButton, advanceButton);
     const actionHint = document.createElement('p');
     actionHint.className = 'football-hub-dynasty-action-hint';
     actionHint.textContent = createDynastyActionHint(save, nonUserScheduledCount, canAdvanceWeek);
@@ -780,6 +790,18 @@ export class FootballHubScreen {
       return;
     }
     void this.persistDynastySaveState(simulateCurrentDynastyUserGame(save).save, league);
+  }
+
+  private approveDynastyProgression(league: LeagueData): void {
+    const save = this.dynastySave;
+    if (!save) {
+      return;
+    }
+    const result = approveCurrentDynastyWeekProgression({ save });
+    if (!result.approved) {
+      return;
+    }
+    void this.persistDynastySaveState(result.save, league);
   }
 
   private advanceDynastyWeek(league: LeagueData): void {

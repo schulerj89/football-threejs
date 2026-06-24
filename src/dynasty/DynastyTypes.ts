@@ -1,4 +1,5 @@
 import type { TeamProfile } from '../teams/TeamProfile';
+import type { PlayerAttributeKey } from '../ratings/PlayerAttribute';
 
 export const DYNASTY_SAVE_SCHEMA_VERSION = 1;
 export const DYNASTY_SEASON_CORE_VERSION = 'football-js-dynasty-season-core-v1';
@@ -63,7 +64,26 @@ export interface DynastyTeamSeasonStats extends DynastyGameTeamStats {
   readonly teamId: string;
 }
 
+export interface DynastyAppliedRatingDelta {
+  readonly attribute: PlayerAttributeKey;
+  readonly currentValue: number;
+  readonly delta: number;
+  readonly projectedValue: number;
+}
+
+export interface DynastyProgressionApplication {
+  readonly appliedAt: string;
+  readonly currentOverall: number;
+  readonly performancePoints: number;
+  readonly playerId: string;
+  readonly projectedOverall: number;
+  readonly ratingDeltas: readonly DynastyAppliedRatingDelta[];
+  readonly teamId: string;
+  readonly weekIndex: number;
+}
+
 export interface DynastySeason {
+  readonly progressionApplications: readonly DynastyProgressionApplication[];
   readonly seasonId: string;
   readonly standings: readonly DynastyTeamRecord[];
   readonly teamIds: readonly string[];

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.29] - 2026-06-24
+
+### Added
+
+- Added approved Dynasty progression applications that persist completed-week player rating deltas in save data without mutating live roster ratings.
+- Added a Dynasty hub Save Progression action that locks once the current team/week progression rows have been saved.
+- Added legacy save hydration and validation coverage for Dynasty progression application history.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyProgressionPreview.test.ts tests/dynastySaveRepository.test.ts tests/dynastySeason.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.28] - 2026-06-24
 
 ### Added

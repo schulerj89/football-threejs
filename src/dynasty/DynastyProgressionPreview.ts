@@ -4,7 +4,12 @@ import type { PlayerRatings } from '../ratings/PlayerRatings';
 import { getPositionRatingProfile } from '../ratings/PositionRatingProfile';
 import type { PlayerArchetype, RosterPlayer } from '../roster/RosterPlayer';
 import { getTeamRosterOrDefault } from '../roster/RosterRegistry';
-import type { DynastySaveData, DynastyTeamSeasonStats } from './DynastyTypes';
+import type {
+  DynastyProgressionApplication,
+  DynastySaveData,
+  DynastyTeamSeasonStats,
+} from './DynastyTypes';
+import { canAdvanceDynastyWeek } from './DynastyWeekAdvance';
 
 export interface DynastyRatingDeltaPreview {
   readonly attribute: PlayerAttributeKey;
@@ -42,6 +47,12 @@ export interface DynastyProgressionPreview {
   readonly trainingSummary: readonly DynastyTrainingSummaryRow[];
 }
 
+export interface DynastyProgressionApprovalResult {
+  readonly approved: boolean;
+  readonly applications: readonly DynastyProgressionApplication[];
+  readonly save: DynastySaveData;
+}
+
 export function createDynastyProgressionPreview(options: {
   readonly save: DynastySaveData;
   readonly teamId?: string;
@@ -65,6 +76,66 @@ export function createDynastyProgressionPreview(options: {
     teamId,
     trainingSummary: createTrainingSummary(rows),
   };
+}
+
+export function approveCurrentDynastyWeekProgression(options: {
+  readonly appliedAt?: string;
+  readonly save: DynastySaveData;
+  readonly teamId?: string;
+}): DynastyProgressionApprovalResult {
+  const teamId = options.teamId ?? options.save.userTeamId;
+  const weekIndex = options.save.currentWeekIndex;
+  const existingApplications = options.save.currentSeason.progressionApplications ?? [];
+  if (!canAdvanceDynastyWeek(options.save) || hasProgressionApplication(options.save, teamId, weekIndex)) {
+    return {
+      applications: [],
+      approved: false,
+      save: options.save,
+    };
+  }
+
+  const appliedAt = options.appliedAt ?? new Date().toISOString();
+  const preview = createDynastyProgressionPreview({
+    save: options.save,
+    teamId,
+  });
+  const applications = preview.rows
+    .filter((row) => row.ratingDeltas.length > 0)
+    .map((row): DynastyProgressionApplication => ({
+      appliedAt,
+      currentOverall: row.currentOverall,
+      performancePoints: row.performancePoints,
+      playerId: row.playerId,
+      projectedOverall: row.projectedOverall,
+      ratingDeltas: row.ratingDeltas.map((delta) => ({ ...delta })),
+      teamId,
+      weekIndex,
+    }));
+
+  return {
+    applications,
+    approved: applications.length > 0,
+    save: {
+      ...options.save,
+      currentSeason: {
+        ...options.save.currentSeason,
+        progressionApplications: [
+          ...existingApplications,
+          ...applications,
+        ],
+      },
+    },
+  };
+}
+
+function hasProgressionApplication(
+  save: DynastySaveData,
+  teamId: string,
+  weekIndex: number,
+): boolean {
+  return (save.currentSeason.progressionApplications ?? []).some((application) =>
+    application.teamId === teamId &&
+    application.weekIndex === weekIndex);
 }
 
 function createTrainingSummary(

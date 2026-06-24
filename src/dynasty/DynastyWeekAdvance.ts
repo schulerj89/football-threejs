@@ -39,6 +39,7 @@ export function normalizeDynastySaveStats(save: DynastySaveData): DynastySaveDat
     ...save,
     currentSeason: recalculateDynastySeasonAggregates({
       ...save.currentSeason,
+      progressionApplications: save.currentSeason.progressionApplications ?? [],
       weeks: save.currentSeason.weeks.map((week) => ({
         ...week,
         games: week.games.map((game) => {
