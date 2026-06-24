@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.27] - 2026-06-24
+
+### Added
+
+- Added Dynasty weekly training summary rows grouped by position room with average performance points, room leaders, and archetype focus labels.
+- Added a Weekly Training panel to the Dynasty hub while keeping progression and training data presentation-only.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyProgressionPreview.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.26] - 2026-06-24
 
 ### Added

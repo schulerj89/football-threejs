@@ -9,6 +9,7 @@ import type {
 import {
   createDynastyProgressionPreview,
   type DynastyProgressionPreviewRow,
+  type DynastyTrainingSummaryRow,
 } from './DynastyProgressionPreview';
 import { createDynastyHubStorySummary } from './DynastyStoryContext';
 
@@ -68,6 +69,7 @@ export interface DynastyHubViewModel {
   readonly seasonLabel: string;
   readonly standings: readonly DynastyHubStandingsRow[];
   readonly storySummary: string;
+  readonly trainingSummary: readonly DynastyTrainingSummaryRow[];
   readonly upcomingGame: DynastyHubGameView | null;
 }
 
@@ -135,6 +137,7 @@ export function createDynastyHubViewModel(options: {
       save: options.save,
       userGame: upcomingGame,
     }),
+    trainingSummary: progression.trainingSummary.slice(0, 4),
     upcomingGame: upcomingGame
       ? createGameView({
           game: upcomingGame,

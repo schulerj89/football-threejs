@@ -159,7 +159,7 @@ Completion notes:
 
 ### Phase 3: Player Progression
 
-Status: In progress. Minor update 1 shipped in `1.22.26`.
+Status: In progress. Minor updates 1-2 shipped in `1.22.26` and `1.22.27`.
 
 Goal: Make roster identity matter over time.
 
@@ -179,7 +179,7 @@ Acceptance:
 Minor update plan:
 
 1. Progression preview contract: add deterministic presentation-only performance points from current Dynasty season stats without mutating roster ratings. Shipped in `1.22.26`.
-2. Weekly training summary: add a compact hub section that groups projected development by position room and archetype.
+2. Weekly training summary: add a compact hub section that groups projected development by position room and archetype. Shipped in `1.22.27`.
 3. Rating delta preview: calculate bounded projected attribute and overall changes based on position weights, still not applied to gameplay.
 4. Apply-to-save progression: persist approved end-of-week progression rows and roster rating deltas in Dynasty save data.
 

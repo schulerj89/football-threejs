@@ -25,6 +25,12 @@ describe('dynasty progression preview', () => {
       row.performancePoints >= 0 &&
       row.performancePoints <= 100)).toBe(true);
     expect(first.rows[0]?.performancePoints).toBeGreaterThan(0);
+    expect(first.trainingSummary.length).toBeGreaterThanOrEqual(6);
+    expect(first.trainingSummary.every((row) =>
+      row.averagePoints >= 0 &&
+      row.averagePoints <= 100 &&
+      row.playerCount > 0 &&
+      row.totalPoints >= row.averagePoints)).toBe(true);
   });
 
   it('reports current overall without mutating roster ratings', () => {
@@ -40,6 +46,26 @@ describe('dynasty progression preview', () => {
       calculateOverallRating(quarterback.footballPosition, quarterback.ratings),
     );
     expect('OVR' in quarterback.ratings).toBe(false);
+  });
+
+  it('groups training summaries by position room and archetype focus', () => {
+    const save = simulateCurrentDynastyUserGame(simulateCurrentDynastyWeekNonUserGames(
+      createSave('dynasty-training-summary'),
+    ).save).save;
+    const preview = createDynastyProgressionPreview({ save });
+    const rooms = preview.trainingSummary.map((row) => row.room);
+
+    expect(rooms).toEqual(expect.arrayContaining([
+      'Backfield',
+      'Front Seven',
+      'Line',
+      'Quarterbacks',
+      'Receivers',
+      'Secondary',
+      'Specialists',
+    ]));
+    expect(preview.trainingSummary[0]?.focusLabel).toMatch(/ focus$/);
+    expect(preview.trainingSummary[0]?.leaderName).toMatch(/\w+ \w+/);
   });
 });
 

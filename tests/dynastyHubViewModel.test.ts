@@ -103,6 +103,8 @@ describe('dynasty hub view model', () => {
       view.progressionPreview[4]?.performancePoints ?? 0,
     );
     expect(view.progressionSummaryLabel).toContain('presentation-only points');
+    expect(view.trainingSummary).toHaveLength(4);
+    expect(view.trainingSummary[0]?.focusLabel).toMatch(/ focus$/);
   });
 
   it('formats turnover margin leaders with a signed value', () => {

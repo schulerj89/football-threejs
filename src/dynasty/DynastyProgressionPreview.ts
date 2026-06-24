@@ -13,10 +13,20 @@ export interface DynastyProgressionPreviewRow {
   readonly position: string;
 }
 
+export interface DynastyTrainingSummaryRow {
+  readonly averagePoints: number;
+  readonly focusLabel: string;
+  readonly leaderName: string;
+  readonly playerCount: number;
+  readonly room: string;
+  readonly totalPoints: number;
+}
+
 export interface DynastyProgressionPreview {
   readonly rows: readonly DynastyProgressionPreviewRow[];
   readonly summaryLabel: string;
   readonly teamId: string;
+  readonly trainingSummary: readonly DynastyTrainingSummaryRow[];
 }
 
 export function createDynastyProgressionPreview(options: {
@@ -40,7 +50,85 @@ export function createDynastyProgressionPreview(options: {
       ? `${stats.gamesPlayed} game sample | presentation-only points`
       : 'No completed games | presentation-only points',
     teamId,
+    trainingSummary: createTrainingSummary(rows),
   };
+}
+
+function createTrainingSummary(
+  rows: readonly DynastyProgressionPreviewRow[],
+): DynastyTrainingSummaryRow[] {
+  const rooms = new Map<string, DynastyProgressionPreviewRow[]>();
+  for (const row of rows) {
+    const room = getPositionRoom(row.position);
+    rooms.set(room, [...(rooms.get(room) ?? []), row]);
+  }
+
+  return [...rooms.entries()]
+    .map(([room, roomRows]) => {
+      const sortedRows = [...roomRows].sort((a, b) =>
+        b.performancePoints - a.performancePoints ||
+        b.currentOverall - a.currentOverall ||
+        a.playerName.localeCompare(b.playerName));
+      const totalPoints = sortedRows.reduce((sum, row) => sum + row.performancePoints, 0);
+      const leader = sortedRows[0]!;
+      const focusArchetype = findMostCommonArchetype(sortedRows);
+
+      return {
+        averagePoints: Math.round(totalPoints / sortedRows.length),
+        focusLabel: `${focusArchetype} focus`,
+        leaderName: leader.playerName,
+        playerCount: sortedRows.length,
+        room,
+        totalPoints,
+      };
+    })
+    .sort((a, b) =>
+      b.totalPoints - a.totalPoints ||
+      b.averagePoints - a.averagePoints ||
+      a.room.localeCompare(b.room));
+}
+
+function getPositionRoom(position: string): string {
+  switch (position) {
+    case 'QB':
+      return 'Quarterbacks';
+    case 'RB':
+      return 'Backfield';
+    case 'WR':
+    case 'SLOT':
+    case 'TE':
+      return 'Receivers';
+    case 'C':
+    case 'LG':
+    case 'LT':
+    case 'RG':
+    case 'RT':
+    case 'LS':
+      return 'Line';
+    case 'DL':
+    case 'ILB':
+    case 'OLB':
+      return 'Front Seven';
+    case 'CB':
+    case 'FS':
+    case 'SS':
+      return 'Secondary';
+    case 'K':
+    case 'P':
+      return 'Specialists';
+    default:
+      return 'Depth';
+  }
+}
+
+function findMostCommonArchetype(rows: readonly DynastyProgressionPreviewRow[]): PlayerArchetype {
+  const counts = new Map<PlayerArchetype, number>();
+  for (const row of rows) {
+    counts.set(row.archetype, (counts.get(row.archetype) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]![0];
 }
 
 function createProgressionRow(
