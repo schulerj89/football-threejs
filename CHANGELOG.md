@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.18] - 2026-06-24
+
+### Fixed
+
+- Hardened the Dynasty hub reload path so the active save loads or creates through the save repository, persists hub sim/advance actions, and shows storage fallback warnings.
+- Hardened Dynasty save persistence so storage write failures keep the valid save available through memory fallback instead of breaking the mode.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyDecisions.test.ts tests/dynastySeason.test.ts tests/dynastySaveRepository.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyWeekAdvance.test.ts`, `npm run build`, `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`, and `npm run test:unit`.
+
 ## [1.22.17] - 2026-06-24
 
 ### Added

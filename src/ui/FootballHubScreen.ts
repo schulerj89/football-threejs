@@ -1,6 +1,11 @@
 import type { GameExperienceSettings } from '../config/GameExperienceSettings';
 import { createDynastyHubViewModel } from '../dynasty/DynastyHubViewModel';
-import { createDynastySeasonCore } from '../dynasty/DynastySchedule';
+import {
+  createAndPersistDynastySave,
+  loadDynastySave,
+  persistDynastySave,
+  type DynastySaveStore,
+} from '../dynasty/DynastySaveRepository';
 import {
   advanceDynastyWeek as advanceDynastyWeekSave,
   canAdvanceDynastyWeek,
@@ -9,7 +14,8 @@ import {
   simulateCurrentDynastyUserGame,
   simulateCurrentDynastyWeekNonUserGames,
 } from '../dynasty/DynastyWeekAdvance';
-import type { DynastySaveData } from '../dynasty/DynastyTypes';
+import { IndexedDbDynastySaveStore } from '../dynasty/IndexedDbDynastySaveStore';
+import type { DynastySaveData, DynastySaveSource } from '../dynasty/DynastyTypes';
 import type { LeagueData } from '../league/LeagueTypes';
 import { calculateOverallRating } from '../ratings/OverallRatingCalculator';
 import { PLAYER_ATTRIBUTE_DEFINITIONS, type PlayerAttributeKey } from '../ratings/PlayerAttribute';
@@ -50,6 +56,7 @@ type RosterSort = 'number' | 'name' | 'overall' | 'position';
 export const DYNASTY_DECISION_DOC_PATH = 'docs/DYNASTY_DECISIONS.md';
 
 export interface FootballHubScreenOptions {
+  dynastySaveStore?: DynastySaveStore | null;
   getLeagueData: () => LeagueData | null;
   initialSettings: GameExperienceSettings;
   onBack: () => void;
@@ -103,11 +110,17 @@ export class FootballHubScreen {
   private selectedRosterPlayerId: string | null = null;
   private settings: GameExperienceSettings;
   private matchupSelection: MatchupSelection;
+  private readonly dynastySaveStore: DynastySaveStore | null;
   private dynastySave: DynastySaveData | null = null;
+  private dynastySaveLoadKey: string | null = null;
+  private dynastySaveLoading = false;
+  private dynastySaveSource: DynastySaveSource = 'none';
+  private dynastySaveWarning: string | null = null;
   private firstGestureHandled = false;
   private visible = false;
 
   constructor(private readonly options: FootballHubScreenOptions) {
+    this.dynastySaveStore = options.dynastySaveStore ?? IndexedDbDynastySaveStore.createFromGlobal();
     this.settings = options.initialSettings;
     this.matchupSelection = createMatchupSelection(options.initialSettings.teamProfiles);
     this.selectedTeamId = options.initialSettings.teamProfiles.userTeamId;
@@ -482,7 +495,12 @@ export class FootballHubScreen {
   }
 
   private syncDynasty(league: LeagueData): void {
-    const save = this.resolveDynastySave(league);
+    this.ensureDynastySaveLoaded(league);
+    const save = this.dynastySave;
+    if (!save || !isDynastySaveCompatibleWithLeague(save, league, this.getDynastyUserTeamId())) {
+      this.renderDynastyLoading();
+      return;
+    }
     const view = createDynastyHubViewModel({ league, save });
     const programProfile = getTeam(league, view.program.teamId) ?? league.teams[0]!;
     this.dynastyLogo.sync(programProfile);
@@ -603,13 +621,32 @@ export class FootballHubScreen {
 
     const note = document.createElement('p');
     note.className = 'football-hub-dynasty-note';
-    note.textContent = `Decision map: ${DYNASTY_DECISION_DOC_PATH}`;
+    note.textContent = this.dynastySaveWarning
+      ? `${this.dynastySaveWarning} Decision map: ${DYNASTY_DECISION_DOC_PATH}`
+      : `Save: ${formatDynastySaveSource(this.dynastySaveSource)} | Decision map: ${DYNASTY_DECISION_DOC_PATH}`;
 
     this.dynastyView.append(header, upcoming, standings, schedule, note);
   }
 
+  private renderDynastyLoading(): void {
+    this.dynastyView.replaceChildren();
+    const loading = document.createElement('section');
+    loading.className = 'football-hub-dynasty-upcoming football-hub-dynasty-loading';
+    const label = document.createElement('span');
+    label.textContent = 'Season Core';
+    const title = document.createElement('strong');
+    title.textContent = this.dynastySaveLoading ? 'Loading Dynasty Save' : 'Preparing Dynasty Save';
+    const detail = document.createElement('p');
+    detail.textContent = this.dynastySaveWarning ?? 'Your active Dynasty save will appear here shortly.';
+    loading.append(label, title, detail);
+    this.dynastyView.append(loading);
+  }
+
   private playDynastyGame(league: LeagueData): void {
-    const save = this.resolveDynastySave(league);
+    const save = this.dynastySave;
+    if (!save) {
+      return;
+    }
     const game = getCurrentDynastyUserGame(save);
     if (!game || game.status !== 'scheduled') {
       return;
@@ -635,37 +672,98 @@ export class FootballHubScreen {
   }
 
   private simulateDynastyOtherGames(league: LeagueData): void {
-    this.dynastySave = simulateCurrentDynastyWeekNonUserGames(this.resolveDynastySave(league)).save;
-    this.sync();
+    const save = this.dynastySave;
+    if (!save) {
+      return;
+    }
+    void this.persistDynastySaveState(simulateCurrentDynastyWeekNonUserGames(save).save, league);
   }
 
   private simulateDynastyUserGame(league: LeagueData): void {
-    this.dynastySave = simulateCurrentDynastyUserGame(this.resolveDynastySave(league)).save;
-    this.sync();
+    const save = this.dynastySave;
+    if (!save) {
+      return;
+    }
+    void this.persistDynastySaveState(simulateCurrentDynastyUserGame(save).save, league);
   }
 
   private advanceDynastyWeek(league: LeagueData): void {
-    const result = advanceDynastyWeekSave(this.resolveDynastySave(league));
+    const save = this.dynastySave;
+    if (!save) {
+      return;
+    }
+    const result = advanceDynastyWeekSave(save);
+    void this.persistDynastySaveState(result.save, league);
+  }
+
+  private async persistDynastySaveState(save: DynastySaveData, league: LeagueData): Promise<void> {
+    this.dynastySave = save;
+    this.sync();
+    const result = await persistDynastySave(save, { store: this.dynastySaveStore });
+    if (!isDynastySaveCompatibleWithLeague(result.save, league, this.getDynastyUserTeamId())) {
+      return;
+    }
     this.dynastySave = result.save;
+    this.dynastySaveSource = result.source;
+    this.dynastySaveWarning = result.warning;
     this.sync();
   }
 
-  private resolveDynastySave(league: LeagueData): DynastySaveData {
-    const userTeamId = normalizeTeamProfileSettings(this.settings.teamProfiles).userTeamId;
+  private ensureDynastySaveLoaded(league: LeagueData): void {
+    const userTeamId = this.getDynastyUserTeamId();
+    const loadKey = createDynastyLoadKey(league, userTeamId);
     if (
-      this.dynastySave &&
-      this.dynastySave.userTeamId === userTeamId &&
-      this.dynastySave.currentSeason.teamIds.every((teamId) =>
-        league.teams.some((team) => team.id === teamId))
+      this.dynastySaveLoadKey === loadKey &&
+      (this.dynastySaveLoading || (
+        this.dynastySave &&
+        isDynastySaveCompatibleWithLeague(this.dynastySave, league, userTeamId)
+      ))
     ) {
-      return this.dynastySave;
+      return;
     }
-    this.dynastySave = createDynastySeasonCore({
-      seed: `${league.seed}:dynasty:${userTeamId}`,
-      teams: league.teams,
-      userTeamId,
-    });
-    return this.dynastySave;
+
+    this.dynastySaveLoadKey = loadKey;
+    this.dynastySaveLoading = true;
+    this.dynastySave = null;
+    this.dynastySaveWarning = null;
+    void this.loadDynastySaveForLeague(league, userTeamId, loadKey);
+  }
+
+  private async loadDynastySaveForLeague(
+    league: LeagueData,
+    userTeamId: string,
+    loadKey: string,
+  ): Promise<void> {
+    const loaded = await loadDynastySave({ store: this.dynastySaveStore });
+    if (this.dynastySaveLoadKey !== loadKey) {
+      return;
+    }
+
+    if (loaded.save && isDynastySaveCompatibleWithLeague(loaded.save, league, userTeamId)) {
+      this.dynastySave = loaded.save;
+      this.dynastySaveSource = loaded.source;
+      this.dynastySaveWarning = loaded.warning;
+    } else {
+      const created = await createAndPersistDynastySave({
+        seed: `${league.seed}:dynasty:${userTeamId}`,
+        store: this.dynastySaveStore,
+        teams: league.teams,
+        userTeamId,
+      });
+      if (this.dynastySaveLoadKey !== loadKey) {
+        return;
+      }
+      this.dynastySave = created.save;
+      this.dynastySaveSource = created.source;
+      this.dynastySaveWarning = loaded.warning ?? created.warning;
+    }
+
+    this.dynastySaveLoading = false;
+    this.sync();
+  }
+
+  private getDynastyUserTeamId(): string {
+    return normalizeTeamProfileSettings(this.settings.teamProfiles).userTeamId;
   }
 
   private syncPlayNow(league: LeagueData): void {
@@ -1048,6 +1146,30 @@ function createScoreBlock(label: string, value: number): HTMLElement {
 
 function formatSignedNumber(value: number): string {
   return value > 0 ? `+${value}` : String(value);
+}
+
+function createDynastyLoadKey(league: LeagueData, userTeamId: string): string {
+  return `${league.seed}:${userTeamId}:${league.teams.map((team) => team.id).sort().join('|')}`;
+}
+
+function isDynastySaveCompatibleWithLeague(
+  save: DynastySaveData,
+  league: LeagueData,
+  userTeamId: string,
+): boolean {
+  const leagueTeamIds = new Set(league.teams.map((team) => team.id));
+  return save.userTeamId === userTeamId &&
+    save.currentSeason.teamIds.length === leagueTeamIds.size &&
+    save.currentSeason.teamIds.every((teamId) => leagueTeamIds.has(teamId));
+}
+
+function formatDynastySaveSource(source: DynastySaveSource): string {
+  return {
+    created: 'Created active save',
+    indexedDB: 'IndexedDB',
+    memoryFallback: 'Memory fallback',
+    none: 'New active save',
+  }[source];
 }
 
 function createDynastyActionHint(

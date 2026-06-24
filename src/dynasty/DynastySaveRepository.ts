@@ -136,7 +136,15 @@ export async function persistDynastySave(
     savedAt: updatedSave.updatedAt,
     schemaVersion: DYNASTY_SAVE_SCHEMA_VERSION,
   };
-  await store.put(record);
+  try {
+    await store.put(record);
+  } catch (error) {
+    return {
+      save: updatedSave,
+      source: 'memoryFallback',
+      warning: `Dynasty save storage failed: ${getErrorMessage(error)}`,
+    };
+  }
 
   return {
     save: updatedSave,

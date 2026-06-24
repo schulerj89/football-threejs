@@ -121,4 +121,27 @@ describe('dynasty save repository', () => {
       source: 'memoryFallback',
     });
   });
+
+  it('keeps a valid in-memory save when storage writes fail', async () => {
+    const league = generateLeagueData({ seed: 'dynasty-save-league' });
+    const created = await createAndPersistDynastySave({
+      createdAt: '2026-06-24T10:00:00.000Z',
+      now: () => new Date('2026-06-24T10:00:00.000Z'),
+      seed: 'dynasty-storage-failure',
+      store: {
+        get: async () => null,
+        put: async () => {
+          throw new Error('quota exceeded');
+        },
+        reset: async () => undefined,
+      },
+      teams: league.teams,
+      userTeamId: DEFAULT_USER_TEAM_ID,
+    });
+
+    expect(created.save.userTeamId).toBe(DEFAULT_USER_TEAM_ID);
+    expect(created.source).toBe('memoryFallback');
+    expect(created.warning).toContain('quota exceeded');
+    expect(validateDynastySaveData(created.save)).toEqual([]);
+  });
 });

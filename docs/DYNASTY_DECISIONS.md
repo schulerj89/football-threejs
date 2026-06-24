@@ -83,7 +83,7 @@ Completion notes:
 
 ### Phase 1: Season Core
 
-Status: In progress. Minor updates 1-4 shipped in `1.22.14` through `1.22.17`; patch hardening starts next.
+Status: In progress. Minor updates 1-4 shipped in `1.22.14` through `1.22.17`; patch hardening update 1 shipped in `1.22.18`.
 
 Goal: Create the first real dynasty save loop.
 
@@ -111,7 +111,7 @@ Minor update plan:
 
 Patch hardening plan:
 
-1. Reload and migration hardening: validate corrupt saves, missing teams, stale schema versions, and safe fallback behavior.
+1. Reload and migration hardening: validate corrupt saves, missing teams, stale schema versions, and safe fallback behavior. Shipped in `1.22.18`.
 2. Flow hardening: prevent Play Now and Dynasty state from leaking into each other, including team settings, kickoff setup, and completed-game return routing.
 
 ### Phase 2: Stats, Stories, and Awards
