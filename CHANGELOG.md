@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.24] - 2026-06-24
+
+### Fixed
+
+- Hardened Dynasty save validation to reject duplicate or missing standings and team stat rows even when row counts still match.
+- Added aggregate validation that compares stored standings and season team stats against finalized game results to catch stale or corrupted cumulative rows.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyWeekAdvance.test.ts tests/dynastySaveRepository.test.ts tests/dynastySeason.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.23] - 2026-06-24
 
 ### Added

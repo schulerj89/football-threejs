@@ -8,6 +8,7 @@ import {
   simulateCurrentDynastyUserGame,
   simulateCurrentDynastyWeekNonUserGames,
 } from '../src/dynasty/DynastyWeekAdvance';
+import { validateDynastySaveData } from '../src/dynasty/DynastyValidation';
 import { generateLeagueData } from '../src/league/LeagueGenerator';
 import { DEFAULT_USER_TEAM_ID } from '../src/teams/TeamRegistry';
 
@@ -87,6 +88,56 @@ describe('dynasty week advance', () => {
     expect(save.currentWeekIndex).toBe(save.currentSeason.weeks.length);
     expect(save.currentSeason.weeks.every((week) =>
       week.games.every((game) => game.status === 'final' && game.result))).toBe(true);
+  });
+
+  it('rejects stale or duplicated aggregate stat rows during validation', () => {
+    const save = simulateCurrentDynastyUserGame(simulateCurrentDynastyWeekNonUserGames(
+      createSave('week-advance-validation-hardening'),
+    ).save).save;
+    const firstStats = save.currentSeason.teamStats[0]!;
+    const secondStats = save.currentSeason.teamStats[1]!;
+    const staleStandings = {
+      ...save,
+      currentSeason: {
+        ...save.currentSeason,
+        standings: save.currentSeason.standings.map((record, index) =>
+          index === 0 ? { ...record, pointsFor: record.pointsFor + 1 } : record),
+      },
+    };
+    const staleStats = {
+      ...save,
+      currentSeason: {
+        ...save.currentSeason,
+        teamStats: save.currentSeason.teamStats.map((stats, index) =>
+          index === 0 ? { ...stats, offensiveYards: stats.offensiveYards + 1 } : stats),
+      },
+    };
+    const duplicateStats = {
+      ...save,
+      currentSeason: {
+        ...save.currentSeason,
+        teamStats: [
+          firstStats,
+          {
+            ...secondStats,
+            teamId: firstStats.teamId,
+          },
+          ...save.currentSeason.teamStats.slice(2),
+        ],
+      },
+    };
+
+    expect(validateDynastySaveData(save)).toEqual([]);
+    expect(validateDynastySaveData(staleStandings).map((issue) => issue.message))
+      .toContain(`Dynasty standings row ${firstStats.teamId} does not match finalized game results`);
+    expect(validateDynastySaveData(staleStats).map((issue) => issue.message))
+      .toContain(`Dynasty team stats row ${firstStats.teamId} does not match finalized game results`);
+    expect(validateDynastySaveData(duplicateStats).map((issue) => issue.message)).toEqual(
+      expect.arrayContaining([
+        `Dynasty team stats include duplicate team ${firstStats.teamId}`,
+        `Dynasty team stats are missing team ${secondStats.teamId}`,
+      ]),
+    );
   });
 });
 
