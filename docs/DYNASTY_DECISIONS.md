@@ -196,7 +196,7 @@ Completion notes:
 
 ### Phase 4: Recruiting-Lite
 
-Status: In progress. Minor updates 1-4 shipped in `1.22.32`, `1.22.33`, `1.22.34`, and `1.22.35`.
+Status: In progress. Minor updates 1-4 shipped in `1.22.32`, `1.22.33`, `1.22.34`, and `1.22.35`; patch hardening update 1 shipped in `1.22.36`.
 
 Goal: Add a compact college-style roster-building layer.
 
@@ -223,7 +223,7 @@ Minor update plan:
 
 Patch hardening plan:
 
-1. Recruiting validation hardening: reject duplicate prospects, invalid pitch scores, impossible grades, and malformed interest rows.
+1. Recruiting validation hardening: reject duplicate prospects, invalid pitch scores, impossible grades, and malformed interest rows. Shipped in `1.22.36`.
 2. Roster safety hardening: prove recruiting views and saved allocations cannot change active roster size or gameplay lineups before the offseason apply path.
 
 ### Phase 5: Program Management

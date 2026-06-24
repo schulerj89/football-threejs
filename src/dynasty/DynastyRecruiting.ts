@@ -104,6 +104,11 @@ export interface DynastySigningClassPreview {
   readonly teamId: string;
 }
 
+export interface DynastyRecruitingValidationIssue {
+  readonly message: string;
+  readonly severity: 'error' | 'warning';
+}
+
 const PROSPECT_SLOTS: readonly {
   readonly archetype: PlayerArchetype;
   readonly footballPosition: FootballPosition;
@@ -371,6 +376,30 @@ export function createDynastySigningClassPreview(options: {
   };
 }
 
+export function validateDynastyRecruitingBoard(
+  board: unknown,
+  teamIds: readonly string[],
+): DynastyRecruitingValidationIssue[] {
+  const issues: DynastyRecruitingValidationIssue[] = [];
+  const validTeamIds = new Set(teamIds);
+  if (!isRecord(board)) {
+    issues.push(error('Dynasty recruiting board is malformed'));
+    return issues;
+  }
+  if (!Array.isArray(board.prospects)) {
+    issues.push(error('Dynasty recruiting prospects must be an array'));
+    return issues;
+  }
+
+  const prospectIds = new Set<string>();
+  const prospectRanks = new Set<number>();
+  for (const prospect of board.prospects) {
+    validateRecruitingProspect(issues, prospect, prospectIds, prospectRanks, validTeamIds);
+  }
+
+  return issues;
+}
+
 function createProspect(options: {
   readonly index: number;
   readonly save: DynastySaveData;
@@ -540,6 +569,122 @@ function createFitLabel(signingConfidence: number): string {
     return 'Development fit';
   }
   return 'Long shot';
+}
+
+function validateRecruitingProspect(
+  issues: DynastyRecruitingValidationIssue[],
+  prospect: unknown,
+  prospectIds: Set<string>,
+  prospectRanks: Set<number>,
+  teamIds: ReadonlySet<string>,
+): void {
+  if (!isRecord(prospect)) {
+    issues.push(error('Dynasty recruiting prospect row is malformed'));
+    return;
+  }
+  const prospectId = typeof prospect.id === 'string' ? prospect.id : '';
+  if (!prospectId) {
+    issues.push(error('Dynasty recruiting prospect is missing an id'));
+  } else if (prospectIds.has(prospectId)) {
+    issues.push(error(`Dynasty recruiting prospect duplicates ${prospectId}`));
+  } else {
+    prospectIds.add(prospectId);
+  }
+  if (
+    typeof prospect.displayName !== 'string' ||
+    prospect.displayName.length === 0 ||
+    typeof prospect.firstName !== 'string' ||
+    prospect.firstName.length === 0 ||
+    typeof prospect.lastName !== 'string' ||
+    prospect.lastName.length === 0
+  ) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId || 'unknown'} has invalid identity`));
+  }
+  if (!isFootballPosition(prospect.footballPosition)) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId || 'unknown'} has invalid position ${String(prospect.footballPosition)}`));
+  }
+  if (!isPlayerArchetype(prospect.archetype)) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId || 'unknown'} has invalid archetype ${String(prospect.archetype)}`));
+  }
+  if (!isBoundedInteger(prospect.overallGrade, 58, 91)) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId || 'unknown'} has invalid overall grade`));
+  }
+  if (!isBoundedInteger(prospect.starRating, 1, 5)) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId || 'unknown'} has invalid star rating`));
+  }
+  if (!Number.isInteger(prospect.nationalRank) || (prospect.nationalRank as number) < 1) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId || 'unknown'} has invalid national rank`));
+  } else if (prospectRanks.has(prospect.nationalRank as number)) {
+    issues.push(error(`Dynasty recruiting prospect duplicates national rank ${String(prospect.nationalRank)}`));
+  } else {
+    prospectRanks.add(prospect.nationalRank as number);
+  }
+  if (!Array.isArray(prospect.interest)) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId || 'unknown'} interest must be an array`));
+    return;
+  }
+  const interestTeamIds = new Set<string>();
+  for (const interest of prospect.interest) {
+    validateRecruitingInterest(issues, interest, prospectId || 'unknown', interestTeamIds, teamIds);
+  }
+  for (const teamId of teamIds) {
+    if (!interestTeamIds.has(teamId)) {
+      issues.push(error(`Dynasty recruiting prospect ${prospectId || 'unknown'} is missing interest for ${teamId}`));
+    }
+  }
+}
+
+function validateRecruitingInterest(
+  issues: DynastyRecruitingValidationIssue[],
+  interest: unknown,
+  prospectId: string,
+  interestTeamIds: Set<string>,
+  teamIds: ReadonlySet<string>,
+): void {
+  if (!isRecord(interest)) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId} has malformed interest row`));
+    return;
+  }
+  const teamId = typeof interest.teamId === 'string' ? interest.teamId : '';
+  if (!teamIds.has(teamId)) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId} has unknown interest team ${String(interest.teamId)}`));
+  } else if (interestTeamIds.has(teamId)) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId} duplicates interest team ${teamId}`));
+  } else {
+    interestTeamIds.add(teamId);
+  }
+  if (!isBoundedInteger(interest.score, 35, 95)) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId} has invalid interest score`));
+  }
+  if (!isRecord(interest.pitchFit)) {
+    issues.push(error(`Dynasty recruiting prospect ${prospectId} has malformed pitch fit`));
+    return;
+  }
+  for (const style of DYNASTY_RECRUITING_PITCH_STYLES) {
+    if (!isBoundedInteger(interest.pitchFit[style], 35, 95)) {
+      issues.push(error(`Dynasty recruiting prospect ${prospectId} has invalid ${style} pitch fit`));
+    }
+  }
+}
+
+function error(message: string): DynastyRecruitingValidationIssue {
+  return { message, severity: 'error' };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isBoundedInteger(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
+}
+
+function isFootballPosition(value: unknown): value is FootballPosition {
+  return typeof value === 'string' && PROSPECT_SLOTS.some((slot) => slot.footballPosition === value);
+}
+
+function isPlayerArchetype(value: unknown): value is PlayerArchetype {
+  return typeof value === 'string' && PROSPECT_SLOTS.some((slot) => slot.archetype === value);
 }
 
 function gradeToStars(grade: number): number {

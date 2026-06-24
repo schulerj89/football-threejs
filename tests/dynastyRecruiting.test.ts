@@ -8,6 +8,7 @@ import {
   createDynastySigningClassPreview,
   createDynastyRecruitingTeamNeeds,
   createDynastyWeeklyRecruitingPlan,
+  validateDynastyRecruitingBoard,
 } from '../src/dynasty/DynastyRecruiting';
 import { createDynastySeasonCore } from '../src/dynasty/DynastySchedule';
 import { generateLeagueData } from '../src/league/LeagueGenerator';
@@ -181,6 +182,71 @@ describe('dynasty recruiting-lite board', () => {
         .toBeGreaterThanOrEqual(first.projectedSignees[index]!.signingConfidence);
     }
     expect(afterSizes).toEqual(beforeSizes);
+  });
+
+  it('rejects malformed recruiting boards, duplicate prospects, impossible grades, and invalid pitch scores', () => {
+    const save = createSave('dynasty-recruiting-validation');
+    const board = createDynastyRecruitingBoard({ save });
+    const prospect = board.prospects[0]!;
+    const interest = prospect.interest[0]!;
+    const cases: readonly [string, unknown, string][] = [
+      [
+        'malformed board',
+        null,
+        'Dynasty recruiting board is malformed',
+      ],
+      [
+        'missing prospects array',
+        { ...board, prospects: 'bad-prospects' },
+        'Dynasty recruiting prospects must be an array',
+      ],
+      [
+        'malformed prospect',
+        { ...board, prospects: [null] },
+        'Dynasty recruiting prospect row is malformed',
+      ],
+      [
+        'duplicate prospect',
+        { ...board, prospects: [prospect, prospect] },
+        `Dynasty recruiting prospect duplicates ${prospect.id}`,
+      ],
+      [
+        'impossible grade',
+        { ...board, prospects: [{ ...prospect, overallGrade: 99 }] },
+        `Dynasty recruiting prospect ${prospect.id} has invalid overall grade`,
+      ],
+      [
+        'bad star rating',
+        { ...board, prospects: [{ ...prospect, starRating: 6 }] },
+        `Dynasty recruiting prospect ${prospect.id} has invalid star rating`,
+      ],
+      [
+        'malformed interest',
+        { ...board, prospects: [{ ...prospect, interest: [null] }] },
+        `Dynasty recruiting prospect ${prospect.id} has malformed interest row`,
+      ],
+      [
+        'duplicate interest team',
+        { ...board, prospects: [{ ...prospect, interest: [interest, interest] }] },
+        `Dynasty recruiting prospect ${prospect.id} duplicates interest team ${interest.teamId}`,
+      ],
+      [
+        'invalid pitch score',
+        { ...board, prospects: [{ ...prospect, interest: [{ ...interest, pitchFit: { ...interest.pitchFit, playingTime: 101 } }] }] },
+        `Dynasty recruiting prospect ${prospect.id} has invalid playingTime pitch fit`,
+      ],
+      [
+        'invalid interest score',
+        { ...board, prospects: [{ ...prospect, interest: [{ ...interest, score: 12 }] }] },
+        `Dynasty recruiting prospect ${prospect.id} has invalid interest score`,
+      ],
+    ];
+
+    expect(validateDynastyRecruitingBoard(board, save.currentSeason.teamIds)).toEqual([]);
+    for (const [label, invalidBoard, expectedMessage] of cases) {
+      expect(validateDynastyRecruitingBoard(invalidBoard, save.currentSeason.teamIds)
+        .map((issue) => issue.message), label).toContain(expectedMessage);
+    }
   });
 
   it('does not change current roster size constraints while generating prospects', () => {

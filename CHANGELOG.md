@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.36] - 2026-06-24
+
+### Fixed
+
+- Added recruiting board validation that rejects malformed boards, duplicate prospects, duplicate interest teams, invalid pitch scores, impossible grades, bad star ratings, and malformed interest rows.
+- Kept corrupted recruiting data on a normal validation path with structured issues instead of runtime failures.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyRecruiting.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.35] - 2026-06-24
 
 ### Added
