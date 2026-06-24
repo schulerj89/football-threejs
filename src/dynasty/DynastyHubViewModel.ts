@@ -6,6 +6,7 @@ import type {
   DynastyTeamRecord,
   DynastyTeamSeasonStats,
 } from './DynastyTypes';
+import { createDynastyHubStorySummary } from './DynastyStoryContext';
 
 export interface DynastyHubTeamView {
   readonly abbreviation: string;
@@ -51,6 +52,7 @@ export interface DynastyHubViewModel {
   readonly schedule: readonly DynastyHubGameView[];
   readonly seasonLabel: string;
   readonly standings: readonly DynastyHubStandingsRow[];
+  readonly storySummary: string;
   readonly upcomingGame: DynastyHubGameView | null;
 }
 
@@ -104,6 +106,11 @@ export function createDynastyHubViewModel(options: {
     schedule,
     seasonLabel: `${options.save.currentSeason.year} Season`,
     standings,
+    storySummary: createDynastyHubStorySummary({
+      league: options.league,
+      save: options.save,
+      userGame: upcomingGame,
+    }),
     upcomingGame: upcomingGame
       ? createGameView({
           game: upcomingGame,

@@ -4,6 +4,7 @@ import type { MatchPossession } from '../../match/MatchTypes';
 export interface PostgameStory {
   readonly caption: string;
   readonly category: PostgameCategory;
+  readonly contextSummary: string | null;
   readonly scriptId: BroadcastScriptId;
   readonly supportingPlayerId: string | null;
   readonly supportingStatKeys: readonly string[];

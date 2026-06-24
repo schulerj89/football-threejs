@@ -93,7 +93,9 @@ export class QuarterTransitionPanel {
     const story = resolvePostgameStory(match);
     const viewModel = createHalftimeStatsViewModel(match);
     this.story.hidden = false;
-    this.story.textContent = story.caption;
+    this.story.textContent = story.contextSummary
+      ? `${story.contextSummary} ${story.caption}`
+      : story.caption;
     this.finalStats.hidden = false;
     this.finalStats.replaceChildren(
       createFinalTeamRow(viewModel, match),

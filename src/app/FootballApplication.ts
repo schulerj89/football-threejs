@@ -707,6 +707,7 @@ export class FootballApplication {
       this.gameExperience.settings.gameMode,
     );
     this.matchController = this.createMatchController();
+    this.matchController.setDynastyStoryContext(launchOptions.dynastyStoryContext ?? null);
     if (this.gameExperience.settings.gameMode === 'exhibition') {
       this.matchController.prepareForPregame(this.gameplay.gameplayModel);
     }

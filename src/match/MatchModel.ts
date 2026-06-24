@@ -41,6 +41,7 @@ import {
   resolveSecondHalfPossession,
 } from './PossessionModel';
 import type {
+  DynastyMatchStoryContext,
   DriveSummary,
   MatchModel,
   MatchPhase,
@@ -63,6 +64,7 @@ import {
 } from './FieldPositionModel';
 
 export interface CreateMatchModelOptions {
+  dynastyStoryContext?: DynastyMatchStoryContext | null;
   opponentTeamId: string;
   rules?: Partial<MatchRules>;
   userTeamId: string;
@@ -76,6 +78,7 @@ export interface MutableMatchModel extends Omit<MatchModel, 'clock' | 'driveSumm
 }
 
 export function createMatchModel({
+  dynastyStoryContext = null,
   opponentTeamId,
   rules = {},
   userTeamId,
@@ -98,6 +101,7 @@ export function createMatchModel({
     deterministicSeed: resolvedRules.seed,
     driveNumber: 1,
     driveSummaries: [],
+    dynastyStoryContext: cloneDynastyStoryContext(dynastyStoryContext),
     extraPoint: createPlaceKickState(),
     gameOverReason: null,
     kickoff: createKickoffState(),
@@ -157,7 +161,9 @@ export function beginMatch(match: MutableMatchModel): void {
 }
 
 export function resetMatchModel(match: MutableMatchModel): void {
+  const dynastyStoryContext = match.dynastyStoryContext;
   const reset = createMatchModel({
+    dynastyStoryContext,
     opponentTeamId: match.opponentTeam.id,
     rules: match.rules,
     userTeamId: match.userTeam.id,
@@ -169,6 +175,7 @@ export function resetMatchModel(match: MutableMatchModel): void {
   match.deterministicSeed = reset.deterministicSeed;
   match.driveNumber = reset.driveNumber;
   match.driveSummaries = reset.driveSummaries;
+  match.dynastyStoryContext = reset.dynastyStoryContext;
   match.extraPoint = reset.extraPoint;
   match.gameOverReason = reset.gameOverReason;
   match.kickoff = reset.kickoff;
@@ -434,6 +441,7 @@ export function snapshotMatchModel(match: MutableMatchModel): MatchSnapshot {
       scoringEvents: summary.scoringEvents.map((event) => ({ ...event })),
       startingFieldPosition: clonePossessionFieldPosition(summary.startingFieldPosition),
     })),
+    dynastyStoryContext: cloneDynastyStoryContext(match.dynastyStoryContext),
     extraPoint: clonePlaceKickState(match.extraPoint),
     gameOverReason: match.gameOverReason,
     kickoff: cloneKickoffState(match.kickoff),
@@ -466,6 +474,12 @@ export function snapshotMatchModel(match: MutableMatchModel): MatchSnapshot {
     canRematch: match.phase === 'gameOver',
     winner: resolveWinner(match),
   };
+}
+
+export function cloneDynastyStoryContext(
+  context: DynastyMatchStoryContext | null,
+): DynastyMatchStoryContext | null {
+  return context ? { ...context } : null;
 }
 
 function canContinue(phase: MatchPhase): boolean {

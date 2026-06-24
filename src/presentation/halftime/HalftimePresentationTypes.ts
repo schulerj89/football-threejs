@@ -10,6 +10,7 @@ export type HalftimeLineId = 'opening' | 'story' | 'transition';
 
 export interface HalftimeStory {
   readonly category: HalftimeCategory;
+  readonly contextSummary: string | null;
   readonly scriptId: BroadcastScriptId;
   readonly supportingStatKeys: readonly string[];
   readonly supportingTeam: MatchPossession | null;

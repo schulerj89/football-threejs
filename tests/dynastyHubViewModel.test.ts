@@ -22,6 +22,8 @@ describe('dynasty hub view model', () => {
     expect(view.seasonLabel).toBe('2026 Season');
     expect(view.upcomingGame?.weekLabel).toBe('Week 1');
     expect(view.upcomingGame?.userOpponentLabel).toMatch(/^(at|vs) .+/);
+    expect(view.storySummary).toContain('Week 1');
+    expect(view.storySummary).toContain('0-0');
     expect(view.schedule).toHaveLength(5);
     expect(view.schedule.every((game) => game.matchupLabel.includes(' at '))).toBe(true);
     expect(view.standings).toHaveLength(6);

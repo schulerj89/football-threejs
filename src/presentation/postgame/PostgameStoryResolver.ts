@@ -40,6 +40,7 @@ export function resolvePostgameStory(match: MatchSnapshot): PostgameStory {
   return {
     caption,
     category: candidate.category,
+    contextSummary: match.dynastyStoryContext?.postgameSummary ?? null,
     scriptId,
     supportingPlayerId: candidate.supportingPlayerId ?? null,
     supportingStatKeys: candidate.supportingStatKeys,

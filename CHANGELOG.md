@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.22] - 2026-06-24
+
+### Added
+
+- Added compact Dynasty story context from the active save and scheduled user matchup, including week, matchup, records, and standings labels.
+- Added Dynasty context summaries to the hub, halftime report, and end-of-game stats story while keeping Play Now matches free of Dynasty copy.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyHubViewModel.test.ts tests/halftimePresentation.test.ts tests/postgamePresentation.test.ts tests/footballHubLaunch.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.21] - 2026-06-24
 
 ### Added

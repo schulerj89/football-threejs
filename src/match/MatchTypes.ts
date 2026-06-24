@@ -85,6 +85,19 @@ export interface MatchClockSnapshot {
   running: boolean;
 }
 
+export interface DynastyMatchStoryContext {
+  readonly halftimeSummary: string;
+  readonly hubSummary: string;
+  readonly matchupLabel: string;
+  readonly opponentRecordLabel: string;
+  readonly opponentStandingLabel: string;
+  readonly postgameSummary: string;
+  readonly seasonLabel: string;
+  readonly userRecordLabel: string;
+  readonly userStandingLabel: string;
+  readonly weekLabel: string;
+}
+
 export interface MatchModel {
   clock: MatchClockSnapshot;
   coinToss: CoinTossState;
@@ -92,6 +105,7 @@ export interface MatchModel {
   deterministicSeed: number;
   driveNumber: number;
   driveSummaries: readonly DriveSummary[];
+  dynastyStoryContext: DynastyMatchStoryContext | null;
   extraPoint: PlaceKickState;
   gameOverReason: 'clockExpired' | null;
   kickoff: KickoffState;

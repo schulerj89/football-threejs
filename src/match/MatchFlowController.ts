@@ -7,6 +7,7 @@ import {
   addDriveSummary,
   advanceToNextQuarter,
   beginMatch,
+  cloneDynastyStoryContext,
   completeExtraPoint,
   completeKickoff,
   createMatchModel,
@@ -44,6 +45,7 @@ import {
   type SimulatedPuntResult,
 } from './AbstractPuntSimulation';
 import type {
+  DynastyMatchStoryContext,
   DriveSummary,
   DriveSummaryResult,
   MatchDifficulty,
@@ -85,6 +87,7 @@ import type { GameStatsPlayEndedEvent } from '../stats/GameStatsEvent';
 
 export interface MatchFlowControllerOptions {
   difficulty?: MatchDifficulty;
+  dynastyStoryContext?: DynastyMatchStoryContext | null;
   opponentTeamId: string;
   quarterDurationSeconds?: number;
   rosterBinding?: GameplayRosterBinding;
@@ -122,6 +125,7 @@ export class MatchFlowController {
       seed: options.seed ?? DEFAULT_MATCH_RULES.seed,
     };
     this.model = createMatchModel({
+      dynastyStoryContext: options.dynastyStoryContext ?? null,
       opponentTeamId: options.opponentTeamId,
       rules,
       userTeamId: options.userTeamId,
@@ -186,6 +190,10 @@ export class MatchFlowController {
 
   setRosterBinding(binding: GameplayRosterBinding): void {
     this.rosterBinding = binding;
+  }
+
+  setDynastyStoryContext(context: DynastyMatchStoryContext | null): void {
+    this.model.dynastyStoryContext = cloneDynastyStoryContext(context);
   }
 
   recordPassRelease(_gameplay: GameplayModel, snapshotBeforeRelease: GameplaySnapshot): void {

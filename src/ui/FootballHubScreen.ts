@@ -15,7 +15,9 @@ import {
   simulateCurrentDynastyWeekNonUserGames,
 } from '../dynasty/DynastyWeekAdvance';
 import { IndexedDbDynastySaveStore } from '../dynasty/IndexedDbDynastySaveStore';
+import { createDynastyMatchStoryContext } from '../dynasty/DynastyStoryContext';
 import type { DynastySaveData, DynastySaveSource } from '../dynasty/DynastyTypes';
+import type { DynastyMatchStoryContext } from '../match/MatchTypes';
 import type { LeagueData } from '../league/LeagueTypes';
 import { calculateOverallRating } from '../ratings/OverallRatingCalculator';
 import { PLAYER_ATTRIBUTE_DEFINITIONS, type PlayerAttributeKey } from '../ratings/PlayerAttribute';
@@ -58,6 +60,7 @@ export const DYNASTY_DECISION_DOC_PATH = 'docs/DYNASTY_DECISIONS.md';
 export type FootballHubLaunchSource = 'dynasty' | 'playNow';
 
 export interface FootballHubLaunchOptions {
+  readonly dynastyStoryContext?: DynastyMatchStoryContext | null;
   readonly source: FootballHubLaunchSource;
 }
 
@@ -542,7 +545,10 @@ export class FootballHubScreen {
     upcomingMeta.textContent = view.upcomingGame
       ? `${view.upcomingGame.venueLabel} | ${view.upcomingGame.matchupLabel} | ${view.upcomingGame.statusLabel}`
       : 'No scheduled game remains.';
-    upcoming.append(upcomingLabel, upcomingTitle, upcomingMeta);
+    const upcomingStory = document.createElement('p');
+    upcomingStory.className = 'football-hub-dynasty-story';
+    upcomingStory.textContent = view.storySummary;
+    upcoming.append(upcomingLabel, upcomingTitle, upcomingMeta, upcomingStory);
     const currentWeek = getCurrentDynastyWeek(save);
     const userGame = getCurrentDynastyUserGame(save);
     const nonUserScheduledCount = currentWeek?.games.filter((game) =>
@@ -698,6 +704,11 @@ export class FootballHubScreen {
         this.settings.teamProfiles,
       ),
     }, {
+      dynastyStoryContext: createDynastyMatchStoryContext({
+        game,
+        league,
+        save,
+      }),
       source: 'dynasty',
     });
   }

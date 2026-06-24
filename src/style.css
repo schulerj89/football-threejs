@@ -2663,6 +2663,10 @@ body[data-game-mode="exhibition"] .score-counter {
   line-height: 1.45;
 }
 
+.football-hub-dynasty-story {
+  max-width: 760px;
+}
+
 .football-hub-dynasty-upcoming {
   min-height: 150px;
 }

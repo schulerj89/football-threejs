@@ -51,6 +51,7 @@ export function resolveHalftimeStory(match: MatchSnapshot): HalftimeStory {
 
   return {
     category,
+    contextSummary: match.dynastyStoryContext?.halftimeSummary ?? null,
     scriptId: selectScriptId(category, match.deterministicSeed),
     supportingStatKeys,
     supportingTeam,
@@ -78,4 +79,3 @@ function stableHash(value: string): number {
   }
   return hash >>> 0;
 }
-

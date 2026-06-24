@@ -37,6 +37,21 @@ describe('postgame presentation', () => {
     expect(story.supportingStatKeys).toContain('turnovers');
   });
 
+  it('includes Dynasty context when the match was launched from Dynasty', () => {
+    const match = {
+      ...createGameOverSnapshot({
+        opponentPoints: 17,
+        userPoints: 24,
+      }),
+      dynastyStoryContext: createDynastyStoryContext(),
+    };
+
+    const story = resolvePostgameStory(match);
+
+    expect(story.contextSummary).toBe('Dynasty Week 2: Metro started this matchup 1-0, with Lights at 0-1.');
+    expect(story.caption).not.toContain('Dynasty Week 2');
+  });
+
   it('selects a quarterback-dominance story from actual player passing stats', () => {
     const match = createGameOverSnapshot({
       opponentPassingYards: 100,
@@ -155,4 +170,19 @@ function resolveWinner(
   }
 
   return userScore > opponentScore ? 'user' : 'opponent';
+}
+
+function createDynastyStoryContext(): MatchSnapshot['dynastyStoryContext'] {
+  return {
+    halftimeSummary: 'Dynasty Week 2: Metro entered 1-0 against Lights (0-1).',
+    hubSummary: 'Week 2: Metro host Lights.',
+    matchupLabel: 'vs Lakefront Lights',
+    opponentRecordLabel: '0-1',
+    opponentStandingLabel: 'No. 5',
+    postgameSummary: 'Dynasty Week 2: Metro started this matchup 1-0, with Lights at 0-1.',
+    seasonLabel: '2026 Season',
+    userRecordLabel: '1-0',
+    userStandingLabel: 'No. 1',
+    weekLabel: 'Week 2',
+  };
 }

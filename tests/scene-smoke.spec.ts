@@ -1174,6 +1174,7 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(dynastyHub).toContainText('Season Core');
   await expect(dynastyHub).toContainText('Standings');
   await expect(dynastyHub).toContainText('Weekly Leaders');
+  await expect(dynastyHub.locator('.football-hub-dynasty-story')).toContainText('Week 1');
   await expect(dynastyHub.locator('.football-hub-dynasty-schedule li')).toHaveCount(5);
   await page.locator('.football-hub-nav').getByRole('button', { name: 'Settings' }).click();
   const hubSettings = page.locator('.football-hub-settings-view');

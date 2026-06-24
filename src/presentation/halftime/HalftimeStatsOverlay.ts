@@ -237,7 +237,8 @@ function formatStoryText(story: HalftimeStory | null, match: MatchSnapshot): str
     : story.supportingTeam === 'opponent'
       ? match.opponentTeam.shortName
       : 'Both teams';
-  return `${supportingTeam} | ${story.category.replace(/([A-Z])/g, ' $1').toUpperCase()}`;
+  const gameStory = `${supportingTeam} | ${story.category.replace(/([A-Z])/g, ' $1').toUpperCase()}`;
+  return story.contextSummary ? `${story.contextSummary} ${gameStory}` : gameStory;
 }
 
 function formatConversionRate(made: number, attempted: number): string {
