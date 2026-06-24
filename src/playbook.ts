@@ -128,6 +128,11 @@ const SPREAD_QUICK_ELEVEN_RECEIVER_IDS = [
   'offense-tight-end',
   'offense-rb',
 ] as const;
+const FOUR_VERTS_ELEVEN_RECEIVER_IDS = [
+  'offense-wr-left',
+  'offense-wr-right',
+  'offense-slot',
+] as const;
 const ELEVEN_ON_ELEVEN_PASS_PROTECTION_ASSIGNMENTS = {
   'offense-center': 'defense-line-middle',
   'offense-line-left': 'defense-line-left',
@@ -782,26 +787,18 @@ export const ELEVEN_ON_ELEVEN_PLAYS: PlayDefinition[] = [
     pass: {
       coverageAssignments: ELEVEN_ON_ELEVEN_PASS_COVERAGE_ASSIGNMENTS,
       deepHelpAssignments: {
-        'defense-safety': [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
+        'defense-safety': [...FOUR_VERTS_ELEVEN_RECEIVER_IDS],
       },
-      eligibleReceiverIds: [...SPREAD_QUICK_ELEVEN_RECEIVER_IDS],
+      eligibleReceiverIds: [...FOUR_VERTS_ELEVEN_RECEIVER_IDS],
       receiverDisplayNames: ELEVEN_ON_ELEVEN_RECEIVER_DISPLAY_NAMES,
     },
     playbookId: '11v11',
     preferredSide: PLAY_SIDE,
     protectionAssignments: ELEVEN_ON_ELEVEN_PASS_PROTECTION_ASSIGNMENTS,
     receiverRoutes: {
-      'offense-rb': route('four-verts-out-flat-11-rb-boundary-flat', 8, [
-        waypoint('check-release', point(snapSide('boundary', 3.5), offenseDepth(1.4))),
-        waypoint('flat', point(sidelineInset('boundary', ELEVEN.receiverSidelineInset + 6), defenseDepth(4.2))),
-      ]),
       'offense-slot': route('four-verts-out-flat-11-slot-streak', 9.75, [
         waypoint('vertical-stem', point(alignedTo('offense-slot'), defenseDepth(8))),
         waypoint('streak', point(alignedTo('offense-slot'), defenseDepth(18))),
-      ]),
-      'offense-tight-end': route('four-verts-out-flat-11-tight-end-field-out', 8.75, [
-        waypoint('stem', point(alignedTo('offense-tight-end'), defenseDepth(6.5))),
-        waypoint('out', point(sidelineInset('field', ELEVEN.receiverSidelineInset + 8), defenseDepth(8.2))),
       ]),
       'offense-wr-left': route('four-verts-out-flat-11-left-streak', 9.75, [
         waypoint('vertical-stem', point(alignedTo('offense-wr-left'), defenseDepth(8))),

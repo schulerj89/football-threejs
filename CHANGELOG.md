@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.66] - 2026-06-24
+
+### Fixed
+
+- Simplified `Four Verts Out Flat 11` play art and targeting to three straight vertical receiver routes instead of mixing in the previous tight-end out and running-back flat.
+- Updated Four Verts receiver/deep-help ordering so gameplay target cycling, field route art, and play-card art all use the same three vertical receivers.
+
+### Added
+
+- Added `artifacts/route-art-validation-1.22.66/` and `artifacts/play-card-validation-1.22.66/` with Playwright screenshots validating the corrected Four Verts route art.
+
+### Tests
+
+- Verified `npx vitest run tests/playbook.test.ts tests/receiverRoutes.test.ts tests/playCallDiagram.test.ts tests/routeArtRenderer.test.ts`, `npx playwright test tests/scene-smoke.spec.ts -g "renders graphical play cards and selects plays through the shared request path"`, `npm run artifacts:route-art`, `npm run artifacts:play-cards`, and `npm run build`.
+
 ## [1.22.65] - 2026-06-24
 
 ### Fixed
