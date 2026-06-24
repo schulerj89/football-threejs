@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.45] - 2026-06-24
+
+### Added
+
+- Added a Dynasty offseason incoming class preview that wraps the recruiting signing-class projection with season status and roster-count context.
+- Kept incoming class candidates read-only so projected signees cannot mutate active roster IDs, ratings, or roster sizes.
+- Updated the Phase 6 decision map to mark incoming class preview work shipped and keep the remaining roster review, next-season, and hardening plan visible.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyOffseason.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.44] - 2026-06-24
 
 ### Added

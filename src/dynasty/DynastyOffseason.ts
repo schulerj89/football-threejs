@@ -1,6 +1,10 @@
 import { calculateOverallRating } from '../ratings/OverallRatingCalculator';
 import { getTeamRosterOrDefault } from '../roster/RosterRegistry';
 import type { FootballPosition } from '../roster/RosterPlayer';
+import {
+  createDynastySigningClassPreview,
+  type DynastySigningClassPreview,
+} from './DynastyRecruiting';
 import type { DynastySaveData } from './DynastyTypes';
 
 export const DYNASTY_OFFSEASON_DEPARTURE_PREVIEW_COUNT = 6;
@@ -25,6 +29,32 @@ export interface DynastyOffseasonDeparturePreview {
   readonly departureCandidates: readonly DynastyDepartureCandidate[];
   readonly seasonComplete: boolean;
   readonly seasonYear: number;
+  readonly summaryLabel: string;
+  readonly teamId: string;
+}
+
+export interface DynastyIncomingClassCandidate {
+  readonly fitLabel: string;
+  readonly footballPosition: FootballPosition;
+  readonly projectedGrade: number;
+  readonly prospectId: string;
+  readonly prospectName: string;
+  readonly rosterActionLabel: string;
+  readonly room: string;
+  readonly signingConfidence: number;
+  readonly sourceLabel: string;
+  readonly starRating: number;
+}
+
+export interface DynastyOffseasonIncomingClassPreview {
+  readonly addressedNeedCount: number;
+  readonly classFitScore: number;
+  readonly currentRosterCount: number;
+  readonly incomingCandidates: readonly DynastyIncomingClassCandidate[];
+  readonly projectedRosterCount: number;
+  readonly seasonComplete: boolean;
+  readonly seasonYear: number;
+  readonly signingClassPreview: DynastySigningClassPreview;
   readonly summaryLabel: string;
   readonly teamId: string;
 }
@@ -88,6 +118,44 @@ export function createDynastyOffseasonDeparturePreview(options: {
     seasonComplete,
     seasonYear: options.save.currentSeason.year,
     summaryLabel: `${candidates.length} departure candidates | ${seasonComplete ? 'season complete' : 'preview only'}`,
+    teamId,
+  };
+}
+
+export function createDynastyOffseasonIncomingClassPreview(options: {
+  readonly save: DynastySaveData;
+  readonly teamId?: string;
+}): DynastyOffseasonIncomingClassPreview {
+  const teamId = options.teamId ?? options.save.userTeamId;
+  const roster = getTeamRosterOrDefault(teamId);
+  const seasonComplete = options.save.status === 'complete';
+  const signingClassPreview = createDynastySigningClassPreview({
+    save: options.save,
+    teamId,
+  });
+  const incomingCandidates = signingClassPreview.projectedSignees.map((signee) => ({
+    fitLabel: signee.fitLabel,
+    footballPosition: signee.footballPosition,
+    projectedGrade: signee.projectedGrade,
+    prospectId: signee.prospectId,
+    prospectName: signee.prospectName,
+    rosterActionLabel: seasonComplete ? 'Ready for offseason review' : 'Preview only',
+    room: signee.room,
+    signingConfidence: signee.signingConfidence,
+    sourceLabel: `${signee.starRating}-star ${signee.room}`,
+    starRating: signee.starRating,
+  }));
+
+  return {
+    addressedNeedCount: signingClassPreview.addressedNeedCount,
+    classFitScore: signingClassPreview.classFitScore,
+    currentRosterCount: roster.players.length,
+    incomingCandidates,
+    projectedRosterCount: roster.players.length + incomingCandidates.length,
+    seasonComplete,
+    seasonYear: options.save.currentSeason.year,
+    signingClassPreview,
+    summaryLabel: `${incomingCandidates.length} incoming prospects | ${seasonComplete ? 'season complete' : 'preview only'}`,
     teamId,
   };
 }
