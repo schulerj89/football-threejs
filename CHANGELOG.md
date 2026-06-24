@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.46] - 2026-06-24
+
+### Added
+
+- Added a Dynasty offseason roster review that combines returning roster counts, departure candidates, incoming prospects, and target gaps by position room.
+- Included projected roster totals and gap labels without mutating roster registry data or applying offseason changes.
+- Updated the Phase 6 decision map to mark roster review shipped and leave next-season schedule/history plus hardening work visible.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyOffseason.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.45] - 2026-06-24
 
 ### Added

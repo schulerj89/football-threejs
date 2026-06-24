@@ -3,6 +3,7 @@ import {
   DYNASTY_OFFSEASON_DEPARTURE_PREVIEW_COUNT,
   createDynastyOffseasonDeparturePreview,
   createDynastyOffseasonIncomingClassPreview,
+  createDynastyOffseasonRosterReview,
 } from '../src/dynasty/DynastyOffseason';
 import { createDynastySigningClassPreview } from '../src/dynasty/DynastyRecruiting';
 import { createDynastySeasonCore } from '../src/dynasty/DynastySchedule';
@@ -94,6 +95,60 @@ describe('dynasty offseason departures', () => {
     expect(afterRoster.players.map((player) => player.id)).toEqual(
       beforeRoster.players.map((player) => player.id),
     );
+    expect(afterRoster.players.map((player) => [player.id, player.ratings])).toEqual(
+      beforeRoster.players.map((player) => [player.id, player.ratings]),
+    );
+  });
+
+  it('summarizes offseason roster balance by room without changing roster data', () => {
+    const save = createSave('dynasty-offseason-roster-review');
+    const beforeRoster = getTeamRosterOrDefault(DEFAULT_USER_TEAM_ID);
+    const departurePreview = createDynastyOffseasonDeparturePreview({ save });
+    const incomingClassPreview = createDynastyOffseasonIncomingClassPreview({ save });
+    const first = createDynastyOffseasonRosterReview({ save });
+    const second = createDynastyOffseasonRosterReview({ save });
+    const afterRoster = getTeamRosterOrDefault(DEFAULT_USER_TEAM_ID);
+
+    expect(first).toEqual(second);
+    expect(first.teamId).toBe(DEFAULT_USER_TEAM_ID);
+    expect(first.seasonYear).toBe(save.currentSeason.year);
+    expect(first.seasonComplete).toBe(false);
+    expect(first.departurePreview).toEqual(departurePreview);
+    expect(first.incomingClassPreview).toEqual(incomingClassPreview);
+    expect(first.reviewRows.map((row) => row.room)).toEqual([
+      'Quarterbacks',
+      'Backfield',
+      'Receivers',
+      'Line',
+      'Front Seven',
+      'Secondary',
+      'Specialists',
+    ]);
+    expect(first.totalCurrentRosterCount).toBe(beforeRoster.players.length);
+    expect(first.totalDepartureCandidateCount).toBe(departurePreview.departureCandidates.length);
+    expect(first.totalIncomingCandidateCount).toBe(incomingClassPreview.incomingCandidates.length);
+    expect(first.totalProjectedRosterCount)
+      .toBe(first.totalCurrentRosterCount - first.totalDepartureCandidateCount + first.totalIncomingCandidateCount);
+    expect(first.summaryLabel).toBe(
+      `${first.totalProjectedRosterCount} projected roster | ${first.reviewRows.filter((row) => row.positionGap > 0).length} rooms with gaps`,
+    );
+    expect(first.reviewRows.every((row) =>
+      row.averageOverall >= 0 &&
+      row.averageOverall <= 99 &&
+      row.currentRosterCount > 0 &&
+      row.returningRosterCount === row.currentRosterCount - row.departureCandidateCount &&
+      row.projectedRosterCount === row.returningRosterCount + row.incomingCandidateCount &&
+      row.positionGap === Math.max(0, row.targetRosterCount - row.projectedRosterCount) &&
+      row.summaryLabel === `${row.room}: ${row.returningRosterCount} returning, ${row.departureCandidateCount} departure candidates, ${row.incomingCandidateCount} incoming` &&
+      row.weakestOverall >= 0 &&
+      row.weakestOverall <= 99)).toBe(true);
+    expect(first.reviewRows.some((row) => row.gapLabel.includes('below target'))).toBe(true);
+    expect(first.reviewRows.reduce((sum, row) => sum + row.currentRosterCount, 0))
+      .toBe(first.totalCurrentRosterCount);
+    expect(first.reviewRows.reduce((sum, row) => sum + row.departureCandidateCount, 0))
+      .toBe(first.totalDepartureCandidateCount);
+    expect(first.reviewRows.reduce((sum, row) => sum + row.incomingCandidateCount, 0))
+      .toBe(first.totalIncomingCandidateCount);
     expect(afterRoster.players.map((player) => [player.id, player.ratings])).toEqual(
       beforeRoster.players.map((player) => [player.id, player.ratings]),
     );

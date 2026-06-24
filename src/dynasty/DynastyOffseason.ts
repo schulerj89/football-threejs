@@ -59,6 +59,50 @@ export interface DynastyOffseasonIncomingClassPreview {
   readonly teamId: string;
 }
 
+export interface DynastyOffseasonRosterReviewRow {
+  readonly averageOverall: number;
+  readonly currentRosterCount: number;
+  readonly departureCandidateCount: number;
+  readonly gapLabel: string;
+  readonly incomingCandidateCount: number;
+  readonly positionGap: number;
+  readonly positions: readonly FootballPosition[];
+  readonly projectedRosterCount: number;
+  readonly returningRosterCount: number;
+  readonly room: string;
+  readonly summaryLabel: string;
+  readonly targetRosterCount: number;
+  readonly weakestOverall: number;
+}
+
+export interface DynastyOffseasonRosterReview {
+  readonly departurePreview: DynastyOffseasonDeparturePreview;
+  readonly incomingClassPreview: DynastyOffseasonIncomingClassPreview;
+  readonly reviewRows: readonly DynastyOffseasonRosterReviewRow[];
+  readonly seasonComplete: boolean;
+  readonly seasonYear: number;
+  readonly summaryLabel: string;
+  readonly teamId: string;
+  readonly totalCurrentRosterCount: number;
+  readonly totalDepartureCandidateCount: number;
+  readonly totalIncomingCandidateCount: number;
+  readonly totalProjectedRosterCount: number;
+}
+
+const ROSTER_REVIEW_ROOMS: readonly {
+  readonly positions: readonly FootballPosition[];
+  readonly room: string;
+  readonly targetRosterCount: number;
+}[] = [
+  { positions: ['QB'], room: 'Quarterbacks', targetRosterCount: 2 },
+  { positions: ['RB'], room: 'Backfield', targetRosterCount: 3 },
+  { positions: ['WR', 'SLOT', 'TE'], room: 'Receivers', targetRosterCount: 6 },
+  { positions: ['C', 'LG', 'LT', 'RG', 'RT', 'LS'], room: 'Line', targetRosterCount: 8 },
+  { positions: ['DL', 'ILB', 'OLB'], room: 'Front Seven', targetRosterCount: 8 },
+  { positions: ['CB', 'FS', 'SS'], room: 'Secondary', targetRosterCount: 6 },
+  { positions: ['K', 'P'], room: 'Specialists', targetRosterCount: 2 },
+];
+
 export function createDynastyOffseasonDeparturePreview(options: {
   readonly save: DynastySaveData;
   readonly teamId?: string;
@@ -160,6 +204,60 @@ export function createDynastyOffseasonIncomingClassPreview(options: {
   };
 }
 
+export function createDynastyOffseasonRosterReview(options: {
+  readonly save: DynastySaveData;
+  readonly teamId?: string;
+}): DynastyOffseasonRosterReview {
+  const teamId = options.teamId ?? options.save.userTeamId;
+  const roster = getTeamRosterOrDefault(teamId);
+  const departurePreview = createDynastyOffseasonDeparturePreview({
+    save: options.save,
+    teamId,
+  });
+  const incomingClassPreview = createDynastyOffseasonIncomingClassPreview({
+    save: options.save,
+    teamId,
+  });
+  const reviewRows = ROSTER_REVIEW_ROOMS.map((room) =>
+    createRosterReviewRow({
+      departureCandidates: departurePreview.departureCandidates,
+      incomingCandidates: incomingClassPreview.incomingCandidates,
+      room,
+      roster,
+    }));
+  const totalDepartureCandidateCount = reviewRows.reduce(
+    (sum, row) => sum + row.departureCandidateCount,
+    0,
+  );
+  const totalIncomingCandidateCount = reviewRows.reduce(
+    (sum, row) => sum + row.incomingCandidateCount,
+    0,
+  );
+  const totalCurrentRosterCount = reviewRows.reduce(
+    (sum, row) => sum + row.currentRosterCount,
+    0,
+  );
+  const totalProjectedRosterCount = reviewRows.reduce(
+    (sum, row) => sum + row.projectedRosterCount,
+    0,
+  );
+  const gapRoomCount = reviewRows.filter((row) => row.positionGap > 0).length;
+
+  return {
+    departurePreview,
+    incomingClassPreview,
+    reviewRows,
+    seasonComplete: options.save.status === 'complete',
+    seasonYear: options.save.currentSeason.year,
+    summaryLabel: `${totalProjectedRosterCount} projected roster | ${gapRoomCount} rooms with gaps`,
+    teamId,
+    totalCurrentRosterCount,
+    totalDepartureCandidateCount,
+    totalIncomingCandidateCount,
+    totalProjectedRosterCount,
+  };
+}
+
 function createDepartureRisk(options: {
   readonly isReserve: boolean;
   readonly isStarter: boolean;
@@ -209,6 +307,58 @@ function createRosterStatusLabel(options: {
     return 'Reserve';
   }
   return 'Depth';
+}
+
+function createRosterReviewRow(options: {
+  readonly departureCandidates: readonly DynastyDepartureCandidate[];
+  readonly incomingCandidates: readonly DynastyIncomingClassCandidate[];
+  readonly room: {
+    readonly positions: readonly FootballPosition[];
+    readonly room: string;
+    readonly targetRosterCount: number;
+  };
+  readonly roster: ReturnType<typeof getTeamRosterOrDefault>;
+}): DynastyOffseasonRosterReviewRow {
+  const players = options.roster.players.filter((player) =>
+    options.room.positions.includes(player.footballPosition));
+  const overalls = players.map((player) => calculateOverallRating(player.footballPosition, player.ratings));
+  const departureCandidateCount = options.departureCandidates.filter((candidate) =>
+    options.room.positions.includes(candidate.footballPosition)).length;
+  const incomingCandidateCount = options.incomingCandidates.filter((candidate) =>
+    options.room.positions.includes(candidate.footballPosition)).length;
+  const currentRosterCount = players.length;
+  const returningRosterCount = Math.max(0, currentRosterCount - departureCandidateCount);
+  const projectedRosterCount = returningRosterCount + incomingCandidateCount;
+  const positionGap = Math.max(0, options.room.targetRosterCount - projectedRosterCount);
+
+  return {
+    averageOverall: overalls.length > 0
+      ? Math.round(overalls.reduce((sum, overall) => sum + overall, 0) / overalls.length)
+      : 0,
+    currentRosterCount,
+    departureCandidateCount,
+    gapLabel: createGapLabel(projectedRosterCount, options.room.targetRosterCount),
+    incomingCandidateCount,
+    positionGap,
+    positions: options.room.positions,
+    projectedRosterCount,
+    returningRosterCount,
+    room: options.room.room,
+    summaryLabel: `${options.room.room}: ${returningRosterCount} returning, ${departureCandidateCount} departure candidates, ${incomingCandidateCount} incoming`,
+    targetRosterCount: options.room.targetRosterCount,
+    weakestOverall: overalls.length > 0 ? Math.min(...overalls) : 0,
+  };
+}
+
+function createGapLabel(projectedRosterCount: number, targetRosterCount: number): string {
+  const gap = projectedRosterCount - targetRosterCount;
+  if (gap === 0) {
+    return 'On target';
+  }
+  if (gap > 0) {
+    return `+${gap} over target`;
+  }
+  return `${Math.abs(gap)} below target`;
 }
 
 function formatDepartureReason(reason: DynastyDepartureReason): string {

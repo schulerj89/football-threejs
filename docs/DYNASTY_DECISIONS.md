@@ -271,7 +271,7 @@ Completion notes:
 
 ### Phase 6: Offseason and Multi-Year Saves
 
-Status: In progress. Minor update 2 shipped in `1.22.45`.
+Status: In progress. Minor update 3 shipped in `1.22.46`.
 
 Goal: Close the long-term loop.
 
@@ -293,7 +293,7 @@ Minor update plan:
 
 1. Departures preview contract: add deterministic offseason departure candidates from roster identity and season status without mutating rosters. Shipped in `1.22.44`.
 2. Incoming class preview: connect recruiting signing previews to an offseason incoming class without mutating rosters. Shipped in `1.22.45`.
-3. Roster review: show returning, departing, and incoming balance with position gaps.
+3. Roster review: show returning, departing, and incoming balance with position gaps. Shipped in `1.22.46`.
 4. Next-season schedule and history: generate the next season shell and preserve season history rows.
 
 Patch hardening plan:
