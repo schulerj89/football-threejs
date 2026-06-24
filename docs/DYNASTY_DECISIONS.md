@@ -159,7 +159,7 @@ Completion notes:
 
 ### Phase 3: Player Progression
 
-Status: In progress. Minor updates 1-4 shipped in `1.22.26`, `1.22.27`, `1.22.28`, and `1.22.29`; patch hardening update 1 shipped in `1.22.30`.
+Status: Complete in `1.22.31`.
 
 Goal: Make roster identity matter over time.
 
@@ -186,7 +186,13 @@ Minor update plan:
 Patch hardening plan:
 
 1. Progression bounds hardening: reject negative, non-integer, oversized, or duplicate progression rows during save validation. Shipped in `1.22.30`.
-2. Gameplay isolation hardening: prove progression previews and saved deltas cannot alter live gameplay ratings until explicitly applied through the approved path.
+2. Gameplay isolation hardening: prove progression previews and saved deltas cannot alter live gameplay ratings until explicitly applied through the approved path. Shipped in `1.22.31`.
+
+Completion notes:
+
+- Dynasty progression previews now generate deterministic performance points, training summaries, and bounded projected rating deltas from current season stats.
+- Approved progression applications persist player/week rating delta history in the save without mutating roster registry ratings.
+- Save validation rejects malformed, negative, non-integer, oversized, empty-delta, duplicate, or invalid progression application rows, and gameplay roster bindings ignore saved deltas until a future explicit apply path exists.
 
 ### Phase 4: Recruiting-Lite
 

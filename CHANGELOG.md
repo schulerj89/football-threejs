@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.31] - 2026-06-24
+
+### Fixed
+
+- Added gameplay isolation coverage proving saved Dynasty progression deltas do not alter live gameplay roster ratings, lineup bindings, or rating-derived movement profiles.
+- Marked Dynasty Phase 3 Player Progression complete after all four minor updates and both patch hardening updates shipped.
+
+### Tests
+
+- Verified `npx vitest run tests/rosterIdentity.test.ts tests/dynastyProgressionPreview.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.30] - 2026-06-24
 
 ### Fixed

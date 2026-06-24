@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   BROADCAST_EXPERIENCE_SETTINGS,
 } from '../src/config/GameExperienceSettings';
+import { approveCurrentDynastyWeekProgression } from '../src/dynasty/DynastyProgressionPreview';
+import { createDynastySeasonCore } from '../src/dynasty/DynastySchedule';
+import {
+  simulateCurrentDynastyUserGame,
+  simulateCurrentDynastyWeekNonUserGames,
+} from '../src/dynasty/DynastyWeekAdvance';
+import { generateLeagueData } from '../src/league/LeagueGenerator';
 import { createGameplayModel, snapshotGameplayModel } from '../src/playState';
 import {
   ELEVEN_ON_ELEVEN_PLAYER_IDS,
@@ -48,6 +55,7 @@ import {
   validateSpecialTeamsFormation,
 } from '../src/specialTeams/SpecialTeamsFormations';
 import { DEFAULT_TEAM_PROFILE_SETTINGS } from '../src/teams/TeamProfileStore';
+import { DEFAULT_USER_TEAM_ID } from '../src/teams/TeamRegistry';
 
 describe('roster identity', () => {
   it('ships valid fictional starter team rosters with unique jersey numbers', () => {
@@ -130,6 +138,44 @@ describe('roster identity', () => {
       createPlayerMovementProfileFromRosterPlayer(rosterPlayer!),
     );
     expect(runningBack?.id).toBe('offense-rb');
+  });
+
+  it('keeps saved Dynasty progression deltas isolated from live gameplay roster ratings', () => {
+    const baselineBinding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
+    const baselineGameplay = snapshotGameplayModel(createGameplayModel({
+      playbookId: '11v11',
+      rosterBinding: baselineBinding,
+    }));
+    const approved = approveCurrentDynastyWeekProgression({
+      appliedAt: '2026-06-24T13:00:00.000Z',
+      save: createCompletedDynastyWeekSave('dynasty-gameplay-isolation'),
+    });
+    const afterBinding = createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS);
+    const afterGameplay = snapshotGameplayModel(createGameplayModel({
+      playbookId: '11v11',
+      rosterBinding: afterBinding,
+    }));
+
+    expect(approved.approved).toBe(true);
+    expect(approved.save.currentSeason.progressionApplications.length).toBeGreaterThan(0);
+    expect(afterBinding.activeLineup.bindings).toEqual(baselineBinding.activeLineup.bindings);
+    expect(afterGameplay.players.map((player) => [player.id, player.movement])).toEqual(
+      baselineGameplay.players.map((player) => [player.id, player.movement]),
+    );
+
+    const sourceRoster = getTeamRosterOrDefault(DEFAULT_USER_TEAM_ID);
+    for (const application of approved.applications) {
+      const gameplayRosterPlayer = afterBinding.userRoster.players.find((player) =>
+        player.id === application.playerId);
+      const sourceRosterPlayer = sourceRoster.players.find((player) =>
+        player.id === application.playerId);
+
+      expect(gameplayRosterPlayer?.ratings).toEqual(sourceRosterPlayer?.ratings);
+      for (const delta of application.ratingDeltas) {
+        expect(gameplayRosterPlayer?.ratings[delta.attribute]).toBe(delta.currentValue);
+        expect(gameplayRosterPlayer?.ratings[delta.attribute]).not.toBe(delta.projectedValue);
+      }
+    }
   });
 
   it('keeps slot-to-roster identity stable across play changes and reloads', () => {
@@ -272,3 +318,15 @@ describe('roster identity', () => {
       .toBe(roster.offensiveStarterIds[0]);
   });
 });
+
+function createCompletedDynastyWeekSave(seed: string) {
+  const league = generateLeagueData({ seed: 'dynasty-gameplay-isolation-league' });
+  return simulateCurrentDynastyUserGame(simulateCurrentDynastyWeekNonUserGames(
+    createDynastySeasonCore({
+      createdAt: '2026-06-24T12:00:00.000Z',
+      seed,
+      teams: league.teams,
+      userTeamId: DEFAULT_USER_TEAM_ID,
+    }),
+  ).save).save;
+}
