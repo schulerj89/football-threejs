@@ -73,6 +73,7 @@ export interface PlayDefinition {
   initialMovementDirection: Vector2;
   kind: PlayKind;
   pass?: {
+    coverageShell?: 'cover2Zone' | 'man';
     coverageAssignments?: Record<string, string>;
     deepHelpAssignments?: Record<string, string[]>;
     eligibleReceiverIds: string[];
@@ -226,7 +227,7 @@ export const FIVE_ON_FIVE_PLAYS: PlayDefinition[] = [
       rusherSlot('defense-rusher-right', 'offense-blocker-right'),
       coverageSlot('defense-cover-wr', 'offense-wr'),
       coverageSlot('defense-cover-rb', 'offense-rb'),
-      defenderSlot('defense-safety', midpointOf(['offense-wr'])),
+      defenseSlot('defense-safety', 'coverageDefender', point(midpointOf(['offense-wr']), defenseDepth(safetyDepth))),
     ],
     id: 'quick-pass',
     initialMovementDirection: { x: 0, z: 1 },
@@ -268,7 +269,7 @@ export const FIVE_ON_FIVE_PLAYS: PlayDefinition[] = [
       rusherSlot('defense-rusher-right', 'offense-blocker-right'),
       coverageSlot('defense-cover-wr', 'offense-wr'),
       coverageSlot('defense-cover-rb', 'offense-rb'),
-      defenderSlot('defense-safety', midpointOf(['offense-wr', 'offense-rb'])),
+      defenseSlot('defense-safety', 'coverageDefender', point(midpointOf(['offense-wr', 'offense-rb']), defenseDepth(safetyDepth))),
     ],
     id: 'slant-flat',
     initialMovementDirection: { x: 0, z: 1 },

@@ -2,6 +2,10 @@ import type { SnapPlacement } from './ballSpotting';
 import { FIELD_DIRECTION } from './fieldSpec';
 import type { FootballSpot } from './fieldScale';
 import {
+  resolveCoverageZones,
+  type CoverageZoneKind,
+} from './coverageShell';
+import {
   resolveFormation,
   resolveFormationTarget,
   type ResolvedFormationSlot,
@@ -64,10 +68,21 @@ export interface PlayCallBlockerAssignment {
   start: SvgPoint;
 }
 
+export interface PlayCallCoverageZone {
+  defenderId: string;
+  footballLandmark: FootballSpot;
+  footballPoints: FootballSpot[];
+  kind: CoverageZoneKind;
+  label: string;
+  landmark: SvgPoint;
+  points: SvgPoint[];
+}
+
 export interface PlayCallDiagramModel {
   alignmentIssues: PlayCallDiagramAlignmentIssue[];
   ball: SvgPoint;
   blockerAssignments: PlayCallBlockerAssignment[];
+  coverageZones: PlayCallCoverageZone[];
   fieldSide: 'left' | 'right';
   lineOfScrimmage: {
     end: SvgPoint;
@@ -133,6 +148,7 @@ export function createPlayCallDiagramModel(
     blockerTargets,
   );
   const receiverRoutes = resolveEligibleReceiverRoutes(play, snapPlacement);
+  const coverageZones = resolveCoverageZones(play, snapPlacement);
   const runTarget = play.kind === 'run'
     ? resolveRunTarget(play, ballCarrier.position, blockerTargets)
     : null;
@@ -141,6 +157,10 @@ export function createPlayCallDiagramModel(
     ...formation.slots.map((slot) => slot.position),
     ...Object.values(blockerTargets),
     ...blockerAssignments.map((assignment) => assignment.footballEnd),
+    ...coverageZones.flatMap((zone) => [
+      zone.landmark,
+      ...zone.footballPoints,
+    ]),
     ...receiverRoutes.flatMap((route) => route.points),
   ];
 
@@ -168,6 +188,15 @@ export function createPlayCallDiagramModel(
       footballStart: { ...assignment.footballStart },
       kind: assignment.kind,
       start: normalizeFootballSpotToSvg(assignment.footballStart, transform),
+    })),
+    coverageZones: coverageZones.map((zone) => ({
+      defenderId: zone.defenderId,
+      footballLandmark: { ...zone.landmark },
+      footballPoints: zone.footballPoints.map((point) => ({ ...point })),
+      kind: zone.kind,
+      label: zone.label,
+      landmark: normalizeFootballSpotToSvg(zone.landmark, transform),
+      points: zone.footballPoints.map((point) => normalizeFootballSpotToSvg(point, transform)),
     })),
     fieldSide: formation.fieldSide,
     lineOfScrimmage: {

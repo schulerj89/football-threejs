@@ -8,6 +8,12 @@ import {
   type PlayDefinition,
 } from './playbook';
 import type { FootballSpot } from './fieldScale';
+import {
+  COVERAGE_SHELL_CONFIG,
+  getCoverageZoneForDefender,
+  resolveCoverageShell,
+  resolveCoverageZoneTarget,
+} from './coverageShell';
 import { DEFENDER_CONFIG, updateDefenderPursuit } from './defenderModel';
 import type { PlayerModel, Vector2 } from './playerModel';
 import {
@@ -90,7 +96,7 @@ export function updateRushingDrillAi(
       acquireBlockingEngagements(players, blocking, options.play);
     });
     profiler.measure('defensiveAi', () => {
-      updateDefenders(players, blocking, runner, options.play, delta);
+      updateDefenders(players, blocking, runner, options.play, options.lineOfScrimmage, delta);
     });
   } else {
     releaseSeparatedEngagements(players, blocking);
@@ -104,7 +110,7 @@ export function updateRushingDrillAi(
       options.receiverRouteStates,
     );
     acquireBlockingEngagements(players, blocking, options.play);
-    updateDefenders(players, blocking, runner, options.play, delta);
+    updateDefenders(players, blocking, runner, options.play, options.lineOfScrimmage, delta);
   }
   keepNonCarriersInsidePlayableField(players, runner.id, options.bounds);
   if (profiler?.enabled) {
@@ -290,10 +296,13 @@ function updateDefenders(
   blocking: BlockingState,
   runner: PlayerModel,
   play: PlayDefinition,
+  lineOfScrimmage: FootballSpot,
   deltaSeconds: number,
 ): void {
   const engagedDefenderIds = getEngagedDefenderIds(blocking);
   const passCompleted = play.kind === 'pass' && runner.role !== 'quarterback';
+  const coverageShell = resolveCoverageShell(play);
+  const snapPlacement = resolveSnapPlacement(lineOfScrimmage);
 
   for (const defender of players) {
     if (defender.team !== 'defense') {
@@ -302,6 +311,38 @@ function updateDefenders(
 
     const isEngaged = engagedDefenderIds.has(defender.id);
     defender.currentState = isEngaged ? 'engaged' : 'pursuing';
+    const zone = !isEngaged &&
+      defender.role === 'coverageDefender' &&
+      coverageShell === 'cover2Zone' &&
+      !passCompleted
+      ? getCoverageZoneForDefender(play, defender.id, snapPlacement)
+      : null;
+
+    if (zone) {
+      const target = resolveCoverageZoneTarget(defender, players, zone);
+      const distanceToTarget = Math.hypot(
+        target.x - defender.position.x,
+        target.z - defender.position.z,
+      );
+
+      if (distanceToTarget <= COVERAGE_SHELL_CONFIG.zoneHoldRadiusYards) {
+        defender.velocity.x = 0;
+        defender.velocity.z = 0;
+        defender.facingRadians = Math.atan2(
+          runner.position.x - defender.position.x,
+          runner.position.z - defender.position.z,
+        );
+      } else {
+        updateDefenderPursuit(
+          defender,
+          createZoneTargetPlayer(target),
+          deltaSeconds,
+          COVERAGE_SHELL_CONFIG.zonePatrolSpeedMultiplier,
+        );
+      }
+      continue;
+    }
+
     const coverageTarget =
       defender.role === 'coverageDefender' && !passCompleted
         ? getCoverageTarget(players, play, defender.id)
@@ -311,6 +352,9 @@ function updateDefenders(
         ? getDeepHelpTarget(players, play, defender.id)
         : null;
     const target = coverageTarget ?? deepHelpTarget ?? runner;
+    if (passCompleted && defender.role === 'coverageDefender') {
+      facePlayerToward(defender, target.position);
+    }
     updateDefenderPursuit(
       defender,
       target,
@@ -380,6 +424,32 @@ function getDeepHelpTarget(
   return {
     ...receivers[0],
     position: midpoint,
+  };
+}
+
+function facePlayerToward(player: PlayerModel, target: FootballSpot): void {
+  player.facingRadians = Math.atan2(
+    target.x - player.position.x,
+    target.z - player.position.z,
+  );
+}
+
+function createZoneTargetPlayer(position: FootballSpot): PlayerModel {
+  return {
+    collisionRadius: 0,
+    currentState: 'idle',
+    facingRadians: 0,
+    id: 'coverage-zone-target',
+    movement: {
+      acceleration: 0,
+      deceleration: 0,
+      maxSpeed: 0,
+      source: 'default',
+    },
+    position,
+    role: 'defender',
+    team: 'defense',
+    velocity: { x: 0, z: 0 },
   };
 }
 

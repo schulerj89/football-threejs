@@ -3,6 +3,7 @@ import {
   PLAY_CALL_DIAGRAM_SIZE,
   createPlayCallDiagramModel,
   type PlayCallBlockerAssignment,
+  type PlayCallCoverageZone,
   type PlayCallDiagramModel,
   type PlayCallRoute,
   type SvgPoint,
@@ -353,6 +354,7 @@ function createDiagramSvg(
   const svg = createSvgElement('svg');
   svg.classList.add('play-card-diagram');
   svg.dataset.playId = model.playId;
+  svg.dataset.coverageZones = model.coverageZones.length.toString();
   svg.dataset.receiverRoutes = model.receiverRoutes.length.toString();
   svg.setAttribute('viewBox', `0 0 ${PLAY_CALL_DIAGRAM_SIZE.width} ${PLAY_CALL_DIAGRAM_SIZE.height}`);
   svg.setAttribute('aria-hidden', 'true');
@@ -366,6 +368,10 @@ function createDiagramSvg(
     model.lineOfScrimmage.end,
     'play-card-line-of-scrimmage',
   ));
+
+  for (const zone of model.coverageZones) {
+    svg.appendChild(createCoverageZone(zone));
+  }
 
   for (const assignment of model.blockerAssignments) {
     svg.appendChild(createBlockerAssignment(assignment));
@@ -516,6 +522,31 @@ function createBlockerAssignment(assignment: PlayCallBlockerAssignment): SVGGEle
     : 'play-card-blocker-line';
   group.appendChild(createLine(assignment.start, assignment.end, lineClass));
   group.appendChild(createAssignmentBar(assignment.start, assignment.end, assignment.kind));
+
+  return group;
+}
+
+function createCoverageZone(zone: PlayCallCoverageZone): SVGGElement {
+  const group = createSvgElement('g');
+  group.classList.add('play-card-coverage-zone');
+  group.dataset.defenderId = zone.defenderId;
+  group.dataset.kind = zone.kind;
+  group.dataset.label = zone.label;
+
+  const polygon = createSvgElement('polygon');
+  polygon.classList.add('play-card-coverage-zone-shape');
+  polygon.setAttribute(
+    'points',
+    zone.points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' '),
+  );
+  group.appendChild(polygon);
+
+  const landmark = createSvgElement('circle');
+  landmark.classList.add('play-card-coverage-zone-landmark');
+  landmark.setAttribute('cx', zone.landmark.x.toFixed(2));
+  landmark.setAttribute('cy', zone.landmark.y.toFixed(2));
+  landmark.setAttribute('r', zone.kind === 'deepHalf' || zone.kind === 'deepMiddle' ? '2.35' : '1.9');
+  group.appendChild(landmark);
 
   return group;
 }

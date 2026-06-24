@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.57] - 2026-06-24
+
+### Added
+
+- Added a default Cover 2 zone shell for pass defense so coverage defenders work flats, hook/curl zones, and deep help landmarks instead of blindly chasing receivers before the catch.
+- Added defensive Cover 2 zone overlays to pass play-card art, including zone polygons and landmark dots for the coverage shell.
+- Captured Cover 2 proof screenshots at `artifacts/cover2-zone-proof/cover2-play-art-spread-quick-11.png` and `artifacts/cover2-zone-proof/cover2-live-zone-hover-spread-quick-11.png`.
+
+### Changed
+
+- Coverage defenders now snap into ball-carrier pursuit after completions, while a short post-catch grace prevents incidental same-frame zone tackles from erasing catches immediately.
+
+### Tests
+
+- Verified `npx vitest run tests/teamSimulation.test.ts tests/playCallDiagram.test.ts`, `npx vitest run tests/playState.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "starts playable 11v11 plays and throws Spread Quick to the selected target"`.
+
 ## [1.22.56] - 2026-06-24
 
 ### Fixed

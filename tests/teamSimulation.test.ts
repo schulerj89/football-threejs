@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { resolveSnapPlacement } from '../src/ballSpotting';
+import {
+  COVERAGE_SHELL_CONFIG,
+  getCoverageZoneForDefender,
+  isPointInsideCoverageZone,
+  resolveCoverageShell,
+} from '../src/coverageShell';
 import { DEFENDER_CONFIG, isTackleContact, updateDefenderPursuit } from '../src/defenderModel';
 import { INITIAL_BALL_SPOT, PLAYABLE_FIELD_BOUNDS } from '../src/field';
 import { createFormationPlayers, getPlay, getRushingPlay } from '../src/playbook';
@@ -268,6 +274,47 @@ describe('five-on-five rushing drill simulation', () => {
     expect(leftCoverage.currentState).toBe('pursuing');
     expect(rightCoverage.currentState).toBe('pursuing');
     expect(linebacker.currentState).toBe('pursuing');
+  });
+
+  it('keeps Cover 2 coverage defenders hovering inside their zones before a completion', () => {
+    const play = getPlay('twin-slants-flat');
+    const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
+    const quarterback = getPlayer(players, 'offense-qb');
+    const snapPlacement = resolveSnapPlacement(INITIAL_BALL_SPOT);
+    const defenders = [
+      getPlayer(players, 'defense-corner-left'),
+      getPlayer(players, 'defense-corner-right'),
+      getPlayer(players, 'defense-linebacker'),
+      getPlayer(players, 'defense-safety'),
+    ];
+
+    expect(resolveCoverageShell(play)).toBe('cover2Zone');
+
+    for (let frame = 0; frame < 10; frame += 1) {
+      updateRushingDrillAi(players, createBlockingState(), quarterback, {
+        bounds: PLAYABLE_FIELD_BOUNDS,
+        deltaSeconds: 0.1,
+        lineOfScrimmage: INITIAL_BALL_SPOT,
+        play,
+      });
+    }
+
+    for (const defender of defenders) {
+      const zone = getCoverageZoneForDefender(play, defender.id, snapPlacement);
+
+      expect(zone).not.toBeNull();
+      expect(isPointInsideCoverageZone(defender.position, zone!)).toBe(true);
+      expect(distanceBetween(defender, { ...defender, position: zone!.landmark })).toBeLessThanOrEqual(
+        COVERAGE_SHELL_CONFIG.deepDepthEndYards,
+      );
+    }
+
+    const leftCorner = getPlayer(players, 'defense-corner-left');
+    const leftFlat = getCoverageZoneForDefender(play, leftCorner.id, snapPlacement);
+
+    expect(leftFlat).not.toBeNull();
+    expect(distanceBetween(leftCorner, { ...leftCorner, position: leftFlat!.landmark })).toBeLessThan(6);
+    expect(leftCorner.position.x).toBeLessThan(-10);
   });
 
   it('turns coverage defenders into carrier pursuit after a Twin Slants Flat completion', () => {

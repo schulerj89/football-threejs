@@ -157,6 +157,7 @@ export const GAMEPLAY_CONFIG = {
   outOfBoundsResetDelaySeconds: 1.25,
   incompleteResetDelaySeconds: 1.25,
   ownGoalLineZ: NEAR_GOAL_LINE_Z,
+  postCatchTackleGraceSeconds: 0.25,
   sackResetDelaySeconds: 1.25,
   safetyResetDelaySeconds: 1.25,
   tackleResetDelaySeconds: 1.25,
@@ -183,6 +184,7 @@ export interface GameplayModel {
   passFeedbackTimerSeconds: number;
   passAttempted: boolean;
   passAudit: PassAuditSnapshot | null;
+  postCatchTackleGraceSeconds: number;
   touchdownRunout: TouchdownRunoutState | null;
   forwardPassEligible: boolean;
   player: PlayerModel;
@@ -283,6 +285,7 @@ export function createGameplayModel(options: CreateGameplayModelOptions = {}): G
     passFeedbackTimerSeconds: 0,
     passAttempted: false,
     passAudit: null,
+    postCatchTackleGraceSeconds: 0,
     touchdownRunout: null,
     forwardPassEligible: true,
     player: ballCarrier,
@@ -323,6 +326,7 @@ export function selectPlay(gameplay: GameplayModel, playId: string): boolean {
   gameplay.passAttempted = false;
   gameplay.passAudit = null;
   gameplay.touchdownRunout = null;
+  gameplay.postCatchTackleGraceSeconds = 0;
   gameplay.forwardPassEligible = true;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(play);
@@ -354,6 +358,7 @@ export function startPlay(gameplay: GameplayModel): boolean {
   gameplay.passAttempted = false;
   gameplay.passAudit = null;
   gameplay.touchdownRunout = null;
+  gameplay.postCatchTackleGraceSeconds = 0;
   gameplay.passFeedbackTimerSeconds = 0;
   ensureSelectedReceiver(gameplay);
   gameplay.playResetTimerSeconds = null;
@@ -473,6 +478,7 @@ export function resetPlay(gameplay: GameplayModel): void {
   gameplay.passAttempted = false;
   gameplay.passAudit = null;
   gameplay.touchdownRunout = null;
+  gameplay.postCatchTackleGraceSeconds = 0;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(gameplay.selectedPlay);
   resetReceiverRoutesForSpot(gameplay, gameplay.selectedPlay, resetSpot);
@@ -506,6 +512,7 @@ export function restartScoreAttack(gameplay: GameplayModel): boolean {
   gameplay.passAttempted = false;
   gameplay.passAudit = null;
   gameplay.touchdownRunout = null;
+  gameplay.postCatchTackleGraceSeconds = 0;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(defaultPlay);
   resetReceiverRoutesForSpot(gameplay, defaultPlay, initialSpot);
@@ -536,6 +543,7 @@ export function resetOffensePossession(
   gameplay.passAttempted = false;
   gameplay.passAudit = null;
   gameplay.touchdownRunout = null;
+  gameplay.postCatchTackleGraceSeconds = 0;
   gameplay.passFeedbackTimerSeconds = 0;
   gameplay.selectedReceiverId = getDefaultEligibleReceiverId(defaultPlay);
   resetReceiverRoutesForSpot(gameplay, defaultPlay, resetSpot);
@@ -561,6 +569,7 @@ export function updateGameplayModel(
     updateScoreAttackClock(gameplay.scoreAttack, delta);
   }
   updatePassFeedback(gameplay, delta);
+  updatePostCatchTackleGrace(gameplay, delta);
 
   if (gameplay.playState === 'live') {
     updateForwardPassEligibility(gameplay);
@@ -572,7 +581,7 @@ export function updateGameplayModel(
     }
 
     if (gameplay.playState === 'live') {
-      detectTackle(gameplay);
+      detectTackle(gameplay, delta);
     }
 
     if (gameplay.playState === 'live') {
@@ -599,7 +608,7 @@ export function updateGameplayModel(
         detectSack(gameplay);
       }
       if (gameplay.playState === 'live') {
-        detectTackle(gameplay);
+        detectTackle(gameplay, delta);
       }
     }
 
@@ -790,7 +799,18 @@ function updatePassFeedback(gameplay: GameplayModel, deltaSeconds: number): void
   );
 }
 
-function detectTackle(gameplay: GameplayModel): void {
+function updatePostCatchTackleGrace(gameplay: GameplayModel, deltaSeconds: number): void {
+  if (gameplay.postCatchTackleGraceSeconds <= 0) {
+    return;
+  }
+
+  gameplay.postCatchTackleGraceSeconds = Math.max(
+    0,
+    gameplay.postCatchTackleGraceSeconds - Math.max(0, deltaSeconds),
+  );
+}
+
+function detectTackle(gameplay: GameplayModel, deltaSeconds: number): void {
   const tackler = gameplay.players.find(
     (player) => player.team === 'defense' && isTackleContact(player, gameplay.player),
   );
@@ -798,6 +818,7 @@ function detectTackle(gameplay: GameplayModel): void {
   if (
     gameplay.ball.possession.kind !== 'player' ||
     gameplay.ball.possession.playerId !== gameplay.player.id ||
+    (gameplay.postCatchTackleGraceSeconds > 0 && deltaSeconds > 0) ||
     !canCarrierBeTackled(gameplay) ||
     !tackler
   ) {
@@ -921,6 +942,7 @@ function completePass(gameplay: GameplayModel, receiver: PlayerModel): void {
   receiver.currentState = 'userControlled';
   receiver.velocity.x = 0;
   receiver.velocity.z = 0;
+  gameplay.postCatchTackleGraceSeconds = GAMEPLAY_CONFIG.postCatchTackleGraceSeconds;
   giveBallToPlayer(gameplay.ball, receiver, 'caught');
 }
 

@@ -63,6 +63,27 @@ describe('play call diagrams', () => {
     }
   });
 
+  it('renders Cover 2 defensive zones for passing play art', () => {
+    const snapPlacement = createCenterSnapPlacement(INITIAL_BALL_SPOT);
+    const quickPass = createPlayCallDiagramModel(getPlay('quick-pass'), snapPlacement);
+    const twinSlants = createPlayCallDiagramModel(getPlay('twin-slants-flat'), snapPlacement);
+
+    expect(quickPass.coverageZones).toHaveLength(3);
+    expect(quickPass.coverageZones.map((zone) => zone.kind)).toEqual([
+      'flat',
+      'hookCurl',
+      'deepMiddle',
+    ]);
+    expect(twinSlants.coverageZones).toHaveLength(4);
+    expect(twinSlants.coverageZones.map((zone) => zone.kind)).toEqual([
+      'flat',
+      'flat',
+      'hookCurl',
+      'deepMiddle',
+    ]);
+    expect(twinSlants.coverageZones.every((zone) => zone.points.length === 4)).toBe(true);
+  });
+
   it('renders Twin Slants Flat with three receiver routes and three protection assignments', () => {
     const snapPlacement = createCenterSnapPlacement(INITIAL_BALL_SPOT);
     const play = getPlay('twin-slants-flat');
