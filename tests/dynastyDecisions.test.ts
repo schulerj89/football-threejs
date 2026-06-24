@@ -37,5 +37,13 @@ describe('dynasty decision roadmap', () => {
     expect(decisionDoc).toContain('Progression bounds hardening: reject negative, non-integer, oversized, or duplicate progression rows during save validation. Shipped in `1.22.30`.');
     expect(decisionDoc).toContain('Gameplay isolation hardening: prove progression previews and saved deltas cannot alter live gameplay ratings until explicitly applied through the approved path. Shipped in `1.22.31`.');
     expect(decisionDoc).toContain('Approved progression applications persist player/week rating delta history in the save without mutating roster registry ratings.');
+    expect(decisionDoc).toContain('### Phase 4: Recruiting-Lite');
+    expect(decisionDoc).toContain('Status: In progress. Minor update 1 shipped in `1.22.32`.');
+    expect(decisionDoc).toContain('Prospect pool contract: add deterministic fictional prospects, position/archetype metadata, star grades, and three pitch-style fit scores without changing rosters. Shipped in `1.22.32`.');
+    expect(decisionDoc).toContain('Team needs view: derive compact recruiting needs from current roster composition and ratings.');
+    expect(decisionDoc).toContain('Weekly recruiting points: add a simple points allocation model for the user program.');
+    expect(decisionDoc).toContain('Signing class preview: summarize likely signees and class fit without mutating rosters until offseason work.');
+    expect(decisionDoc).toContain('Recruiting validation hardening: reject duplicate prospects, invalid pitch scores, impossible grades, and malformed interest rows.');
+    expect(decisionDoc).toContain('Roster safety hardening: prove recruiting views and saved allocations cannot change active roster size or gameplay lineups before the offseason apply path.');
   });
 });

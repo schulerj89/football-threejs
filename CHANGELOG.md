@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.32] - 2026-06-24
+
+### Added
+
+- Started Dynasty Phase 4 Recruiting-Lite with a deterministic fictional prospect board, position/archetype metadata, star grades, and bounded team interest scores.
+- Added the three recruiting pitch styles for playing time, team strength, and program fit as the first compact recruiting contract.
+- Added the Phase 4 rollout plan with four minor updates and two patch-hardening passes in the Dynasty decision map.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyRecruiting.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.31] - 2026-06-24
 
 ### Fixed

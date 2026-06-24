@@ -196,6 +196,8 @@ Completion notes:
 
 ### Phase 4: Recruiting-Lite
 
+Status: In progress. Minor update 1 shipped in `1.22.32`.
+
 Goal: Add a compact college-style roster-building layer.
 
 Scope:
@@ -211,6 +213,18 @@ Acceptance:
 - Recruiting can be completed in one simple weekly screen.
 - Prospects are fictional and deterministic.
 - Existing roster size constraints remain valid.
+
+Minor update plan:
+
+1. Prospect pool contract: add deterministic fictional prospects, position/archetype metadata, star grades, and three pitch-style fit scores without changing rosters. Shipped in `1.22.32`.
+2. Team needs view: derive compact recruiting needs from current roster composition and ratings.
+3. Weekly recruiting points: add a simple points allocation model for the user program.
+4. Signing class preview: summarize likely signees and class fit without mutating rosters until offseason work.
+
+Patch hardening plan:
+
+1. Recruiting validation hardening: reject duplicate prospects, invalid pitch scores, impossible grades, and malformed interest rows.
+2. Roster safety hardening: prove recruiting views and saved allocations cannot change active roster size or gameplay lineups before the offseason apply path.
 
 ### Phase 5: Program Management
 
