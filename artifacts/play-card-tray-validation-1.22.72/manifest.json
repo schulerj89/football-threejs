@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-06-24T23:45:00.000Z",
+  "version": "1.22.72",
+  "source": "Local Playwright capture from normal title > Play Now > Play Game exhibition flow at 1440x900.",
+  "notes": [
+    "Validates the live user-possession play-call tray renders eight cards: seven offensive plays plus a same-grid PUNT card.",
+    "Validates calls, average yards, and star metadata are removed from play cards.",
+    "Validates the play-call tray is offset below the broadcast scorebug with no overlap."
+  ],
+  "captures": [
+    {
+      "fileName": "exhibition-punt-card.png",
+      "label": "Exhibition play-call tray with punt card",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "metrics": {
+        "cardCount": 8,
+        "puntText": "PUNT",
+        "statsElementCount": 0,
+        "favoriteElementCount": 0,
+        "scorebugGapPixels": 22
+      }
+    }
+  ]
+}

@@ -2997,6 +2997,8 @@ test('renders graphical play cards and selects plays through the shared request 
   await expect(page.locator('.play-card[data-play-id="quick-pass-7"] .play-card-receiver-route')).toHaveCount(3);
   await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-receiver-route')).toHaveCount(3);
   await expect(page.locator('.play-card .play-card-coverage-zone')).toHaveCount(0);
+  await expect(page.locator('.play-card-stats')).toHaveCount(0);
+  await expect(page.locator('.play-card-favorite')).toHaveCount(0);
   await expect(page.locator('.play-card[data-play-id="inside-zone-7"]')).toHaveAttribute('data-selected', 'true');
 
   await page.locator('.play-card[data-play-id="outside-zone-7"]').click();
@@ -3222,7 +3224,7 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
     await continueButton.click();
     await expect(page.locator('.play-call-ui')).toBeVisible({ timeout: 15_000 });
   }
-  await expect(page.locator('.play-card')).toHaveCount(7);
+  await expect(page.locator('.play-card')).toHaveCount(8);
   await expect(page.locator('.play-card-title')).toHaveText([
     'Inside Zone 11',
     'Spread Quick 11',
@@ -3232,6 +3234,7 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
     'Curl Flat 11',
     '3 Verts Out 11',
   ]);
+  await expect(page.locator('.play-card-punt')).toHaveText('PUNT');
   await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-run-direction')).toHaveCount(1);
   await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-blocker-assignment')).toHaveCount(9);
   await expect(page.locator('.play-card[data-play-id="spread-quick-11"] .play-card-receiver-route')).toHaveCount(5);
@@ -3247,6 +3250,8 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
   await expect(page.locator('.play-card[data-play-id="four-verts-out-flat-11"] .play-card-receiver-route')).toHaveCount(5);
   await expect(page.locator('.play-card[data-play-id="four-verts-out-flat-11"] .play-card-blocker-assignment')).toHaveCount(4);
   await expect(page.locator('.play-card .play-card-coverage-zone')).toHaveCount(0);
+  await expect(page.locator('.play-card-stats')).toHaveCount(0);
+  await expect(page.locator('.play-card-favorite')).toHaveCount(0);
   await expectNonBlankCanvas(page);
 
   await page.keyboard.press('5');

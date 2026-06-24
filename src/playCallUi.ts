@@ -16,14 +16,13 @@ import {
 } from './teams/TeamThemeApplier';
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+const PUNT_CARD_ACTION = 'punt';
 
 export class PlayCallUi {
   readonly root: HTMLDivElement;
   private enabled = false;
-  private readonly actions: HTMLDivElement;
   private readonly grid: HTMLDivElement;
   private readonly hint: HTMLSpanElement;
-  private readonly puntButton: HTMLButtonElement;
   private lastRenderKey = '';
   private pendingSelectedPlayId: string | null = null;
   private puntAvailable = false;
@@ -52,17 +51,6 @@ export class PlayCallUi {
     this.grid = document.createElement('div');
     this.grid.className = 'play-call-grid';
     this.root.appendChild(this.grid);
-
-    this.actions = document.createElement('div');
-    this.actions.className = 'play-call-actions';
-    this.puntButton = document.createElement('button');
-    this.puntButton.className = 'play-call-punt-button';
-    this.puntButton.type = 'button';
-    this.puntButton.textContent = 'PUNT';
-    this.puntButton.setAttribute('aria-label', 'Punt');
-    this.puntButton.addEventListener('click', this.handlePuntClick);
-    this.actions.append(this.puntButton);
-    this.root.appendChild(this.actions);
 
     this.root.addEventListener('pointerdown', this.handlePointerDown);
     this.root.addEventListener('pointerup', this.handlePointerUp);
@@ -110,7 +98,6 @@ export class PlayCallUi {
   dispose(): void {
     this.root.removeEventListener('pointerdown', this.handlePointerDown);
     this.root.removeEventListener('pointerup', this.handlePointerUp);
-    this.puntButton.removeEventListener('click', this.handlePuntClick);
     this.root.remove();
     this.pendingSelectedPlayId = null;
   }
@@ -127,8 +114,6 @@ export class PlayCallUi {
     const dismissed = preSnapKey !== null && this.dismissedForPreSnapKey === preSnapKey;
     this.root.hidden = !this.enabled || dismissed;
     this.root.dataset.selectionLocked = this.selectionLocked ? 'true' : 'false';
-    this.actions.hidden = !this.puntAvailable || this.selectionLocked;
-    this.puntButton.disabled = !this.puntAvailable || this.selectionLocked;
 
     if (!this.enabled) {
       this.currentPreSnapKey = null;
@@ -147,6 +132,7 @@ export class PlayCallUi {
       gameplay.drive.lineOfScrimmage.z.toFixed(3),
       this.teamTheme?.teamKey ?? 'default',
       this.selectionLocked ? 'locked' : 'selectable',
+      this.puntAvailable ? 'punt' : 'no-punt',
     ].join('|');
 
     if (renderKey === this.lastRenderKey) {
@@ -173,23 +159,12 @@ export class PlayCallUi {
     }
   };
 
-  private readonly handlePuntClick = (event: MouseEvent): void => {
-    if (!this.enabled || this.selectionLocked || !this.puntAvailable || !this.onPunt) {
-      return;
-    }
-
-    this.dismissAfterSelection();
-    this.onPunt();
-    this.puntButton.blur();
-    event.preventDefault();
-  };
-
   private renderCards(gameplay: GameplaySnapshot): void {
     const snapPlacement: SnapPlacement = {
       lane: gameplay.drive.snapLane,
       spot: gameplay.drive.lineOfScrimmage,
     };
-    const cards = this.plays.map((play) =>
+    const cards: HTMLButtonElement[] = this.plays.map((play) =>
       createPlayCard(
         play,
         snapPlacement,
@@ -199,6 +174,9 @@ export class PlayCallUi {
         this.selectionLocked,
       ),
     );
+    if (this.puntAvailable) {
+      cards.push(createPuntCard(this.selectionLocked));
+    }
 
     this.grid.replaceChildren(...cards);
   }
@@ -240,6 +218,18 @@ export class PlayCallUi {
     }
 
     const card = target.closest<HTMLButtonElement>('.play-card');
+    if (card?.dataset.action === PUNT_CARD_ACTION) {
+      if (!this.puntAvailable || !this.onPunt) {
+        return;
+      }
+
+      this.dismissAfterSelection();
+      this.onPunt();
+      card.blur();
+      event.preventDefault();
+      return;
+    }
+
     const playId = card?.dataset.playId;
 
     if (!playId) {
@@ -299,24 +289,17 @@ function createPlayCard(
   const badge = document.createElement('span');
   badge.className = 'play-card-kind-badge';
   badge.textContent = play.kind === 'pass' ? 'Pass' : 'Run';
-  const stats = document.createElement('span');
-  stats.className = 'play-card-stats';
-  stats.textContent = '0 Calls | 0.0 Avg Yds';
   const shortcut = document.createElement('span');
   shortcut.className = 'play-card-shortcut';
   shortcut.textContent = shortcutNumber.toString();
-  fieldPanel.append(badge, stats, shortcut);
+  fieldPanel.append(badge, shortcut);
 
   const footer = document.createElement('div');
   footer.className = 'play-card-footer';
   const title = document.createElement('div');
   title.className = 'play-card-title';
   title.textContent = play.displayName;
-  const favorite = document.createElement('span');
-  favorite.className = 'play-card-favorite';
-  favorite.setAttribute('aria-hidden', 'true');
-  favorite.textContent = '☆';
-  footer.append(title, favorite);
+  footer.append(title);
 
   card.append(fieldPanel, footer);
 
@@ -343,7 +326,7 @@ export function resolvePlayCallTrayLayout(
     };
   }
 
-  const columns = Math.min(3, Math.max(1, cardCount));
+  const columns = Math.min(viewportWidth >= 1000 ? 4 : 3, Math.max(1, cardCount));
 
   return {
     cardCount,
@@ -358,6 +341,25 @@ export function createPlayCardAccessibilityLabel(
   shortcutNumber: number,
 ): string {
   return `${play.displayName}, ${play.kind === 'pass' ? 'pass' : 'run'} play, shortcut ${shortcutNumber}`;
+}
+
+function createPuntCard(selectionLocked: boolean): HTMLButtonElement {
+  const card = document.createElement('button');
+  card.className = 'play-card play-card-punt';
+  card.dataset.action = PUNT_CARD_ACTION;
+  card.dataset.kind = 'special';
+  card.dataset.selected = 'false';
+  card.dataset.locked = selectionLocked ? 'true' : 'false';
+  card.disabled = selectionLocked;
+  card.type = 'button';
+  card.setAttribute('aria-label', 'Punt');
+
+  const title = document.createElement('span');
+  title.className = 'play-card-punt-title';
+  title.textContent = 'PUNT';
+  card.appendChild(title);
+
+  return card;
 }
 
 function createDiagramSvg(

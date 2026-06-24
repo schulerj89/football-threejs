@@ -377,12 +377,12 @@ canvas[hidden] {
 .play-call-ui {
   position: fixed;
   left: 50%;
-  top: 50%;
+  top: clamp(148px, 18vh, 164px);
   z-index: 9;
   display: grid;
   gap: 8px;
-  width: min(1120px, calc(100vw - 32px));
-  transform: translate(-50%, -50%);
+  width: min(1180px, calc(100vw - 32px));
+  transform: translateX(-50%);
   justify-items: center;
   pointer-events: none;
 }
@@ -396,7 +396,7 @@ canvas[hidden] {
   gap: 12px;
   align-items: baseline;
   justify-content: space-between;
-  width: min(1040px, 100%);
+  width: min(1160px, 100%);
   padding: 0 2px;
   color: #f7fbf8;
   text-transform: uppercase;
@@ -417,64 +417,20 @@ canvas[hidden] {
 
 .play-call-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 9px;
-  width: min(1040px, 100%);
-  max-height: min(72vh, 620px);
+  width: min(1160px, 100%);
+  max-height: calc(100vh - 188px);
   overflow-y: auto;
   padding: 2px;
   pointer-events: auto;
-}
-
-.play-call-actions {
-  display: flex;
-  justify-content: center;
-  width: min(1040px, 100%);
-  pointer-events: auto;
-}
-
-.play-call-actions[hidden] {
-  display: none;
-}
-
-.play-call-punt-button {
-  min-width: min(260px, 100%);
-  min-height: 44px;
-  padding: 11px 24px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(237, 243, 234, 0.96), rgba(214, 224, 216, 0.96));
-  color: #101512;
-  cursor: pointer;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 950;
-  letter-spacing: 0;
-  text-align: center;
-  text-transform: uppercase;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
-}
-
-.play-call-punt-button:hover,
-.play-call-punt-button:focus-visible {
-  border-color: rgba(242, 217, 75, 0.72);
-  outline: none;
-  box-shadow:
-    0 0 0 2px rgba(242, 217, 75, 0.22),
-    0 14px 30px rgba(0, 0, 0, 0.28);
-}
-
-.play-call-punt-button:disabled {
-  cursor: default;
-  opacity: 0.5;
 }
 
 .play-card {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 224px;
+  min-height: 198px;
   flex-direction: column;
   align-items: stretch;
   gap: 0;
@@ -530,7 +486,7 @@ canvas[hidden] {
 .play-card-title {
   overflow: hidden;
   color: #f7f7f7;
-  font-size: clamp(20px, 2.4vw, 28px);
+  font-size: clamp(17px, 1.8vw, 24px);
   font-weight: 900;
   letter-spacing: 0;
   line-height: 1.05;
@@ -579,35 +535,13 @@ canvas[hidden] {
   z-index: 2;
 }
 
-.play-card-stats {
-  position: absolute;
-  right: 10px;
-  bottom: 7px;
-  color: rgba(239, 242, 245, 0.78);
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0;
-  line-height: 1;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  z-index: 2;
-}
-
 .play-card-footer {
   display: grid;
-  min-height: 58px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  min-height: 48px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  padding: 0 16px;
+  padding: 0 14px;
   background: #080808;
-}
-
-.play-card-favorite {
-  color: #83cfff;
-  font-size: 34px;
-  font-weight: 400;
-  line-height: 1;
-  text-shadow: 0 0 10px rgba(84, 198, 255, 0.24);
 }
 
 .play-card-diagram {
@@ -622,6 +556,23 @@ canvas[hidden] {
   background-position: center;
   background-size: cover;
   overflow: hidden;
+}
+
+.play-card-punt {
+  display: grid;
+  min-height: 198px;
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgba(237, 243, 234, 0.97), rgba(194, 204, 197, 0.98));
+  color: #101512;
+  text-align: center;
+}
+
+.play-card-punt-title {
+  font-size: clamp(30px, 3.8vw, 46px);
+  font-weight: 950;
+  letter-spacing: 0;
+  line-height: 1;
 }
 
 .cadence-status {
@@ -4261,8 +4212,15 @@ body[data-game-mode="exhibition"] .score-counter {
   pointer-events: none;
 }
 
+@media (max-width: 1000px) {
+  .play-call-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 760px) {
   .play-call-ui {
+    top: max(86px, calc(env(safe-area-inset-top) + 82px));
     width: calc(100vw - 24px);
   }
 

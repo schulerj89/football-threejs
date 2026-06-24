@@ -340,15 +340,27 @@ describe('play call diagrams', () => {
   it('uses desktop grid layout metadata for seven cards and horizontal scroll on small screens', () => {
     expect(resolvePlayCallTrayLayout(1280, 7)).toEqual({
       cardCount: 7,
-      columns: 3,
+      columns: 4,
       mode: 'desktopGrid',
-      rows: 3,
+      rows: 2,
+    });
+    expect(resolvePlayCallTrayLayout(1280, 8)).toEqual({
+      cardCount: 8,
+      columns: 4,
+      mode: 'desktopGrid',
+      rows: 2,
     });
     expect(resolvePlayCallTrayLayout(1280, 6)).toEqual({
       cardCount: 6,
-      columns: 3,
+      columns: 4,
       mode: 'desktopGrid',
       rows: 2,
+    });
+    expect(resolvePlayCallTrayLayout(900, 7)).toEqual({
+      cardCount: 7,
+      columns: 3,
+      mode: 'desktopGrid',
+      rows: 3,
     });
     expect(resolvePlayCallTrayLayout(390, 6)).toEqual({
       cardCount: 6,

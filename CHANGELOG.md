@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.72] - 2026-06-24
+
+### Changed
+
+- Removed the placeholder calls, average yards, and star metadata from play-call cards.
+- Changed the desktop play-call tray to four columns so seven offensive cards plus punt fit cleanly in two rows at normal desktop widths.
+- Repositioned the play-call tray below the broadcast scorebug to avoid top-row overlap.
+
+### Added
+
+- Added a same-grid `PUNT` play-call card when punt is available during exhibition user possessions.
+- Added `artifacts/play-card-tray-validation-1.22.72/` with a live exhibition screenshot validating the punt card and scorebug spacing.
+
+### Tests
+
+- Verified `npx vitest run tests/playCallDiagram.test.ts`, `npx playwright test tests/scene-smoke.spec.ts -g "renders graphical play cards|starts playable 11v11 plays"`, and `npm run build`.
+
 ## [1.22.71] - 2026-06-24
 
 ### Changed
