@@ -271,6 +271,8 @@ Completion notes:
 
 ### Phase 6: Offseason and Multi-Year Saves
 
+Status: In progress. Minor update 1 shipped in `1.22.44`.
+
 Goal: Close the long-term loop.
 
 Scope:
@@ -286,6 +288,18 @@ Acceptance:
 - Multiple seasons can be advanced without corrupting rosters.
 - Team history and season records persist.
 - Save migration handles schema changes.
+
+Minor update plan:
+
+1. Departures preview contract: add deterministic offseason departure candidates from roster identity and season status without mutating rosters. Shipped in `1.22.44`.
+2. Incoming class preview: connect recruiting signing previews to an offseason incoming class without mutating rosters.
+3. Roster review: show returning, departing, and incoming balance with position gaps.
+4. Next-season schedule and history: generate the next season shell and preserve season history rows.
+
+Patch hardening plan:
+
+1. Offseason validation hardening: reject malformed departures, incoming class rows, roster review rows, duplicate history entries, and invalid next-season metadata.
+2. Multi-year save isolation hardening: prove offseason previews and next-season shells cannot corrupt active roster registry, current-season results, or save migration paths.
 
 ## Open Decisions
 

@@ -57,5 +57,13 @@ describe('dynasty decision roadmap', () => {
     expect(decisionDoc).toContain('Gameplay isolation hardening: prove program goals, budgets, and staff modifiers cannot alter current-play ratings, movement, or simulation results before approved apply paths exist. Shipped in `1.22.43`.');
     expect(decisionDoc).toContain('Dynasty Program Management now exposes visible coach goals');
     expect(decisionDoc).toContain('Program Management previews are future-phase-only and gameplay isolation coverage proves');
+    expect(decisionDoc).toContain('### Phase 6: Offseason and Multi-Year Saves');
+    expect(decisionDoc).toContain('Status: In progress. Minor update 1 shipped in `1.22.44`.');
+    expect(decisionDoc).toContain('Departures preview contract: add deterministic offseason departure candidates from roster identity and season status without mutating rosters. Shipped in `1.22.44`.');
+    expect(decisionDoc).toContain('Incoming class preview: connect recruiting signing previews to an offseason incoming class without mutating rosters.');
+    expect(decisionDoc).toContain('Roster review: show returning, departing, and incoming balance with position gaps.');
+    expect(decisionDoc).toContain('Next-season schedule and history: generate the next season shell and preserve season history rows.');
+    expect(decisionDoc).toContain('Offseason validation hardening: reject malformed departures, incoming class rows, roster review rows, duplicate history entries, and invalid next-season metadata.');
+    expect(decisionDoc).toContain('Multi-year save isolation hardening: prove offseason previews and next-season shells cannot corrupt active roster registry, current-season results, or save migration paths.');
   });
 });

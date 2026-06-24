@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.44] - 2026-06-24
+
+### Added
+
+- Started Dynasty Phase 6 Offseason and Multi-Year Saves with a deterministic read-only departure preview for the user program.
+- Ranked departure candidates by roster status, overall rating, season completion, and deterministic save-seed risk without mutating roster registry data.
+- Added the Phase 6 rollout plan with four minor updates and two patch-hardening passes in the Dynasty decision map.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyOffseason.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.43] - 2026-06-24
 
 ### Fixed
