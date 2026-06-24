@@ -5,6 +5,8 @@ import type { TeamRoster } from '../roster/TeamRoster';
 import type { DynastySaveData } from './DynastyTypes';
 
 export const DYNASTY_RECRUITING_PROSPECT_COUNT = 18;
+export const DYNASTY_WEEKLY_RECRUITING_POINTS = 100;
+export const DYNASTY_WEEKLY_RECRUITING_ALLOCATION_LIMIT = 5;
 
 export type DynastyRecruitingPitchStyle =
   | 'playingTime'
@@ -46,6 +48,7 @@ export interface DynastyRecruitingProspect {
 export interface DynastyRecruitingBoard {
   readonly pitchStyles: readonly DynastyRecruitingPitchStyle[];
   readonly prospects: readonly DynastyRecruitingProspect[];
+  readonly recruitingPlan: DynastyWeeklyRecruitingPlan;
   readonly summaryLabel: string;
   readonly teamNeeds: readonly DynastyRecruitingTeamNeed[];
 }
@@ -60,6 +63,25 @@ export interface DynastyRecruitingTeamNeed {
   readonly summaryLabel: string;
   readonly targetRosterCount: number;
   readonly weakestOverall: number;
+}
+
+export interface DynastyRecruitingAllocation {
+  readonly allocatedPoints: number;
+  readonly needPriorityScore: number;
+  readonly pitchStyle: DynastyRecruitingPitchStyle;
+  readonly prospectId: string;
+  readonly prospectName: string;
+  readonly room: string;
+  readonly totalFitScore: number;
+}
+
+export interface DynastyWeeklyRecruitingPlan {
+  readonly allocations: readonly DynastyRecruitingAllocation[];
+  readonly remainingPoints: number;
+  readonly summaryLabel: string;
+  readonly teamId: string;
+  readonly totalPoints: number;
+  readonly weekIndex: number;
 }
 
 const PROSPECT_SLOTS: readonly {
@@ -160,6 +182,10 @@ export function createDynastyRecruitingBoard(options: {
   readonly teamId?: string;
 }): DynastyRecruitingBoard {
   const teamId = options.teamId ?? options.save.userTeamId;
+  const teamNeeds = createDynastyRecruitingTeamNeeds({
+    save: options.save,
+    teamId,
+  });
   const prospects = PROSPECT_SLOTS.map((slot, index) =>
     createProspect({
       index,
@@ -178,11 +204,14 @@ export function createDynastyRecruitingBoard(options: {
   return {
     pitchStyles: DYNASTY_RECRUITING_PITCH_STYLES,
     prospects,
-    summaryLabel: `${prospects.length} fictional prospects | deterministic board`,
-    teamNeeds: createDynastyRecruitingTeamNeeds({
+    recruitingPlan: createDynastyWeeklyRecruitingPlan({
+      prospects,
       save: options.save,
       teamId,
+      teamNeeds,
     }),
+    summaryLabel: `${prospects.length} fictional prospects | deterministic board`,
+    teamNeeds,
   };
 }
 
@@ -205,6 +234,53 @@ export function createDynastyRecruitingTeamNeeds(options: {
       b.priorityScore - a.priorityScore ||
       a.averageOverall - b.averageOverall ||
       a.room.localeCompare(b.room));
+}
+
+export function createDynastyWeeklyRecruitingPlan(options: {
+  readonly prospects?: readonly DynastyRecruitingProspect[];
+  readonly save: DynastySaveData;
+  readonly teamId?: string;
+  readonly teamNeeds?: readonly DynastyRecruitingTeamNeed[];
+}): DynastyWeeklyRecruitingPlan {
+  const teamId = options.teamId ?? options.save.userTeamId;
+  const prospects = options.prospects ?? createDynastyRecruitingBoard({
+    save: options.save,
+    teamId,
+  }).prospects;
+  const teamNeeds = options.teamNeeds ?? createDynastyRecruitingTeamNeeds({
+    save: options.save,
+    teamId,
+  });
+  const needByPosition = createNeedByPosition(teamNeeds);
+  const rankedTargets = prospects
+    .map((prospect) => createRecruitingTarget(prospect, teamId, needByPosition))
+    .filter((target): target is DynastyRecruitingAllocation & { readonly rankScore: number } =>
+      target !== null)
+    .sort((a, b) =>
+      b.rankScore - a.rankScore ||
+      b.totalFitScore - a.totalFitScore ||
+      a.prospectName.localeCompare(b.prospectName))
+    .slice(0, DYNASTY_WEEKLY_RECRUITING_ALLOCATION_LIMIT);
+  const pointSchedule = createPointSchedule(DYNASTY_WEEKLY_RECRUITING_POINTS, rankedTargets.length);
+  const allocations = rankedTargets.map((target, index) => ({
+    allocatedPoints: pointSchedule[index] ?? 0,
+    needPriorityScore: target.needPriorityScore,
+    pitchStyle: target.pitchStyle,
+    prospectId: target.prospectId,
+    prospectName: target.prospectName,
+    room: target.room,
+    totalFitScore: target.totalFitScore,
+  }));
+  const allocatedTotal = allocations.reduce((sum, allocation) => sum + allocation.allocatedPoints, 0);
+
+  return {
+    allocations,
+    remainingPoints: DYNASTY_WEEKLY_RECRUITING_POINTS - allocatedTotal,
+    summaryLabel: `${DYNASTY_WEEKLY_RECRUITING_POINTS} weekly points | ${allocations.length} active targets`,
+    teamId,
+    totalPoints: DYNASTY_WEEKLY_RECRUITING_POINTS,
+    weekIndex: options.save.currentWeekIndex,
+  };
 }
 
 function createProspect(options: {
@@ -295,6 +371,74 @@ function createTeamNeed(
     targetRosterCount: room.targetRosterCount,
     weakestOverall,
   };
+}
+
+function createNeedByPosition(
+  teamNeeds: readonly DynastyRecruitingTeamNeed[],
+): ReadonlyMap<FootballPosition, DynastyRecruitingTeamNeed> {
+  const needs = new Map<FootballPosition, DynastyRecruitingTeamNeed>();
+  for (const need of teamNeeds) {
+    for (const position of need.positions) {
+      needs.set(position, need);
+    }
+  }
+  return needs;
+}
+
+function createRecruitingTarget(
+  prospect: DynastyRecruitingProspect,
+  teamId: string,
+  needByPosition: ReadonlyMap<FootballPosition, DynastyRecruitingTeamNeed>,
+): (DynastyRecruitingAllocation & { readonly rankScore: number }) | null {
+  const interest = prospect.interest.find((row) => row.teamId === teamId);
+  const need = needByPosition.get(prospect.footballPosition);
+  if (!interest || !need) {
+    return null;
+  }
+  const pitchStyle = selectBestPitchStyle(interest.pitchFit);
+  const rankScore = Math.round(
+    prospect.overallGrade * 0.35 +
+    interest.score * 0.4 +
+    need.priorityScore * 0.25,
+  );
+
+  return {
+    allocatedPoints: 0,
+    needPriorityScore: need.priorityScore,
+    pitchStyle,
+    prospectId: prospect.id,
+    prospectName: prospect.displayName,
+    rankScore,
+    room: need.room,
+    totalFitScore: interest.score,
+  };
+}
+
+function selectBestPitchStyle(
+  pitchFit: DynastyRecruitingPitchFit,
+): DynastyRecruitingPitchStyle {
+  return DYNASTY_RECRUITING_PITCH_STYLES
+    .map((style) => ({
+      score: pitchFit[style],
+      style,
+    }))
+    .sort((a, b) => b.score - a.score || a.style.localeCompare(b.style))[0]!.style;
+}
+
+function createPointSchedule(totalPoints: number, targetCount: number): number[] {
+  if (targetCount <= 0) {
+    return [];
+  }
+  const baseWeights = [28, 24, 20, 16, 12];
+  const weights = baseWeights.slice(0, targetCount);
+  const weightTotal = weights.reduce((sum, weight) => sum + weight, 0);
+  const preliminary = weights.map((weight) => Math.floor((weight / weightTotal) * totalPoints));
+  let remainder = totalPoints - preliminary.reduce((sum, points) => sum + points, 0);
+  for (let index = 0; remainder > 0; index = (index + 1) % preliminary.length) {
+    preliminary[index] += 1;
+    remainder -= 1;
+  }
+  return preliminary;
 }
 
 function gradeToStars(grade: number): number {

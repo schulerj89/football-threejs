@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   DYNASTY_RECRUITING_PITCH_STYLES,
   DYNASTY_RECRUITING_PROSPECT_COUNT,
+  DYNASTY_WEEKLY_RECRUITING_ALLOCATION_LIMIT,
+  DYNASTY_WEEKLY_RECRUITING_POINTS,
   createDynastyRecruitingBoard,
   createDynastyRecruitingTeamNeeds,
+  createDynastyWeeklyRecruitingPlan,
 } from '../src/dynasty/DynastyRecruiting';
 import { createDynastySeasonCore } from '../src/dynasty/DynastySchedule';
 import { generateLeagueData } from '../src/league/LeagueGenerator';
@@ -21,6 +24,7 @@ describe('dynasty recruiting-lite board', () => {
     expect(first.summaryLabel).toBe('18 fictional prospects | deterministic board');
     expect(first.pitchStyles).toEqual(DYNASTY_RECRUITING_PITCH_STYLES);
     expect(first.prospects).toHaveLength(DYNASTY_RECRUITING_PROSPECT_COUNT);
+    expect(first.recruitingPlan.totalPoints).toBe(DYNASTY_WEEKLY_RECRUITING_POINTS);
     expect(first.teamNeeds).toHaveLength(7);
     expect(new Set(first.prospects.map((prospect) => prospect.id)).size)
       .toBe(DYNASTY_RECRUITING_PROSPECT_COUNT);
@@ -93,6 +97,42 @@ describe('dynasty recruiting-lite board', () => {
       targetRosterCount: 2,
     });
     expect(first.find((need) => need.room === 'Line')?.positions).toEqual(['C', 'LG', 'LT', 'RG', 'RT', 'LS']);
+  });
+
+  it('allocates weekly recruiting points across top user-program targets', () => {
+    const save = createSave('dynasty-recruiting-points');
+    const board = createDynastyRecruitingBoard({ save });
+    const first = createDynastyWeeklyRecruitingPlan({ save });
+    const second = createDynastyWeeklyRecruitingPlan({ save });
+    const alternateTeam = save.currentSeason.teamIds.find((teamId) => teamId !== DEFAULT_USER_TEAM_ID)!;
+    const alternate = createDynastyWeeklyRecruitingPlan({ save, teamId: alternateTeam });
+
+    expect(board.recruitingPlan).toEqual(first);
+    expect(first).toEqual(second);
+    expect(first).not.toEqual(alternate);
+    expect(first.teamId).toBe(DEFAULT_USER_TEAM_ID);
+    expect(first.weekIndex).toBe(save.currentWeekIndex);
+    expect(first.totalPoints).toBe(DYNASTY_WEEKLY_RECRUITING_POINTS);
+    expect(first.remainingPoints).toBe(0);
+    expect(first.summaryLabel).toBe('100 weekly points | 5 active targets');
+    expect(first.allocations).toHaveLength(DYNASTY_WEEKLY_RECRUITING_ALLOCATION_LIMIT);
+    expect(first.allocations.reduce((sum, allocation) => sum + allocation.allocatedPoints, 0))
+      .toBe(DYNASTY_WEEKLY_RECRUITING_POINTS);
+    expect(new Set(first.allocations.map((allocation) => allocation.prospectId)).size)
+      .toBe(first.allocations.length);
+    expect(first.allocations.every((allocation) =>
+      allocation.allocatedPoints > 0 &&
+      allocation.needPriorityScore >= 0 &&
+      allocation.needPriorityScore <= 100 &&
+      allocation.totalFitScore >= 35 &&
+      allocation.totalFitScore <= 95 &&
+      DYNASTY_RECRUITING_PITCH_STYLES.includes(allocation.pitchStyle) &&
+      allocation.prospectName.length > 0 &&
+      allocation.room.length > 0)).toBe(true);
+    for (let index = 1; index < first.allocations.length; index += 1) {
+      expect(first.allocations[index - 1]!.allocatedPoints)
+        .toBeGreaterThanOrEqual(first.allocations[index]!.allocatedPoints);
+    }
   });
 
   it('does not change current roster size constraints while generating prospects', () => {

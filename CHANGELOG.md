@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.34] - 2026-06-24
+
+### Added
+
+- Added a Dynasty weekly recruiting points plan with a 100-point budget, five active targets, selected pitch style, need priority, and team fit scoring.
+- Included the weekly recruiting plan in the recruiting board contract without mutating saves, prospects, rosters, or gameplay lineups.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyRecruiting.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.33] - 2026-06-24
 
 ### Added
