@@ -2625,10 +2625,15 @@ body[data-game-mode="exhibition"] .score-counter {
 
 .football-hub-dynasty-program {
   grid-column: 1 / -1;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   border-color: color-mix(in srgb, var(--hub-accent, #2f66d8) 42%, rgba(255, 255, 255, 0.18));
   background: linear-gradient(90deg, rgba(11, 19, 17, 0.96), rgba(255, 255, 255, 0.06));
+}
+
+.football-hub-dynasty-new {
+  align-self: center;
+  white-space: nowrap;
 }
 
 .football-hub-dynasty-logo {
@@ -2689,14 +2694,20 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-dynasty-team-choice-logo {
-  width: min(88px, 48%);
-  height: min(88px, 48%);
+  display: grid;
+  place-items: center;
+  width: min(124px, 72%);
+  height: min(124px, 72%);
 }
 
 .football-hub-dynasty-team-choice-logo img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.football-hub-dynasty-team-choice-logo .team-logo-badge-fallback {
+  display: none;
 }
 
 .football-hub-dynasty-team-choice strong {

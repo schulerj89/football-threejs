@@ -535,12 +535,12 @@ export class FootballHubScreen {
   }
 
   private syncDynasty(league: LeagueData): void {
-    this.ensureDynastySaveLoaded(league);
     const save = this.dynastySave;
     if (this.dynastyTeamChoiceRequired && !this.dynastySaveLoading && !save) {
       this.renderDynastyTeamChoice(league);
       return;
     }
+    this.ensureDynastySaveLoaded(league);
     if (!save || !isDynastySaveCompatibleWithLeague(save, league, save.userTeamId)) {
       this.renderDynastyLoading();
       return;
@@ -562,7 +562,12 @@ export class FootballHubScreen {
     const meta = document.createElement('p');
     meta.textContent = `${view.seasonLabel} | ${view.currentWeekLabel} | ${view.program.recordLabel}`;
     headerText.append(eyebrow, title, meta);
-    header.append(this.dynastyLogo.root, headerText);
+    const newDynastyButton = document.createElement('button');
+    newDynastyButton.type = 'button';
+    newDynastyButton.className = 'football-hub-secondary football-hub-dynasty-new';
+    newDynastyButton.textContent = 'Start New Dynasty';
+    newDynastyButton.addEventListener('click', () => this.openDynastyTeamChoice());
+    header.append(this.dynastyLogo.root, headerText, newDynastyButton);
 
     const upcoming = document.createElement('section');
     upcoming.className = 'football-hub-dynasty-upcoming';
@@ -1049,6 +1054,15 @@ export class FootballHubScreen {
     this.dynastySaveLoadKey = loadKey;
     this.renderDynastyLoading();
     void this.loadDynastySaveForLeague(league, teamId, loadKey);
+  }
+
+  private openDynastyTeamChoice(): void {
+    this.dynastySave = null;
+    this.dynastySaveLoading = false;
+    this.dynastyTeamChoiceRequired = true;
+    this.dynastySaveLoadKey = null;
+    this.dynastySaveWarning = 'Choose a team to replace the active Dynasty save.';
+    this.sync();
   }
 
   private syncPlayNow(league: LeagueData): void {

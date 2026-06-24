@@ -1174,6 +1174,7 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(dynastyHub).toContainText('Choose Program');
   await expect(dynastyHub.locator('.football-hub-dynasty-team-choice')).toHaveCount(6);
   await expect(dynastyHub.locator('.football-hub-dynasty-team-choice-logo')).toHaveCount(6);
+  await expect(dynastyHub.locator('.football-hub-dynasty-team-choice-logo .team-logo-badge-fallback').first()).toBeHidden();
   await expect(dynastyHub.getByRole('button', { name: 'Start Dynasty with Metro Meteors' })).toBeVisible();
   await dynastyHub.getByRole('button', { name: 'Start Dynasty with Metro Meteors' }).click();
   await expect(dynastyHub).toContainText('Season Core');
@@ -1183,6 +1184,12 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(dynastyHub).toContainText('Weekly Training');
   await expect(dynastyHub).toContainText('Progression Preview');
   await expect(dynastyHub).toContainText('Save Progression');
+  await expect(dynastyHub.getByRole('button', { name: 'Start New Dynasty' })).toBeVisible();
+  await dynastyHub.getByRole('button', { name: 'Start New Dynasty' }).click();
+  await expect(dynastyHub).toContainText('Choose Program');
+  await expect(dynastyHub).toContainText('Choose a team to replace the active Dynasty save.');
+  await dynastyHub.getByRole('button', { name: 'Start Dynasty with Metro Meteors' }).click();
+  await expect(dynastyHub).toContainText('Season Core');
   await expect(dynastyHub.locator('.football-hub-dynasty-story')).toContainText('Week 1');
   await expect(dynastyHub.locator('.football-hub-dynasty-schedule li')).toHaveCount(5);
   await page.locator('.football-hub-nav').getByRole('button', { name: 'Settings' }).click();

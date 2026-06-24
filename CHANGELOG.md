@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.52] - 2026-06-24
+
+### Fixed
+
+- Added a visible Start New Dynasty action in the existing Dynasty hub so the team-choice wizard can be reopened when an active save already exists.
+- Enlarged and centered Dynasty wizard team logos and hid abbreviation fallback text inside the logo tiles.
+- Updated the browser smoke to verify reopening the wizard from an existing Dynasty save before returning to the hub.
+
+### Tests
+
+- Verified `npm run test:unit`, `npm run build`, `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`, and a Playwright screenshot proof at `test-results/dynasty-team-wizard-reopened.png`.
+
 ## [1.22.51] - 2026-06-24
 
 ### Added
