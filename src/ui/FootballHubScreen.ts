@@ -1,6 +1,14 @@
 import type { GameExperienceSettings } from '../config/GameExperienceSettings';
 import { createDynastyHubViewModel } from '../dynasty/DynastyHubViewModel';
 import { createDynastySeasonCore } from '../dynasty/DynastySchedule';
+import {
+  advanceDynastyWeek as advanceDynastyWeekSave,
+  canAdvanceDynastyWeek,
+  getCurrentDynastyWeek,
+  getCurrentDynastyUserGame,
+  simulateCurrentDynastyUserGame,
+  simulateCurrentDynastyWeekNonUserGames,
+} from '../dynasty/DynastyWeekAdvance';
 import type { DynastySaveData } from '../dynasty/DynastyTypes';
 import type { LeagueData } from '../league/LeagueTypes';
 import { calculateOverallRating } from '../ratings/OverallRatingCalculator';
@@ -505,6 +513,44 @@ export class FootballHubScreen {
       ? `${view.upcomingGame.venueLabel} | ${view.upcomingGame.matchupLabel} | ${view.upcomingGame.statusLabel}`
       : 'No scheduled game remains.';
     upcoming.append(upcomingLabel, upcomingTitle, upcomingMeta);
+    const currentWeek = getCurrentDynastyWeek(save);
+    const userGame = getCurrentDynastyUserGame(save);
+    const nonUserScheduledCount = currentWeek?.games.filter((game) =>
+      game.status === 'scheduled' &&
+      game.awayTeamId !== save.userTeamId &&
+      game.homeTeamId !== save.userTeamId).length ?? 0;
+    const canAdvanceWeek = canAdvanceDynastyWeek(save);
+    const actions = document.createElement('div');
+    actions.className = 'football-hub-dynasty-actions';
+    const playButton = document.createElement('button');
+    playButton.type = 'button';
+    playButton.className = 'football-hub-primary';
+    playButton.textContent = 'Play Dynasty Game';
+    playButton.disabled = !userGame || userGame.status !== 'scheduled';
+    playButton.addEventListener('click', () => this.playDynastyGame(league));
+    const simOtherButton = document.createElement('button');
+    simOtherButton.type = 'button';
+    simOtherButton.className = 'football-hub-secondary';
+    simOtherButton.textContent = 'Sim Other Games';
+    simOtherButton.disabled = nonUserScheduledCount === 0;
+    simOtherButton.addEventListener('click', () => this.simulateDynastyOtherGames(league));
+    const quickSimButton = document.createElement('button');
+    quickSimButton.type = 'button';
+    quickSimButton.className = 'football-hub-secondary';
+    quickSimButton.textContent = 'Quick Sim User Game';
+    quickSimButton.disabled = !userGame || userGame.status !== 'scheduled';
+    quickSimButton.addEventListener('click', () => this.simulateDynastyUserGame(league));
+    const advanceButton = document.createElement('button');
+    advanceButton.type = 'button';
+    advanceButton.className = 'football-hub-secondary';
+    advanceButton.textContent = save.status === 'complete' ? 'Season Complete' : 'Advance Week';
+    advanceButton.disabled = !canAdvanceWeek;
+    advanceButton.addEventListener('click', () => this.advanceDynastyWeek(league));
+    actions.append(playButton, simOtherButton, quickSimButton, advanceButton);
+    const actionHint = document.createElement('p');
+    actionHint.className = 'football-hub-dynasty-action-hint';
+    actionHint.textContent = createDynastyActionHint(save, nonUserScheduledCount, canAdvanceWeek);
+    upcoming.append(actions, actionHint);
 
     const standings = document.createElement('section');
     standings.className = 'football-hub-dynasty-standings';
@@ -560,6 +606,48 @@ export class FootballHubScreen {
     note.textContent = `Decision map: ${DYNASTY_DECISION_DOC_PATH}`;
 
     this.dynastyView.append(header, upcoming, standings, schedule, note);
+  }
+
+  private playDynastyGame(league: LeagueData): void {
+    const save = this.resolveDynastySave(league);
+    const game = getCurrentDynastyUserGame(save);
+    if (!game || game.status !== 'scheduled') {
+      return;
+    }
+
+    const userIsHome = game.homeTeamId === save.userTeamId;
+    const opponentTeamId = userIsHome ? game.awayTeamId : game.homeTeamId;
+    const matchupSelection = createAutoUniformCorrectionForMatchup({
+      opponentTeamId,
+      opponentUniform: userIsHome ? 'away' : 'home',
+      userTeamId: save.userTeamId,
+      userUniform: userIsHome ? 'home' : 'away',
+    }, this.settings.teamProfiles);
+    this.handleFirstGesture();
+    this.options.onPlayGame({
+      ...this.settings,
+      gameMode: 'exhibition',
+      teamProfiles: createTeamProfileSettingsFromMatchupSelection(
+        matchupSelection,
+        this.settings.teamProfiles,
+      ),
+    });
+  }
+
+  private simulateDynastyOtherGames(league: LeagueData): void {
+    this.dynastySave = simulateCurrentDynastyWeekNonUserGames(this.resolveDynastySave(league)).save;
+    this.sync();
+  }
+
+  private simulateDynastyUserGame(league: LeagueData): void {
+    this.dynastySave = simulateCurrentDynastyUserGame(this.resolveDynastySave(league)).save;
+    this.sync();
+  }
+
+  private advanceDynastyWeek(league: LeagueData): void {
+    const result = advanceDynastyWeekSave(this.resolveDynastySave(league));
+    this.dynastySave = result.save;
+    this.sync();
   }
 
   private resolveDynastySave(league: LeagueData): DynastySaveData {
@@ -960,6 +1048,30 @@ function createScoreBlock(label: string, value: number): HTMLElement {
 
 function formatSignedNumber(value: number): string {
   return value > 0 ? `+${value}` : String(value);
+}
+
+function createDynastyActionHint(
+  save: DynastySaveData,
+  nonUserScheduledCount: number,
+  canAdvanceWeek: boolean,
+): string {
+  if (save.status === 'complete') {
+    return 'The regular season is complete for this starter Dynasty save.';
+  }
+  if (canAdvanceWeek) {
+    return 'All games are final. Advance to the next week.';
+  }
+  const userGame = getCurrentDynastyUserGame(save);
+  if (nonUserScheduledCount > 0 && userGame?.status === 'scheduled') {
+    return 'Play or quick-sim your matchup, then sim the rest of the league before advancing.';
+  }
+  if (nonUserScheduledCount > 0) {
+    return 'Sim the remaining league games before advancing.';
+  }
+  if (userGame?.status === 'scheduled') {
+    return 'Play or quick-sim your matchup before advancing.';
+  }
+  return 'No advance action is available for the current week.';
 }
 
 function clampRating(value: number): number {

@@ -2679,6 +2679,23 @@ body[data-game-mode="exhibition"] .score-counter {
   line-height: 1.05;
 }
 
+.football-hub-dynasty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.45rem;
+}
+
+.football-hub-dynasty-actions button {
+  min-width: 9.5rem;
+}
+
+.football-hub-dynasty-action-hint {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin-top: 0.25rem;
+  padding-top: 0.85rem;
+}
+
 .football-hub-dynasty-standings table {
   width: 100%;
   border-collapse: collapse;

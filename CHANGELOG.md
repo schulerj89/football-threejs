@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.17] - 2026-06-24
+
+### Added
+
+- Added deterministic Dynasty weekly advance logic for simming non-user games, recording the user matchup, recalculating standings, and completing the regular season.
+- Added Dynasty hub actions to play the scheduled matchup, sim remaining league games, quick-sim the user game, and advance the week when every game is final.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyDecisions.test.ts tests/dynastySeason.test.ts tests/dynastySaveRepository.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyWeekAdvance.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.16] - 2026-06-24
 
 ### Added
