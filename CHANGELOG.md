@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.42] - 2026-06-24
+
+### Fixed
+
+- Added Program Management validation for malformed coach goals, duplicate categories, invalid strength scores, bad budget totals, and malformed row labels.
+- Rejected hidden current-play modifier labels and out-of-range staff bonus values so Program Management remains future-phase-only.
+- Updated the Phase 5 decision map to mark Program Management patch hardening update 1 shipped.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyProgramManagement.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.41] - 2026-06-24
 
 ### Added

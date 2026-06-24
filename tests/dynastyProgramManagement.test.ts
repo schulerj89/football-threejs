@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createDynastyProgramManagementPlan } from '../src/dynasty/DynastyProgramManagement';
+import {
+  createDynastyProgramManagementPlan,
+  validateDynastyProgramManagementPlan,
+} from '../src/dynasty/DynastyProgramManagement';
 import { createDynastySeasonCore } from '../src/dynasty/DynastySchedule';
 import {
   simulateCurrentDynastyUserGame,
@@ -122,6 +125,83 @@ describe('dynasty program management', () => {
     expect(plan.staffModifiers[0]!.bonusValue).toBeGreaterThanOrEqual(plan.staffModifiers[1]!.bonusValue);
     expect(save.currentSeason.weeks[save.currentWeekIndex]?.games.some((game) =>
       game.status === 'scheduled')).toBe(false);
+  });
+
+  it('rejects malformed goals, invalid budget totals, hidden modifiers, and bad bonus values', () => {
+    const plan = createDynastyProgramManagementPlan({
+      save: createSave('dynasty-program-management-validation'),
+    });
+    const goal = plan.coachGoals[0]!;
+    const budget = plan.budgetAllocations[0]!;
+    const modifier = plan.staffModifiers[0]!;
+    const cases: readonly [string, unknown, string][] = [
+      [
+        'malformed plan',
+        null,
+        'Dynasty program management plan is malformed',
+      ],
+      [
+        'missing coach goals',
+        { ...plan, coachGoals: 'bad-goals' },
+        'Dynasty program management coach goals must be an array',
+      ],
+      [
+        'malformed coach goal',
+        { ...plan, coachGoals: [null] },
+        'Dynasty program management coach goal row is malformed',
+      ],
+      [
+        'duplicate coach goal',
+        { ...plan, coachGoals: [goal, goal] },
+        `Dynasty program management coach goal duplicates ${goal.category}`,
+      ],
+      [
+        'invalid strength score',
+        { ...plan, programStrengths: [{ ...plan.programStrengths[0]!, score: 120 }] },
+        `Dynasty program management strength ${plan.programStrengths[0]!.category} has invalid score`,
+      ],
+      [
+        'bad budget total',
+        { ...plan, budgetAllocations: [{ ...budget, allocationPoints: budget.allocationPoints - 1 }, ...plan.budgetAllocations.slice(1)] },
+        'Dynasty program management budget allocations total 99, expected 100',
+      ],
+      [
+        'duplicate budget category',
+        { ...plan, budgetAllocations: [budget, budget] },
+        `Dynasty program management budget allocation duplicates ${budget.category}`,
+      ],
+      [
+        'hidden budget modifier',
+        { ...plan, budgetAllocations: [{ ...budget, futureEffectLabel: 'Current gameplay boost' }] },
+        `Dynasty program management budget allocation ${budget.category} must be future-phase only`,
+      ],
+      [
+        'bad staff bonus',
+        { ...plan, staffModifiers: [{ ...modifier, bonusValue: 9 }] },
+        `Dynasty program management staff modifier ${modifier.category} has invalid bonus`,
+      ],
+      [
+        'hidden staff modifier',
+        { ...plan, staffModifiers: [{ ...modifier, futureEffectLabel: 'Current gameplay boost' }] },
+        `Dynasty program management staff modifier ${modifier.category} must be future-phase only`,
+      ],
+      [
+        'missing future scope summary',
+        { ...plan, budgetSummaryLabel: '100 budget points' },
+        'Dynasty program management budget summary must declare future-phase scope',
+      ],
+      [
+        'missing staff isolation summary',
+        { ...plan, staffSummaryLabel: '4 staff previews' },
+        'Dynasty program management staff summary must declare no current-play effects',
+      ],
+    ];
+
+    expect(validateDynastyProgramManagementPlan(plan)).toEqual([]);
+    for (const [label, invalidPlan, expectedMessage] of cases) {
+      expect(validateDynastyProgramManagementPlan(invalidPlan).map((issue) => issue.message), label)
+        .toContain(expectedMessage);
+    }
   });
 });
 

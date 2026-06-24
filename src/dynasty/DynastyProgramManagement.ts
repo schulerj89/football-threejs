@@ -72,6 +72,11 @@ export interface DynastyStaffModifierPreview {
   readonly title: string;
 }
 
+export interface DynastyProgramManagementValidationIssue {
+  readonly message: string;
+  readonly severity: 'error' | 'warning';
+}
+
 export interface DynastyProgramManagementPlan {
   readonly budgetAllocations: readonly DynastyProgramBudgetAllocation[];
   readonly budgetSummaryLabel: string;
@@ -171,6 +176,30 @@ export function createDynastyProgramManagementPlan(options: {
     teamId,
     weekIndex: options.save.currentWeekIndex,
   };
+}
+
+export function validateDynastyProgramManagementPlan(
+  plan: unknown,
+): DynastyProgramManagementValidationIssue[] {
+  const issues: DynastyProgramManagementValidationIssue[] = [];
+  if (!isRecord(plan)) {
+    issues.push(error('Dynasty program management plan is malformed'));
+    return issues;
+  }
+
+  validateCoachGoals(issues, plan.coachGoals);
+  validateProgramStrengths(issues, plan.programStrengths);
+  validateBudgetAllocations(issues, plan.budgetAllocations);
+  validateStaffModifiers(issues, plan.staffModifiers);
+
+  if (typeof plan.budgetSummaryLabel !== 'string' || !plan.budgetSummaryLabel.includes('future-phase')) {
+    issues.push(error('Dynasty program management budget summary must declare future-phase scope'));
+  }
+  if (typeof plan.staffSummaryLabel !== 'string' || !plan.staffSummaryLabel.includes('no current-play effects')) {
+    issues.push(error('Dynasty program management staff summary must declare no current-play effects'));
+  }
+
+  return issues;
 }
 
 function createStaffModifierPreviews(options: {
@@ -486,6 +515,210 @@ function createEmptyRecord(teamId: string): DynastyTeamRecord {
     teamId,
     wins: 0,
   };
+}
+
+function validateCoachGoals(
+  issues: DynastyProgramManagementValidationIssue[],
+  goals: unknown,
+): void {
+  if (!Array.isArray(goals)) {
+    issues.push(error('Dynasty program management coach goals must be an array'));
+    return;
+  }
+  const categories = new Set<string>();
+  for (const goal of goals) {
+    if (!isRecord(goal)) {
+      issues.push(error('Dynasty program management coach goal row is malformed'));
+      continue;
+    }
+    const category = typeof goal.category === 'string' ? goal.category : '';
+    if (!isCoachGoalCategory(category)) {
+      issues.push(error(`Dynasty program management coach goal has invalid category ${String(goal.category)}`));
+    } else if (categories.has(category)) {
+      issues.push(error(`Dynasty program management coach goal duplicates ${category}`));
+    } else {
+      categories.add(category);
+    }
+    if (
+      !isBoundedInteger(goal.currentValue, 0, 9999) ||
+      !isBoundedInteger(goal.targetValue, 1, 9999) ||
+      !isBoundedInteger(goal.progressPercent, 0, 100)
+    ) {
+      issues.push(error(`Dynasty program management coach goal ${category || 'unknown'} has invalid values`));
+    }
+    if (
+      typeof goal.title !== 'string' ||
+      goal.title.length === 0 ||
+      typeof goal.description !== 'string' ||
+      goal.description.length === 0 ||
+      typeof goal.progressLabel !== 'string' ||
+      goal.progressLabel.length === 0 ||
+      !['Complete', 'Needs attention', 'On track'].includes(String(goal.statusLabel))
+    ) {
+      issues.push(error(`Dynasty program management coach goal ${category || 'unknown'} has invalid labels`));
+    }
+  }
+}
+
+function validateProgramStrengths(
+  issues: DynastyProgramManagementValidationIssue[],
+  strengths: unknown,
+): void {
+  if (!Array.isArray(strengths)) {
+    issues.push(error('Dynasty program management strengths must be an array'));
+    return;
+  }
+  const categories = new Set<string>();
+  const ranks = new Set<number>();
+  for (const strength of strengths) {
+    if (!isRecord(strength)) {
+      issues.push(error('Dynasty program management strength row is malformed'));
+      continue;
+    }
+    const category = typeof strength.category === 'string' ? strength.category : '';
+    if (!isProgramStrengthCategory(category)) {
+      issues.push(error(`Dynasty program management strength has invalid category ${String(strength.category)}`));
+    } else if (categories.has(category)) {
+      issues.push(error(`Dynasty program management strength duplicates ${category}`));
+    } else {
+      categories.add(category);
+    }
+    if (!isBoundedInteger(strength.rank, 1, 5)) {
+      issues.push(error(`Dynasty program management strength ${category || 'unknown'} has invalid rank`));
+    } else if (ranks.has(strength.rank as number)) {
+      issues.push(error(`Dynasty program management strength duplicates rank ${String(strength.rank)}`));
+    } else {
+      ranks.add(strength.rank as number);
+    }
+    if (!isBoundedInteger(strength.score, 0, 99)) {
+      issues.push(error(`Dynasty program management strength ${category || 'unknown'} has invalid score`));
+    }
+    if (!hasVisibleLabels(strength, ['detailLabel', 'evidenceLabel', 'title'])) {
+      issues.push(error(`Dynasty program management strength ${category || 'unknown'} has invalid labels`));
+    }
+  }
+}
+
+function validateBudgetAllocations(
+  issues: DynastyProgramManagementValidationIssue[],
+  allocations: unknown,
+): void {
+  if (!Array.isArray(allocations)) {
+    issues.push(error('Dynasty program management budget allocations must be an array'));
+    return;
+  }
+  const categories = new Set<string>();
+  const ranks = new Set<number>();
+  let total = 0;
+  for (const allocation of allocations) {
+    if (!isRecord(allocation)) {
+      issues.push(error('Dynasty program management budget allocation row is malformed'));
+      continue;
+    }
+    const category = typeof allocation.category === 'string' ? allocation.category : '';
+    if (!isProgramBudgetCategory(category)) {
+      issues.push(error(`Dynasty program management budget allocation has invalid category ${String(allocation.category)}`));
+    } else if (categories.has(category)) {
+      issues.push(error(`Dynasty program management budget allocation duplicates ${category}`));
+    } else {
+      categories.add(category);
+    }
+    if (!isBoundedInteger(allocation.rank, 1, 4)) {
+      issues.push(error(`Dynasty program management budget allocation ${category || 'unknown'} has invalid rank`));
+    } else if (ranks.has(allocation.rank as number)) {
+      issues.push(error(`Dynasty program management budget allocation duplicates rank ${String(allocation.rank)}`));
+    } else {
+      ranks.add(allocation.rank as number);
+    }
+    if (!isBoundedInteger(allocation.allocationPoints, 1, 100)) {
+      issues.push(error(`Dynasty program management budget allocation ${category || 'unknown'} has invalid points`));
+    } else {
+      total += allocation.allocationPoints as number;
+    }
+    if (!hasVisibleLabels(allocation, ['futureEffectLabel', 'priorityLabel', 'rationaleLabel', 'title'])) {
+      issues.push(error(`Dynasty program management budget allocation ${category || 'unknown'} has invalid labels`));
+    }
+    if (typeof allocation.futureEffectLabel !== 'string' || !allocation.futureEffectLabel.startsWith('Future ')) {
+      issues.push(error(`Dynasty program management budget allocation ${category || 'unknown'} must be future-phase only`));
+    }
+  }
+  if (allocations.length > 0 && total !== 100) {
+    issues.push(error(`Dynasty program management budget allocations total ${total}, expected 100`));
+  }
+}
+
+function validateStaffModifiers(
+  issues: DynastyProgramManagementValidationIssue[],
+  modifiers: unknown,
+): void {
+  if (!Array.isArray(modifiers)) {
+    issues.push(error('Dynasty program management staff modifiers must be an array'));
+    return;
+  }
+  const categories = new Set<string>();
+  const ranks = new Set<number>();
+  for (const modifier of modifiers) {
+    if (!isRecord(modifier)) {
+      issues.push(error('Dynasty program management staff modifier row is malformed'));
+      continue;
+    }
+    const category = typeof modifier.category === 'string' ? modifier.category : '';
+    if (!isStaffModifierCategory(category)) {
+      issues.push(error(`Dynasty program management staff modifier has invalid category ${String(modifier.category)}`));
+    } else if (categories.has(category)) {
+      issues.push(error(`Dynasty program management staff modifier duplicates ${category}`));
+    } else {
+      categories.add(category);
+    }
+    if (!isBoundedInteger(modifier.rank, 1, 4)) {
+      issues.push(error(`Dynasty program management staff modifier ${category || 'unknown'} has invalid rank`));
+    } else if (ranks.has(modifier.rank as number)) {
+      issues.push(error(`Dynasty program management staff modifier duplicates rank ${String(modifier.rank)}`));
+    } else {
+      ranks.add(modifier.rank as number);
+    }
+    if (!isBoundedInteger(modifier.bonusValue, 1, 5)) {
+      issues.push(error(`Dynasty program management staff modifier ${category || 'unknown'} has invalid bonus`));
+    }
+    if (!hasVisibleLabels(modifier, ['bonusLabel', 'futureEffectLabel', 'sourceLabel', 'title'])) {
+      issues.push(error(`Dynasty program management staff modifier ${category || 'unknown'} has invalid labels`));
+    }
+    if (typeof modifier.futureEffectLabel !== 'string' || !modifier.futureEffectLabel.startsWith('Future ')) {
+      issues.push(error(`Dynasty program management staff modifier ${category || 'unknown'} must be future-phase only`));
+    }
+  }
+}
+
+function error(message: string): DynastyProgramManagementValidationIssue {
+  return { message, severity: 'error' };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isBoundedInteger(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
+}
+
+function hasVisibleLabels(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  return keys.every((key) => typeof value[key] === 'string' && (value[key] as string).length > 0);
+}
+
+function isCoachGoalCategory(value: string): value is DynastyCoachGoalCategory {
+  return ['defense', 'development', 'offense', 'season'].includes(value);
+}
+
+function isProgramStrengthCategory(value: string): value is DynastyProgramStrengthCategory {
+  return ['defensiveIdentity', 'offensiveIdentity', 'rosterCore', 'seasonMomentum', 'specialTeams'].includes(value);
+}
+
+function isProgramBudgetCategory(value: string): value is DynastyProgramBudgetCategory {
+  return ['facilities', 'recruiting', 'staff', 'training'].includes(value);
+}
+
+function isStaffModifierCategory(value: string): value is DynastyStaffModifierCategory {
+  return ['facilities', 'gameManagement', 'recruiting', 'training'].includes(value);
 }
 
 function clampPercent(value: number): number {

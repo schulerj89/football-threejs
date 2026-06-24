@@ -234,7 +234,7 @@ Completion notes:
 
 ### Phase 5: Program Management
 
-Status: In progress. Minor updates 1-4 shipped in `1.22.38`, `1.22.39`, `1.22.40`, and `1.22.41`.
+Status: In progress. Minor updates 1-4 shipped in `1.22.38`, `1.22.39`, `1.22.40`, and `1.22.41`; patch hardening update 1 shipped in `1.22.42`.
 
 Goal: Add strategic program identity without overwhelming the player.
 
@@ -260,7 +260,7 @@ Minor update plan:
 
 Patch hardening plan:
 
-1. Program management validation hardening: reject malformed goals, budget totals, hidden modifiers, and out-of-range bonus values.
+1. Program management validation hardening: reject malformed goals, budget totals, hidden modifiers, and out-of-range bonus values. Shipped in `1.22.42`.
 2. Gameplay isolation hardening: prove program goals, budgets, and staff modifiers cannot alter current-play ratings, movement, or simulation results before approved apply paths exist.
 
 ### Phase 6: Offseason and Multi-Year Saves
