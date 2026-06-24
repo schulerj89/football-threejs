@@ -2,9 +2,17 @@ import type { TeamProfile } from '../teams/TeamProfile';
 
 export const DYNASTY_SAVE_SCHEMA_VERSION = 1;
 export const DYNASTY_SEASON_CORE_VERSION = 'football-js-dynasty-season-core-v1';
+export const DYNASTY_DATABASE_NAME = 'football-js-dynasty';
+export const DYNASTY_SAVE_STORE_NAME = 'dynasty-saves';
+export const DYNASTY_ACTIVE_SAVE_KEY = 'active';
 
 export type DynastyGameStatus = 'scheduled' | 'final';
 export type DynastySaveStatus = 'active' | 'complete';
+export type DynastySaveSource =
+  | 'created'
+  | 'indexedDB'
+  | 'memoryFallback'
+  | 'none';
 
 export interface DynastyGameResult {
   readonly awayScore: number;
@@ -54,6 +62,14 @@ export interface DynastySaveData {
   readonly status: DynastySaveStatus;
   readonly updatedAt: string;
   readonly userTeamId: string;
+}
+
+export interface StoredDynastySaveRecord {
+  readonly key: typeof DYNASTY_ACTIVE_SAVE_KEY;
+  readonly modeVersion: typeof DYNASTY_SEASON_CORE_VERSION;
+  readonly payload: DynastySaveData;
+  readonly savedAt: string;
+  readonly schemaVersion: typeof DYNASTY_SAVE_SCHEMA_VERSION;
 }
 
 export interface DynastySeasonCoreInput {

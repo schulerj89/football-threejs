@@ -83,7 +83,7 @@ Completion notes:
 
 ### Phase 1: Season Core
 
-Status: In progress. Minor update 1 starts in `1.22.14`.
+Status: In progress. Minor update 1 shipped in `1.22.14`; minor update 2 starts in `1.22.15`.
 
 Goal: Create the first real dynasty save loop.
 
@@ -104,8 +104,8 @@ Acceptance:
 
 Minor update plan:
 
-1. Season-core contract: add the `DynastySaveData` schema and deterministic six-team round-robin schedule generator.
-2. Save repository: persist, load, reset, and migrate the active dynasty save through IndexedDB.
+1. Season-core contract: add the `DynastySaveData` schema and deterministic six-team round-robin schedule generator. Shipped in `1.22.14`.
+2. Save repository: persist, load, reset, and migrate the active dynasty save through IndexedDB. Shipped in `1.22.15`.
 3. Dynasty hub view: show the active user program, current week, upcoming game, schedule, and standings in the Football Hub Dynasty tab.
 4. Weekly advance: simulate non-user games deterministically, update standings, and allow the user matchup to launch from the Dynasty path.
 

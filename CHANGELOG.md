@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.15] - 2026-06-24
+
+### Added
+
+- Added the Dynasty active-save repository with create, load, persist, reset, validation, and current-version migration checks.
+- Added the browser IndexedDB adapter and in-memory test store for Dynasty saves.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyDecisions.test.ts tests/dynastySeason.test.ts tests/dynastySaveRepository.test.ts`, `npm run build`, and `npm run test:unit`.
+
 ## [1.22.14] - 2026-06-24
 
 ### Added
