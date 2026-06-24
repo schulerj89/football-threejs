@@ -3,6 +3,7 @@ import {
   DYNASTY_OFFSEASON_DEPARTURE_PREVIEW_COUNT,
   createDynastyOffseasonDeparturePreview,
   createDynastyOffseasonIncomingClassPreview,
+  createDynastyOffseasonNextSeasonShell,
   createDynastyOffseasonRosterReview,
 } from '../src/dynasty/DynastyOffseason';
 import { createDynastySigningClassPreview } from '../src/dynasty/DynastyRecruiting';
@@ -176,6 +177,54 @@ describe('dynasty offseason departures', () => {
     expect(preview.summaryLabel).toBe(`${preview.incomingCandidates.length} incoming prospects | season complete`);
     expect(preview.incomingCandidates.every((candidate) =>
       candidate.rosterActionLabel === 'Ready for offseason review')).toBe(true);
+  });
+
+  it('creates a next-season schedule shell and preserves completed-season history without mutating the save', () => {
+    const completeSave = createCompletedSave('dynasty-offseason-next-season');
+    const beforeSeason = structuredClone(completeSave.currentSeason);
+    const beforeRoster = getTeamRosterOrDefault(DEFAULT_USER_TEAM_ID);
+    const shell = createDynastyOffseasonNextSeasonShell({ save: completeSave });
+    const rosterReview = createDynastyOffseasonRosterReview({ save: completeSave });
+    const userRecord = completeSave.currentSeason.standings.find((row) =>
+      row.teamId === DEFAULT_USER_TEAM_ID)!;
+    const afterRoster = getTeamRosterOrDefault(DEFAULT_USER_TEAM_ID);
+
+    expect(completeSave.status).toBe('complete');
+    expect(shell.teamId).toBe(DEFAULT_USER_TEAM_ID);
+    expect(shell.seasonComplete).toBe(true);
+    expect(shell.nextSeasonYear).toBe(completeSave.currentSeason.year + 1);
+    expect(shell.summaryLabel).toBe(`${shell.nextSeasonYear} schedule shell | ${completeSave.currentSeason.year} history preserved`);
+    expect(shell.rosterReview).toEqual(rosterReview);
+    expect(shell.currentSeasonHistory.seasonComplete).toBe(true);
+    expect(shell.currentSeasonHistory.seasonId).toBe(completeSave.currentSeason.seasonId);
+    expect(shell.currentSeasonHistory.year).toBe(completeSave.currentSeason.year);
+    expect(shell.currentSeasonHistory.userTeamId).toBe(DEFAULT_USER_TEAM_ID);
+    expect(shell.currentSeasonHistory.userRecordLabel).toBe(`${userRecord.wins}-${userRecord.losses}`);
+    expect(shell.currentSeasonHistory.teamRows).toHaveLength(completeSave.currentSeason.teamIds.length);
+    expect(shell.currentSeasonHistory.teamRows.map((row) => row.rank))
+      .toEqual(Array.from({ length: completeSave.currentSeason.teamIds.length }, (_, index) => index + 1));
+    expect(shell.currentSeasonHistory.championTeamId).toBe(shell.currentSeasonHistory.teamRows[0]!.teamId);
+    expect(shell.currentSeasonHistory.championRecordLabel)
+      .toBe(`${shell.currentSeasonHistory.teamRows[0]!.wins}-${shell.currentSeasonHistory.teamRows[0]!.losses}`);
+    expect(shell.currentSeasonHistory.teamRows.every((row) =>
+      row.gamesPlayed === row.wins + row.losses &&
+      row.pointsMargin === row.pointsFor - row.pointsAgainst)).toBe(true);
+    expect(shell.nextSeason.year).toBe(shell.nextSeasonYear);
+    expect(shell.nextSeason.seasonId).not.toBe(completeSave.currentSeason.seasonId);
+    expect(shell.nextSeason.teamIds).toEqual(completeSave.currentSeason.teamIds);
+    expect(shell.nextSeason.weeks).toHaveLength(completeSave.currentSeason.weeks.length);
+    expect(shell.nextSeason.weeks.flatMap((week) => week.games).every((game) =>
+      game.status === 'scheduled' && game.result === null)).toBe(true);
+    expect(shell.nextSeason.standings.every((row) =>
+      row.wins === 0 &&
+      row.losses === 0 &&
+      row.pointsFor === 0 &&
+      row.pointsAgainst === 0)).toBe(true);
+    expect(shell.nextSeason.teamStats.every((row) => row.gamesPlayed === 0)).toBe(true);
+    expect(completeSave.currentSeason).toEqual(beforeSeason);
+    expect(afterRoster.players.map((player) => [player.id, player.ratings])).toEqual(
+      beforeRoster.players.map((player) => [player.id, player.ratings]),
+    );
   });
 });
 

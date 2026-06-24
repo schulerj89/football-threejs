@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.47] - 2026-06-24
+
+### Added
+
+- Added a Dynasty offseason next-season shell that snapshots completed-season history and generates the next year schedule.
+- Preserved champion, user record, ranked team history rows, and projected roster review context without mutating the active save or roster registry.
+- Updated the Phase 6 decision map to mark all four minor updates shipped while leaving patch hardening work in progress.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyOffseason.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.46] - 2026-06-24
 
 ### Added

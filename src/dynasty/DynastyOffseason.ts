@@ -5,7 +5,13 @@ import {
   createDynastySigningClassPreview,
   type DynastySigningClassPreview,
 } from './DynastyRecruiting';
-import type { DynastySaveData } from './DynastyTypes';
+import { createDynastySeason } from './DynastySchedule';
+import type {
+  DynastySaveData,
+  DynastySeason,
+  DynastyTeamRecord,
+  DynastyTeamSeasonStats,
+} from './DynastyTypes';
 
 export const DYNASTY_OFFSEASON_DEPARTURE_PREVIEW_COUNT = 6;
 
@@ -87,6 +93,39 @@ export interface DynastyOffseasonRosterReview {
   readonly totalDepartureCandidateCount: number;
   readonly totalIncomingCandidateCount: number;
   readonly totalProjectedRosterCount: number;
+}
+
+export interface DynastyOffseasonTeamHistoryRow {
+  readonly gamesPlayed: number;
+  readonly losses: number;
+  readonly pointsAgainst: number;
+  readonly pointsFor: number;
+  readonly pointsMargin: number;
+  readonly rank: number;
+  readonly teamId: string;
+  readonly wins: number;
+}
+
+export interface DynastyOffseasonSeasonHistorySnapshot {
+  readonly championRecordLabel: string;
+  readonly championTeamId: string;
+  readonly seasonComplete: boolean;
+  readonly seasonId: string;
+  readonly summaryLabel: string;
+  readonly teamRows: readonly DynastyOffseasonTeamHistoryRow[];
+  readonly userRecordLabel: string;
+  readonly userTeamId: string;
+  readonly year: number;
+}
+
+export interface DynastyOffseasonNextSeasonShell {
+  readonly currentSeasonHistory: DynastyOffseasonSeasonHistorySnapshot;
+  readonly nextSeason: DynastySeason;
+  readonly nextSeasonYear: number;
+  readonly rosterReview: DynastyOffseasonRosterReview;
+  readonly seasonComplete: boolean;
+  readonly summaryLabel: string;
+  readonly teamId: string;
 }
 
 const ROSTER_REVIEW_ROOMS: readonly {
@@ -258,6 +297,37 @@ export function createDynastyOffseasonRosterReview(options: {
   };
 }
 
+export function createDynastyOffseasonNextSeasonShell(options: {
+  readonly save: DynastySaveData;
+  readonly teamId?: string;
+}): DynastyOffseasonNextSeasonShell {
+  const teamId = options.teamId ?? options.save.userTeamId;
+  const nextSeasonYear = options.save.currentSeason.year + 1;
+  const rosterReview = createDynastyOffseasonRosterReview({
+    save: options.save,
+    teamId,
+  });
+  const nextSeason = createDynastySeason({
+    seed: `${options.save.seed}:next-season:${nextSeasonYear}`,
+    teamIds: options.save.currentSeason.teamIds,
+    year: nextSeasonYear,
+  });
+  const currentSeasonHistory = createSeasonHistorySnapshot({
+    save: options.save,
+    teamId,
+  });
+
+  return {
+    currentSeasonHistory,
+    nextSeason,
+    nextSeasonYear,
+    rosterReview,
+    seasonComplete: options.save.status === 'complete',
+    summaryLabel: `${nextSeasonYear} schedule shell | ${currentSeasonHistory.year} history preserved`,
+    teamId,
+  };
+}
+
 function createDepartureRisk(options: {
   readonly isReserve: boolean;
   readonly isStarter: boolean;
@@ -347,6 +417,63 @@ function createRosterReviewRow(options: {
     summaryLabel: `${options.room.room}: ${returningRosterCount} returning, ${departureCandidateCount} departure candidates, ${incomingCandidateCount} incoming`,
     targetRosterCount: options.room.targetRosterCount,
     weakestOverall: overalls.length > 0 ? Math.min(...overalls) : 0,
+  };
+}
+
+function createSeasonHistorySnapshot(options: {
+  readonly save: DynastySaveData;
+  readonly teamId: string;
+}): DynastyOffseasonSeasonHistorySnapshot {
+  const statsByTeam = new Map(options.save.currentSeason.teamStats.map((row) => [row.teamId, row]));
+  const teamRows = options.save.currentSeason.standings
+    .map((record) => createTeamHistoryRow(record, statsByTeam.get(record.teamId)))
+    .sort((a, b) =>
+      b.wins - a.wins ||
+      a.losses - b.losses ||
+      b.pointsMargin - a.pointsMargin ||
+      a.teamId.localeCompare(b.teamId))
+    .map((row, index) => ({
+      ...row,
+      rank: index + 1,
+    }));
+  const champion = teamRows[0] ?? createTeamHistoryRow(
+    options.save.currentSeason.standings[0] ?? {
+      losses: 0,
+      pointsAgainst: 0,
+      pointsFor: 0,
+      teamId: options.teamId,
+      wins: 0,
+    },
+    undefined,
+  );
+  const userRow = teamRows.find((row) => row.teamId === options.teamId) ?? champion;
+
+  return {
+    championRecordLabel: `${champion.wins}-${champion.losses}`,
+    championTeamId: champion.teamId,
+    seasonComplete: options.save.status === 'complete',
+    seasonId: options.save.currentSeason.seasonId,
+    summaryLabel: `${options.save.currentSeason.year} history | ${champion.teamId} ${champion.wins}-${champion.losses}`,
+    teamRows,
+    userRecordLabel: `${userRow.wins}-${userRow.losses}`,
+    userTeamId: options.teamId,
+    year: options.save.currentSeason.year,
+  };
+}
+
+function createTeamHistoryRow(
+  record: DynastyTeamRecord,
+  stats: DynastyTeamSeasonStats | undefined,
+): DynastyOffseasonTeamHistoryRow {
+  return {
+    gamesPlayed: stats?.gamesPlayed ?? record.wins + record.losses,
+    losses: record.losses,
+    pointsAgainst: record.pointsAgainst,
+    pointsFor: record.pointsFor,
+    pointsMargin: record.pointsFor - record.pointsAgainst,
+    rank: 0,
+    teamId: record.teamId,
+    wins: record.wins,
   };
 }
 
