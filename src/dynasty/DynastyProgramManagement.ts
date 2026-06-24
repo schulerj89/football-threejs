@@ -40,7 +40,25 @@ export interface DynastyProgramStrength {
   readonly title: string;
 }
 
+export type DynastyProgramBudgetCategory =
+  | 'facilities'
+  | 'recruiting'
+  | 'staff'
+  | 'training';
+
+export interface DynastyProgramBudgetAllocation {
+  readonly allocationPoints: number;
+  readonly category: DynastyProgramBudgetCategory;
+  readonly futureEffectLabel: string;
+  readonly priorityLabel: string;
+  readonly rank: number;
+  readonly rationaleLabel: string;
+  readonly title: string;
+}
+
 export interface DynastyProgramManagementPlan {
+  readonly budgetAllocations: readonly DynastyProgramBudgetAllocation[];
+  readonly budgetSummaryLabel: string;
   readonly coachGoals: readonly DynastyCoachGoal[];
   readonly programStrengths: readonly DynastyProgramStrength[];
   readonly summaryLabel: string;
@@ -110,8 +128,17 @@ export function createDynastyProgramManagementPlan(options: {
     }),
   ] as const satisfies readonly DynastyCoachGoal[];
   const completedGoals = coachGoals.filter((goal) => goal.statusLabel === 'Complete').length;
+  const budgetAllocations = createBudgetAllocations({
+    coachGoals,
+    developmentReadyCount,
+    record,
+    stats,
+    teamId,
+  });
 
   return {
+    budgetAllocations,
+    budgetSummaryLabel: `${budgetAllocations.reduce((sum, allocation) => sum + allocation.allocationPoints, 0)} budget points | future-phase allocations only`,
     coachGoals,
     programStrengths,
     summaryLabel: `${completedGoals}/${coachGoals.length} coach goals complete | visible targets only`,
@@ -119,6 +146,83 @@ export function createDynastyProgramManagementPlan(options: {
     teamId,
     weekIndex: options.save.currentWeekIndex,
   };
+}
+
+function createBudgetAllocations(options: {
+  readonly coachGoals: readonly DynastyCoachGoal[];
+  readonly developmentReadyCount: number;
+  readonly record: DynastyTeamRecord;
+  readonly stats: DynastyTeamSeasonStats;
+  readonly teamId: string;
+}): DynastyProgramBudgetAllocation[] {
+  const ratings = calculateTeamRatings(getTeamRosterOrDefault(options.teamId));
+  const incompleteGoals = options.coachGoals.filter((goal) => goal.statusLabel !== 'Complete').length;
+  const games = Math.max(1, options.stats.gamesPlayed);
+  const defensiveYardsAllowedPerGame = options.stats.gamesPlayed > 0
+    ? Math.round(options.stats.defensiveYards / games)
+    : 0;
+  const rawRows = [
+    {
+      category: 'recruiting',
+      futureEffectLabel: 'Future recruiting-board emphasis',
+      priorityScore: 24 +
+        Math.max(0, 80 - ratings.overall) * 0.55 +
+        Math.max(0, options.record.losses - options.record.wins) * 4,
+      rationaleLabel: `${ratings.overall} roster OVR | ${options.record.wins}-${options.record.losses} record`,
+      title: 'Recruiting',
+    },
+    {
+      category: 'training',
+      futureEffectLabel: 'Future weekly development emphasis',
+      priorityScore: 24 +
+        options.developmentReadyCount * 1.8 +
+        Math.max(0, 82 - ratings.offense) * 0.35,
+      rationaleLabel: `${options.developmentReadyCount} players ready | ${ratings.offense} offense`,
+      title: 'Training',
+    },
+    {
+      category: 'facilities',
+      futureEffectLabel: 'Future facilities investment emphasis',
+      priorityScore: 24 +
+        Math.max(0, 82 - ratings.specialTeams) * 0.45 +
+        Math.max(0, defensiveYardsAllowedPerGame - 260) * 0.05,
+      rationaleLabel: `${ratings.specialTeams} special teams | ${defensiveYardsAllowedPerGame} yds allowed/gm`,
+      title: 'Facilities',
+    },
+    {
+      category: 'staff',
+      futureEffectLabel: 'Future staff bonus emphasis',
+      priorityScore: 24 +
+        incompleteGoals * 3.5 +
+        Math.max(0, 82 - ratings.defense) * 0.35,
+      rationaleLabel: `${incompleteGoals} open goals | ${ratings.defense} defense`,
+      title: 'Staff',
+    },
+  ] as const satisfies readonly {
+    readonly category: DynastyProgramBudgetCategory;
+    readonly futureEffectLabel: string;
+    readonly priorityScore: number;
+    readonly rationaleLabel: string;
+    readonly title: string;
+  }[];
+  const allocations = distributeBudget(rawRows.map((row) => row.priorityScore), 100);
+
+  return rawRows
+    .map((row, index) => ({
+      allocationPoints: allocations[index] ?? 0,
+      category: row.category,
+      futureEffectLabel: row.futureEffectLabel,
+      priorityLabel: `${Math.round(row.priorityScore)} priority`,
+      rationaleLabel: row.rationaleLabel,
+      title: row.title,
+    }))
+    .sort((a, b) =>
+      b.allocationPoints - a.allocationPoints ||
+      a.title.localeCompare(b.title))
+    .map((row, index) => ({
+      ...row,
+      rank: index + 1,
+    }));
 }
 
 function createProgramStrengths(options: {
@@ -313,4 +417,21 @@ function normalizeInverseRange(value: number, best: number, worst: number): numb
 
 function formatSigned(value: number): string {
   return value > 0 ? `+${value}` : String(value);
+}
+
+function distributeBudget(rawScores: readonly number[], totalPoints: number): number[] {
+  const scoreTotal = rawScores.reduce((sum, score) => sum + Math.max(0, score), 0);
+  if (scoreTotal <= 0 || rawScores.length === 0) {
+    return [];
+  }
+  const preliminary = rawScores.map((score) => Math.floor((Math.max(0, score) / scoreTotal) * totalPoints));
+  let remainder = totalPoints - preliminary.reduce((sum, points) => sum + points, 0);
+  const order = rawScores
+    .map((score, index) => ({ index, score }))
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+  for (let cursor = 0; remainder > 0; cursor = (cursor + 1) % order.length) {
+    preliminary[order[cursor]!.index] += 1;
+    remainder -= 1;
+  }
+  return preliminary;
 }

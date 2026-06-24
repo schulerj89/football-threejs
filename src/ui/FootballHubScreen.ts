@@ -702,6 +702,25 @@ export class FootballHubScreen {
     }
     programStrengths.append(strengthsMeta, strengthsList);
 
+    const budget = document.createElement('section');
+    budget.className = 'football-hub-dynasty-budget';
+    budget.append(createSectionLabel('Program Budget'));
+    const budgetMeta = document.createElement('p');
+    budgetMeta.textContent = view.budgetSummaryLabel;
+    const budgetList = document.createElement('ol');
+    for (const allocation of view.budgetAllocations) {
+      const item = document.createElement('li');
+      const title = document.createElement('span');
+      title.textContent = allocation.title;
+      const detail = document.createElement('strong');
+      detail.textContent = `${allocation.allocationPoints} pts | ${allocation.priorityLabel}`;
+      const rationale = document.createElement('span');
+      rationale.textContent = allocation.rationaleLabel;
+      item.append(title, detail, rationale);
+      budgetList.append(item);
+    }
+    budget.append(budgetMeta, budgetList);
+
     const training = document.createElement('section');
     training.className = 'football-hub-dynasty-training';
     training.append(createSectionLabel('Weekly Training'));
@@ -761,7 +780,7 @@ export class FootballHubScreen {
       ? `${this.dynastySaveWarning} Decision map: ${DYNASTY_DECISION_DOC_PATH}`
       : `Save: ${formatDynastySaveSource(this.dynastySaveSource)} | Decision map: ${DYNASTY_DECISION_DOC_PATH}`;
 
-    this.dynastyView.append(header, upcoming, standings, leaders, awards, coachGoals, programStrengths, training, progression, schedule, note);
+    this.dynastyView.append(header, upcoming, standings, leaders, awards, coachGoals, programStrengths, budget, training, progression, schedule, note);
   }
 
   private renderDynastyLoading(): void {

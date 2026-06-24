@@ -14,6 +14,7 @@ import {
 import {
   createDynastyProgramManagementPlan,
   type DynastyCoachGoal,
+  type DynastyProgramBudgetAllocation,
   type DynastyProgramStrength,
 } from './DynastyProgramManagement';
 import { createDynastyHubStorySummary } from './DynastyStoryContext';
@@ -65,6 +66,8 @@ export interface DynastyHubAwardWatchRow {
 
 export interface DynastyHubViewModel {
   readonly awardWatch: readonly DynastyHubAwardWatchRow[];
+  readonly budgetAllocations: readonly DynastyProgramBudgetAllocation[];
+  readonly budgetSummaryLabel: string;
   readonly coachGoals: readonly DynastyCoachGoal[];
   readonly coachGoalsSummaryLabel: string;
   readonly currentWeekLabel: string;
@@ -134,6 +137,8 @@ export function createDynastyHubViewModel(options: {
 
   return {
     awardWatch,
+    budgetAllocations: programManagement.budgetAllocations,
+    budgetSummaryLabel: programManagement.budgetSummaryLabel,
     coachGoals: programManagement.coachGoals,
     coachGoalsSummaryLabel: programManagement.summaryLabel,
     currentWeekLabel: currentWeek?.label ?? 'Season Complete',

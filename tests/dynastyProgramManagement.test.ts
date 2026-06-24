@@ -19,6 +19,7 @@ describe('dynasty program management', () => {
     expect(first.weekIndex).toBe(save.currentWeekIndex);
     expect(first.summaryLabel).toBe('0/4 coach goals complete | visible targets only');
     expect(first.strengthsSummaryLabel).toContain('leads the current identity profile');
+    expect(first.budgetSummaryLabel).toBe('100 budget points | future-phase allocations only');
     expect(first.coachGoals.map((goal) => goal.category)).toEqual([
       'season',
       'offense',
@@ -51,6 +52,20 @@ describe('dynasty program management', () => {
       strength.evidenceLabel.length > 0 &&
       strength.score >= 0 &&
       strength.score <= 99)).toBe(true);
+    expect(first.budgetAllocations).toHaveLength(4);
+    expect(first.budgetAllocations.map((allocation) => allocation.rank)).toEqual([1, 2, 3, 4]);
+    expect(first.budgetAllocations.map((allocation) => allocation.category).sort()).toEqual([
+      'facilities',
+      'recruiting',
+      'staff',
+      'training',
+    ]);
+    expect(first.budgetAllocations.reduce((sum, allocation) => sum + allocation.allocationPoints, 0)).toBe(100);
+    expect(first.budgetAllocations.every((allocation) =>
+      allocation.allocationPoints > 0 &&
+      allocation.futureEffectLabel.startsWith('Future ') &&
+      allocation.priorityLabel.endsWith(' priority') &&
+      allocation.rationaleLabel.length > 0)).toBe(true);
   });
 
   it('updates coach goal and program strength progress from season stats without changing gameplay outcomes', () => {
@@ -64,6 +79,8 @@ describe('dynasty program management', () => {
     const offensiveStrength = plan.programStrengths.find((strength) => strength.category === 'offensiveIdentity')!;
     const defensiveStrength = plan.programStrengths.find((strength) => strength.category === 'defensiveIdentity')!;
     const momentumStrength = plan.programStrengths.find((strength) => strength.category === 'seasonMomentum')!;
+    const staffBudget = plan.budgetAllocations.find((allocation) => allocation.category === 'staff')!;
+    const recruitingBudget = plan.budgetAllocations.find((allocation) => allocation.category === 'recruiting')!;
     const userStats = save.currentSeason.teamStats.find((row) => row.teamId === DEFAULT_USER_TEAM_ID)!;
     const userRecord = save.currentSeason.standings.find((row) => row.teamId === DEFAULT_USER_TEAM_ID)!;
 
@@ -77,6 +94,12 @@ describe('dynasty program management', () => {
     expect(defensiveStrength.evidenceLabel).toBe(`${defensiveGoal.currentValue} defensive yds/gm`);
     expect(momentumStrength.detailLabel).toBe(`${userRecord.wins}-${userRecord.losses} record`);
     expect(plan.programStrengths[0]!.score).toBeGreaterThanOrEqual(plan.programStrengths[1]!.score);
+    expect(plan.budgetAllocations.reduce((sum, allocation) => sum + allocation.allocationPoints, 0)).toBe(100);
+    expect(staffBudget.rationaleLabel).toContain('open goals');
+    expect(recruitingBudget.rationaleLabel).toContain(`${userRecord.wins}-${userRecord.losses} record`);
+    expect(plan.budgetAllocations[0]!.allocationPoints).toBeGreaterThanOrEqual(
+      plan.budgetAllocations[1]!.allocationPoints,
+    );
     expect(save.currentSeason.weeks[save.currentWeekIndex]?.games.some((game) =>
       game.status === 'scheduled')).toBe(false);
   });

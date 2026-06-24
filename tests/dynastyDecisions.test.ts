@@ -48,10 +48,10 @@ describe('dynasty decision roadmap', () => {
     expect(decisionDoc).toContain('Dynasty Recruiting-Lite now creates a deterministic fictional prospect pool');
     expect(decisionDoc).toContain('Recruiting roster safety snapshots and gameplay binding checks prove recruiting allocations');
     expect(decisionDoc).toContain('### Phase 5: Program Management');
-    expect(decisionDoc).toContain('Status: In progress. Minor updates 1-2 shipped in `1.22.38` and `1.22.39`.');
+    expect(decisionDoc).toContain('Status: In progress. Minor updates 1-3 shipped in `1.22.38`, `1.22.39`, and `1.22.40`.');
     expect(decisionDoc).toContain('Coach goals contract: add visible weekly and season program goals derived from save state without changing gameplay outcomes. Shipped in `1.22.38`.');
     expect(decisionDoc).toContain('Program strengths view: summarize the user program\'s identity from roster ratings, team stats, and standings. Shipped in `1.22.39`.');
-    expect(decisionDoc).toContain('Budget allocation model: add a simple visible allocation between recruiting, training, facilities, and staff.');
+    expect(decisionDoc).toContain('Budget allocation model: add a simple visible allocation between recruiting, training, facilities, and staff. Shipped in `1.22.40`.');
     expect(decisionDoc).toContain('Staff modifiers preview: show small deterministic staff bonuses as future-phase inputs, not current-play effects.');
     expect(decisionDoc).toContain('Program management validation hardening: reject malformed goals, budget totals, hidden modifiers, and out-of-range bonus values.');
     expect(decisionDoc).toContain('Gameplay isolation hardening: prove program goals, budgets, and staff modifiers cannot alter current-play ratings');
