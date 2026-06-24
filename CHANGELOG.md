@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.20] - 2026-06-24
+
+### Added
+
+- Started Dynasty Phase 2 with team-level season stat rows on Dynasty saves and deterministic per-game stat lines for finalized simulated and quick-simmed games.
+- Added legacy Dynasty save stat hydration so older active saves rebuild missing game and season stats before validation.
+- Added the Phase 2 rollout plan with four minor updates and two patch-hardening passes in the dynasty decision map.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastySeason.test.ts tests/dynastySaveRepository.test.ts tests/dynastyWeekAdvance.test.ts tests/dynastyDecisions.test.ts`, `npm run build`, and `npm run test:unit`.
+
 ## [1.22.19] - 2026-06-24
 
 ### Fixed

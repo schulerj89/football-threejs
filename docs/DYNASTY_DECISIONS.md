@@ -122,6 +122,8 @@ Completion notes:
 
 ### Phase 2: Stats, Stories, and Awards
 
+Status: In progress. Minor update 1 shipped in `1.22.20`.
+
 Goal: Let the season feel persistent through stats and commentary.
 
 Scope:
@@ -136,6 +138,18 @@ Acceptance:
 - Simulated and user-played games produce valid cumulative stats.
 - No impossible stats are generated.
 - Commentary remains generic and factual.
+
+Minor update plan:
+
+1. Season stats contract: add team-level season stat rows, deterministic per-game stat lines, aggregate rebuilds, and legacy stat hydration. Shipped in `1.22.20`.
+2. Weekly leaders: expose passing, rushing, scoring, turnover, and yardage leaders from the current Dynasty save.
+3. Story hooks: add compact Dynasty context summaries for halftime, postgame, and weekly hub copy.
+4. Award watch lists: add deterministic offensive, defensive, and special teams watch rows based on season stats.
+
+Patch hardening plan:
+
+1. Stat validation hardening: reject missing, negative, mismatched, or impossible aggregate stat rows and preserve migration safety.
+2. Story presentation hardening: keep Dynasty story copy generic, factual, and absent from Play Now unless a Dynasty context exists.
 
 ### Phase 3: Player Progression
 

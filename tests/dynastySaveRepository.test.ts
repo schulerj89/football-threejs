@@ -39,6 +39,63 @@ describe('dynasty save repository', () => {
     expect(validateDynastySaveData(created.save)).toEqual([]);
   });
 
+  it('hydrates missing season stats from older active saves', async () => {
+    const league = generateLeagueData({ seed: 'dynasty-save-league' });
+    const created = await createAndPersistDynastySave({
+      createdAt: '2026-06-24T10:00:00.000Z',
+      seed: 'dynasty-save-legacy-stats',
+      store: null,
+      teams: league.teams,
+      userTeamId: DEFAULT_USER_TEAM_ID,
+    });
+    const [week] = created.save.currentSeason.weeks;
+    const [game] = week!.games;
+    const legacySave = {
+      ...created.save,
+      currentSeason: {
+        ...created.save.currentSeason,
+        teamStats: undefined,
+        weeks: [
+          {
+            ...week!,
+            games: [
+              {
+                ...game!,
+                result: {
+                  awayScore: 21,
+                  homeScore: 17,
+                  winnerTeamId: game!.awayTeamId,
+                },
+                status: 'final',
+              },
+              ...week!.games.slice(1),
+            ],
+          },
+          ...created.save.currentSeason.weeks.slice(1),
+        ],
+      },
+    } as unknown as typeof created.save;
+    const store = createMemoryDynastySaveStore({
+      key: DYNASTY_ACTIVE_SAVE_KEY,
+      modeVersion: DYNASTY_SEASON_CORE_VERSION,
+      payload: legacySave,
+      savedAt: legacySave.updatedAt,
+      schemaVersion: DYNASTY_SAVE_SCHEMA_VERSION,
+    });
+    const loaded = await loadDynastySave({ store });
+
+    expect(loaded.warning).toBeNull();
+    expect(loaded.save?.currentSeason.teamStats).toHaveLength(6);
+    expect(loaded.save?.currentSeason.teamStats.find((stats) =>
+      stats.teamId === game!.awayTeamId)).toMatchObject({
+      gamesPlayed: 1,
+      pointsAgainst: 17,
+      pointsFor: 21,
+    });
+    expect(loaded.save?.currentSeason.weeks[0]?.games[0]?.result?.awayStats.offensiveYards)
+      .toBeGreaterThan(0);
+  });
+
   it('persists an updated save timestamp and clears it on reset', async () => {
     const league = generateLeagueData({ seed: 'dynasty-save-league' });
     const store = createMemoryDynastySaveStore();

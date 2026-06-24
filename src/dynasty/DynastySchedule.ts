@@ -5,6 +5,7 @@ import {
   type DynastyScheduledGame,
   type DynastySeason,
   type DynastySeasonCoreInput,
+  type DynastyTeamSeasonStats,
   type DynastyTeamRecord,
   type DynastyWeek,
 } from './DynastyTypes';
@@ -49,6 +50,7 @@ export function createDynastySeason(options: {
     seasonId: `dynasty-season-${options.year}-${hashText(`${options.seed}:${teamIds.join('|')}`)}`,
     standings: teamIds.map(createEmptyRecord),
     teamIds,
+    teamStats: teamIds.map(createEmptyTeamStats),
     weeks,
     year: options.year,
   };
@@ -128,6 +130,23 @@ function createEmptyRecord(teamId: string): DynastyTeamRecord {
     pointsFor: 0,
     teamId,
     wins: 0,
+  };
+}
+
+function createEmptyTeamStats(teamId: string): DynastyTeamSeasonStats {
+  return {
+    defensiveYards: 0,
+    fieldGoals: 0,
+    gamesPlayed: 0,
+    giveaways: 0,
+    offensiveYards: 0,
+    passingYards: 0,
+    pointsAgainst: 0,
+    pointsFor: 0,
+    rushingYards: 0,
+    takeaways: 0,
+    teamId,
+    touchdowns: 0,
   };
 }
 

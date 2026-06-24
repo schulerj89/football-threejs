@@ -14,9 +14,21 @@ export type DynastySaveSource =
   | 'memoryFallback'
   | 'none';
 
+export interface DynastyGameTeamStats {
+  readonly fieldGoals: number;
+  readonly giveaways: number;
+  readonly offensiveYards: number;
+  readonly passingYards: number;
+  readonly rushingYards: number;
+  readonly takeaways: number;
+  readonly touchdowns: number;
+}
+
 export interface DynastyGameResult {
   readonly awayScore: number;
+  readonly awayStats: DynastyGameTeamStats;
   readonly homeScore: number;
+  readonly homeStats: DynastyGameTeamStats;
   readonly winnerTeamId: string;
 }
 
@@ -43,10 +55,19 @@ export interface DynastyTeamRecord {
   readonly wins: number;
 }
 
+export interface DynastyTeamSeasonStats extends DynastyGameTeamStats {
+  readonly defensiveYards: number;
+  readonly gamesPlayed: number;
+  readonly pointsAgainst: number;
+  readonly pointsFor: number;
+  readonly teamId: string;
+}
+
 export interface DynastySeason {
   readonly seasonId: string;
   readonly standings: readonly DynastyTeamRecord[];
   readonly teamIds: readonly string[];
+  readonly teamStats: readonly DynastyTeamSeasonStats[];
   readonly weeks: readonly DynastyWeek[];
   readonly year: number;
 }

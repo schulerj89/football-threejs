@@ -1,5 +1,6 @@
 import type { TeamProfile } from '../teams/TeamProfile';
 import { createDynastySeasonCore } from './DynastySchedule';
+import { normalizeDynastySaveStats } from './DynastyWeekAdvance';
 import {
   DYNASTY_ACTIVE_SAVE_KEY,
   DYNASTY_SAVE_SCHEMA_VERSION,
@@ -90,12 +91,17 @@ export async function loadDynastySave(
       };
     }
     const migrated = migrateDynastySaveRecord(record);
-    throwOnDynastyValidationErrors(validateDynastySaveData(migrated.payload));
-    if (migrated !== record) {
-      await store.put(migrated);
+    const normalizedPayload = normalizeDynastySaveStats(migrated.payload);
+    const normalizedRecord: StoredDynastySaveRecord = {
+      ...migrated,
+      payload: normalizedPayload,
+    };
+    throwOnDynastyValidationErrors(validateDynastySaveData(normalizedPayload));
+    if (migrated !== record || normalizedPayload !== migrated.payload) {
+      await store.put(normalizedRecord);
     }
     return {
-      save: migrated.payload,
+      save: normalizedPayload,
       source: 'indexedDB',
       warning: null,
     };

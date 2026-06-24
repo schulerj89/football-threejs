@@ -51,6 +51,11 @@ describe('dynasty season core', () => {
     expect(save.currentSeason.teamIds).toHaveLength(DYNASTY_SEASON_TEAM_COUNT);
     expect(weeks).toHaveLength(DYNASTY_REGULAR_SEASON_WEEK_COUNT);
     expect(save.currentSeason.standings).toHaveLength(DYNASTY_SEASON_TEAM_COUNT);
+    expect(save.currentSeason.teamStats).toHaveLength(DYNASTY_SEASON_TEAM_COUNT);
+    expect(save.currentSeason.teamStats.every((stats) =>
+      stats.gamesPlayed === 0 &&
+      stats.offensiveYards === 0 &&
+      stats.defensiveYards === 0)).toBe(true);
 
     for (const week of weeks) {
       const weeklyTeamIds = new Set<string>();

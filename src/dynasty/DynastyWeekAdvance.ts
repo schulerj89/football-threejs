@@ -1,9 +1,11 @@
 import type {
   DynastyGameResult,
+  DynastyGameTeamStats,
   DynastySaveData,
   DynastyScheduledGame,
   DynastySeason,
   DynastyTeamRecord,
+  DynastyTeamSeasonStats,
   DynastyWeek,
 } from './DynastyTypes';
 
@@ -30,6 +32,30 @@ export function getCurrentDynastyUserGame(save: DynastySaveData): DynastySchedul
 export function canAdvanceDynastyWeek(save: DynastySaveData): boolean {
   const week = getCurrentDynastyWeek(save);
   return !!week && week.games.every((game) => game.status === 'final' && game.result);
+}
+
+export function normalizeDynastySaveStats(save: DynastySaveData): DynastySaveData {
+  return {
+    ...save,
+    currentSeason: recalculateDynastySeasonAggregates({
+      ...save.currentSeason,
+      weeks: save.currentSeason.weeks.map((week) => ({
+        ...week,
+        games: week.games.map((game) => {
+          if (!game.result) {
+            return game;
+          }
+          if (game.result.awayStats && game.result.homeStats) {
+            return game;
+          }
+          return {
+            ...game,
+            result: createGameResult(game, game.result.awayScore, game.result.homeScore),
+          };
+        }),
+      })),
+    }),
+  };
 }
 
 export function simulateCurrentDynastyWeekNonUserGames(save: DynastySaveData): DynastyWeekAdvanceResult {
@@ -141,14 +167,14 @@ function replaceDynastyWeek(save: DynastySaveData, nextWeek: DynastyWeek): Dynas
     week.weekIndex === nextWeek.weekIndex ? nextWeek : week);
   return {
     ...save,
-    currentSeason: recalculateDynastyStandings({
+    currentSeason: recalculateDynastySeasonAggregates({
       ...save.currentSeason,
       weeks,
     }),
   };
 }
 
-function recalculateDynastyStandings(season: DynastySeason): DynastySeason {
+function recalculateDynastySeasonAggregates(season: DynastySeason): DynastySeason {
   const records = new Map<string, DynastyTeamRecord>(
     season.teamIds.map((teamId) => [
       teamId,
@@ -161,6 +187,9 @@ function recalculateDynastyStandings(season: DynastySeason): DynastySeason {
       },
     ]),
   );
+  const stats = new Map<string, DynastyTeamSeasonStats>(
+    season.teamIds.map((teamId) => [teamId, createEmptySeasonStats(teamId)]),
+  );
 
   for (const week of season.weeks) {
     for (const game of week.games) {
@@ -168,12 +197,14 @@ function recalculateDynastyStandings(season: DynastySeason): DynastySeason {
         continue;
       }
       applyGameResult(records, game);
+      applyGameStats(stats, game);
     }
   }
 
   return {
     ...season,
     standings: season.teamIds.map((teamId) => records.get(teamId)!).filter(Boolean),
+    teamStats: season.teamIds.map((teamId) => stats.get(teamId)!).filter(Boolean),
   };
 }
 
@@ -238,10 +269,110 @@ function createGameResult(
   awayScore: number,
   homeScore: number,
 ): DynastyGameResult {
+  const base = `${game.gameId}:${awayScore}:${homeScore}`;
   return {
     awayScore,
+    awayStats: createGameTeamStats(`${base}:${game.awayTeamId}:away`, awayScore, homeScore),
     homeScore,
+    homeStats: createGameTeamStats(`${base}:${game.homeTeamId}:home`, homeScore, awayScore),
     winnerTeamId: awayScore > homeScore ? game.awayTeamId : game.homeTeamId,
+  };
+}
+
+function applyGameStats(
+  stats: Map<string, DynastyTeamSeasonStats>,
+  game: DynastyScheduledGame,
+): void {
+  if (!game.result) {
+    return;
+  }
+
+  const awayStats = stats.get(game.awayTeamId);
+  const homeStats = stats.get(game.homeTeamId);
+  if (!awayStats || !homeStats) {
+    return;
+  }
+
+  stats.set(game.awayTeamId, addGameStats(
+    awayStats,
+    game.result.awayStats,
+    game.result.homeStats,
+    game.result.awayScore,
+    game.result.homeScore,
+  ));
+  stats.set(game.homeTeamId, addGameStats(
+    homeStats,
+    game.result.homeStats,
+    game.result.awayStats,
+    game.result.homeScore,
+    game.result.awayScore,
+  ));
+}
+
+function addGameStats(
+  seasonStats: DynastyTeamSeasonStats,
+  teamStats: DynastyGameTeamStats,
+  opponentStats: DynastyGameTeamStats,
+  pointsFor: number,
+  pointsAgainst: number,
+): DynastyTeamSeasonStats {
+  return {
+    defensiveYards: seasonStats.defensiveYards + opponentStats.offensiveYards,
+    fieldGoals: seasonStats.fieldGoals + teamStats.fieldGoals,
+    gamesPlayed: seasonStats.gamesPlayed + 1,
+    giveaways: seasonStats.giveaways + teamStats.giveaways,
+    offensiveYards: seasonStats.offensiveYards + teamStats.offensiveYards,
+    passingYards: seasonStats.passingYards + teamStats.passingYards,
+    pointsAgainst: seasonStats.pointsAgainst + pointsAgainst,
+    pointsFor: seasonStats.pointsFor + pointsFor,
+    rushingYards: seasonStats.rushingYards + teamStats.rushingYards,
+    takeaways: seasonStats.takeaways + teamStats.takeaways,
+    teamId: seasonStats.teamId,
+    touchdowns: seasonStats.touchdowns + teamStats.touchdowns,
+  };
+}
+
+function createEmptySeasonStats(teamId: string): DynastyTeamSeasonStats {
+  return {
+    defensiveYards: 0,
+    fieldGoals: 0,
+    gamesPlayed: 0,
+    giveaways: 0,
+    offensiveYards: 0,
+    passingYards: 0,
+    pointsAgainst: 0,
+    pointsFor: 0,
+    rushingYards: 0,
+    takeaways: 0,
+    teamId,
+    touchdowns: 0,
+  };
+}
+
+function createGameTeamStats(
+  seed: string,
+  pointsFor: number,
+  pointsAgainst: number,
+): DynastyGameTeamStats {
+  const touchdowns = Math.max(0, Math.min(8, Math.floor(pointsFor / 7)));
+  const fieldGoals = Math.max(0, Math.min(5, Math.floor((pointsFor - touchdowns * 7) / 3)));
+  const paceYards = 245 + Math.floor(hashToUnit(`${seed}:pace`) * 165);
+  const scoreYards = touchdowns * 28 + fieldGoals * 12;
+  const offensiveYards = Math.max(120, paceYards + scoreYards - Math.max(0, pointsAgainst - pointsFor) * 3);
+  const passingShare = 0.45 + hashToUnit(`${seed}:pass-share`) * 0.28;
+  const passingYards = Math.min(offensiveYards, Math.round(offensiveYards * passingShare));
+  const rushingYards = offensiveYards - passingYards;
+  const giveaways = Math.floor(hashToUnit(`${seed}:giveaways`) * 3);
+  const takeaways = Math.floor(hashToUnit(`${seed}:takeaways`) * 3);
+
+  return {
+    fieldGoals,
+    giveaways,
+    offensiveYards,
+    passingYards,
+    rushingYards,
+    takeaways,
+    touchdowns,
   };
 }
 

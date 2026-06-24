@@ -24,6 +24,11 @@ describe('dynasty week advance', () => {
     expect(firstResult.save).toEqual(secondResult.save);
     expect(userGame?.status).toBe('scheduled');
     expect(currentWeek.games.filter((game) => game.status === 'final')).toHaveLength(2);
+    expect(currentWeek.games.filter((game) =>
+      game.status === 'final' &&
+      game.result?.awayStats.offensiveYards &&
+      game.result.homeStats.offensiveYards)).toHaveLength(2);
+    expect(firstResult.save.currentSeason.teamStats.filter((stats) => stats.gamesPlayed === 1)).toHaveLength(4);
     expect(canAdvanceDynastyWeek(firstResult.save)).toBe(false);
   });
 
@@ -49,6 +54,14 @@ describe('dynasty week advance', () => {
       pointsFor: 24,
       wins: 1,
     });
+    expect(withUserResult.currentSeason.teamStats.find((stats) =>
+      stats.teamId === DEFAULT_USER_TEAM_ID)).toMatchObject({
+      gamesPlayed: 1,
+      pointsAgainst: 17,
+      pointsFor: 24,
+    });
+    expect(withUserResult.currentSeason.teamStats.find((stats) =>
+      stats.teamId === DEFAULT_USER_TEAM_ID)?.offensiveYards).toBeGreaterThan(0);
     expect(opponentRecord).toMatchObject({
       losses: 1,
       pointsAgainst: 24,

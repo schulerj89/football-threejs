@@ -52,6 +52,9 @@ export function validateDynastySaveData(save: DynastySaveData): DynastyValidatio
   if (season.standings.length !== DYNASTY_SEASON_TEAM_COUNT) {
     issues.push(error(`Expected ${DYNASTY_SEASON_TEAM_COUNT} dynasty standings rows, received ${season.standings.length}`));
   }
+  if (!Array.isArray(season.teamStats) || season.teamStats.length !== DYNASTY_SEASON_TEAM_COUNT) {
+    issues.push(error(`Expected ${DYNASTY_SEASON_TEAM_COUNT} dynasty team stat rows, received ${season.teamStats?.length ?? 0}`));
+  }
   for (const record of season.standings) {
     if (!teamIds.has(record.teamId)) {
       issues.push(error(`Dynasty standings include unknown team ${record.teamId}`));
@@ -63,6 +66,29 @@ export function validateDynastySaveData(save: DynastySaveData): DynastyValidatio
       record.pointsAgainst < 0
     ) {
       issues.push(error(`Dynasty standings row ${record.teamId} contains negative values`));
+    }
+  }
+  for (const stats of season.teamStats ?? []) {
+    if (!teamIds.has(stats.teamId)) {
+      issues.push(error(`Dynasty team stats include unknown team ${stats.teamId}`));
+    }
+    if (
+      stats.defensiveYards < 0 ||
+      stats.fieldGoals < 0 ||
+      stats.gamesPlayed < 0 ||
+      stats.giveaways < 0 ||
+      stats.offensiveYards < 0 ||
+      stats.passingYards < 0 ||
+      stats.pointsAgainst < 0 ||
+      stats.pointsFor < 0 ||
+      stats.rushingYards < 0 ||
+      stats.takeaways < 0 ||
+      stats.touchdowns < 0
+    ) {
+      issues.push(error(`Dynasty team stats row ${stats.teamId} contains negative values`));
+    }
+    if (stats.passingYards + stats.rushingYards !== stats.offensiveYards) {
+      issues.push(error(`Dynasty team stats row ${stats.teamId} has mismatched offensive yards`));
     }
   }
 
@@ -100,6 +126,10 @@ export function validateDynastySaveData(save: DynastySaveData): DynastyValidatio
       if (game.result && game.result.winnerTeamId !== game.awayTeamId && game.result.winnerTeamId !== game.homeTeamId) {
         issues.push(error(`${game.gameId} result winner is not in the game`));
       }
+      if (game.result) {
+        validateGameStats(issues, `${game.gameId} away`, game.result.awayStats);
+        validateGameStats(issues, `${game.gameId} home`, game.result.homeStats);
+      }
     }
     if (weeklyTeamIds.size !== DYNASTY_SEASON_TEAM_COUNT) {
       issues.push(error(`${week.label} does not schedule every dynasty team`));
@@ -121,4 +151,38 @@ export function throwOnDynastyValidationErrors(issues: readonly DynastyValidatio
 
 function error(message: string): DynastyValidationIssue {
   return { message, severity: 'error' };
+}
+
+function validateGameStats(
+  issues: DynastyValidationIssue[],
+  label: string,
+  stats: {
+    readonly fieldGoals?: number;
+    readonly giveaways?: number;
+    readonly offensiveYards?: number;
+    readonly passingYards?: number;
+    readonly rushingYards?: number;
+    readonly takeaways?: number;
+    readonly touchdowns?: number;
+  } | undefined,
+): void {
+  if (!stats) {
+    issues.push(error(`${label} result is missing team stats`));
+    return;
+  }
+  const values = [
+    stats.fieldGoals,
+    stats.giveaways,
+    stats.offensiveYards,
+    stats.passingYards,
+    stats.rushingYards,
+    stats.takeaways,
+    stats.touchdowns,
+  ];
+  if (values.some((value) => typeof value !== 'number' || !Number.isInteger(value) || value < 0)) {
+    issues.push(error(`${label} result contains invalid team stats`));
+  }
+  if ((stats.passingYards ?? 0) + (stats.rushingYards ?? 0) !== stats.offensiveYards) {
+    issues.push(error(`${label} result has mismatched offensive yards`));
+  }
 }
