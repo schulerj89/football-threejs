@@ -102,6 +102,9 @@ describe('dynasty hub view model', () => {
     expect(view.progressionPreview[0]?.performancePoints).toBeGreaterThanOrEqual(
       view.progressionPreview[4]?.performancePoints ?? 0,
     );
+    expect(view.progressionPreview[0]?.projectedOverall).toBeGreaterThanOrEqual(
+      view.progressionPreview[0]?.currentOverall ?? 0,
+    );
     expect(view.progressionSummaryLabel).toContain('presentation-only points');
     expect(view.trainingSummary).toHaveLength(4);
     expect(view.trainingSummary[0]?.focusLabel).toMatch(/ focus$/);

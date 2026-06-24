@@ -29,10 +29,10 @@ describe('dynasty decision roadmap', () => {
     expect(decisionDoc).toContain('Dynasty story copy is suppressed for Play Now and for malformed Dynasty context.');
     expect(decisionDoc).toContain('Patch hardening plan:');
     expect(decisionDoc).toContain('### Phase 3: Player Progression');
-    expect(decisionDoc).toContain('Status: In progress. Minor updates 1-2 shipped in `1.22.26` and `1.22.27`.');
+    expect(decisionDoc).toContain('Status: In progress. Minor updates 1-3 shipped in `1.22.26`, `1.22.27`, and `1.22.28`.');
     expect(decisionDoc).toContain('Progression preview contract: add deterministic presentation-only performance points');
     expect(decisionDoc).toContain('Weekly training summary: add a compact hub section that groups projected development by position room and archetype. Shipped in `1.22.27`.');
-    expect(decisionDoc).toContain('Rating delta preview: calculate bounded projected attribute and overall changes');
+    expect(decisionDoc).toContain('Rating delta preview: calculate bounded projected attribute and overall changes based on position weights, still not applied to gameplay. Shipped in `1.22.28`.');
     expect(decisionDoc).toContain('Apply-to-save progression: persist approved end-of-week progression rows');
     expect(decisionDoc).toContain('Progression bounds hardening: reject negative, non-integer, oversized, or duplicate progression rows');
     expect(decisionDoc).toContain('Gameplay isolation hardening: prove progression previews and saved deltas cannot alter live gameplay ratings');

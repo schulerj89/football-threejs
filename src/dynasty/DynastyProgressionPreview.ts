@@ -1,7 +1,17 @@
 import { calculateOverallRating } from '../ratings/OverallRatingCalculator';
+import { isPlayerAttributeKey, type PlayerAttributeKey } from '../ratings/PlayerAttribute';
+import type { PlayerRatings } from '../ratings/PlayerRatings';
+import { getPositionRatingProfile } from '../ratings/PositionRatingProfile';
 import type { PlayerArchetype, RosterPlayer } from '../roster/RosterPlayer';
 import { getTeamRosterOrDefault } from '../roster/RosterRegistry';
 import type { DynastySaveData, DynastyTeamSeasonStats } from './DynastyTypes';
+
+export interface DynastyRatingDeltaPreview {
+  readonly attribute: PlayerAttributeKey;
+  readonly currentValue: number;
+  readonly delta: number;
+  readonly projectedValue: number;
+}
 
 export interface DynastyProgressionPreviewRow {
   readonly archetype: PlayerArchetype;
@@ -11,6 +21,9 @@ export interface DynastyProgressionPreviewRow {
   readonly playerId: string;
   readonly playerName: string;
   readonly position: string;
+  readonly projectedOverall: number;
+  readonly projectedOverallDelta: number;
+  readonly ratingDeltas: readonly DynastyRatingDeltaPreview[];
 }
 
 export interface DynastyTrainingSummaryRow {
@@ -140,6 +153,9 @@ function createProgressionRow(
   const roleScore = calculateRoleScore(player, stats);
   const stabilityBonus = hashToRange(`${dynastySeed}:${player.id}:progression`, 0, 8);
   const performancePoints = clampPoints(Math.round(roleScore + stabilityBonus));
+  const ratingDeltas = createRatingDeltaPreview(player, performancePoints);
+  const projectedRatings = applyRatingDeltas(player.ratings, ratingDeltas);
+  const projectedOverall = calculateOverallRating(player.footballPosition, projectedRatings);
 
   return {
     archetype: player.archetype,
@@ -149,7 +165,63 @@ function createProgressionRow(
     playerId: player.id,
     playerName: player.displayName,
     position: player.footballPosition,
+    projectedOverall,
+    projectedOverallDelta: Math.max(0, projectedOverall - currentOverall),
+    ratingDeltas,
   };
+}
+
+function createRatingDeltaPreview(
+  player: RosterPlayer,
+  performancePoints: number,
+): DynastyRatingDeltaPreview[] {
+  const budget = getRatingDeltaBudget(performancePoints);
+  if (budget <= 0) {
+    return [];
+  }
+
+  return Object.entries(getPositionRatingProfile(player.footballPosition).overallWeights)
+    .filter((entry): entry is [PlayerAttributeKey, number] =>
+      isPlayerAttributeKey(entry[0]) &&
+      typeof entry[1] === 'number' &&
+      player.ratings[entry[0]] !== undefined)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, budget)
+    .map(([attribute]) => {
+      const currentValue = player.ratings[attribute] ?? 0;
+      const projectedValue = Math.min(99, currentValue + 1);
+      return {
+        attribute,
+        currentValue,
+        delta: projectedValue - currentValue,
+        projectedValue,
+      };
+    })
+    .filter((delta) => delta.delta > 0);
+}
+
+function getRatingDeltaBudget(performancePoints: number): number {
+  if (performancePoints >= 60) {
+    return 3;
+  }
+  if (performancePoints >= 40) {
+    return 2;
+  }
+  if (performancePoints >= 20) {
+    return 1;
+  }
+  return 0;
+}
+
+function applyRatingDeltas(
+  ratings: PlayerRatings,
+  deltas: readonly DynastyRatingDeltaPreview[],
+): PlayerRatings {
+  const projected: Partial<Record<PlayerAttributeKey, number>> = { ...ratings };
+  for (const delta of deltas) {
+    projected[delta.attribute] = delta.projectedValue;
+  }
+  return projected;
 }
 
 function calculateRoleScore(

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.28] - 2026-06-24
+
+### Added
+
+- Added Dynasty rating delta previews that project bounded attribute bumps from performance-point bands using each position's overall weights.
+- Added projected overall ratings and OVR delta labels to the Dynasty hub Progression Preview without mutating roster ratings or gameplay behavior.
+
+### Tests
+
+- Verified `npx vitest run tests/dynastyProgressionPreview.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyDecisions.test.ts`, `npm run test:unit`, `npm run build`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.27] - 2026-06-24
 
 ### Added

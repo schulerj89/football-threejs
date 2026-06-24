@@ -24,7 +24,17 @@ describe('dynasty progression preview', () => {
     expect(first.rows.every((row) =>
       row.performancePoints >= 0 &&
       row.performancePoints <= 100)).toBe(true);
+    expect(first.rows.every((row) =>
+      row.projectedOverall >= row.currentOverall &&
+      row.projectedOverallDelta >= 0 &&
+      row.projectedOverallDelta <= 3 &&
+      row.ratingDeltas.length <= 3 &&
+      row.ratingDeltas.every((delta) =>
+        delta.delta === 1 &&
+        delta.projectedValue === delta.currentValue + 1 &&
+        delta.projectedValue <= 99))).toBe(true);
     expect(first.rows[0]?.performancePoints).toBeGreaterThan(0);
+    expect(first.rows.some((row) => row.ratingDeltas.length > 0)).toBe(true);
     expect(first.trainingSummary.length).toBeGreaterThanOrEqual(6);
     expect(first.trainingSummary.every((row) =>
       row.averagePoints >= 0 &&
@@ -45,6 +55,7 @@ describe('dynasty progression preview', () => {
     expect(quarterbackPreview.currentOverall).toBe(
       calculateOverallRating(quarterback.footballPosition, quarterback.ratings),
     );
+    expect(quarterbackPreview.projectedOverall).toBeGreaterThanOrEqual(quarterbackPreview.currentOverall);
     expect('OVR' in quarterback.ratings).toBe(false);
   });
 

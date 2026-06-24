@@ -682,7 +682,7 @@ export class FootballHubScreen {
       const position = document.createElement('span');
       position.textContent = player.position;
       const name = document.createElement('strong');
-      name.textContent = `${player.playerName} (${player.currentOverall} OVR)`;
+      name.textContent = `${player.playerName} (${player.currentOverall} OVR, +${player.projectedOverallDelta})`;
       const points = document.createElement('span');
       points.textContent = `${player.performancePoints} pts`;
       item.append(position, name, points);
