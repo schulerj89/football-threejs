@@ -388,6 +388,15 @@ interface PresentationAuditSnapshot {
 
 interface RouteArtRendererSnapshot {
   auditEnabled: boolean;
+  coverageShellEnabled: boolean;
+  coverageZones: Array<{
+    defenderId: string;
+    kind: 'deepHalf' | 'deepMiddle' | 'flat' | 'hookCurl';
+    label: string;
+    landmark: FootballSpot;
+    points: FootballSpot[];
+    visible: boolean;
+  }>;
   enabled: boolean;
   rebuildKey: string;
   routeCount: number;
@@ -2973,9 +2982,8 @@ test('renders graphical play cards and selects plays through the shared request 
   await expect(page.locator('.play-card[data-play-id="inside-zone-7"] .play-card-run-direction')).toHaveCount(1);
   await expect(page.locator('.play-card[data-play-id="outside-zone-7"] .play-card-run-direction')).toHaveCount(1);
   await expect(page.locator('.play-card[data-play-id="quick-pass-7"] .play-card-receiver-route')).toHaveCount(3);
-  await expect(page.locator('.play-card[data-play-id="quick-pass-7"] .play-card-coverage-zone')).toHaveCount(4);
   await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-receiver-route')).toHaveCount(3);
-  await expect(page.locator('.play-card[data-play-id="twin-slants-flat"] .play-card-coverage-zone')).toHaveCount(4);
+  await expect(page.locator('.play-card .play-card-coverage-zone')).toHaveCount(0);
   await expect(page.locator('.play-card[data-play-id="inside-zone-7"]')).toHaveAttribute('data-selected', 'true');
 
   await page.locator('.play-card[data-play-id="outside-zone-7"]').click();
@@ -3019,6 +3027,13 @@ test('shows on-field receiver routes before snap and supports route audit mode',
   expect(preSnapRoutes.routes.map((route) => route.receiverId)).toEqual(['offense-wr', 'offense-rb']);
   expect(preSnapRoutes.routes.every((route) => route.points.length >= 3)).toBe(true);
   expect(preSnapRoutes.routes.find((route) => route.receiverId === 'offense-wr')?.selected).toBe(true);
+  expect(preSnapRoutes.coverageShellEnabled).toBe(true);
+  expect(preSnapRoutes.coverageZones.map((zone) => zone.kind)).toEqual([
+    'flat',
+    'hookCurl',
+    'deepMiddle',
+  ]);
+  expect(preSnapRoutes.coverageZones.every((zone) => zone.visible)).toBe(true);
 
   await page.keyboard.press('e');
   await expect.poll(async () =>
@@ -3028,6 +3043,7 @@ test('shows on-field receiver routes before snap and supports route audit mode',
   await pressSpaceWhenSnapReady(page);
   await expect.poll(() => getGameplaySnapshot(page)).toMatchObject({ playState: 'live' });
   await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({ visible: false });
+  expect((await getRouteArtSnapshot(page)).coverageZones.every((zone) => !zone.visible)).toBe(true);
 
   await page.goto('/?debug=1&readback=1&experience=performance&routeArt=0&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -3036,12 +3052,14 @@ test('shows on-field receiver routes before snap and supports route audit mode',
     enabled: false,
     visible: false,
   });
+  expect((await getRouteArtSnapshot(page)).coverageZones).toEqual([]);
 
   await page.goto('/?debug=1&readback=1&experience=performance&routeAudit=1&playbook=5v5');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await page.keyboard.press('3');
   await expect.poll(() => getRouteArtSnapshot(page)).toMatchObject({
     auditEnabled: true,
+    coverageShellEnabled: true,
     routeCount: 1,
     visible: true,
   });
@@ -3187,20 +3205,17 @@ test('starts playable 11v11 plays and throws Spread Quick to the selected target
   await expect(page.locator('.play-card[data-play-id="inside-zone-11"] .play-card-blocker-assignment')).toHaveCount(9);
   await expect(page.locator('.play-card[data-play-id="spread-quick-11"] .play-card-receiver-route')).toHaveCount(5);
   await expect(page.locator('.play-card[data-play-id="spread-quick-11"] .play-card-blocker-assignment')).toHaveCount(5);
-  await expect(page.locator('.play-card[data-play-id="spread-quick-11"] .play-card-coverage-zone')).toHaveCount(6);
   await expect(page.locator('.play-card[data-play-id="outside-zone-11"] .play-card-run-direction')).toHaveCount(1);
   await expect(page.locator('.play-card[data-play-id="outside-zone-11"] .play-card-blocker-assignment')).toHaveCount(9);
   await expect(page.locator('.play-card[data-play-id="off-tackle-11"] .play-card-run-direction')).toHaveCount(1);
   await expect(page.locator('.play-card[data-play-id="off-tackle-11"] .play-card-blocker-assignment')).toHaveCount(9);
   await expect(page.locator('.play-card[data-play-id="twin-slants-11"] .play-card-receiver-route')).toHaveCount(5);
   await expect(page.locator('.play-card[data-play-id="twin-slants-11"] .play-card-blocker-assignment')).toHaveCount(5);
-  await expect(page.locator('.play-card[data-play-id="twin-slants-11"] .play-card-coverage-zone')).toHaveCount(6);
   await expect(page.locator('.play-card[data-play-id="curl-flat-11"] .play-card-receiver-route')).toHaveCount(5);
   await expect(page.locator('.play-card[data-play-id="curl-flat-11"] .play-card-blocker-assignment')).toHaveCount(5);
-  await expect(page.locator('.play-card[data-play-id="curl-flat-11"] .play-card-coverage-zone')).toHaveCount(6);
   await expect(page.locator('.play-card[data-play-id="four-verts-out-flat-11"] .play-card-receiver-route')).toHaveCount(5);
   await expect(page.locator('.play-card[data-play-id="four-verts-out-flat-11"] .play-card-blocker-assignment')).toHaveCount(5);
-  await expect(page.locator('.play-card[data-play-id="four-verts-out-flat-11"] .play-card-coverage-zone')).toHaveCount(6);
+  await expect(page.locator('.play-card .play-card-coverage-zone')).toHaveCount(0);
   await expectNonBlankCanvas(page);
 
   await page.keyboard.press('5');

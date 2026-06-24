@@ -429,6 +429,7 @@ export class PresentationRuntime {
 
     this.routeArtRenderer = new RouteArtRenderer({
       auditEnabled: routeAuditEnabled,
+      coverageShellEnabled: searchParams.has('debug') || routeAuditEnabled,
       enabled: gameExperience.settings.routeArtEnabled,
     });
     this.scene.add(this.routeArtRenderer.group);

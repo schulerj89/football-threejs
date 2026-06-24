@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import type { SnapPlacement } from '../ballSpotting';
+import {
+  resolveCoverageZones,
+  type CoverageZone,
+} from '../coverageShell';
 import type { FootballSpot } from '../fieldScale';
 import type { GameplaySnapshot } from '../playState';
 import type { PlayDefinition } from '../playbook';
@@ -14,6 +18,7 @@ import {
 
 export interface RouteArtRendererOptions {
   auditEnabled?: boolean;
+  coverageShellEnabled?: boolean;
   enabled?: boolean;
   toleranceYards?: number;
 }
@@ -28,10 +33,21 @@ export interface RouteArtRouteSnapshot {
 
 export interface RouteArtRendererSnapshot {
   auditEnabled: boolean;
+  coverageShellEnabled: boolean;
+  coverageZones: RouteArtCoverageZoneSnapshot[];
   enabled: boolean;
   rebuildKey: string;
   routeCount: number;
   routes: RouteArtRouteSnapshot[];
+  visible: boolean;
+}
+
+export interface RouteArtCoverageZoneSnapshot {
+  defenderId: string;
+  kind: CoverageZone['kind'];
+  label: string;
+  landmark: FootballSpot;
+  points: FootballSpot[];
   visible: boolean;
 }
 
@@ -51,6 +67,13 @@ interface RouteVisual {
   waypointMarkers: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>[];
 }
 
+interface CoverageZoneVisual {
+  landmark: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
+  outline: THREE.LineLoop<THREE.BufferGeometry, THREE.LineBasicMaterial>;
+  shell: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  zone: CoverageZone;
+}
+
 export const ROUTE_ART_CONFIG = {
   arrowLength: 0.9,
   arrowRadius: 0.32,
@@ -60,6 +83,9 @@ export const ROUTE_ART_CONFIG = {
   selectedRouteOpacity: 0.98,
   startMarkerRadius: 0.3,
   waypointRadius: 0.22,
+  coverageLandmarkRadius: 0.28,
+  coverageZoneOpacity: 0.2,
+  coverageZoneOutlineOpacity: 0.78,
 } as const;
 
 export class RouteArtRenderer {
@@ -119,6 +145,48 @@ export class RouteArtRenderer {
     opacity: 0.98,
   });
   private readonly markerGeometry = new THREE.CircleGeometry(ROUTE_ART_CONFIG.waypointRadius, 16);
+  private readonly coverageLandmarkGeometry = new THREE.CircleGeometry(
+    ROUTE_ART_CONFIG.coverageLandmarkRadius,
+    16,
+  );
+  private readonly coverageFlatMaterial = new THREE.MeshBasicMaterial({
+    color: 0x54d6ff,
+    depthTest: true,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: ROUTE_ART_CONFIG.coverageZoneOpacity,
+  });
+  private readonly coverageFlatOutlineMaterial = new THREE.LineBasicMaterial({
+    color: 0x54d6ff,
+    depthTest: true,
+    transparent: true,
+    opacity: ROUTE_ART_CONFIG.coverageZoneOutlineOpacity,
+  });
+  private readonly coverageDeepMaterial = new THREE.MeshBasicMaterial({
+    color: 0xf2d94b,
+    depthTest: true,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: ROUTE_ART_CONFIG.coverageZoneOpacity,
+  });
+  private readonly coverageDeepOutlineMaterial = new THREE.LineBasicMaterial({
+    color: 0xf2d94b,
+    depthTest: true,
+    transparent: true,
+    opacity: ROUTE_ART_CONFIG.coverageZoneOutlineOpacity,
+  });
+  private readonly coverageFlatLandmarkMaterial = new THREE.MeshBasicMaterial({
+    color: 0x54d6ff,
+    depthTest: true,
+    transparent: true,
+    opacity: 0.92,
+  });
+  private readonly coverageDeepLandmarkMaterial = new THREE.MeshBasicMaterial({
+    color: 0xf2d94b,
+    depthTest: true,
+    transparent: true,
+    opacity: 0.92,
+  });
   private readonly receiverMarkerGeometry = new THREE.CircleGeometry(
     ROUTE_ART_CONFIG.receiverMarkerRadius,
     16,
@@ -126,6 +194,7 @@ export class RouteArtRenderer {
   private readonly startMarkerGeometry = new THREE.CircleGeometry(ROUTE_ART_CONFIG.startMarkerRadius, 16);
 
   private readonly routeVisuals = new Map<string, RouteVisual>();
+  private readonly coverageZoneVisuals: CoverageZoneVisual[] = [];
   private lastRebuildKey = '';
   private snapshot: RouteArtRendererSnapshot;
 
@@ -148,9 +217,11 @@ export class RouteArtRenderer {
   update(gameplay: GameplaySnapshot, play: PlayDefinition): void {
     const enabled = this.enabled || this.options.auditEnabled === true;
     const auditEnabled = this.options.auditEnabled === true;
+    const coverageShellEnabled = this.options.coverageShellEnabled === true;
     const shouldShow = enabled &&
       play.kind === 'pass' &&
       (gameplay.playState === 'preSnap' || (auditEnabled && gameplay.playState === 'live'));
+    const shouldShowCoverage = shouldShow && coverageShellEnabled && gameplay.playState === 'preSnap';
 
     this.group.visible = shouldShow;
 
@@ -164,12 +235,16 @@ export class RouteArtRenderer {
       spot: gameplay.drive.lineOfScrimmage,
     };
     const routes = resolveEligibleReceiverRoutes(play, snapPlacement);
-    const rebuildKey = createRouteRebuildKey(play, snapPlacement, routes);
+    const coverageZones = coverageShellEnabled
+      ? resolveCoverageZones(play, snapPlacement)
+      : [];
+    const rebuildKey = createRouteRebuildKey(play, snapPlacement, routes, coverageZones);
 
     if (rebuildKey !== this.lastRebuildKey) {
-      this.rebuild(routes, rebuildKey);
+      this.rebuild(routes, coverageZones, rebuildKey);
     }
 
+    this.syncCoverageZoneVisualStates(shouldShowCoverage);
     this.syncRouteVisualStates(gameplay, auditEnabled);
     this.snapshot = this.createSnapshot(shouldShow);
   }
@@ -181,6 +256,11 @@ export class RouteArtRenderer {
         ...route,
         audit: route.audit ? cloneAuditSnapshot(route.audit) : null,
         points: route.points.map((point) => ({ ...point })),
+      })),
+      coverageZones: this.snapshot.coverageZones.map((zone) => ({
+        ...zone,
+        landmark: { ...zone.landmark },
+        points: zone.points.map((point) => ({ ...point })),
       })),
     };
   }
@@ -200,12 +280,23 @@ export class RouteArtRenderer {
       this.routeMarkerMaterial,
       this.selectedLineMaterial,
       this.selectedMarkerMaterial,
+      this.coverageFlatMaterial,
+      this.coverageFlatOutlineMaterial,
+      this.coverageDeepMaterial,
+      this.coverageDeepOutlineMaterial,
+      this.coverageFlatLandmarkMaterial,
+      this.coverageDeepLandmarkMaterial,
     ]) {
       material.dispose();
     }
+    this.coverageLandmarkGeometry.dispose();
   }
 
-  private rebuild(routes: ResolvedReceiverRoute[], rebuildKey: string): void {
+  private rebuild(
+    routes: ResolvedReceiverRoute[],
+    coverageZones: CoverageZone[],
+    rebuildKey: string,
+  ): void {
     this.clearRouteVisuals();
     this.lastRebuildKey = rebuildKey;
 
@@ -214,6 +305,49 @@ export class RouteArtRenderer {
       this.routeVisuals.set(route.receiverId, visual);
       this.group.add(visual.group);
     }
+
+    for (const zone of coverageZones) {
+      const visual = this.createCoverageZoneVisual(zone);
+      this.coverageZoneVisuals.push(visual);
+      this.group.add(visual.shell, visual.outline, visual.landmark);
+    }
+  }
+
+  private createCoverageZoneVisual(zone: CoverageZone): CoverageZoneVisual {
+    const material = isDeepCoverageZone(zone)
+      ? this.coverageDeepMaterial
+      : this.coverageFlatMaterial;
+    const outlineMaterial = isDeepCoverageZone(zone)
+      ? this.coverageDeepOutlineMaterial
+      : this.coverageFlatOutlineMaterial;
+    const landmarkMaterial = isDeepCoverageZone(zone)
+      ? this.coverageDeepLandmarkMaterial
+      : this.coverageFlatLandmarkMaterial;
+    const shell = new THREE.Mesh(createCoverageZoneGeometry(zone), material);
+    shell.name = `route-art-coverage-zone-${zone.defenderId}`;
+    shell.renderOrder = 4;
+    shell.userData.coverageZone = true;
+    shell.userData.coverageZoneKind = zone.kind;
+
+    const outline = new THREE.LineLoop(createCoverageZoneOutlineGeometry(zone), outlineMaterial);
+    outline.name = `route-art-coverage-zone-outline-${zone.defenderId}`;
+    outline.renderOrder = 5;
+    outline.userData.coverageZoneOutline = true;
+    outline.userData.coverageZoneKind = zone.kind;
+
+    const landmark = new THREE.Mesh(this.coverageLandmarkGeometry, landmarkMaterial);
+    landmark.name = `route-art-coverage-landmark-${zone.defenderId}`;
+    landmark.position.set(zone.landmark.x, ROUTE_ART_CONFIG.heightY + 0.035, zone.landmark.z);
+    landmark.rotation.x = -Math.PI / 2;
+    landmark.renderOrder = 8;
+    landmark.userData.coverageZoneLandmark = true;
+
+    return {
+      landmark,
+      outline,
+      shell,
+      zone,
+    };
   }
 
   private createRouteVisual(route: ResolvedReceiverRoute): RouteVisual {
@@ -338,6 +472,14 @@ export class RouteArtRenderer {
     }
   }
 
+  private syncCoverageZoneVisualStates(visible: boolean): void {
+    for (const visual of this.coverageZoneVisuals) {
+      visual.shell.visible = visible;
+      visual.outline.visible = visible;
+      visual.landmark.visible = visible;
+    }
+  }
+
   private applyMaterials(visual: RouteVisual, selected: boolean, hasError: boolean): void {
     const lineMaterial = hasError
       ? this.errorLineMaterial
@@ -401,8 +543,18 @@ export class RouteArtRenderer {
   }
 
   private createSnapshot(visible: boolean): RouteArtRendererSnapshot {
+    const coverageShellEnabled = this.options.coverageShellEnabled === true;
     return {
       auditEnabled: this.options.auditEnabled === true,
+      coverageShellEnabled,
+      coverageZones: this.coverageZoneVisuals.map((visual) => ({
+        defenderId: visual.zone.defenderId,
+        kind: visual.zone.kind,
+        label: visual.zone.label,
+        landmark: { ...visual.zone.landmark },
+        points: visual.zone.footballPoints.map((point) => ({ ...point })),
+        visible: visible && visual.shell.visible && coverageShellEnabled,
+      })),
       enabled: this.enabled || this.options.auditEnabled === true,
       rebuildKey: this.lastRebuildKey,
       routeCount: this.routeVisuals.size,
@@ -425,6 +577,11 @@ export class RouteArtRenderer {
       visual.group.clear();
     }
 
+    for (const visual of this.coverageZoneVisuals) {
+      visual.shell.geometry.dispose();
+      visual.outline.geometry.dispose();
+    }
+    this.coverageZoneVisuals.length = 0;
     this.routeVisuals.clear();
     this.group.clear();
   }
@@ -470,6 +627,7 @@ function createRouteRebuildKey(
   play: PlayDefinition,
   snapPlacement: SnapPlacement,
   routes: ResolvedReceiverRoute[],
+  coverageZones: CoverageZone[] = [],
 ): string {
   return [
     play.id,
@@ -481,6 +639,13 @@ function createRouteRebuildKey(
         route.receiverId,
         route.id,
         ...route.points.map((point) => `${point.x.toFixed(3)},${point.z.toFixed(3)}`),
+      ].join(':'),
+    ),
+    ...coverageZones.map((zone) =>
+      [
+        zone.defenderId,
+        zone.kind,
+        ...zone.footballPoints.map((point) => `${point.x.toFixed(3)},${point.z.toFixed(3)}`),
       ].join(':'),
     ),
   ].join('|');
@@ -496,6 +661,45 @@ function createDynamicLineGeometry(): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
   return geometry;
+}
+
+function createCoverageZoneGeometry(zone: CoverageZone): THREE.BufferGeometry {
+  const [first, second, third, fourth] = zone.footballPoints;
+  const vertices = new Float32Array([
+    first.x,
+    ROUTE_ART_CONFIG.heightY - 0.015,
+    first.z,
+    second.x,
+    ROUTE_ART_CONFIG.heightY - 0.015,
+    second.z,
+    third.x,
+    ROUTE_ART_CONFIG.heightY - 0.015,
+    third.z,
+    first.x,
+    ROUTE_ART_CONFIG.heightY - 0.015,
+    first.z,
+    third.x,
+    ROUTE_ART_CONFIG.heightY - 0.015,
+    third.z,
+    fourth.x,
+    ROUTE_ART_CONFIG.heightY - 0.015,
+    fourth.z,
+  ]);
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+
+  return geometry;
+}
+
+function createCoverageZoneOutlineGeometry(zone: CoverageZone): THREE.BufferGeometry {
+  return new THREE.BufferGeometry().setFromPoints(
+    zone.footballPoints.map((point) =>
+      new THREE.Vector3(point.x, ROUTE_ART_CONFIG.heightY + 0.01, point.z),
+    ),
+  );
 }
 
 function writeLineGeometry(
@@ -526,6 +730,10 @@ function positionArrow(arrow: THREE.Mesh, route: ResolvedReceiverRoute): void {
     end.z - tangent.z * ROUTE_ART_CONFIG.arrowLength * 0.5,
   );
   arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
+}
+
+function isDeepCoverageZone(zone: CoverageZone): boolean {
+  return zone.kind === 'deepHalf' || zone.kind === 'deepMiddle';
 }
 
 function cloneAuditSnapshot(snapshot: ReceiverRouteAuditSnapshot): ReceiverRouteAuditSnapshot {

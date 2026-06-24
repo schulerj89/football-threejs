@@ -611,31 +611,6 @@ canvas[hidden] {
   stroke-width: 2.2;
 }
 
-.play-card-coverage-zone-shape {
-  fill: rgba(84, 214, 255, 0.14);
-  stroke: rgba(84, 214, 255, 0.54);
-  stroke-dasharray: 4 3;
-  stroke-linejoin: round;
-  stroke-width: 1.1;
-}
-
-.play-card-coverage-zone[data-kind="deepHalf"] .play-card-coverage-zone-shape,
-.play-card-coverage-zone[data-kind="deepMiddle"] .play-card-coverage-zone-shape {
-  fill: rgba(242, 217, 75, 0.12);
-  stroke: rgba(242, 217, 75, 0.52);
-}
-
-.play-card-coverage-zone-landmark {
-  fill: rgba(84, 214, 255, 0.82);
-  stroke: rgba(7, 20, 24, 0.78);
-  stroke-width: 0.8;
-}
-
-.play-card-coverage-zone[data-kind="deepHalf"] .play-card-coverage-zone-landmark,
-.play-card-coverage-zone[data-kind="deepMiddle"] .play-card-coverage-zone-landmark {
-  fill: rgba(242, 217, 75, 0.84);
-}
-
 .play-card-blocker-line {
   stroke: rgba(242, 217, 75, 0.72);
   stroke-linecap: round;

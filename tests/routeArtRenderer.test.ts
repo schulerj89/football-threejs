@@ -135,6 +135,33 @@ describe('route art renderer', () => {
 
     renderer.dispose();
   });
+
+  it('draws Cover 2 zones on the field only for debug route art before the snap', () => {
+    const gameplay = createGameplayModel({ playbookId: '7v7' });
+    selectPlay(gameplay, 'twin-slants-flat');
+    const normalRenderer = new RouteArtRenderer();
+    const debugRenderer = new RouteArtRenderer({ coverageShellEnabled: true });
+
+    normalRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    expect(normalRenderer.getSnapshot().coverageZones).toEqual([]);
+
+    debugRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    const preSnapCoverage = debugRenderer.getSnapshot().coverageZones;
+
+    expect(preSnapCoverage).toHaveLength(4);
+    expect(preSnapCoverage.every((zone) => zone.visible)).toBe(true);
+    expect(
+      debugRenderer.group.getObjectByName('route-art-coverage-zone-defense-corner-left'),
+    ).toBeDefined();
+
+    startPlay(gameplay);
+    debugRenderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+
+    expect(debugRenderer.getSnapshot().coverageZones.every((zone) => !zone.visible)).toBe(true);
+
+    normalRenderer.dispose();
+    debugRenderer.dispose();
+  });
 });
 
 function createSnapshotForLane(

@@ -1,9 +1,8 @@
 import { createCenterSnapPlacement, type SnapPlacement } from './ballSpotting';
-import { FIELD_DIMENSIONS, FIELD_DIRECTION, PLAYABLE_FIELD_BOUNDS } from './fieldSpec';
+import { FIELD_DIRECTION, PLAYABLE_FIELD_BOUNDS } from './fieldSpec';
 import type { FootballSpot } from './fieldScale';
 import {
   resolveFormation,
-  type FormationSide,
   type ResolvedFormationSlot,
 } from './formationLayout';
 import type { PlayerModel } from './playerModel';
@@ -27,8 +26,10 @@ export const COVERAGE_SHELL_CONFIG = {
   hookDepthStartYards: 5,
   deepDepthEndYards: 26,
   deepDepthStartYards: 12,
-  insideFlatWidthYards: 12,
+  outsideFlatStartYards: 14,
+  outsideFlatEndYards: 26,
   hookHalfWidthYards: 8,
+  deepHalfWidthYards: 26,
   minimumThreatInfluenceYards: 0.25,
   threatInfluence: 0.45,
   zoneHoldRadiusYards: 0.55,
@@ -162,10 +163,15 @@ function resolveCoverageZoneForSlot(
 
 function createFlatZone(
   defenderId: string,
-  side: FormationSide,
+  side: 'left' | 'right',
   snapPlacement: SnapPlacement,
 ): CoverageZone {
-  const { minX, maxX } = resolveSideBounds(side, COVERAGE_SHELL_CONFIG.insideFlatWidthYards);
+  const { minX, maxX } = resolveSnapRelativeBounds(
+    snapPlacement,
+    side,
+    COVERAGE_SHELL_CONFIG.outsideFlatStartYards,
+    COVERAGE_SHELL_CONFIG.outsideFlatEndYards,
+  );
   const minZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.flatDepthStartYards);
   const maxZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.flatDepthEndYards);
 
@@ -178,19 +184,17 @@ function createHookCurlZone(
   snapPlacement: SnapPlacement,
 ): CoverageZone {
   const direction = side === 'left' ? -1 : 1;
-  const minX = side === 'left'
-    ? snapPlacement.spot.x - COVERAGE_SHELL_CONFIG.hookHalfWidthYards * 2
-    : snapPlacement.spot.x;
-  const maxX = side === 'left'
-    ? snapPlacement.spot.x
-    : snapPlacement.spot.x + COVERAGE_SHELL_CONFIG.hookHalfWidthYards * 2;
+  const { minX, maxX } = resolveSnapRelativeBounds(
+    snapPlacement,
+    side,
+    0,
+    COVERAGE_SHELL_CONFIG.hookHalfWidthYards * 2,
+  );
   const minZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.hookDepthStartYards);
   const maxZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.hookDepthEndYards);
-  const clampedMinX = Math.max(PLAYABLE_FIELD_BOUNDS.minX, minX);
-  const clampedMaxX = Math.min(PLAYABLE_FIELD_BOUNDS.maxX, maxX);
   const label = direction < 0 ? 'C2 left hook' : 'C2 right hook';
 
-  return createZone(defenderId, 'hookCurl', label, clampedMinX, clampedMaxX, minZ, maxZ);
+  return createZone(defenderId, 'hookCurl', label, minX, maxX, minZ, maxZ);
 }
 
 function createDeepHalfZone(
@@ -198,8 +202,12 @@ function createDeepHalfZone(
   side: 'left' | 'right',
   snapPlacement: SnapPlacement,
 ): CoverageZone {
-  const minX = side === 'left' ? PLAYABLE_FIELD_BOUNDS.minX : 0;
-  const maxX = side === 'left' ? 0 : PLAYABLE_FIELD_BOUNDS.maxX;
+  const { minX, maxX } = resolveSnapRelativeBounds(
+    snapPlacement,
+    side,
+    0,
+    COVERAGE_SHELL_CONFIG.deepHalfWidthYards,
+  );
   const minZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.deepDepthStartYards);
   const maxZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.deepDepthEndYards);
 
@@ -210,8 +218,8 @@ function createDeepMiddleZone(
   defenderId: string,
   snapPlacement: SnapPlacement,
 ): CoverageZone {
-  const minX = PLAYABLE_FIELD_BOUNDS.minX;
-  const maxX = PLAYABLE_FIELD_BOUNDS.maxX;
+  const minX = snapPlacement.spot.x - COVERAGE_SHELL_CONFIG.deepHalfWidthYards;
+  const maxX = snapPlacement.spot.x + COVERAGE_SHELL_CONFIG.deepHalfWidthYards;
   const minZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.deepDepthStartYards);
   const maxZ = depthFromLine(snapPlacement, COVERAGE_SHELL_CONFIG.deepDepthEndYards);
 
@@ -252,22 +260,19 @@ function createZone(
   };
 }
 
-function resolveSideBounds(
-  side: FormationSide,
-  insideWidthYards: number,
+function resolveSnapRelativeBounds(
+  snapPlacement: SnapPlacement,
+  side: 'left' | 'right',
+  nearOffsetYards: number,
+  farOffsetYards: number,
 ): { minX: number; maxX: number } {
-  const halfWidth = FIELD_DIMENSIONS.fieldWidth / 2;
-
-  if (side === 'left') {
-    return {
-      minX: -halfWidth,
-      maxX: Math.min(-halfWidth + insideWidthYards, halfWidth),
-    };
-  }
+  const direction = side === 'left' ? -1 : 1;
+  const nearX = snapPlacement.spot.x + direction * nearOffsetYards;
+  const farX = snapPlacement.spot.x + direction * farOffsetYards;
 
   return {
-    minX: Math.max(halfWidth - insideWidthYards, -halfWidth),
-    maxX: halfWidth,
+    minX: Math.min(nearX, farX),
+    maxX: Math.max(nearX, farX),
   };
 }
 

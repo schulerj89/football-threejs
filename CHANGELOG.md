@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.58] - 2026-06-24
+
+### Fixed
+
+- Removed defensive Cover 2 zone art from offensive play-card diagrams so offensive play selection only shows offensive routes and blocking.
+- Moved Cover 2 defensive play art onto the field in debug route-art mode before the snap, including filled zones, outlines, and landmark dots.
+- Rebased Cover 2 zone math around the pre-snap ball center so flats, hook/curl landmarks, and deep halves shift with the snap spot while remaining clamped to the playable field.
+
+### Artifacts
+
+- Added `artifacts/cover2-zone-proof/cover2-debug-field-presnap-spread-quick-11.png` as the pre-snap debug field overlay proof.
+- Removed the obsolete `artifacts/cover2-zone-proof/cover2-play-art-spread-quick-11.png` proof because defensive coverage no longer appears on offensive cards.
+
+### Tests
+
+- Verified `npx vitest run tests/routeArtRenderer.test.ts tests/teamSimulation.test.ts tests/playCallDiagram.test.ts`, `npx playwright test tests/scene-smoke.spec.ts -g "shows on-field receiver routes before snap and supports route audit mode|renders graphical play cards and selects plays through the shared request path|starts playable 11v11 plays and throws Spread Quick to the selected target"`, `npm run build`, and `npm run test:unit`.
+
 ## [1.22.57] - 2026-06-24
 
 ### Added

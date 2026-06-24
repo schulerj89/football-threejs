@@ -4,6 +4,7 @@ import {
   COVERAGE_SHELL_CONFIG,
   getCoverageZoneForDefender,
   isPointInsideCoverageZone,
+  resolveCoverageZones,
   resolveCoverageShell,
 } from '../src/coverageShell';
 import { DEFENDER_CONFIG, isTackleContact, updateDefenderPursuit } from '../src/defenderModel';
@@ -317,6 +318,30 @@ describe('five-on-five rushing drill simulation', () => {
     expect(leftCorner.position.x).toBeLessThan(-10);
   });
 
+  it('positions Cover 2 zone landmarks relative to the pre-snap ball center', () => {
+    const play = getPlay('twin-slants-flat');
+    const middle = resolveCoverageZones(play, {
+      lane: 'middle',
+      spot: { x: 0, z: INITIAL_BALL_SPOT.z },
+    });
+    const rightHash = resolveCoverageZones(play, {
+      lane: 'rightHash',
+      spot: { x: 6, z: INITIAL_BALL_SPOT.z },
+    });
+    const middleLeftFlat = getZone(middle, 'defense-corner-left');
+    const rightHashLeftFlat = getZone(rightHash, 'defense-corner-left');
+    const middleSafety = getZone(middle, 'defense-safety');
+    const rightHashSafety = getZone(rightHash, 'defense-safety');
+    const rightHashLeftFlatXs = rightHashLeftFlat.footballPoints.map((point) => point.x);
+
+    expect(rightHashLeftFlat.landmark.x - middleLeftFlat.landmark.x).toBeCloseTo(6);
+    expect(Math.min(...rightHashLeftFlatXs)).toBeCloseTo(-20);
+    expect(Math.max(...rightHashLeftFlatXs)).toBeCloseTo(-8);
+    expect(Math.min(...rightHashSafety.footballPoints.map((point) => point.x))).toBeCloseTo(-20);
+    expect(rightHashSafety.landmark.x).toBeGreaterThan(middleSafety.landmark.x);
+    expect(rightHashSafety.landmark.x).toBeLessThanOrEqual(6);
+  });
+
   it('turns coverage defenders into carrier pursuit after a Twin Slants Flat completion', () => {
     const play = getPlay('twin-slants-flat');
     const players = createFormationPlayers(INITIAL_BALL_SPOT, play);
@@ -423,6 +448,19 @@ function makePlayer(
       team,
     },
   );
+}
+
+function getZone(
+  zones: ReturnType<typeof resolveCoverageZones>,
+  defenderId: string,
+) {
+  const zone = zones.find((candidate) => candidate.defenderId === defenderId);
+
+  if (!zone) {
+    throw new Error(`Missing coverage zone ${defenderId}`);
+  }
+
+  return zone;
 }
 
 function getPlayer(players: PlayerModel[], playerId: string): PlayerModel {
