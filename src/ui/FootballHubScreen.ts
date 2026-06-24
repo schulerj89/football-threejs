@@ -55,13 +55,23 @@ type RosterSort = 'number' | 'name' | 'overall' | 'position';
 
 export const DYNASTY_DECISION_DOC_PATH = 'docs/DYNASTY_DECISIONS.md';
 
+export type FootballHubLaunchSource = 'dynasty' | 'playNow';
+
+export interface FootballHubLaunchOptions {
+  readonly source: FootballHubLaunchSource;
+}
+
+export function shouldPersistFootballHubLaunchSettings(options: FootballHubLaunchOptions): boolean {
+  return options.source === 'playNow';
+}
+
 export interface FootballHubScreenOptions {
   dynastySaveStore?: DynastySaveStore | null;
   getLeagueData: () => LeagueData | null;
   initialSettings: GameExperienceSettings;
   onBack: () => void;
   onFirstGesture?: () => void;
-  onPlayGame: (settings: GameExperienceSettings) => void;
+  onPlayGame: (settings: GameExperienceSettings, options: FootballHubLaunchOptions) => void;
   onSettingsChange: (settings: GameExperienceSettings) => void;
 }
 
@@ -267,6 +277,8 @@ export class FootballHubScreen {
           this.matchupSelection,
           this.settings.teamProfiles,
         ),
+      }, {
+        source: 'playNow',
       });
     });
     actions.append(this.playNowCorrectionButton, this.playNowPlayButton);
@@ -668,6 +680,8 @@ export class FootballHubScreen {
         matchupSelection,
         this.settings.teamProfiles,
       ),
+    }, {
+      source: 'dynasty',
     });
   }
 
@@ -898,11 +912,11 @@ export class FootballHubScreen {
       return;
     }
     const currentTeamId = side === 'user'
-      ? this.matchupSelection.userTeamId
-      : this.matchupSelection.opponentTeamId;
+      ? this.playNowTeamSelects.user.value || this.matchupSelection.userTeamId
+      : this.playNowTeamSelects.opponent.value || this.matchupSelection.opponentTeamId;
     const excludedTeamId = side === 'user'
-      ? this.matchupSelection.opponentTeamId
-      : this.matchupSelection.userTeamId;
+      ? this.playNowTeamSelects.opponent.value || this.matchupSelection.opponentTeamId
+      : this.playNowTeamSelects.user.value || this.matchupSelection.userTeamId;
     const selectableTeams = league.teams.filter((team) => team.id !== excludedTeamId);
     if (selectableTeams.length === 0) {
       return;

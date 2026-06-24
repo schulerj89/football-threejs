@@ -3,6 +3,7 @@ import type { LeagueData } from '../league/LeagueTypes';
 import type { PlayState } from '../playState';
 import { PauseSettingsPanel } from '../ui/PauseSettingsPanel';
 import { SettingsPanel } from '../ui/SettingsPanel';
+import type { FootballHubLaunchOptions } from '../ui/FootballHubScreen';
 import type { TitleLoadingState } from '../ui/TitleScreen';
 import { TitleScreenController } from '../ui/TitleScreenController';
 
@@ -26,7 +27,7 @@ export interface ApplicationLifecycleOptions {
   onPauseSettingsChange: (settings: GameExperienceSettings) => void;
   onReturnToTitle: () => void;
   onTitleFirstGesture: () => void;
-  onStart: () => void;
+  onStart: (settings: GameExperienceSettings, options: FootballHubLaunchOptions) => void;
   onTitleSettingsChange: (settings: GameExperienceSettings) => void;
   syncChrome: (phase: AppPhase) => void;
 }

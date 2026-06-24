@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.19] - 2026-06-24
+
+### Fixed
+
+- Hardened Football Hub launch routing so Play Now settings continue to persist while Dynasty matchup settings run as one-match settings without leaking into the saved title setup.
+- Restored the pre-Dynasty title settings when returning from a Dynasty-launched match and kept pause-setting changes during that match runtime-only.
+
+### Tests
+
+- Verified `npx vitest run tests/footballHubLaunch.test.ts tests/dynastyDecisions.test.ts tests/dynastySeason.test.ts tests/dynastySaveRepository.test.ts tests/dynastyHubViewModel.test.ts tests/dynastyWeekAdvance.test.ts`, `npm run build`, `npm run test:unit`, and `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`.
+
 ## [1.22.18] - 2026-06-24
 
 ### Fixed

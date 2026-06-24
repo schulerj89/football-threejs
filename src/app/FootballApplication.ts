@@ -1,9 +1,11 @@
 import {
   resolveGameExperienceSettings,
   saveGameExperienceSettings,
+  normalizeGameExperienceSettings,
   type GameExperienceSettings,
   type ResolvedGameExperienceSettings,
 } from '../config/GameExperienceSettings';
+import type { StorageLike } from '../audio/AudioSettings';
 import { resolveCrowdPreviewEnabled } from '../crowdPreview';
 import { resolvePlayerBodyVisualStyle } from '../playerVisual';
 import { ApplicationDiagnostics } from './ApplicationDiagnostics';
@@ -57,6 +59,10 @@ import { createGameplayRosterBinding } from '../roster/GameplayRosterBinding';
 import { preloadFootballPlayerVisualAssets } from '../presentation/players/FootballPlayerVisualFactory';
 import type { PlayerVisualMode } from '../presentation/players/PlayerVisualMode';
 import { LeagueBootController } from '../league/LeagueBootController';
+import {
+  shouldPersistFootballHubLaunchSettings,
+  type FootballHubLaunchOptions,
+} from '../ui/FootballHubScreen';
 
 export interface FootballApplicationOptions {
   mount: HTMLDivElement;
@@ -88,6 +94,7 @@ export class FootballApplication {
   private gameExperience: ResolvedGameExperienceSettings;
   private hasRenderedFirstFrame = false;
   private matchSeedSequence = 0;
+  private settingsToRestoreAfterMatch: GameExperienceSettings | null = null;
   private crowdSuppressedForCapacityBenchmark = false;
   private previousPerformanceResourceSnapshot: ResourceChangeSnapshot | null = null;
 
@@ -204,7 +211,7 @@ export class FootballApplication {
       createTitleLoadingState: () => this.diagnostics.createTitleLoadingState(),
       onPauseSettingsChange: (settings) => this.handlePauseSettingsChange(settings),
       onReturnToTitle: () => this.returnToTitleScreen(),
-      onStart: () => this.startGameFromTitle(),
+      onStart: (settings, options) => this.startGameFromTitle(settings, options),
       onTitleFirstGesture: () => {
         void this.presentation.titleMusicController.startFromUserGesture();
       },
@@ -684,9 +691,17 @@ export class FootballApplication {
     });
   }
 
-  private startGameFromTitle(): void {
-    const selectedSettings = this.lifecycle.getTitleSettings(this.gameExperience.settings);
-    this.applyExperienceSettings(selectedSettings, { persist: true });
+  private startGameFromTitle(
+    launchSettings?: GameExperienceSettings,
+    launchOptions: FootballHubLaunchOptions = { source: 'playNow' },
+  ): void {
+    const selectedSettings = launchSettings ?? this.lifecycle.getTitleSettings(this.gameExperience.settings);
+    if (launchOptions.source === 'dynasty' && !this.settingsToRestoreAfterMatch) {
+      this.settingsToRestoreAfterMatch = this.gameExperience.settings;
+    }
+    this.applyExperienceSettings(selectedSettings, {
+      persist: shouldPersistFootballHubLaunchSettings(launchOptions),
+    });
     this.gameplay.startFromTitle(
       this.gameExperience.settings.playbookId,
       this.gameExperience.settings.gameMode,
@@ -718,7 +733,7 @@ export class FootballApplication {
     this.applyExperienceSettings({
       ...settings,
       playbookId: this.gameExperience.settings.playbookId,
-    }, { persist: true });
+    }, { persist: !this.settingsToRestoreAfterMatch });
   }
 
   private applyExperienceSettings(
@@ -730,10 +745,14 @@ export class FootballApplication {
     if (options.persist ?? true) {
       saveGameExperienceSettings(settings);
     }
+    const transientStorage = (options.persist ?? true)
+      ? null
+      : createTransientGameSettingsStorage(settings);
     this.gameExperience = resolveGameExperienceSettings({
       audioSettings: this.presentation.audioMixer.getSettings(),
       crowdPresentationSettings: this.gameExperience.crowdPresentationSettings,
       searchParams: this.searchParams,
+      storage: transientStorage ?? undefined,
     });
     const teamTheme = resolveTeamPresentationTheme(this.gameExperience.settings.teamProfiles);
     this.sceneRuntime.applyTeamTheme(teamTheme);
@@ -934,6 +953,11 @@ export class FootballApplication {
     this.quarterTransitionPanel.sync(null, false);
     this.presentation.updatePostgameFrame(null);
     this.presentation.resetPregamePresentationIdentity();
+    const restoreSettings = this.settingsToRestoreAfterMatch;
+    if (restoreSettings) {
+      this.settingsToRestoreAfterMatch = null;
+      this.applyExperienceSettings(restoreSettings, { persist: false });
+    }
     this.lifecycle.returnToTitleScreen();
   }
 
@@ -1372,4 +1396,16 @@ function resolveCrowdCapacityTargetFrameTime(
 
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function createTransientGameSettingsStorage(settings: GameExperienceSettings): StorageLike {
+  const values = new Map<string, string>();
+  const storage: StorageLike = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+  };
+  saveGameExperienceSettings(normalizeGameExperienceSettings(settings), storage);
+  return storage;
 }

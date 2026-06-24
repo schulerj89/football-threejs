@@ -83,7 +83,7 @@ Completion notes:
 
 ### Phase 1: Season Core
 
-Status: In progress. Minor updates 1-4 shipped in `1.22.14` through `1.22.17`; patch hardening update 1 shipped in `1.22.18`.
+Status: Complete in `1.22.19`.
 
 Goal: Create the first real dynasty save loop.
 
@@ -112,7 +112,13 @@ Minor update plan:
 Patch hardening plan:
 
 1. Reload and migration hardening: validate corrupt saves, missing teams, stale schema versions, and safe fallback behavior. Shipped in `1.22.18`.
-2. Flow hardening: prevent Play Now and Dynasty state from leaking into each other, including team settings, kickoff setup, and completed-game return routing.
+2. Flow hardening: prevent Play Now and Dynasty state from leaking into each other, including team settings, kickoff setup, and completed-game return routing. Shipped in `1.22.19`.
+
+Completion notes:
+
+- The Dynasty hub loads, creates, and persists the active save through the repository.
+- Weekly non-user games and quick-sim user games update standings deterministically.
+- Dynasty matchup launch settings are runtime-only, and Play Now settings remain separate.
 
 ### Phase 2: Stats, Stories, and Awards
 

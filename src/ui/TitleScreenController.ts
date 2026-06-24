@@ -1,6 +1,10 @@
 import type { GameExperienceSettings } from '../config/GameExperienceSettings';
 import type { LeagueData } from '../league/LeagueTypes';
-import { FootballHubScreen } from './FootballHubScreen';
+import {
+  FootballHubScreen,
+  shouldPersistFootballHubLaunchSettings,
+  type FootballHubLaunchOptions,
+} from './FootballHubScreen';
 import { SettingsPanel } from './SettingsPanel';
 import { TitleScreen, type TitleLoadingState } from './TitleScreen';
 
@@ -11,7 +15,7 @@ export interface TitleScreenControllerOptions {
   onFootballHubOpen?: () => void;
   onFirstGesture?: () => void;
   onSettingsChange: (settings: GameExperienceSettings) => void;
-  onStart: () => void;
+  onStart: (settings: GameExperienceSettings, options: FootballHubLaunchOptions) => void;
 }
 
 export class TitleScreenController {
@@ -33,11 +37,13 @@ export class TitleScreenController {
         options.onFootballHubBack?.();
       },
       onFirstGesture: options.onFirstGesture,
-      onPlayGame: (settings) => {
-        this.settingsPanel.setSettings(settings);
+      onPlayGame: (settings, launchOptions) => {
         this.footballHubScreen.setVisible(false);
-        options.onSettingsChange(settings);
-        options.onStart();
+        if (shouldPersistFootballHubLaunchSettings(launchOptions)) {
+          this.settingsPanel.setSettings(settings);
+          options.onSettingsChange(settings);
+        }
+        options.onStart(settings, launchOptions);
       },
       onSettingsChange: (settings) => {
         this.settingsPanel.setSettings(settings);
