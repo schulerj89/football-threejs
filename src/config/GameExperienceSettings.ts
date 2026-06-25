@@ -472,11 +472,8 @@ export function resolveGameExperienceQueryOverrides(
     overrides.gameMode = 'scoreAttack';
   }
 
-  if (playbookValue === '5v5' || playbookValue === '7v7' || playbookValue === '11v11') {
+  if (playbookValue === '11v11') {
     overrides.playbookId = playbookValue;
-    if (!overrides.gameMode && playbookValue !== '11v11') {
-      overrides.gameMode = 'scoreAttack';
-    }
   }
 
   const quarterLengthValue = searchParams.get('quarterLength') ??
@@ -595,7 +592,7 @@ export function resolveDevelopmentModeFlags(searchParams: URLSearchParams): Deve
   return {
     appearanceAudit: searchParams.has('appearanceAudit'),
     crowdPreview: searchParams.get('crowdPreview') === '1',
-    formationPreview: searchParams.has('formationPreview'),
+    formationPreview: searchParams.get('formationPreview') === '11v11',
     passAudit: searchParams.has('passAudit'),
     presentationAudit: searchParams.has('presentationAudit'),
     routeAudit: searchParams.has('routeAudit'),
@@ -843,7 +840,7 @@ function isSidelineDensity(value: unknown): value is SidelineDensity {
 }
 
 function isPlaybookId(value: unknown): value is PlaybookId {
-  return value === '5v5' || value === '7v7' || value === '11v11';
+  return value === '11v11';
 }
 
 function isUniformVariant(value: unknown): value is UniformVariant {

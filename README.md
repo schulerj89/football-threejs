@@ -2,7 +2,7 @@
 
 Low-poly 3D American football prototype built with Three.js, Vite, and TypeScript.
 
-Football JS is currently focused on a stylized 11v11 offense-first exhibition game with fictional teams, pregame presentation, coin toss, simulated kickoffs, user offensive drives, opponent drive simulation, halftime, and postgame stats. Dynasty mode is in early staged development. Older 7v7 and 5v5 modes remain available as development regression paths.
+Football JS is currently focused on a stylized 11v11 offense-first exhibition game with fictional teams, pregame presentation, coin toss, simulated kickoffs, user offensive drives, opponent drive simulation, halftime, and postgame stats. Dynasty mode is in early staged development.
 
 ## Quick Start
 
@@ -38,7 +38,7 @@ npm run benchmark:reference
 - Dynasty: early shell with team-selection wizard, week hub, standings, awards, program info, training, schedule, roster, and exit flow.
 - Presentation: broadcast scorebug, route art, defensive debug art, stadium, weather, crowd, sideline, officials, audio, music, lower thirds, and camera shots.
 - Gameplay: 11v11 formations, rushing and passing plays, receiver targeting, route-aware passing, tackles, sacks, touchdowns, field goals, punts, safeties, downs, ball spotting, and clock flow.
-- Development modes: 7v7 and 5v5 regression paths, formation previews, player pose harnesses, audits, debug overlays, and performance tooling.
+- Development modes: 11v11 formation previews, player pose harnesses, audits, debug overlays, and performance tooling.
 
 ## Controls
 
@@ -52,7 +52,6 @@ npm run benchmark:reference
 
 ## Common URL Flags
 
-- `?playbook=7v7` or `?playbook=5v5` for older drill modes.
 - `?camera=tactical`, `?camera=offense`, or `?camera=cinematic`.
 - `?cinematics=off`, `?cinematics=brief`, or `?cinematics=full`.
 - `?weather=clear`, `?weather=overcast`, or `?weather=rain`.

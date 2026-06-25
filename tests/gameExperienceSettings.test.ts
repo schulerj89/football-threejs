@@ -92,7 +92,7 @@ describe('game experience settings', () => {
     });
   });
 
-  it('persists non-custom game mode selections', () => {
+  it('normalizes persisted legacy playbook selections back to 11v11', () => {
     const storage = createMemoryStorage();
 
     saveGameExperienceSettings({
@@ -108,12 +108,12 @@ describe('game experience settings', () => {
     expect(resolved.persistedSettings).toMatchObject({
       preset: 'broadcast',
       settings: {
-        playbookId: '5v5',
+        playbookId: '11v11',
         preset: 'broadcast',
       },
     });
     expect(resolved.settings).toMatchObject({
-      playbookId: '5v5',
+      playbookId: '11v11',
       preset: 'broadcast',
     });
   });
@@ -124,7 +124,7 @@ describe('game experience settings', () => {
     const storedBefore = storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY);
 
     const resolved = resolveGameExperienceSettings({
-      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&sidelinePlayers=0&sidelineDensity=high&coaches=1&tunnelTableau=0&announcer=0&captions=1&playbook=5v5&stadium=0&musicVolume=0.33&playerVisual=meshyRigged'),
+      searchParams: new URLSearchParams('camera=cinematic&cinematics=full&crowdVisuals=1&crowdDensity=high&sidelinePlayers=0&sidelineDensity=high&coaches=1&tunnelTableau=0&announcer=0&captions=1&mode=scoreAttack&playbook=5v5&stadium=0&musicVolume=0.33&playerVisual=meshyRigged'),
       storage,
     });
 
@@ -140,7 +140,7 @@ describe('game experience settings', () => {
       gameMode: 'scoreAttack',
       musicVolume: 0.33,
       playerVisualMode: 'meshyRigged',
-      playbookId: '5v5',
+      playbookId: '11v11',
       preset: 'performance',
       sidelineDensity: 'high',
       sidelinePlayersEnabled: false,
@@ -159,7 +159,6 @@ describe('game experience settings', () => {
       gameMode: 'scoreAttack',
       musicVolume: 0.33,
       playerVisualMode: 'meshyRigged',
-      playbookId: '5v5',
       sidelineDensity: 'high',
       sidelinePlayersEnabled: false,
       stadiumEnabled: false,
@@ -185,21 +184,18 @@ describe('game experience settings', () => {
     expect(storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY)).toBeNull();
   });
 
-  it('keeps 7v7 available as an explicit query override', () => {
+  it('ignores legacy playbook query overrides', () => {
     const resolved = resolveGameExperienceSettings({
       searchParams: new URLSearchParams('playbook=7v7'),
       storage: createMemoryStorage(),
     });
 
     expect(resolved.settings).toMatchObject({
-      gameMode: 'scoreAttack',
-      playbookId: '7v7',
+      gameMode: 'exhibition',
+      playbookId: '11v11',
       preset: 'broadcast',
     });
-    expect(resolved.queryOverrides).toEqual({
-      gameMode: 'scoreAttack',
-      playbookId: '7v7',
-    });
+    expect(resolved.queryOverrides).toEqual({});
   });
 
   it('supports explicit quality-mode query overrides', () => {
@@ -238,7 +234,7 @@ describe('game experience settings', () => {
     });
     expect(
       resolveDevelopmentModeFlags(
-        new URLSearchParams('formationPreview=7v7&crowdPreview=1&routeAudit=1&passAudit=1&presentationAudit=1&shotPreview=prePlayOrbit180&appearanceAudit=1'),
+        new URLSearchParams('formationPreview=11v11&crowdPreview=1&routeAudit=1&passAudit=1&presentationAudit=1&shotPreview=prePlayOrbit180&appearanceAudit=1'),
       ),
     ).toEqual({
       appearanceAudit: true,
@@ -249,6 +245,8 @@ describe('game experience settings', () => {
       routeAudit: true,
       shotPreview: true,
     });
+    expect(resolveDevelopmentModeFlags(new URLSearchParams('formationPreview=7v7')).formationPreview)
+      .toBe(false);
   });
 });
 

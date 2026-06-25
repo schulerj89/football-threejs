@@ -133,11 +133,6 @@ import type {
   SceneResourceProfileSnapshot,
 } from '../performance/MemoryTypes';
 import type { StadiumControllerSnapshot } from '../stadium/StadiumController';
-import {
-  createSevenAuditOverlay,
-  syncSevenAuditOverlay,
-  type SevenAuditSnapshot,
-} from '../sevenOnSevenAudit';
 import { getHelmetAssetSnapshot, type HelmetAssetSnapshot } from '../helmetVisual';
 import {
   createWeatherDebugOverlay,
@@ -154,7 +149,7 @@ declare global {
   }
 }
 
-export interface SevenAuditResetCycleResourceSnapshot {
+export interface BaseAuditResetCycleResourceSnapshot {
   activeAudioNodes: number;
   activePlayerRootCount: number;
   crowdInstanceCount: number;
@@ -173,15 +168,7 @@ export interface SevenAuditResetCycleResourceSnapshot {
   visualRootCount: number;
 }
 
-export interface SevenAuditResetCycleResult {
-  after: SevenAuditResetCycleResourceSnapshot;
-  availablePlayIds: string[];
-  before: SevenAuditResetCycleResourceSnapshot;
-  cycles: number;
-  exercisedPlayIds: string[];
-}
-
-export interface ElevenAuditResetCycleResourceSnapshot extends SevenAuditResetCycleResourceSnapshot {
+export interface ElevenAuditResetCycleResourceSnapshot extends BaseAuditResetCycleResourceSnapshot {
   activeCameraShot: string | null;
   activePresentationHold: boolean;
   crowdReaction: string | null;
@@ -237,7 +224,6 @@ export interface FootballDebugApi {
   getPresentationHardeningAuditSnapshot: () => PresentationHardeningAuditSnapshot | null;
   getPresentationHoldSnapshot: () => PresentationHoldSnapshot;
   getPresentationAuditSnapshot: () => PresentationAuditSnapshot | null;
-  getSevenAuditSnapshot: () => SevenAuditSnapshot | null;
   getStadiumSnapshot: () => StadiumControllerSnapshot;
   getWeatherSnapshot: () => WeatherPresentationSnapshot;
   getPlayerBodyVisualSnapshots: () => PlayerBodyVisualSnapshot[];
@@ -253,7 +239,6 @@ export interface FootballDebugApi {
   runCrowdCapacityBenchmark: () => CrowdCapacityBenchmarkSnapshot;
   resetLeagueData: () => Promise<void>;
   runElevenAuditResetCycles: (cycles?: number) => ElevenAuditResetCycleResult | null;
-  runSevenAuditResetCycles: (cycles?: number) => SevenAuditResetCycleResult | null;
   setPerformanceScenario: (scenario: PerformanceScenarioName) => PerformanceScenarioSnapshot | null;
   setCrowdPreviewCameraView: (view: CrowdPreviewCameraView) => void;
   setAnnouncerEnabled: (enabled: boolean) => void;
@@ -282,7 +267,6 @@ export interface DevelopmentToolsRuntimeOptions {
   officialsDebugEnabled: boolean;
   routeAuditEnabled: boolean;
   searchParams: URLSearchParams;
-  sevenAuditEnabled: boolean;
   sidelineTeamsDebugEnabled: boolean;
   renderer: THREE.WebGLRenderer;
   activePlayer: () => PlayerModel;
@@ -328,7 +312,6 @@ export interface DevelopmentOverlayFrame {
   memoryDebugSnapshot: MemoryDebugSnapshot | null;
   officialsSnapshot: OfficialsPresentationSnapshot;
   sidelineTeamsSnapshot: SidelineTeamControllerSnapshot;
-  sevenAuditSnapshot: SevenAuditSnapshot | null;
   playerVisuals: Map<string, THREE.Group>;
   weatherSnapshot: WeatherPresentationSnapshot;
 }
@@ -361,7 +344,6 @@ export class DevelopmentToolsRuntime {
   private pregameDebugOverlay: HTMLDivElement | null = null;
   private presentationHardeningAuditOverlay: HTMLDivElement | null = null;
   private routeAuditOverlay: HTMLDivElement | null = null;
-  private sevenAuditOverlay: HTMLDivElement | null = null;
   private weatherDebugOverlay: HTMLDivElement | null = null;
   private readonly debugFeatureRegistry = new DebugFeatureRegistry();
   private readonly debugPanel: DebugPanel;
@@ -413,7 +395,6 @@ export class DevelopmentToolsRuntime {
       !!this.performanceDebugOverlay ||
       !!this.pregameDebugOverlay ||
       !!this.halftimeDebugOverlay ||
-      !!this.sevenAuditOverlay ||
       !!this.elevenAuditOverlay ||
       !!this.appearanceAuditOverlay ||
       !!this.cadenceDebugOverlay ||
@@ -528,9 +509,6 @@ export class DevelopmentToolsRuntime {
     }
     if (this.performanceDebugOverlay) {
       syncPerformanceDebugOverlay(this.performanceDebugOverlay, frame.qualityDebugSnapshot);
-    }
-    if (this.sevenAuditOverlay && frame.sevenAuditSnapshot) {
-      syncSevenAuditOverlay(this.sevenAuditOverlay, frame.sevenAuditSnapshot);
     }
     if (this.elevenAuditOverlay && frame.elevenAuditSnapshot) {
       syncElevenAuditOverlay(this.elevenAuditOverlay, frame.elevenAuditSnapshot);
@@ -900,15 +878,6 @@ export class DevelopmentToolsRuntime {
       },
     );
     registerElementFeature(
-      'sevenAudit',
-      '7v7 audit',
-      options.sevenAuditEnabled,
-      createSevenAuditOverlay,
-      (element) => {
-        this.sevenAuditOverlay = element;
-      },
-    );
-    registerElementFeature(
       'elevenAudit',
       '11v11 audit',
       options.elevenAuditEnabled,
@@ -1002,7 +971,6 @@ export class DevelopmentToolsRuntime {
       options.appearanceAuditEnabled ||
       options.officialsDebugEnabled ||
       options.sidelineTeamsDebugEnabled ||
-      options.sevenAuditEnabled ||
       options.elevenAuditEnabled ||
       options.audioDebugEnabled ||
       options.performanceDebugEnabled ||

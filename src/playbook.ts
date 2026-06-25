@@ -845,16 +845,6 @@ export const PLAYBOOK_OPTIONS: readonly PlaybookOption[] = [
     displayName: '11v11 Prototype',
     id: '11v11',
   },
-  {
-    description: 'Development regression mode',
-    displayName: '7v7 Development Regression Mode',
-    id: '7v7',
-  },
-  {
-    description: 'Legacy regression mode',
-    displayName: '5v5 Legacy Regression Mode',
-    id: '5v5',
-  },
 ] as const;
 
 export function getPlaybookOptions(): PlaybookOption[] {
@@ -862,11 +852,7 @@ export function getPlaybookOptions(): PlaybookOption[] {
 }
 
 export function resolvePlaybookId(value: string | null): PlaybookId {
-  if (value === '5v5' || value === '7v7' || value === '11v11') {
-    return value;
-  }
-
-  return '11v11';
+  return value === '11v11' ? value : '11v11';
 }
 
 export function getAvailablePlays(playbookId: PlaybookId = '11v11'): PlayDefinition[] {

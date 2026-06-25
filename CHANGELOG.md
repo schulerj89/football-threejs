@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.80] - 2026-06-24
+
+### Changed
+
+- Removed legacy 7v7 and 5v5 playbook references from the player-facing README, Play Now summary, playbook options, query overrides, formation preview activation, and debug API surface so the app presents 11v11 as the only active mode.
+
+### Tests
+
+- Verified `npx vitest run tests/gameExperienceSettings.test.ts tests/playbook.test.ts tests/formationPreview.test.ts tests/debugFeatureRegistry.test.ts` and `npm run build`.
+
 ## [1.22.79] - 2026-06-24
 
 ### Changed

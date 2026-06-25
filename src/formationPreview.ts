@@ -82,7 +82,7 @@ export {
 };
 
 const PLAY_SIDE: PreferredFormationSide = 'right';
-const PREVIEW_PLAY_ID = 'inside-zone-7';
+const PREVIEW_PLAY_ID = 'inside-zone-11';
 const OFFENSE_PRE_SNAP_FACING = { kind: 'playDirection' } as const;
 const DEFENSE_PRE_SNAP_FACING = { kind: 'againstPlayDirection' } as const;
 
@@ -134,11 +134,11 @@ export function resolveFormationPreviewMode(value: string | null): FormationPrev
     return '11v11';
   }
 
-  return value === '7v7' ? '7v7' : null;
+  return null;
 }
 
 export function createFormationPreviewModel(
-  mode: FormationPreviewMode = '7v7',
+  mode: FormationPreviewMode = '11v11',
   lane: SnapLane = 'middle',
   spot: FootballSpot = INITIAL_BALL_SPOT,
 ): FormationPreviewModel {
@@ -249,7 +249,7 @@ export function snapshotFormationPreviewAsGameplay(
     passFeedback: null,
     player: snapshotPlayerModel(primaryPlayer),
     players: preview.players.map(snapshotPlayerModel),
-    playbookId: '7v7',
+    playbookId: '11v11',
     receiverRouteStates: [],
     playState: 'preSnap',
     score: 0,
@@ -342,7 +342,7 @@ function getPreviewPrimaryPlayer(players: PlayerModel[]): PlayerModel {
 }
 
 function getPreviewDisplayName(mode: FormationPreviewMode): string {
-  return mode === '11v11' ? '11v11 Formation Preview' : '7v7 Formation Preview';
+  return mode === '11v11' ? '11v11 Formation Preview' : 'Formation Preview';
 }
 
 function createPreviewLabels(

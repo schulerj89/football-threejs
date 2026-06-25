@@ -273,7 +273,6 @@ export class FootballApplication {
       renderer: this.sceneRuntime.renderer,
       routeAuditEnabled: searchParams.has('routeAudit'),
       searchParams,
-      sevenAuditEnabled: searchParams.has('sevenAudit'),
     });
     document.addEventListener('visibilitychange', this.syncAudioPageActivity);
     window.addEventListener('keydown', this.handlePregameSkipKeyDown);
@@ -686,7 +685,6 @@ export class FootballApplication {
         : null,
       officialsSnapshot: this.presentation.getOfficialsSnapshot(),
       sidelineTeamsSnapshot: this.presentation.getSidelineTeamSnapshot(),
-      sevenAuditSnapshot: this.diagnostics.getSevenAuditSnapshot(),
       weatherSnapshot: this.sceneRuntime.getWeatherSnapshot(),
     });
   }

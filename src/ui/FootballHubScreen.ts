@@ -1877,8 +1877,7 @@ function capitalize(value: string): string {
 
 function formatGameSummary(settings: GameExperienceSettings): string {
   return [
-    capitalize(settings.gameMode),
-    settings.playbookId,
+    '11v11',
     `${Math.round(settings.quarterLengthSeconds / 60)}:00 quarters`,
     `${capitalize(settings.matchDifficulty)} difficulty`,
     `${formatWeatherCondition(settings.weatherCondition)} weather`,

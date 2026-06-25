@@ -27,10 +27,6 @@ import {
   createElevenAuditSnapshot,
   type ElevenAuditSnapshot,
 } from '../elevenOnElevenAudit';
-import {
-  createSevenAuditSnapshot,
-  type SevenAuditSnapshot,
-} from '../sevenOnSevenAudit';
 import type { RenderMetricsSnapshot } from '../debugOverlay';
 import {
   createPerformanceReport,
@@ -58,7 +54,6 @@ import type { PerformanceScenarioName } from '../performance/PerformanceBudget';
 import type {
   ElevenAuditResetCycleResult,
   FootballDebugApi,
-  SevenAuditResetCycleResult,
 } from './DevelopmentToolsRuntime';
 import { FIELD_GOAL_DEVELOPMENT_FORMATION } from '../presentation/stage/FootballFormationFamilies';
 import { FOOTBALL_PLAYER_VISUAL_PROFILE_ID } from '../presentation/players/FootballPlayerVisualFactory';
@@ -272,24 +267,6 @@ export class ApplicationDiagnostics {
       playerVisualCount: this.options.playerVisuals.size,
       presentation: this.options.presentation.getGamePresentationRuntimeSnapshot(),
       presentationHold: this.options.presentation.holdSnapshot,
-      renderMetrics,
-    });
-  }
-
-  getSevenAuditSnapshot(): SevenAuditSnapshot | null {
-    if (!this.options.searchParams.has('sevenAudit')) {
-      return null;
-    }
-    const renderMetrics = this.latestRenderMetrics ?? this.createRenderMetricsSnapshot(0);
-    return createSevenAuditSnapshot({
-      activeAudioNodes: this.options.presentation.getRuntimeAudioSnapshot().activeAudioNodeCount,
-      gameplay: this.options.gameplay.getActivePresentationSnapshot(
-        !!this.options.presentation.crowdPreviewController,
-      ),
-      materialCount: renderMetrics.sceneMaterialCount,
-      play: this.options.gameplay.gameplayModel.selectedPlay,
-      playerVisualCount: this.options.playerVisuals.size,
-      presentation: this.options.presentation.getGamePresentationRuntimeSnapshot(),
       renderMetrics,
     });
   }
@@ -532,7 +509,6 @@ export class ApplicationDiagnostics {
       getPresentationHardeningAuditSnapshot: () => this.getPresentationHardeningAuditSnapshot(),
       getPresentationHoldSnapshot: () => this.options.presentation.holdSnapshot,
       getPresentationAuditSnapshot: () => this.getPresentationAuditSnapshot(),
-      getSevenAuditSnapshot: () => this.getSevenAuditSnapshot(),
       getStadiumSnapshot: () => this.options.presentation.getStadiumSnapshot(),
       getWeatherSnapshot: () => this.options.getWeatherSnapshot(),
       getPlayerBodyVisualSnapshots: () => this.options.playerVisuals.getBodySnapshots(),
@@ -551,7 +527,6 @@ export class ApplicationDiagnostics {
       runCrowdCapacityBenchmark: () => this.options.runCrowdCapacityBenchmark(),
       resetLeagueData: () => this.options.resetLeagueData(),
       runElevenAuditResetCycles: (cycles = 100) => this.runElevenAuditResetCycles(cycles),
-      runSevenAuditResetCycles: (cycles = 100) => this.runSevenAuditResetCycles(cycles),
       setPerformanceScenario: (scenario) =>
         this.options.performanceScenarioRunner?.setScenario(scenario) ?? null,
       setCrowdPreviewCameraView: (view) => {
@@ -666,44 +641,6 @@ export class ApplicationDiagnostics {
     };
   }
 
-  private runSevenAuditResetCycles(cycles: number): SevenAuditResetCycleResult | null {
-    const gameplay = this.options.gameplay;
-    if (this.options.presentation.crowdPreviewController || gameplay.formationPreviewModel) {
-      return null;
-    }
-    const cycleCount = Math.max(0, Math.min(500, Math.floor(cycles)));
-    const availablePlayIds = gameplay.gameplayModel.availablePlays.map((play) => play.id);
-    const exercisedPlayIds = new Set<string>();
-    this.prepareResetCyclePlaybookAudit(availablePlayIds);
-    const before = this.createSevenAuditResetCycleResourceSnapshot();
-    for (let cycle = 0; cycle < cycleCount; cycle += 1) {
-      if (gameplay.gameplayModel.playState !== 'preSnap') {
-        resetPlay(gameplay.gameplayModel);
-      }
-      const playId = availablePlayIds[cycle % availablePlayIds.length];
-      if (playId) {
-        selectPlay(gameplay.gameplayModel, playId);
-        exercisedPlayIds.add(playId);
-      }
-      startPlay(gameplay.gameplayModel);
-      resetPlay(gameplay.gameplayModel);
-      this.options.playerVisuals.reconcile(this.getActivePlayers());
-      this.options.presentation.syncBall(gameplay.gameplayModel.ball);
-      this.options.presentation.runRouteArtUpdate(
-        snapshotGameplayModel(gameplay.gameplayModel),
-        gameplay.gameplayModel.selectedPlay,
-      );
-      this.options.presentation.skipPresentation();
-    }
-    return {
-      after: this.createSevenAuditResetCycleResourceSnapshot(),
-      availablePlayIds,
-      before,
-      cycles: cycleCount,
-      exercisedPlayIds: [...exercisedPlayIds],
-    };
-  }
-
   private createElevenAuditResetCycleResourceSnapshot() {
     const metrics = this.createRenderMetricsSnapshot(0);
     const audio = this.options.presentation.getRuntimeAudioSnapshot();
@@ -733,30 +670,6 @@ export class ApplicationDiagnostics {
         this.options.presentation.getGamePresentationRuntimeSnapshot().history.length,
       sidelineMeshCount: sidelineTeams.meshCount,
       stadiumGeometryCount: stadium.geometryCount,
-      stadiumMeshCount: metrics.stadiumMeshCount,
-      textureCount: metrics.textures,
-      visualRootCount: this.options.playerVisuals.size,
-    };
-  }
-
-  private createSevenAuditResetCycleResourceSnapshot() {
-    const metrics = this.createRenderMetricsSnapshot(0);
-    const audio = this.options.presentation.getRuntimeAudioSnapshot();
-    return {
-      activeAudioNodes: audio.activeAudioNodeCount,
-      activePlayerRootCount: this.getActivePlayers().length,
-      crowdInstanceCount: metrics.crowdInstanceCount,
-      debugOverlayCount: countActiveDebugOverlays(),
-      footballMeshCount: metrics.footballMeshCount,
-      geometryCount: metrics.geometries,
-      jerseyNumberAtlasCreated: getJerseyNumberAtlasSnapshot().atlasCreated,
-      jerseyNumberMaterialCount: getJerseyNumberMaterialSnapshot().materialCount,
-      jerseyNumberMeshCount: collectJerseyNumberMeshes(this.options.sceneRuntime.scene).length,
-      materialCount: metrics.sceneMaterialCount,
-      officialMeshCount: metrics.officialMeshCount,
-      presentationHistoryCount:
-        this.options.presentation.getGamePresentationRuntimeSnapshot().history.length,
-      sidelineMeshCount: metrics.sidelineMeshCount,
       stadiumMeshCount: metrics.stadiumMeshCount,
       textureCount: metrics.textures,
       visualRootCount: this.options.playerVisuals.size,
