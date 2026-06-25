@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.78] - 2026-06-24
+
+### Changed
+
+- Simplified the README into a concise project overview with quick start, core scripts, current game summary, controls, URL flags, repo map, asset-generation notes, and performance references.
+
+### Tests
+
+- Not run; documentation-only change.
+
 ## [1.22.77] - 2026-06-24
 
 ### Fixed
