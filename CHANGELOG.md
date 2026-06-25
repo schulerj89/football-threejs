@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.83] - 2026-06-25
+
+### Added
+
+- Added animated bone/body-part labels to the low-poly player animation harness and per-labeled-part color pickers that recolor the skinned mesh by dominant rig bone.
+- Added live helmet shell, faceguard, and stripe color controls plus a screenshot artifact validating labeled body-part recoloring.
+
+### Tests
+
+- Verified `npx playwright test tests/player-animation-harness.spec.ts` and `npm run build`.
+
 ## [1.22.82] - 2026-06-25
 
 ### Added

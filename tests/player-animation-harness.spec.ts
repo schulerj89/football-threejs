@@ -13,13 +13,23 @@ test('low poly player animation harness loads player, helmet, and clips', async 
   expect(snapshot?.route).toBe('player-animation-harness');
   expect(snapshot?.animationCount).toBeGreaterThanOrEqual(1);
   expect(snapshot?.boneCount).toBeGreaterThanOrEqual(20);
+  expect(snapshot?.bodyLabelCount).toBeGreaterThanOrEqual(12);
+  expect(snapshot?.colorControlCount).toBeGreaterThanOrEqual(20);
   expect(snapshot?.helmetAttached).toBe(true);
   expect(snapshot?.helmetParentName).toBe('Head');
   expect(snapshot?.meshCount).toBeGreaterThan(0);
   expect(snapshot?.triangleCount).toBeGreaterThan(0);
 
+  const bodyLabels = page.locator('.player-animation-harness__label-layer');
+  await expect(bodyLabels.getByText('Head', { exact: true })).toBeVisible();
+  await expect(bodyLabels.getByText('L Upper Arm', { exact: true })).toBeVisible();
+  await page.getByLabel('L Upper Arm').fill('#d92323');
+  await page.getByLabel('R Knee').fill('#1f9a57');
+  await page.getByLabel('Helmet shell').fill('#111111');
   await page.getByRole('button', { name: 'Pause' }).click();
   await page.getByLabel('Show skeleton').check();
+  await page.getByLabel('Show body labels').uncheck();
+  await expect(bodyLabels.getByText('Head', { exact: true })).toBeHidden();
 
   const nonBlankPixelCount = await page.locator('canvas').evaluate((canvas) => {
     const target = canvas as HTMLCanvasElement;

@@ -10,6 +10,8 @@ interface PlayerAnimationHarnessSnapshot {
   animationCount: number;
   activeClip: string | null;
   boneCount: number;
+  bodyLabelCount: number;
+  colorControlCount: number;
   drawCalls: number;
   geometries: number;
   helmetAttached: boolean;
@@ -33,6 +35,60 @@ const loader = new GLTFLoader();
 const PLAYER_CENTER = new THREE.Vector3();
 const PLAYER_SIZE = new THREE.Vector3();
 const HELMET_CENTER = new THREE.Vector3();
+const LABEL_POSITION = new THREE.Vector3();
+
+interface HelmetColors {
+  faceguard: string;
+  helmetShell: string;
+  helmetStripe: string;
+}
+
+interface BodyLabelDefinition {
+  displayName: string;
+  objectName: string;
+}
+
+const DEFAULT_HELMET_COLORS: HelmetColors = {
+  faceguard: '#f2f4f6',
+  helmetShell: '#2f66d8',
+  helmetStripe: '#f2d94b',
+};
+
+const HELMET_COLOR_CONTROLS: Array<{ key: keyof HelmetColors; label: string }> = [
+  { key: 'helmetShell', label: 'Helmet shell' },
+  { key: 'faceguard', label: 'Faceguard' },
+  { key: 'helmetStripe', label: 'Helmet stripe' },
+];
+
+const BODY_LABELS: BodyLabelDefinition[] = [
+  { displayName: 'Head', objectName: 'Head' },
+  { displayName: 'Neck', objectName: 'neck' },
+  { displayName: 'Chest', objectName: 'Spine' },
+  { displayName: 'Mid Spine', objectName: 'Spine01' },
+  { displayName: 'Hips', objectName: 'Hips' },
+  { displayName: 'L Shoulder', objectName: 'LeftShoulder' },
+  { displayName: 'L Upper Arm', objectName: 'LeftArm' },
+  { displayName: 'L Forearm', objectName: 'LeftForeArm' },
+  { displayName: 'L Hand', objectName: 'LeftHand' },
+  { displayName: 'R Shoulder', objectName: 'RightShoulder' },
+  { displayName: 'R Upper Arm', objectName: 'RightArm' },
+  { displayName: 'R Forearm', objectName: 'RightForeArm' },
+  { displayName: 'R Hand', objectName: 'RightHand' },
+  { displayName: 'L Thigh', objectName: 'LeftUpLeg' },
+  { displayName: 'L Knee', objectName: 'LeftLeg' },
+  { displayName: 'L Foot', objectName: 'LeftFoot' },
+  { displayName: 'R Thigh', objectName: 'RightUpLeg' },
+  { displayName: 'R Knee', objectName: 'RightLeg' },
+  { displayName: 'R Foot', objectName: 'RightFoot' },
+];
+
+const BONE_COLOR_ALIASES: Record<string, string> = {
+  Spine02: 'Spine',
+  head_end: 'Head',
+  headfront: 'Head',
+  LeftToeBase: 'LeftFoot',
+  RightToeBase: 'RightFoot',
+};
 
 class PlayerAnimationHarness {
   private readonly renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -42,6 +98,7 @@ class PlayerAnimationHarness {
   private readonly controls: OrbitControls;
   private readonly viewport = document.createElement('section');
   private readonly panel = document.createElement('aside');
+  private readonly labelsLayer = document.createElement('div');
   private readonly metrics = document.createElement('div');
   private readonly status = document.createElement('div');
   private readonly clipSelect = document.createElement('select');
@@ -53,6 +110,9 @@ class PlayerAnimationHarness {
   private readonly helperRoot = new THREE.Group();
   private readonly helmetRoot = new THREE.Group();
   private readonly skeletonHolder = new THREE.Group();
+  private readonly bodyLabels = new Map<string, HTMLElement>();
+  private readonly bodyPartColors = createDefaultBodyPartColors();
+  private readonly helmetColors: HelmetColors = { ...DEFAULT_HELMET_COLORS };
   private mixer: THREE.AnimationMixer | null = null;
   private currentAction: THREE.AnimationAction | null = null;
   private playerRoot: THREE.Object3D | null = null;
@@ -67,6 +127,7 @@ class PlayerAnimationHarness {
   private helmetRotation = new THREE.Euler(0, 0, 0);
   private wireframe = false;
   private showSkeleton = false;
+  private showBodyLabels = true;
   private animationFrame = 0;
   private metricsAccumulator = 0;
 
@@ -74,6 +135,7 @@ class PlayerAnimationHarness {
     this.root.className = 'player-animation-harness';
     this.viewport.className = 'player-animation-harness__viewport';
     this.panel.className = 'player-animation-harness__panel';
+    this.labelsLayer.className = 'player-animation-harness__label-layer';
     this.metrics.className = 'player-animation-harness__metrics';
     this.status.className = 'player-animation-harness__status';
     this.helperRoot.name = 'player-animation-harness-helpers';
@@ -82,7 +144,7 @@ class PlayerAnimationHarness {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(0x07100e);
     this.renderer.shadowMap.enabled = true;
-    this.viewport.append(this.renderer.domElement);
+    this.viewport.append(this.renderer.domElement, this.labelsLayer);
     this.root.append(this.viewport, this.panel);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
@@ -148,6 +210,7 @@ class PlayerAnimationHarness {
       this.createCameraToolbar(),
       this.createMetricsCard(),
       this.createAnimationCard(),
+      this.createColorCard(),
       this.createHelmetCard(),
       this.createDisplayCard(),
       this.status,
@@ -276,8 +339,43 @@ class PlayerAnimationHarness {
     return card;
   }
 
+  private createColorCard(): HTMLElement {
+    const card = createCard('Body part colors');
+    const note = document.createElement('div');
+    note.className = 'player-animation-harness__note';
+    note.textContent = 'This GLB is one skinned mesh, so body part fills are assigned from the dominant rig bone for each vertex.';
+    card.append(note);
+    for (const definition of BODY_LABELS) {
+      const input = document.createElement('input');
+      input.type = 'color';
+      input.value = this.bodyPartColors.get(definition.objectName) ?? '#ffffff';
+      input.setAttribute('aria-label', definition.displayName);
+      input.addEventListener('input', () => {
+        this.bodyPartColors.set(definition.objectName, input.value);
+        this.repaintColors();
+      });
+      card.append(createRow(definition.displayName, input));
+    }
+    for (const control of HELMET_COLOR_CONTROLS) {
+      const input = document.createElement('input');
+      input.type = 'color';
+      input.value = this.helmetColors[control.key];
+      input.setAttribute('aria-label', control.label);
+      input.addEventListener('input', () => {
+        this.helmetColors[control.key] = input.value;
+        this.repaintColors();
+      });
+      card.append(createRow(control.label, input));
+    }
+    return card;
+  }
+
   private createDisplayCard(): HTMLElement {
     const card = createCard('Display');
+    const labels = createCheckbox('Show body labels', this.showBodyLabels, (checked) => {
+      this.showBodyLabels = checked;
+      this.updateLabelVisibility();
+    });
     const skeleton = createCheckbox('Show skeleton', this.showSkeleton, (checked) => {
       this.showSkeleton = checked;
       this.updateSkeletonVisibility();
@@ -286,7 +384,7 @@ class PlayerAnimationHarness {
       this.wireframe = checked;
       this.applyWireframe();
     });
-    card.append(skeleton, wireframe);
+    card.append(labels, skeleton, wireframe);
     return card;
   }
 
@@ -335,7 +433,8 @@ class PlayerAnimationHarness {
     this.playerRoot?.removeFromParent();
     this.playerRoot = gltf.scene;
     this.playerRoot.name = 'low-poly-player-preview';
-    colorizePlayer(this.playerRoot);
+    preparePlayerForBodyPartColors(this.playerRoot);
+    applyPlayerBodyPartColors(this.playerRoot, this.bodyPartColors);
 
     const bounds = new THREE.Box3().setFromObject(this.playerRoot);
     bounds.getCenter(PLAYER_CENTER);
@@ -349,6 +448,7 @@ class PlayerAnimationHarness {
       }
     });
     this.scene.add(this.playerRoot);
+    this.createBodyLabels();
 
     this.skeletonHelper = new THREE.SkeletonHelper(this.playerRoot);
     this.skeletonHelper.name = 'low-poly-player-skeleton-helper';
@@ -368,7 +468,7 @@ class PlayerAnimationHarness {
   private installHelmet(source: THREE.Object3D): void {
     this.helmetRoot.clear();
     this.helmetRoot.userData.assetId = 'low_poly_helmet';
-    colorizeHelmet(source);
+    colorizeHelmet(source, this.helmetColors);
     const helmetBounds = new THREE.Box3().setFromObject(source);
     helmetBounds.getCenter(HELMET_CENTER);
     source.position.sub(HELMET_CENTER);
@@ -376,6 +476,22 @@ class PlayerAnimationHarness {
     this.applyHelmetTransform();
     const parent = this.findHelmetParent();
     parent?.add(this.helmetRoot);
+  }
+
+  private createBodyLabels(): void {
+    this.labelsLayer.replaceChildren();
+    this.bodyLabels.clear();
+    for (const definition of BODY_LABELS) {
+      if (!this.playerRoot?.getObjectByName(definition.objectName)) {
+        continue;
+      }
+      const label = document.createElement('div');
+      label.className = 'player-animation-harness__body-label';
+      label.textContent = definition.displayName;
+      this.labelsLayer.append(label);
+      this.bodyLabels.set(definition.objectName, label);
+    }
+    this.updateLabelVisibility();
   }
 
   private findHelmetParent(): THREE.Object3D | null {
@@ -458,9 +574,44 @@ class PlayerAnimationHarness {
     });
   }
 
+  private repaintColors(): void {
+    if (this.playerRoot) {
+      applyPlayerBodyPartColors(this.playerRoot, this.bodyPartColors);
+    }
+    colorizeHelmet(this.helmetRoot, this.helmetColors);
+    this.updateMetrics();
+  }
+
   private updateSkeletonVisibility(): void {
     if (this.skeletonHelper) {
       this.skeletonHelper.visible = this.showSkeleton;
+    }
+  }
+
+  private updateLabelVisibility(): void {
+    this.labelsLayer.hidden = !this.showBodyLabels;
+  }
+
+  private updateBodyLabels(): void {
+    if (!this.showBodyLabels || !this.playerRoot) {
+      return;
+    }
+    const width = Math.max(this.viewport.clientWidth, 1);
+    const height = Math.max(this.viewport.clientHeight, 1);
+    for (const definition of BODY_LABELS) {
+      const label = this.bodyLabels.get(definition.objectName);
+      const target = this.playerRoot.getObjectByName(definition.objectName);
+      if (!label || !target) {
+        continue;
+      }
+      target.getWorldPosition(LABEL_POSITION);
+      LABEL_POSITION.project(this.camera);
+      const visible = LABEL_POSITION.z > -1 && LABEL_POSITION.z < 1;
+      label.hidden = !visible;
+      if (visible) {
+        label.style.left = `${((LABEL_POSITION.x + 1) * 0.5 * width).toFixed(1)}px`;
+        label.style.top = `${((-LABEL_POSITION.y + 1) * 0.5 * height).toFixed(1)}px`;
+      }
     }
   }
 
@@ -484,6 +635,8 @@ class PlayerAnimationHarness {
       metric('Animations', String(snapshot.animationCount)),
       metric('Active clip', snapshot.activeClip ?? 'none'),
       metric('Bones', String(snapshot.boneCount)),
+      metric('Labels', String(snapshot.bodyLabelCount)),
+      metric('Color fills', String(snapshot.colorControlCount)),
       metric('Meshes', String(snapshot.meshCount)),
       metric('Triangles', String(Math.round(snapshot.triangleCount))),
       metric('Helmet', snapshot.helmetAttached ? `attached to ${snapshot.helmetParentName}` : 'missing'),
@@ -509,6 +662,8 @@ class PlayerAnimationHarness {
       loaded: this.loaded,
       meshCount: countObjects(this.scene, (object) => object instanceof THREE.Mesh),
       route: 'player-animation-harness',
+      bodyLabelCount: this.bodyLabels.size,
+      colorControlCount: BODY_LABELS.length + HELMET_COLOR_CONTROLS.length,
       textures: this.renderer.info.memory.textures,
       triangleCount: countTriangles(this.scene),
     };
@@ -529,6 +684,7 @@ class PlayerAnimationHarness {
       this.mixer.update(delta * this.speed);
     }
     this.controls.update();
+    this.updateBodyLabels();
     this.renderer.render(this.scene, this.camera);
     this.updateTimeReadout();
     this.metricsAccumulator += delta;
@@ -545,70 +701,134 @@ function loadGltf(url: string): Promise<{ scene: THREE.Group; animations: THREE.
   });
 }
 
-function colorizePlayer(root: THREE.Object3D): void {
-  const texture = createUniformTexture();
+function createDefaultBodyPartColors(): Map<string, string> {
+  const colors = new Map<string, string>();
+  for (const definition of BODY_LABELS) {
+    colors.set(definition.objectName, getDefaultBodyPartColor(definition.objectName));
+  }
+  return colors;
+}
+
+function getDefaultBodyPartColor(objectName: string): string {
+  if (objectName === 'Head' || objectName === 'neck') {
+    return '#c88b61';
+  }
+  if (objectName.includes('Hand')) {
+    return '#ffffff';
+  }
+  if (objectName.includes('Foot')) {
+    return '#2f66d8';
+  }
+  if (objectName.includes('Leg')) {
+    return objectName.includes('UpLeg') ? '#c88b61' : '#f2f4f6';
+  }
+  if (objectName === 'Hips') {
+    return '#17233a';
+  }
+  return '#2f66d8';
+}
+
+function preparePlayerForBodyPartColors(root: THREE.Object3D): void {
   root.traverse((object) => {
-    if (object instanceof THREE.Mesh) {
+    if (object instanceof THREE.SkinnedMesh) {
+      ensureVertexColorAttribute(object.geometry);
       object.material = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        map: texture,
         metalness: 0.05,
         roughness: 0.78,
+        vertexColors: true,
       });
     }
   });
 }
 
-function colorizeHelmet(root: THREE.Object3D): void {
+function applyPlayerBodyPartColors(root: THREE.Object3D, bodyPartColors: Map<string, string>): void {
+  root.traverse((object) => {
+    if (object instanceof THREE.SkinnedMesh) {
+      applySkinnedMeshBodyPartColors(object, bodyPartColors);
+    }
+  });
+}
+
+function ensureVertexColorAttribute(geometry: THREE.BufferGeometry): THREE.BufferAttribute {
+  const position = geometry.getAttribute('position');
+  const existing = geometry.getAttribute('color');
+  if (existing instanceof THREE.BufferAttribute && existing.count === position.count) {
+    return existing;
+  }
+  const attribute = new THREE.Float32BufferAttribute(new Float32Array(position.count * 3), 3);
+  geometry.setAttribute('color', attribute);
+  return attribute;
+}
+
+function applySkinnedMeshBodyPartColors(
+  mesh: THREE.SkinnedMesh,
+  bodyPartColors: Map<string, string>,
+): void {
+  const geometry = mesh.geometry;
+  const colorAttribute = ensureVertexColorAttribute(geometry);
+  const skinIndex = geometry.getAttribute('skinIndex');
+  const skinWeight = geometry.getAttribute('skinWeight');
+  const color = new THREE.Color();
+  const fallback = bodyPartColors.get('Spine') ?? '#2f66d8';
+  for (let vertexIndex = 0; vertexIndex < colorAttribute.count; vertexIndex += 1) {
+    const boneName = resolveDominantBoneName(mesh, skinIndex, skinWeight, vertexIndex);
+    const labelKey = BONE_COLOR_ALIASES[boneName] ?? boneName;
+    color.set(bodyPartColors.get(labelKey) ?? fallback);
+    colorAttribute.setXYZ(vertexIndex, color.r, color.g, color.b);
+  }
+  colorAttribute.needsUpdate = true;
+}
+
+function resolveDominantBoneName(
+  mesh: THREE.SkinnedMesh,
+  skinIndex: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+  skinWeight: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+  vertexIndex: number,
+): string {
+  let bestSlot = 0;
+  let bestWeight = -1;
+  for (let slot = 0; slot < skinWeight.itemSize; slot += 1) {
+    const weight = skinWeight.getComponent(vertexIndex, slot);
+    if (weight > bestWeight) {
+      bestWeight = weight;
+      bestSlot = slot;
+    }
+  }
+  const boneIndex = skinIndex.getComponent(vertexIndex, bestSlot);
+  return mesh.skeleton.bones[boneIndex]?.name ?? 'Spine';
+}
+
+function colorizeHelmet(root: THREE.Object3D, colors: HelmetColors): void {
   root.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) {
       return;
     }
     const name = `${object.name} ${Array.isArray(object.material) ? object.material.map((material) => material.name).join(' ') : object.material.name}`.toLowerCase();
     const color = name.includes('face') || name.includes('guard') || name.includes('mask')
-      ? 0xf2f4f6
+      ? colors.faceguard
       : name.includes('stripe') || name.includes('accent')
-        ? 0xf2d94b
-        : 0x2f66d8;
-    object.material = new THREE.MeshStandardMaterial({
-      color,
-      metalness: 0.08,
-      roughness: 0.62,
-    });
+        ? colors.helmetStripe
+        : colors.helmetShell;
+    if (object.material instanceof THREE.MeshStandardMaterial) {
+      object.material.color.set(color);
+    } else {
+      disposeMaterial(object.material);
+      object.material = new THREE.MeshStandardMaterial({
+        color,
+        metalness: 0.08,
+        roughness: 0.62,
+      });
+    }
     object.castShadow = true;
     object.receiveShadow = true;
   });
 }
 
-function createUniformTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const context = canvas.getContext('2d');
-  if (!context) {
-    throw new Error('Canvas 2D context unavailable');
+function disposeMaterial(material: THREE.Material | THREE.Material[]): void {
+  const materials = Array.isArray(material) ? material : [material];
+  for (const entry of materials) {
+    entry.dispose();
   }
-  context.fillStyle = '#2f66d8';
-  context.fillRect(0, 0, 512, 512);
-  context.fillStyle = '#f2f4f6';
-  context.fillRect(0, 260, 512, 126);
-  context.fillStyle = '#c88b61';
-  context.fillRect(0, 0, 512, 108);
-  context.fillStyle = '#17233a';
-  context.fillRect(0, 386, 512, 126);
-  context.fillStyle = '#f2d94b';
-  context.fillRect(214, 0, 24, 512);
-  context.fillRect(274, 0, 24, 512);
-  context.fillStyle = '#ffffff';
-  context.font = 'bold 84px Arial';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText('12', 256, 206);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.name = 'low-poly-player-test-uniform-texture';
-  texture.needsUpdate = true;
-  return texture;
 }
 
 function createCard(titleText: string): HTMLElement {
