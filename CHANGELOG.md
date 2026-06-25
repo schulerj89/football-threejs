@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.75] - 2026-06-24
+
+### Fixed
+
+- Hid the now-playing mini player while the Football Hub is open so it no longer overlaps Play Now `Game Settings` or the Settings screen controls.
+
+### Added
+
+- Added `artifacts/play-now-settings-validation-1.22.75/` with screenshots for the Play Now screen, the Play Now `Game Settings` section, and the Football Hub Settings screen.
+
+### Tests
+
+- Verified `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"` and `npm run build`.
+
 ## [1.22.74] - 2026-06-24
 
 ### Added

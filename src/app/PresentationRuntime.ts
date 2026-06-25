@@ -1158,7 +1158,6 @@ export class PresentationRuntime {
   ): void {
     this.titleMusicController.update(deltaSeconds);
     const visible = appPhase === 'title' ||
-      appPhase === 'footballHub' ||
       appPhase === 'matchSetup' ||
       pauseSettingsVisible;
     this.nowPlayingIndicator.setVisible(visible);

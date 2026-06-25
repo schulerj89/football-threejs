@@ -1180,6 +1180,7 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.title-screen')).toBeHidden();
   await expect(page.locator('.football-hub-screen')).toBeVisible();
   await expect(page.locator('body[data-app-phase="footballHub"]')).toBeAttached();
+  await expect(page.locator('.now-playing-indicator')).toBeHidden();
   await expect.poll(() => getAudioSnapshot(page).then((snapshot) => snapshot.userGestureUnlocked)).toBe(true);
   const menuMusicAssetIds = new Set(MENU_MUSIC_TRACKS.map((track) => track.assetId));
   await expect.poll(() =>
