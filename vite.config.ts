@@ -5,6 +5,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: new URL('./index.html', import.meta.url).pathname,
+        playerAnimationHarness: new URL('./player-animation-harness.html', import.meta.url).pathname,
         playerBaseHarness: new URL('./player-base-harness.html', import.meta.url).pathname,
         playerLab: new URL('./player-lab.html', import.meta.url).pathname,
       },

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.82] - 2026-06-25
+
+### Added
+
+- Added a Vite-served low-poly player animation harness at `player-animation-harness.html` that loads `low_poly_player.glb`, applies a simple test uniform texture, attaches `low_poly_helmet.glb` to the head, and exposes clip playback, camera, display, speed, timeline, and helmet-fit controls.
+- Added Playwright coverage and a screenshot artifact for validating the player animation harness.
+
+### Tests
+
+- Verified `npx playwright test tests/player-animation-harness.spec.ts` and `npm run build`.
+
 ## [1.22.81] - 2026-06-25
 
 ### Changed
