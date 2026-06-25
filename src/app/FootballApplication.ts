@@ -756,6 +756,7 @@ export class FootballApplication {
       storage: transientStorage ?? undefined,
     });
     const teamTheme = resolveTeamPresentationTheme(this.gameExperience.settings.teamProfiles);
+    this.sceneRuntime.setWeatherCondition(this.gameExperience.settings.weatherCondition);
     this.sceneRuntime.applyTeamTheme(teamTheme);
     this.playerVisuals.setTeamUniforms(teamTheme.uniforms);
     this.playerVisuals.setVisualMode(this.gameExperience.settings.playerVisualMode);

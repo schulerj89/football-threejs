@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.74] - 2026-06-24
+
+### Added
+
+- Added a Play Now `Game Settings` section before `Play Game` with quarter length, difficulty, and weather selectors.
+- Added weather as a first-class saved game setting with migration defaults and URL query override support.
+
+### Changed
+
+- Wired Play Now weather selections into the active scene weather controller so pregame sky, lighting, and rain match the selected matchup settings.
+
+### Tests
+
+- Verified `npx vitest run tests/gameSettings.test.ts tests/gameExperienceSettings.test.ts`, `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now"`, and `npm run build`.
+- Attempted `npm test -- --run tests/gameSettings.test.ts`; this invoked the full unit suite and four existing long-running asset/audio tests timed out at the default 5s test timeout.
+
 ## [1.22.73] - 2026-06-24
 
 ### Added

@@ -37,6 +37,7 @@ describe('game settings facade', () => {
       sidelinePlayersEnabled: true,
       stadiumEnabled: true,
       tunnelTableauEnabled: true,
+      weatherCondition: 'clear',
     });
   });
 
@@ -148,6 +149,7 @@ describe('game settings facade', () => {
       officialsEnabled: false,
       preset: 'custom',
       stadiumEnabled: false,
+      weatherCondition: 'clear',
     });
   });
 
@@ -167,6 +169,21 @@ describe('game settings facade', () => {
       officialsDebugLabels: true,
       officialsEnabled: true,
     });
+    expect(storage.getItem(GAME_SETTINGS_COMPAT_STORAGE_KEY)).toBe(storedBefore);
+  });
+
+  it('resolves weather query overrides without persisting them', () => {
+    const storage = createMemoryStorage();
+    saveGameSettings(BROADCAST_GAME_SETTINGS, storage);
+    const storedBefore = storage.getItem(GAME_SETTINGS_COMPAT_STORAGE_KEY);
+
+    const resolved = resolveGameSettings({
+      searchParams: new URLSearchParams('weather=rain'),
+      storage,
+    });
+
+    expect(resolved.settings.weatherCondition).toBe('rain');
+    expect(resolved.queryOverrides.weatherCondition).toBe('rain');
     expect(storage.getItem(GAME_SETTINGS_COMPAT_STORAGE_KEY)).toBe(storedBefore);
   });
 });

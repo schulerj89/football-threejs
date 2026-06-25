@@ -18,7 +18,7 @@ import { approveCurrentDynastyWeekProgression } from '../dynasty/DynastyProgress
 import { IndexedDbDynastySaveStore } from '../dynasty/IndexedDbDynastySaveStore';
 import { createDynastyMatchStoryContext } from '../dynasty/DynastyStoryContext';
 import type { DynastySaveData, DynastySaveSource } from '../dynasty/DynastyTypes';
-import type { DynastyMatchStoryContext } from '../match/MatchTypes';
+import type { DynastyMatchStoryContext, MatchDifficulty } from '../match/MatchTypes';
 import type { LeagueData } from '../league/LeagueTypes';
 import { calculateOverallRating } from '../ratings/OverallRatingCalculator';
 import { PLAYER_ATTRIBUTE_DEFINITIONS, type PlayerAttributeKey } from '../ratings/PlayerAttribute';
@@ -51,6 +51,7 @@ import {
   type MatchupSelection,
 } from './MatchSetupModel';
 import type { UniformVariant } from '../teams/UniformPalette';
+import type { WeatherCondition } from '../weather/WeatherTypes';
 
 type HubSection = 'playNow' | 'dynasty' | 'rosters' | 'settings';
 type DynastyPage = 'week' | 'standings' | 'awards' | 'program' | 'training' | 'schedule' | 'roster';
@@ -126,6 +127,10 @@ export class FootballHubScreen {
   private readonly playNowValidation = document.createElement('div');
   private readonly playNowCorrectionButton = document.createElement('button');
   private readonly playNowPlayButton = document.createElement('button');
+  private readonly playNowGameSettings = document.createElement('section');
+  private readonly playNowQuarterLengthSelect = document.createElement('select');
+  private readonly playNowDifficultySelect = document.createElement('select');
+  private readonly playNowWeatherSelect = document.createElement('select');
   private readonly userLogo: TeamLogoBadge;
   private readonly opponentLogo: TeamLogoBadge;
   private readonly teamOverviewLogo: TeamLogoBadge;
@@ -313,7 +318,82 @@ export class FootballHubScreen {
       });
     });
     actions.append(this.playNowCorrectionButton, this.playNowPlayButton);
-    this.playNowView.append(matchup, this.playNowSummary, actions);
+    this.createPlayNowGameSettings();
+    this.playNowView.append(matchup, this.playNowSummary, this.playNowGameSettings, actions);
+  }
+
+  private createPlayNowGameSettings(): void {
+    this.playNowGameSettings.className = 'football-hub-game-settings';
+    const header = document.createElement('header');
+    const title = document.createElement('h3');
+    title.textContent = 'Game Settings';
+    const subtitle = document.createElement('p');
+    subtitle.textContent = 'Set this matchup before Play Game.';
+    header.append(title, subtitle);
+
+    const grid = document.createElement('div');
+    grid.className = 'football-hub-game-settings-grid';
+
+    this.configurePlayNowSelect(
+      this.playNowQuarterLengthSelect,
+      'Play Now quarter length',
+      [
+        { label: '1 minute', value: '60' },
+        { label: '3 minutes', value: '180' },
+        { label: '5 minutes', value: '300' },
+        { label: '10 minutes', value: '600' },
+      ],
+      () => this.updatePlayNowGameSettings({
+        quarterLengthSeconds: Number(this.playNowQuarterLengthSelect.value),
+      }),
+    );
+    this.configurePlayNowSelect(
+      this.playNowDifficultySelect,
+      'Play Now difficulty',
+      [
+        { label: 'Rookie', value: 'rookie' },
+        { label: 'Pro', value: 'pro' },
+        { label: 'All-Pro', value: 'allPro' },
+      ],
+      () => this.updatePlayNowGameSettings({
+        matchDifficulty: this.playNowDifficultySelect.value as MatchDifficulty,
+      }),
+    );
+    this.configurePlayNowSelect(
+      this.playNowWeatherSelect,
+      'Play Now weather',
+      [
+        { label: 'Clear / Sunny', value: 'clear' },
+        { label: 'Overcast', value: 'overcast' },
+        { label: 'Rain', value: 'rain' },
+      ],
+      () => this.updatePlayNowGameSettings({
+        weatherCondition: this.playNowWeatherSelect.value as WeatherCondition,
+      }),
+    );
+
+    grid.append(
+      createPlayNowSettingControl('Quarter Length', this.playNowQuarterLengthSelect),
+      createPlayNowSettingControl('Difficulty', this.playNowDifficultySelect),
+      createPlayNowSettingControl('Weather', this.playNowWeatherSelect),
+    );
+    this.playNowGameSettings.append(header, grid);
+  }
+
+  private configurePlayNowSelect(
+    select: HTMLSelectElement,
+    ariaLabel: string,
+    options: readonly { label: string; value: string }[],
+    onChange: () => void,
+  ): void {
+    select.setAttribute('aria-label', ariaLabel);
+    select.replaceChildren(...options.map((option) => {
+      const element = document.createElement('option');
+      element.value = option.value;
+      element.textContent = option.label;
+      return element;
+    }));
+    select.addEventListener('change', onChange);
   }
 
   private createDynastyView(): void {
@@ -1214,9 +1294,18 @@ export class FootballHubScreen {
     this.syncPlayTeamTitle('opponent', theme.defense.profile, teamProfiles.opponentUniform);
     this.syncPlayTeamRatings('user', userSummary);
     this.syncPlayTeamRatings('opponent', opponentSummary);
+    this.syncPlayNowGameSettings();
     this.syncPlayNowValidation();
     this.playNowSummary.className = 'football-hub-match-summary';
     this.playNowSummary.textContent = `${theme.offense.profile.displayName} ${theme.offense.profile.abbreviation} vs ${theme.defense.profile.displayName} ${theme.defense.profile.abbreviation} | ${formatGameSummary(this.settings)}`;
+  }
+
+  private syncPlayNowGameSettings(): void {
+    this.playNowQuarterLengthSelect.value = getQuarterLengthOptionValue(
+      this.settings.quarterLengthSeconds,
+    );
+    this.playNowDifficultySelect.value = this.settings.matchDifficulty;
+    this.playNowWeatherSelect.value = this.settings.weatherCondition;
   }
 
   private syncPlayTeamControls(
@@ -1296,6 +1385,19 @@ export class FootballHubScreen {
         this.matchupSelection,
         this.settings.teamProfiles,
       ),
+    };
+    this.settings = nextSettings;
+    this.settingsPanel.setSettings(nextSettings);
+    this.options.onSettingsChange(nextSettings);
+    this.sync();
+  }
+
+  private updatePlayNowGameSettings(
+    patch: Partial<Pick<GameExperienceSettings, 'matchDifficulty' | 'quarterLengthSeconds' | 'weatherCondition'>>,
+  ): void {
+    const nextSettings: GameExperienceSettings = {
+      ...this.settings,
+      ...patch,
     };
     this.settings = nextSettings;
     this.settingsPanel.setSettings(nextSettings);
@@ -1723,6 +1825,15 @@ function createEmptyState(text: string): HTMLElement {
   return element;
 }
 
+function createPlayNowSettingControl(labelText: string, select: HTMLSelectElement): HTMLElement {
+  const control = document.createElement('label');
+  control.className = 'football-hub-game-setting';
+  const label = document.createElement('span');
+  label.textContent = labelText;
+  control.append(label, select);
+  return control;
+}
+
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
@@ -1733,7 +1844,24 @@ function formatGameSummary(settings: GameExperienceSettings): string {
     settings.playbookId,
     `${Math.round(settings.quarterLengthSeconds / 60)}:00 quarters`,
     `${capitalize(settings.matchDifficulty)} difficulty`,
+    `${formatWeatherCondition(settings.weatherCondition)} weather`,
   ].join(' | ');
+}
+
+function formatWeatherCondition(condition: WeatherCondition): string {
+  if (condition === 'clear') {
+    return 'Clear / Sunny';
+  }
+
+  return capitalize(condition);
+}
+
+function getQuarterLengthOptionValue(value: number): '180' | '300' | '60' | '600' {
+  if (value === 60 || value === 180 || value === 300 || value === 600) {
+    return String(value) as '180' | '300' | '60' | '600';
+  }
+
+  return '180';
 }
 
 function wrapIndex(index: number, length: number): number {

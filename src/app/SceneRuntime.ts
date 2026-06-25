@@ -32,7 +32,7 @@ export class SceneRuntime {
   private readonly directionalLight: THREE.DirectionalLight;
   private maxPixelRatio = 2;
   private readonly resizeHandlers = new Set<(width: number, height: number) => void>();
-  private readonly weatherController: WeatherPresentationController;
+  private weatherController: WeatherPresentationController;
 
   constructor({ mount, searchParams }: SceneRuntimeOptions) {
     this.scene.background = new THREE.Color(0x101920);
@@ -100,6 +100,18 @@ export class SceneRuntime {
 
   getWeatherSnapshot(): WeatherPresentationSnapshot {
     return this.weatherController.getSnapshot();
+  }
+
+  setWeatherCondition(condition: string | null | undefined): void {
+    const nextController = new WeatherPresentationController({
+      hemisphereLight: this.ambientLight,
+      keyLight: this.directionalLight,
+      model: createWeatherModel(condition),
+    });
+    this.scene.remove(this.weatherController.group);
+    this.weatherController.dispose();
+    this.weatherController = nextController;
+    this.scene.add(this.weatherController.group);
   }
 
   setMaxPixelRatio(maxPixelRatio: number): void {

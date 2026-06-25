@@ -2636,8 +2636,68 @@ body[data-game-mode="exhibition"] .score-counter {
 }
 
 .football-hub-match-summary,
+.football-hub-game-settings,
 .football-hub-actions {
   margin-top: 14px;
+}
+
+.football-hub-game-settings {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.football-hub-game-settings header {
+  display: grid;
+  gap: 4px;
+}
+
+.football-hub-game-settings h3,
+.football-hub-game-settings p {
+  margin: 0;
+}
+
+.football-hub-game-settings h3 {
+  color: #f8fcf7;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.football-hub-game-settings p {
+  color: #cbd6cf;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.football-hub-game-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.football-hub-game-setting {
+  display: grid;
+  gap: 6px;
+}
+
+.football-hub-game-setting span {
+  color: #aeb9b1;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.football-hub-game-setting select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  background: #101716;
+  color: #f6faf6;
+  font: inherit;
 }
 
 .football-hub-dynasty {
@@ -4288,6 +4348,7 @@ body[data-game-mode="exhibition"] .score-counter {
   }
 
   .football-hub-matchup,
+  .football-hub-game-settings-grid,
   .football-hub-rosters,
   .football-hub-team-overview {
     grid-template-columns: 1fr;

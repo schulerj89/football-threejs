@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 16;
+export const GAME_SETTINGS_SCHEMA_VERSION = 17;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -61,6 +61,7 @@ function migrateOfficialSettings(value: unknown): unknown {
       sidelineDensity: value.sidelineDensity ?? 'medium',
       sidelinePlayersEnabled: value.sidelinePlayersEnabled ?? true,
       tunnelTableauEnabled: value.tunnelTableauEnabled ?? true,
+      weatherCondition: normalizeWeatherCondition(value.weatherCondition),
     };
   }
 
@@ -85,6 +86,7 @@ function migrateOfficialSettings(value: unknown): unknown {
       sidelineDensity: value.sidelineDensity ?? 'low',
       sidelinePlayersEnabled: value.sidelinePlayersEnabled ?? false,
       tunnelTableauEnabled: value.tunnelTableauEnabled ?? false,
+      weatherCondition: normalizeWeatherCondition(value.weatherCondition),
     };
   }
 
@@ -108,6 +110,7 @@ function migrateOfficialSettings(value: unknown): unknown {
     sidelineDensity: value.sidelineDensity ?? 'medium',
     sidelinePlayersEnabled: value.sidelinePlayersEnabled ?? true,
     tunnelTableauEnabled: value.tunnelTableauEnabled ?? true,
+    weatherCondition: normalizeWeatherCondition(value.weatherCondition),
   };
 }
 
@@ -149,4 +152,8 @@ function migrateCrowdFullness(
 
 function normalizeMenuPlaylistOrder(value: unknown): 'sequential' | 'shuffle' {
   return value === 'shuffle' ? 'shuffle' : 'sequential';
+}
+
+function normalizeWeatherCondition(value: unknown): 'clear' | 'overcast' | 'rain' {
+  return value === 'overcast' || value === 'rain' ? value : 'clear';
 }

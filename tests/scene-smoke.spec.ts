@@ -532,6 +532,7 @@ interface PregamePresentationSnapshot {
     tunnel: number;
   };
   targetGameplayCamera: CameraSnapshot['mode'];
+  weatherCondition: 'clear' | 'overcast' | 'rain';
 }
 
 interface CrowdPreviewSnapshot {
@@ -881,6 +882,7 @@ interface GameExperienceSettingsSnapshot {
   routeArtEnabled: boolean;
   selectedReceiverLabelEnabled: boolean;
   stadiumEnabled: boolean;
+  weatherCondition: 'clear' | 'overcast' | 'rain';
 }
 
 interface MatchSnapshot {
@@ -1276,6 +1278,14 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.football-hub-play-team-logo-stage')).toHaveCount(2);
   await expect(page.locator('.football-hub-play-team').first()).toContainText(/\w+ \w+/);
   await expect(page.locator('.football-hub-play-team').first()).toContainText(/[A-Z]{3}/);
+  await expect(page.locator('.football-hub-game-settings')).toBeVisible();
+  await expect(page.locator('.football-hub-game-settings h3')).toHaveText('Game Settings');
+  await expect(page.getByLabel('Play Now quarter length')).toHaveValue('180');
+  await expect(page.getByLabel('Play Now difficulty')).toHaveValue('pro');
+  await expect(page.getByLabel('Play Now weather')).toHaveValue('clear');
+  await page.getByLabel('Play Now weather').selectOption('rain');
+  await expect(page.getByLabel('Play Now weather')).toHaveValue('rain');
+  await expect(page.locator('.football-hub-match-summary')).toContainText('Rain weather');
   const playNowLogoBox = await page.locator('.football-hub-play-team-logo').first().boundingBox();
   expect(playNowLogoBox?.width ?? 0).toBeGreaterThanOrEqual(170);
   expect(playNowLogoBox?.height ?? 0).toBeGreaterThanOrEqual(170);
@@ -1359,6 +1369,7 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.title-screen')).toBeVisible();
   await page.getByRole('button', { name: 'Start Game' }).click();
   await expect(page.locator('.football-hub-screen')).toBeVisible();
+  await expect(page.getByLabel('Play Now weather')).toHaveValue('rain');
   await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
   await expect(page.locator('.match-setup-screen')).toHaveCount(0);
   await expect(page.locator('body[data-app-phase="pregamePresentation"]')).toBeAttached();
@@ -1376,6 +1387,7 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
     currentShot: 'stadiumCenterOrbit',
     phase: 'running',
     skipState: 'available',
+    weatherCondition: 'rain',
   });
   const pregamePresentation = await getPregamePresentationSnapshot(page);
   expect(pregamePresentation.sequence).toEqual([
@@ -1421,6 +1433,7 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
 
   const started = await getGameplaySnapshot(page);
   const experience = await getGameExperienceSnapshot(page);
+  expect(experience.finalSettings.weatherCondition).toBe('rain');
   expect(started).toMatchObject({
     playState: 'preSnap',
     playbookId: '11v11',

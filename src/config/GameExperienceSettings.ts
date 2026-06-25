@@ -56,6 +56,7 @@ import {
   normalizeAnnouncerVoiceSetting,
 } from '../audio/voicePacks/VoicePackSelector';
 import type { AnnouncerVoiceSetting } from '../audio/voicePacks/VoicePackTypes';
+import type { WeatherCondition } from '../weather/WeatherTypes';
 
 export type ExperiencePreset =
   | 'broadcast'
@@ -103,6 +104,7 @@ export interface GameExperienceSettings {
   stadiumEnabled: boolean;
   teamProfiles: TeamProfileSettings;
   tunnelTableauEnabled: boolean;
+  weatherCondition: WeatherCondition;
 }
 
 export interface PersistedGameExperienceSettings {
@@ -151,6 +153,7 @@ export interface GameExperienceQueryOverrides {
   stadiumEnabled?: boolean;
   teamProfiles?: TeamProfileSettings;
   tunnelTableauEnabled?: boolean;
+  weatherCondition?: WeatherCondition;
 }
 
 export interface DevelopmentModeFlags {
@@ -242,6 +245,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   stadiumEnabled: true,
   teamProfiles: DEFAULT_TEAM_PROFILE_SETTINGS,
   tunnelTableauEnabled: true,
+  weatherCondition: 'clear',
 } as const;
 
 export const PERFORMANCE_EXPERIENCE_SETTINGS: GameExperienceSettings = {
@@ -437,6 +441,9 @@ export function normalizeGameExperienceSettings(
     ),
     tunnelTableauEnabled:
       settings.tunnelTableauEnabled ?? presetDefaults.tunnelTableauEnabled,
+    weatherCondition: isWeatherCondition(settings.weatherCondition)
+      ? settings.weatherCondition
+      : presetDefaults.weatherCondition,
   };
 }
 
@@ -453,6 +460,7 @@ export function resolveGameExperienceQueryOverrides(
   const crowdFullnessValue = searchParams.get('crowdFullness');
   const sidelineDensityValue = searchParams.get('sidelineDensity');
   const qualityValue = searchParams.get('quality') ?? searchParams.get('qualityMode');
+  const weatherValue = searchParams.get('weather') ?? searchParams.get('pregameWeather');
 
   if (isExperiencePreset(presetValue)) {
     overrides.preset = presetValue;
@@ -522,6 +530,10 @@ export function resolveGameExperienceQueryOverrides(
     overrides.qualityMode = normalizeQualityMode(qualityValue);
   } else if (searchParams.get('perfProfile') === '1') {
     overrides.qualityMode = 'lockedBroadcast';
+  }
+
+  if (isWeatherCondition(weatherValue)) {
+    overrides.weatherCondition = weatherValue;
   }
 
   applyBooleanOverride(overrides, 'crowdVisualsEnabled', searchParams, 'crowdVisuals');
@@ -812,6 +824,10 @@ function isExhibitionGameMode(value: unknown): value is ExhibitionGameMode {
 
 function isMatchDifficulty(value: unknown): value is MatchDifficulty {
   return value === 'allPro' || value === 'pro' || value === 'rookie';
+}
+
+function isWeatherCondition(value: unknown): value is WeatherCondition {
+  return value === 'clear' || value === 'overcast' || value === 'rain';
 }
 
 function isCinematicsSetting(value: unknown): value is CinematicsSetting {
