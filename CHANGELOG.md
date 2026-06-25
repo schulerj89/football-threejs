@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.79] - 2026-06-24
+
+### Changed
+
+- Split formation validation out of `formationLayout.ts` into `formationValidation.ts` while preserving the existing formation layout public API.
+
+### Tests
+
+- Verified `npx vitest run tests/formationLayout.test.ts tests/formationPreview.test.ts tests/playbook.test.ts tests/teamSimulation.test.ts tests/elevenOnElevenAudit.test.ts` and `npm run build`.
+
 ## [1.22.78] - 2026-06-24
 
 ### Changed
