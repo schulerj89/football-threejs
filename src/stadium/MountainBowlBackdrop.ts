@@ -68,6 +68,9 @@ const RIDGES: readonly RidgeSpec[] = [
 const TREE_LINE_COUNT = 24;
 const BASE_BERM_COUNT = 3;
 const VALLEY_SKIRT_SEGMENT_COUNT = 4;
+const SERVICE_PATH_COUNT = 10;
+const TERRACE_SHELF_COUNT = 5;
+const RETAINING_WALL_PANEL_COUNT = 7;
 
 export function createMountainBowlBackdrop(): MountainBowlBackdropBuild {
   const group = new THREE.Group();
@@ -91,6 +94,11 @@ export function createMountainBowlBackdrop(): MountainBowlBackdropBuild {
   group.add(valleySkirt.group);
   geometries.push(...valleySkirt.geometries);
   materials.push(...valleySkirt.materials);
+
+  const siteDetails = createSiteDetails();
+  group.add(siteDetails.group);
+  geometries.push(...siteDetails.geometries);
+  materials.push(...siteDetails.materials);
 
   for (const ridge of RIDGES) {
     const geometry = createRidgeGeometry(ridge);
@@ -171,11 +179,252 @@ export function createMountainBowlBackdrop(): MountainBowlBackdropBuild {
         minZ: scenicBounds.min.z,
       },
       ridgeNames,
+      retainingWallPanelCount: siteDetails.retainingWallPanelCount,
+      servicePathCount: siteDetails.servicePathCount,
       snowCapCount,
+      terraceShelfCount: siteDetails.terraceShelfCount,
       treeLineCount: TREE_LINE_COUNT,
       triangleCount,
       valleySkirtSegmentCount: VALLEY_SKIRT_SEGMENT_COUNT,
     },
+  };
+}
+
+function createSiteDetails(): {
+  geometries: THREE.BufferGeometry[];
+  group: THREE.Group;
+  materials: THREE.Material[];
+  retainingWallPanelCount: number;
+  servicePathCount: number;
+  terraceShelfCount: number;
+} {
+  const group = new THREE.Group();
+  group.name = 'mountain-bowl-site-details';
+  group.userData.stadium = true;
+  group.userData.mountainBowl = true;
+
+  const servicePathMaterial = new THREE.MeshLambertMaterial({
+    color: 0x56635d,
+    side: THREE.DoubleSide,
+  });
+  servicePathMaterial.name = 'mountain-bowl-service-path-material';
+  const shelfMaterials = [
+    new THREE.MeshLambertMaterial({ color: 0x25322d, side: THREE.DoubleSide }),
+    new THREE.MeshLambertMaterial({ color: 0x38443e, side: THREE.DoubleSide }),
+  ];
+  shelfMaterials.forEach((material, index) => {
+    material.name = `mountain-bowl-terrace-shelf-material-${index + 1}`;
+  });
+  const wallMaterial = new THREE.MeshLambertMaterial({
+    color: 0x27302d,
+    side: THREE.DoubleSide,
+  });
+  wallMaterial.name = 'mountain-bowl-retaining-wall-panel-material';
+
+  const geometries: THREE.BufferGeometry[] = [];
+  const servicePaths = [
+    {
+      name: 'left-lower-road',
+      points: [
+        [-314, 0.055, FIELD_BOUNDS.minZ - 64],
+        [-300, 0.055, FIELD_BOUNDS.minZ - 64],
+        [-254, 0.055, FIELD_BOUNDS.maxZ + 164],
+        [-273, 0.055, FIELD_BOUNDS.maxZ + 164],
+      ],
+    },
+    {
+      name: 'left-upper-road',
+      points: [
+        [-250, 0.065, FIELD_BOUNDS.minZ - 24],
+        [-238, 0.065, FIELD_BOUNDS.minZ - 22],
+        [-200, 0.065, FIELD_BOUNDS.maxZ + 132],
+        [-216, 0.065, FIELD_BOUNDS.maxZ + 134],
+      ],
+    },
+    {
+      name: 'right-lower-road',
+      points: [
+        [300, 0.055, FIELD_BOUNDS.minZ - 64],
+        [314, 0.055, FIELD_BOUNDS.minZ - 64],
+        [273, 0.055, FIELD_BOUNDS.maxZ + 164],
+        [254, 0.055, FIELD_BOUNDS.maxZ + 164],
+      ],
+    },
+    {
+      name: 'right-upper-road',
+      points: [
+        [238, 0.065, FIELD_BOUNDS.minZ - 22],
+        [250, 0.065, FIELD_BOUNDS.minZ - 24],
+        [216, 0.065, FIELD_BOUNDS.maxZ + 134],
+        [200, 0.065, FIELD_BOUNDS.maxZ + 132],
+      ],
+    },
+    {
+      name: 'far-service-shelf',
+      points: [
+        [-210, 0.075, FIELD_BOUNDS.maxZ + 92],
+        [218, 0.075, FIELD_BOUNDS.maxZ + 96],
+        [236, 0.075, FIELD_BOUNDS.maxZ + 108],
+        [-226, 0.075, FIELD_BOUNDS.maxZ + 104],
+      ],
+    },
+    {
+      name: 'near-cross-road',
+      points: [
+        [-292, 0.08, FIELD_BOUNDS.minZ - 74],
+        [292, 0.08, FIELD_BOUNDS.minZ - 72],
+        [306, 0.08, FIELD_BOUNDS.minZ - 62],
+        [-306, 0.08, FIELD_BOUNDS.minZ - 64],
+      ],
+    },
+    {
+      name: 'near-left-ramp',
+      points: [
+        [-230, 0.085, FIELD_BOUNDS.minZ - 108],
+        [-210, 0.085, FIELD_BOUNDS.minZ - 108],
+        [-150, 0.085, FIELD_BOUNDS.minZ - 64],
+        [-174, 0.085, FIELD_BOUNDS.minZ - 64],
+      ],
+    },
+    {
+      name: 'near-apron-lane',
+      points: [
+        [-102, 0.12, FIELD_BOUNDS.minZ - 30],
+        [104, 0.12, FIELD_BOUNDS.minZ - 29],
+        [116, 0.12, FIELD_BOUNDS.minZ - 22],
+        [-116, 0.12, FIELD_BOUNDS.minZ - 23],
+      ],
+    },
+    {
+      name: 'left-apron-lane',
+      points: [
+        [-66, 0.13, FIELD_BOUNDS.minZ - 14],
+        [-55, 0.13, FIELD_BOUNDS.minZ - 12],
+        [-55, 0.13, FIELD_BOUNDS.maxZ + 14],
+        [-68, 0.13, FIELD_BOUNDS.maxZ + 20],
+      ],
+    },
+    {
+      name: 'right-apron-lane',
+      points: [
+        [55, 0.13, FIELD_BOUNDS.minZ - 12],
+        [66, 0.13, FIELD_BOUNDS.minZ - 14],
+        [68, 0.13, FIELD_BOUNDS.maxZ + 20],
+        [55, 0.13, FIELD_BOUNDS.maxZ + 14],
+      ],
+    },
+  ] as const;
+
+  servicePaths.forEach((path) => {
+    const geometry = createQuadGeometry(path.points);
+    geometry.name = `mountain-bowl-service-path-${path.name}-geometry`;
+    const mesh = new THREE.Mesh(geometry, servicePathMaterial);
+    mesh.name = `mountain-bowl-service-path-${path.name}`;
+    mesh.userData.stadium = true;
+    mesh.userData.mountainBowl = true;
+    group.add(mesh);
+    geometries.push(geometry);
+  });
+
+  const terraces = [
+    {
+      name: 'left-outer-shelf',
+      materialIndex: 0,
+      points: [
+        [-340, 0.045, FIELD_BOUNDS.minZ - 40],
+        [-320, 0.045, FIELD_BOUNDS.minZ - 46],
+        [-292, 0.045, FIELD_BOUNDS.maxZ + 178],
+        [-340, 0.045, FIELD_BOUNDS.maxZ + 184],
+      ],
+    },
+    {
+      name: 'left-inner-shelf',
+      materialIndex: 1,
+      points: [
+        [-186, 0.05, FIELD_BOUNDS.minZ - 18],
+        [-162, 0.05, FIELD_BOUNDS.minZ - 16],
+        [-174, 0.05, FIELD_BOUNDS.maxZ + 106],
+        [-205, 0.05, FIELD_BOUNDS.maxZ + 112],
+      ],
+    },
+    {
+      name: 'right-inner-shelf',
+      materialIndex: 1,
+      points: [
+        [162, 0.05, FIELD_BOUNDS.minZ - 16],
+        [186, 0.05, FIELD_BOUNDS.minZ - 18],
+        [205, 0.05, FIELD_BOUNDS.maxZ + 112],
+        [174, 0.05, FIELD_BOUNDS.maxZ + 106],
+      ],
+    },
+    {
+      name: 'right-outer-shelf',
+      materialIndex: 0,
+      points: [
+        [320, 0.045, FIELD_BOUNDS.minZ - 46],
+        [340, 0.045, FIELD_BOUNDS.minZ - 40],
+        [340, 0.045, FIELD_BOUNDS.maxZ + 184],
+        [292, 0.045, FIELD_BOUNDS.maxZ + 178],
+      ],
+    },
+    {
+      name: 'far-foothill-shelf',
+      materialIndex: 0,
+      points: [
+        [-250, 0.05, FIELD_BOUNDS.maxZ + 110],
+        [252, 0.05, FIELD_BOUNDS.maxZ + 114],
+        [286, 0.05, FIELD_BOUNDS.maxZ + 128],
+        [-284, 0.05, FIELD_BOUNDS.maxZ + 124],
+      ],
+    },
+  ] as const;
+
+  terraces.forEach((terrace) => {
+    const geometry = createQuadGeometry(terrace.points);
+    geometry.name = `mountain-bowl-terrace-shelf-${terrace.name}-geometry`;
+    const mesh = new THREE.Mesh(geometry, shelfMaterials[terrace.materialIndex]);
+    mesh.name = `mountain-bowl-terrace-shelf-${terrace.name}`;
+    mesh.userData.stadium = true;
+    mesh.userData.mountainBowl = true;
+    group.add(mesh);
+    geometries.push(geometry);
+  });
+
+  const wallSegments = [
+    [-226, -156, 6.2],
+    [-154, -92, 8.1],
+    [-88, -28, 5.6],
+    [-24, 36, 7.5],
+    [40, 104, 6.4],
+    [110, 174, 8.7],
+    [180, 238, 5.9],
+  ] as const;
+
+  wallSegments.forEach(([x1, x2, height], index) => {
+    const z = FIELD_BOUNDS.maxZ + 100 + (index % 2) * 2.5;
+    const y0 = 0.45 + (index % 3) * 0.18;
+    const geometry = createQuadGeometry([
+      [x1, y0, z],
+      [x2, y0 + 0.25, z + 1.2],
+      [x2, y0 + height, z + 1.2],
+      [x1, y0 + height * 0.82, z],
+    ]);
+    geometry.name = `mountain-bowl-retaining-wall-panel-${index + 1}-geometry`;
+    const mesh = new THREE.Mesh(geometry, wallMaterial);
+    mesh.name = `mountain-bowl-retaining-wall-panel-${index + 1}`;
+    mesh.userData.stadium = true;
+    mesh.userData.mountainBowl = true;
+    group.add(mesh);
+    geometries.push(geometry);
+  });
+
+  return {
+    geometries,
+    group,
+    materials: [servicePathMaterial, ...shelfMaterials, wallMaterial],
+    retainingWallPanelCount: RETAINING_WALL_PANEL_COUNT,
+    servicePathCount: SERVICE_PATH_COUNT,
+    terraceShelfCount: TERRACE_SHELF_COUNT,
   };
 }
 

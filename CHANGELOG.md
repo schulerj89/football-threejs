@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.88] - 2026-06-25
+
+### Changed
+
+- Hardened the `mountainBowl` stadium surround with service-lane, terrace-shelf, and retaining-wall geometry so the side and foreground masks read more like intentional stadium infrastructure.
+- Extended the mountain-bowl debug snapshot and preview tests with service path, terrace shelf, and retaining wall counts while keeping scenic ridge bounds behind the far bowl.
+
+### Added
+
+- Added Layer 4 screenshots, debug snapshot, and two-agent review artifacts under `artifacts/mountain-bowl-layer-4-1.22.88/`.
+
+### Tests
+
+- Verified `npx vitest run tests/stadium/stadiumGeometry.test.ts`, `npx playwright test tests/stadium-mountain-bowl.spec.ts`, and `npm run build`.
+
 ## [1.22.87] - 2026-06-25
 
 ### Changed

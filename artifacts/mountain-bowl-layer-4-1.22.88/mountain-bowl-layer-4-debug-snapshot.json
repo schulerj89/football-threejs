@@ -1,0 +1,168 @@
+{
+  "stadiumSnapshot": {
+    "drawCalls": 77,
+    "geometryCount": 71,
+    "materialCount": 24,
+    "seatCount": 25056,
+    "textureCount": 4,
+    "triangles": 27481,
+    "enabled": true,
+    "imageMaterialsEnabled": true,
+    "lowerTierRows": 16,
+    "mountainBowl": {
+      "baseBermCount": 3,
+      "bounds": {
+        "maxX": 340,
+        "maxY": 67.31999969482422,
+        "maxZ": 270,
+        "minX": -340,
+        "minY": -15.399999618530273,
+        "minZ": -168
+      },
+      "edgeFeathered": true,
+      "layerCount": 4,
+      "materialCount": 17,
+      "peakCount": 33,
+      "rockFacetCount": 23,
+      "ridgeCount": 3,
+      "scenicBounds": {
+        "maxX": 239,
+        "maxY": 67.31999969482422,
+        "maxZ": 270,
+        "minX": -247,
+        "minY": -15.399999618530273,
+        "minZ": 155.5
+      },
+      "ridgeNames": [
+        "mountain-bowl-far-ridge",
+        "mountain-bowl-mid-ridge",
+        "mountain-bowl-foothill-ridge"
+      ],
+      "retainingWallPanelCount": 7,
+      "servicePathCount": 10,
+      "snowCapCount": 2,
+      "terraceShelfCount": 5,
+      "treeLineCount": 24,
+      "triangleCount": 281,
+      "valleySkirtSegmentCount": 4
+    },
+    "themeId": "mountainBowl",
+    "upperTierEnabled": true
+  },
+  "stageSnapshot": {
+    "activePrimaryGroups": [],
+    "appPhase": "gameplay",
+    "coinToss": {
+      "bareHeadCount": 0,
+      "coinVisible": false,
+      "helmetReadyCount": 0,
+      "profileMatchCount": 0,
+      "totalCount": 0,
+      "visibleCount": 0
+    },
+    "conflictingPrimaryGroups": [],
+    "fieldGoalFixture": {
+      "family": "fieldGoal",
+      "normalGameActive": false,
+      "participantCount": 12,
+      "profileMatchCount": 12
+    },
+    "gameplay": {
+      "bareHeadCount": 0,
+      "helmetCount": 0,
+      "profileMatchCount": 22,
+      "totalCount": 22,
+      "visibleCount": 0
+    },
+    "helmetAsset": {
+      "assetId": "football-helmet-kit",
+      "attachedPlayerIds": [
+        "metro-meteors-cb-21",
+        "metro-meteors-cb-29",
+        "metro-meteors-cb-34",
+        "metro-meteors-dl-60",
+        "metro-meteors-dl-90",
+        "metro-meteors-dl-94",
+        "metro-meteors-dl-97",
+        "metro-meteors-fs-31",
+        "metro-meteors-ilb-47",
+        "metro-meteors-k-5",
+        "metro-meteors-ls-49",
+        "metro-meteors-olb-41",
+        "metro-meteors-olb-43",
+        "metro-meteors-olb-52",
+        "metro-meteors-p-9",
+        "metro-meteors-rb-2",
+        "metro-meteors-ss-36",
+        "metro-meteors-te-87",
+        "metro-meteors-wr-7",
+        "metro-meteors-wr-89",
+        "summit-forge-c-56",
+        "summit-forge-cb-34",
+        "summit-forge-dl-60",
+        "summit-forge-dl-92",
+        "summit-forge-k-5",
+        "summit-forge-lg-67",
+        "summit-forge-ls-49",
+        "summit-forge-lt-74",
+        "summit-forge-olb-43",
+        "summit-forge-p-9",
+        "summit-forge-qb-14",
+        "summit-forge-rb-2",
+        "summit-forge-rb-23",
+        "summit-forge-rg-71",
+        "summit-forge-rt-79",
+        "summit-forge-slot-19",
+        "summit-forge-te-84",
+        "summit-forge-te-86",
+        "summit-forge-wr-13",
+        "summit-forge-wr-7",
+        "summit-forge-wr-82",
+        "summit-forge-wr-88"
+      ],
+      "errorMessage": null,
+      "faceguardMeshNames": [
+        "faceguard_standard"
+      ],
+      "shellMeshNames": [
+        "helmet_shell"
+      ],
+      "status": "loaded"
+    },
+    "kickoff": {
+      "bareHeadCount": 0,
+      "helmetReadyCount": 0,
+      "profileMatchCount": 0,
+      "reticleVisible": false,
+      "totalCount": 0,
+      "visibleCount": 0
+    },
+    "matchPhase": "pregame",
+    "normalOfficialsVisibleCount": 0,
+    "previewCanvasCount": 0,
+    "profileId": "football-player-v1",
+    "resourceCounts": {
+      "coinObjects": 1,
+      "geometries": 90,
+      "helmetAttachedPlayerIds": 42,
+      "jerseyNumberAtlasCreated": true,
+      "jerseyNumberMeshes": 106,
+      "jerseyNumberMaterials": 2,
+      "materials": 77,
+      "reticleObjects": 3,
+      "textures": 7,
+      "webglContexts": 1
+    },
+    "scrimmage": {
+      "dynamicMarkersVisible": false
+    },
+    "warmup": {
+      "enabled": false,
+      "helmetReady": false,
+      "profileMatchCount": 0,
+      "quarterbackReady": false,
+      "totalFullProfileCount": 0,
+      "visibleFullProfileCount": 0
+    }
+  }
+}

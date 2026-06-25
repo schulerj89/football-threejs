@@ -166,7 +166,10 @@ export interface MountainBowlBackdropSnapshot {
     minZ: number;
   };
   ridgeNames: readonly string[];
+  retainingWallPanelCount: number;
+  servicePathCount: number;
   snowCapCount: number;
+  terraceShelfCount: number;
   treeLineCount: number;
   triangleCount: number;
 }

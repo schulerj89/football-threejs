@@ -155,7 +155,10 @@ describe('stadium geometry builder', () => {
       baseBermCount: 3,
       edgeFeathered: true,
       layerCount: 4,
+      retainingWallPanelCount: 7,
       ridgeCount: 3,
+      servicePathCount: 10,
+      terraceShelfCount: 5,
       treeLineCount: 24,
       valleySkirtSegmentCount: 4,
     });
@@ -164,7 +167,7 @@ describe('stadium geometry builder', () => {
     expect(build.mountainBowl?.snowCapCount).toBeGreaterThan(0);
     expect(build.mountainBowl?.scenicBounds.minZ).toBeGreaterThan(FIELD_DIMENSIONS.fieldLength / 2);
     expect(build.mountainBowl?.bounds.minZ).toBeLessThan(FIELD_DIMENSIONS.fieldLength / 2);
-    expect(build.mountainBowl?.triangleCount).toBeLessThan(250);
+    expect(build.mountainBowl?.triangleCount).toBeLessThan(310);
     expect(build.mountainBowl?.bounds.maxY).toBeGreaterThan(55);
     expect(build.metrics.triangles).toBeGreaterThan(build.mountainBowl?.triangleCount ?? 0);
 

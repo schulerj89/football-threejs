@@ -8,12 +8,15 @@ interface MountainBowlSnapshot {
   };
   edgeFeathered: boolean;
   peakCount: number;
+  retainingWallPanelCount: number;
   rockFacetCount: number;
   ridgeCount: number;
   scenicBounds: {
     minZ: number;
   };
+  servicePathCount: number;
   snowCapCount: number;
+  terraceShelfCount: number;
   treeLineCount: number;
   triangleCount: number;
   valleySkirtSegmentCount: number;
@@ -45,7 +48,10 @@ test('mountain bowl preview shows procedural mountains without on-field player a
   expect(stadium.mountainBowl).toMatchObject({
     baseBermCount: 3,
     edgeFeathered: true,
+    retainingWallPanelCount: 7,
     ridgeCount: 3,
+    servicePathCount: 10,
+    terraceShelfCount: 5,
     treeLineCount: 24,
     valleySkirtSegmentCount: 4,
   });
@@ -55,7 +61,7 @@ test('mountain bowl preview shows procedural mountains without on-field player a
   expect(stadium.mountainBowl?.bounds.maxY).toBeGreaterThan(55);
   expect(stadium.mountainBowl?.scenicBounds.minZ).toBeGreaterThan(70);
   expect(stadium.mountainBowl?.bounds.minZ).toBeLessThan(70);
-  expect(stadium.mountainBowl?.triangleCount).toBeLessThan(250);
+  expect(stadium.mountainBowl?.triangleCount).toBeLessThan(310);
   expect(stadium.triangles).toBeGreaterThan(stadium.mountainBowl?.triangleCount ?? 0);
 
   const stage = await getStageVisualMatrixSnapshot(page);
