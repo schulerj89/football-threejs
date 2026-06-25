@@ -152,11 +152,13 @@ describe('stadium geometry builder', () => {
 
     expect(build.group.getObjectByName('mountain-bowl-backdrop')).toBeInstanceOf(THREE.Group);
     expect(build.mountainBowl).toMatchObject({
+      edgeFeathered: true,
       layerCount: 4,
       ridgeCount: 3,
       treeLineCount: 24,
     });
-    expect(build.mountainBowl?.peakCount).toBeGreaterThanOrEqual(20);
+    expect(build.mountainBowl?.peakCount).toBeGreaterThanOrEqual(30);
+    expect(build.mountainBowl?.rockFacetCount).toBeGreaterThanOrEqual(15);
     expect(build.mountainBowl?.snowCapCount).toBeGreaterThan(0);
     expect(build.mountainBowl?.bounds.minZ).toBeGreaterThan(FIELD_DIMENSIONS.fieldLength / 2);
     expect(build.mountainBowl?.bounds.maxY).toBeGreaterThan(55);

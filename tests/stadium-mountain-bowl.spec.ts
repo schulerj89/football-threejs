@@ -5,7 +5,9 @@ interface MountainBowlSnapshot {
     maxY: number;
     minZ: number;
   };
+  edgeFeathered: boolean;
   peakCount: number;
+  rockFacetCount: number;
   ridgeCount: number;
   snowCapCount: number;
   treeLineCount: number;
@@ -36,10 +38,12 @@ test('mountain bowl preview shows procedural mountains without on-field player a
   expect(stadium.enabled).toBe(true);
   expect(stadium.themeId).toBe('mountainBowl');
   expect(stadium.mountainBowl).toMatchObject({
-    peakCount: 24,
+    edgeFeathered: true,
     ridgeCount: 3,
     treeLineCount: 24,
   });
+  expect(stadium.mountainBowl?.peakCount).toBeGreaterThanOrEqual(30);
+  expect(stadium.mountainBowl?.rockFacetCount).toBeGreaterThanOrEqual(15);
   expect(stadium.mountainBowl?.snowCapCount).toBeGreaterThan(0);
   expect(stadium.mountainBowl?.bounds.maxY).toBeGreaterThan(55);
   expect(stadium.mountainBowl?.bounds.minZ).toBeGreaterThan(70);

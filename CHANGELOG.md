@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.86] - 2026-06-25
+
+### Changed
+
+- Hardened the `mountainBowl` stadium backdrop with feathered ridge endpoints, lower varied ridge bases, tightened snow caps, and low-cost rock facet overlays so the mountains read less like flat slabs.
+- Extended the mountain debug snapshot and preview tests with feathering and facet metrics.
+
+### Added
+
+- Added Layer 2 screenshots, debug snapshot, and two-agent review artifacts under `artifacts/mountain-bowl-layer-2-1.22.86/`.
+
+### Tests
+
+- Verified `npx vitest run tests/stadium/stadiumGeometry.test.ts`, `npx playwright test tests/stadium-mountain-bowl.spec.ts`, and `npm run build`.
+
 ## [1.22.85] - 2026-06-25
 
 ### Added

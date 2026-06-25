@@ -4,6 +4,7 @@ import type { MountainBowlBackdropSnapshot } from './StadiumTypes';
 
 interface RidgeSpec {
   color: number;
+  facetColor: number;
   name: string;
   opacity: number;
   peaks: readonly number[];
@@ -25,38 +26,41 @@ export interface MountainBowlBackdropBuild {
 const RIDGES: readonly RidgeSpec[] = [
   {
     color: 0x52606a,
+    facetColor: 0x2f3d46,
     name: 'mountain-bowl-far-ridge',
     opacity: 0.92,
-    peaks: [0.52, 0.68, 0.57, 0.86, 0.62, 0.73, 0.58],
+    peaks: [0.08, 0.39, 0.57, 0.49, 0.88, 0.58, 0.72, 0.54, 0.35, 0.1],
     snowLine: 0.72,
-    width: 340,
-    xOffset: -8,
-    yBase: 18,
-    yScale: 56,
+    width: 470,
+    xOffset: -6,
+    yBase: -12,
+    yScale: 90,
     z: FIELD_BOUNDS.maxZ + 210,
   },
   {
     color: 0x6c655e,
+    facetColor: 0x3f403c,
     name: 'mountain-bowl-mid-ridge',
     opacity: 0.96,
-    peaks: [0.34, 0.55, 0.45, 0.76, 0.5, 0.66, 0.41, 0.58],
+    peaks: [0.06, 0.28, 0.48, 0.37, 0.68, 0.44, 0.6, 0.39, 0.52, 0.25, 0.08],
     snowLine: 0.83,
-    width: 300,
-    xOffset: 16,
-    yBase: 10,
-    yScale: 48,
+    width: 430,
+    xOffset: 12,
+    yBase: -9,
+    yScale: 66,
     z: FIELD_BOUNDS.maxZ + 178,
   },
   {
     color: 0x384838,
+    facetColor: 0x263326,
     name: 'mountain-bowl-foothill-ridge',
     opacity: 1,
-    peaks: [0.24, 0.36, 0.3, 0.42, 0.29, 0.4, 0.27, 0.34, 0.25],
+    peaks: [0.04, 0.18, 0.29, 0.24, 0.37, 0.26, 0.34, 0.22, 0.31, 0.2, 0.15, 0.05],
     snowLine: 1,
-    width: 278,
-    xOffset: -4,
-    yBase: 3,
-    yScale: 28,
+    width: 390,
+    xOffset: -2,
+    yBase: 1,
+    yScale: 36,
     z: FIELD_BOUNDS.maxZ + 145,
   },
 ] as const;
@@ -72,6 +76,7 @@ export function createMountainBowlBackdrop(): MountainBowlBackdropBuild {
   const geometries: THREE.BufferGeometry[] = [];
   const materials: THREE.Material[] = [];
   const ridgeNames: string[] = [];
+  let rockFacetCount = 0;
   let snowCapCount = 0;
 
   for (const ridge of RIDGES) {
@@ -92,6 +97,12 @@ export function createMountainBowlBackdrop(): MountainBowlBackdropBuild {
     geometries.push(geometry);
     materials.push(material);
     ridgeNames.push(ridge.name);
+
+    const facets = createRockFacetMesh(ridge);
+    group.add(facets.mesh);
+    geometries.push(facets.geometry);
+    materials.push(facets.material);
+    rockFacetCount += facets.facetCount;
 
     for (const cap of createSnowCapMeshes(ridge)) {
       group.add(cap.mesh);
@@ -123,9 +134,11 @@ export function createMountainBowlBackdrop(): MountainBowlBackdropBuild {
         minY: bounds.min.y,
         minZ: bounds.min.z,
       },
+      edgeFeathered: true,
       layerCount: RIDGES.length + 1,
       materialCount: materials.length,
       peakCount: RIDGES.reduce((sum, ridge) => sum + ridge.peaks.length, 0),
+      rockFacetCount,
       ridgeCount: RIDGES.length,
       ridgeNames,
       snowCapCount,
@@ -144,8 +157,10 @@ function createRidgeGeometry(ridge: RidgeSpec): THREE.BufferGeometry {
 
   for (let index = 0; index < ridge.peaks.length; index += 1) {
     const x = left + index * segmentWidth;
+    const baseWave = Math.sin(index * 1.73) * 1.6;
+    const edgeDrop = Math.min(index, ridge.peaks.length - 1 - index) <= 1 ? -3.4 : 0;
     const peakY = baseY + ridge.peaks[index] * ridge.yScale;
-    positions.push(x, baseY, ridge.z, x, peakY, ridge.z);
+    positions.push(x, baseY + baseWave + edgeDrop, ridge.z, x, peakY, ridge.z);
   }
 
   for (let index = 0; index < ridge.peaks.length - 1; index += 1) {
@@ -158,6 +173,56 @@ function createRidgeGeometry(ridge: RidgeSpec): THREE.BufferGeometry {
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
+}
+
+function createRockFacetMesh(ridge: RidgeSpec): {
+  facetCount: number;
+  geometry: THREE.BufferGeometry;
+  material: THREE.Material;
+  mesh: THREE.Mesh;
+} {
+  const positions: number[] = [];
+  const segmentWidth = ridge.width / (ridge.peaks.length - 1);
+  const left = -ridge.width / 2 + ridge.xOffset;
+
+  for (let index = 1; index < ridge.peaks.length - 1; index += 1) {
+    if (index % 2 === 0 && ridge.peaks[index] < 0.35) {
+      continue;
+    }
+    const x = left + index * segmentWidth;
+    const peakY = ridge.yBase + ridge.peaks[index] * ridge.yScale - 0.35;
+    const baseY = ridge.yBase + ridge.peaks[index] * ridge.yScale * 0.32;
+    const leftFoot = x - segmentWidth * (0.28 + (index % 3) * 0.05);
+    const rightFoot = x + segmentWidth * (0.2 + (index % 2) * 0.07);
+    positions.push(
+      x, peakY, ridge.z - 0.18,
+      leftFoot, baseY, ridge.z - 0.18,
+      rightFoot, baseY + 2.2, ridge.z - 0.18,
+    );
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  geometry.name = `${ridge.name}-rock-facets-geometry`;
+  const material = new THREE.MeshLambertMaterial({
+    color: ridge.facetColor,
+    opacity: 0.34,
+    side: THREE.DoubleSide,
+    transparent: true,
+  });
+  material.name = `${ridge.name}-rock-facets`;
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = `${ridge.name}-rock-facets`;
+  mesh.userData.stadium = true;
+  mesh.userData.mountainBowl = true;
+
+  return {
+    facetCount: positions.length / 9,
+    geometry,
+    material,
+    mesh,
+  };
 }
 
 function createSnowCapMeshes(ridge: RidgeSpec): Array<{
@@ -175,13 +240,13 @@ function createSnowCapMeshes(ridge: RidgeSpec): Array<{
     }
     const peakY = ridge.yBase + heightRatio * ridge.yScale;
     const x = left + index * segmentWidth;
-    const capWidth = segmentWidth * 0.42;
-    const capHeight = Math.max(3.2, ridge.yScale * 0.075);
+    const capWidth = segmentWidth * 0.24;
+    const capHeight = Math.max(4.1, ridge.yScale * 0.095);
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute([
-      x, peakY + 0.22, ridge.z - 0.08,
+      x, peakY + 0.12, ridge.z - 0.08,
       x - capWidth, peakY - capHeight, ridge.z - 0.08,
-      x + capWidth, peakY - capHeight * 0.86, ridge.z - 0.08,
+      x + capWidth * 0.82, peakY - capHeight * 0.92, ridge.z - 0.08,
     ], 3));
     geometry.setIndex([0, 1, 2]);
     geometry.computeVertexNormals();

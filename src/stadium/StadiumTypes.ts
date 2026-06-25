@@ -149,6 +149,8 @@ export interface MountainBowlBackdropSnapshot {
     minY: number;
     minZ: number;
   };
+  edgeFeathered: boolean;
+  rockFacetCount: number;
   layerCount: number;
   materialCount: number;
   peakCount: number;
