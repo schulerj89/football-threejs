@@ -75,7 +75,8 @@ test('mountain bowl preview shows procedural mountains without on-field player a
   expect(stadium.mountainBowl?.bounds.maxY).toBeGreaterThan(55);
   expect(stadium.mountainBowl?.scenicBounds.minZ).toBeGreaterThan(70);
   expect(stadium.mountainBowl?.bounds.minZ).toBeLessThan(70);
-  expect(stadium.mountainBowl?.triangleCount).toBeLessThan(310);
+  expect(stadium.mountainBowl?.triangleCount).toBeGreaterThan(15_000);
+  expect(stadium.mountainBowl?.triangleCount).toBeLessThan(25_000);
   expect(stadium.triangles).toBeGreaterThan(stadium.mountainBowl?.triangleCount ?? 0);
 
   const stage = await getStageVisualMatrixSnapshot(page);

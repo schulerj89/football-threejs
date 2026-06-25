@@ -4,7 +4,11 @@ import type { MountainBowlBackdropSnapshot } from './StadiumTypes';
 
 interface RidgeSpec {
   color: number;
+  detailBands: number;
+  detailSubdivisions: number;
+  depth: number;
   facetColor: number;
+  highlightColor: number;
   name: string;
   opacity: number;
   peaks: readonly number[];
@@ -26,7 +30,11 @@ export interface MountainBowlBackdropBuild {
 const RIDGES: readonly RidgeSpec[] = [
   {
     color: 0x52606a,
+    detailBands: 25,
+    detailSubdivisions: 18,
+    depth: 26,
     facetColor: 0x2f3d46,
+    highlightColor: 0x76818a,
     name: 'mountain-bowl-far-ridge',
     opacity: 0.92,
     peaks: [0.08, 0.39, 0.57, 0.49, 0.88, 0.58, 0.72, 0.54, 0.35, 0.1],
@@ -39,7 +47,11 @@ const RIDGES: readonly RidgeSpec[] = [
   },
   {
     color: 0x6c655e,
+    detailBands: 23,
+    detailSubdivisions: 17,
+    depth: 20,
     facetColor: 0x3f403c,
+    highlightColor: 0x8a8176,
     name: 'mountain-bowl-mid-ridge',
     opacity: 0.96,
     peaks: [0.06, 0.28, 0.48, 0.37, 0.68, 0.44, 0.6, 0.39, 0.52, 0.25, 0.08],
@@ -52,7 +64,11 @@ const RIDGES: readonly RidgeSpec[] = [
   },
   {
     color: 0x384838,
+    detailBands: 19,
+    detailSubdivisions: 14,
+    depth: 14,
     facetColor: 0x263326,
+    highlightColor: 0x50614b,
     name: 'mountain-bowl-foothill-ridge',
     opacity: 1,
     peaks: [0.04, 0.18, 0.29, 0.24, 0.37, 0.26, 0.34, 0.22, 0.31, 0.2, 0.15, 0.05],
@@ -104,10 +120,12 @@ export function createMountainBowlBackdrop(): MountainBowlBackdropBuild {
     const geometry = createRidgeGeometry(ridge);
     geometry.name = `${ridge.name}-geometry`;
     const material = new THREE.MeshLambertMaterial({
-      color: ridge.color,
+      color: 0xffffff,
+      flatShading: true,
       opacity: ridge.opacity,
       side: THREE.DoubleSide,
       transparent: ridge.opacity < 1,
+      vertexColors: true,
     });
     material.name = ridge.name;
     const mesh = new THREE.Mesh(geometry, material);
@@ -617,29 +635,87 @@ function createQuadGeometry(points: readonly (readonly number[])[]): THREE.Buffe
 
 function createRidgeGeometry(ridge: RidgeSpec): THREE.BufferGeometry {
   const positions: number[] = [];
+  const colors: number[] = [];
   const indices: number[] = [];
-  const segmentWidth = ridge.width / (ridge.peaks.length - 1);
+  const segmentCount = (ridge.peaks.length - 1) * ridge.detailSubdivisions;
+  const rowCount = ridge.detailBands;
+  const segmentWidth = ridge.width / segmentCount;
   const left = -ridge.width / 2 + ridge.xOffset;
   const baseY = ridge.yBase;
+  const baseColor = new THREE.Color(ridge.color);
+  const shadeColor = new THREE.Color(ridge.facetColor);
+  const highlightColor = new THREE.Color(ridge.highlightColor);
 
-  for (let index = 0; index < ridge.peaks.length; index += 1) {
-    const x = left + index * segmentWidth;
-    const baseWave = Math.sin(index * 1.73) * 1.6;
-    const edgeDrop = Math.min(index, ridge.peaks.length - 1 - index) <= 1 ? -3.4 : 0;
-    const peakY = baseY + ridge.peaks[index] * ridge.yScale;
-    positions.push(x, baseY + baseWave + edgeDrop, ridge.z, x, peakY, ridge.z);
+  for (let column = 0; column <= segmentCount; column += 1) {
+    const ridgeT = column / segmentCount;
+    const peakRatio = sampleRidgePeak(ridge, ridgeT);
+    const neighborLeft = sampleRidgePeak(ridge, Math.max(0, ridgeT - 1 / segmentCount));
+    const neighborRight = sampleRidgePeak(ridge, Math.min(1, ridgeT + 1 / segmentCount));
+    const slope = neighborRight - neighborLeft;
+    const edgeRatio = Math.min(column, segmentCount - column) / Math.max(1, ridge.detailSubdivisions);
+    const edgeDrop = edgeRatio < 1 ? -(1 - edgeRatio) * 5.4 : 0;
+    const x = left + column * segmentWidth;
+    const peakY = baseY + peakRatio * ridge.yScale + edgeDrop;
+    const localBaseY = baseY + Math.sin(column * 0.31) * 1.4 + edgeDrop * 0.6;
+
+    for (let row = 0; row <= rowCount; row += 1) {
+      const verticalT = row / rowCount;
+      const shelfNoise = deterministicNoise(column * 17 + row * 29 + ridge.name.length * 53);
+      const ridgeFold = Math.sin(ridgeT * Math.PI * (5 + (row % 3))) * (1 - verticalT) * 1.8;
+      const y = THREE.MathUtils.lerp(localBaseY, peakY, Math.pow(verticalT, 0.9)) +
+        (shelfNoise - 0.5) * (1 - verticalT) * ridge.yScale * 0.035;
+      const z =
+        ridge.z -
+        ridge.depth * Math.sin(verticalT * Math.PI) * (0.25 + Math.abs(slope) * 1.8) -
+        ridge.depth * 0.08 * shelfNoise -
+        ridgeFold;
+      positions.push(x, y, z);
+
+      const highlightMix = Math.max(0, slope) * 2.4 + verticalT * 0.22;
+      const shadeMix = Math.max(0, -slope) * 2.2 + (1 - verticalT) * 0.18 + shelfNoise * 0.12;
+      const color = baseColor.clone()
+        .lerp(shadeColor, THREE.MathUtils.clamp(shadeMix, 0, 0.72))
+        .lerp(highlightColor, THREE.MathUtils.clamp(highlightMix, 0, 0.42));
+      colors.push(color.r, color.g, color.b);
+    }
   }
 
-  for (let index = 0; index < ridge.peaks.length - 1; index += 1) {
-    const base = index * 2;
-    indices.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
+  const columns = segmentCount + 1;
+  const rows = rowCount + 1;
+  for (let column = 0; column < columns - 1; column += 1) {
+    for (let row = 0; row < rows - 1; row += 1) {
+      const base = column * rows + row;
+      const nextColumn = base + rows;
+      if ((column + row) % 2 === 0) {
+        indices.push(base, nextColumn, base + 1, base + 1, nextColumn, nextColumn + 1);
+      } else {
+        indices.push(base, nextColumn, nextColumn + 1, base, nextColumn + 1, base + 1);
+      }
+    }
   }
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
+}
+
+function sampleRidgePeak(ridge: RidgeSpec, t: number): number {
+  const scaled = THREE.MathUtils.clamp(t, 0, 1) * (ridge.peaks.length - 1);
+  const index = Math.floor(scaled);
+  const nextIndex = Math.min(index + 1, ridge.peaks.length - 1);
+  const localT = scaled - index;
+  const smoothT = localT * localT * (3 - 2 * localT);
+  const base = THREE.MathUtils.lerp(ridge.peaks[index], ridge.peaks[nextIndex], smoothT);
+  const chipped = deterministicNoise(Math.floor(t * 997) + ridge.name.length * 113) - 0.5;
+  return THREE.MathUtils.clamp(base + chipped * 0.035, 0.03, 0.95);
+}
+
+function deterministicNoise(seed: number): number {
+  const value = Math.sin(seed * 12.9898) * 43758.5453;
+  return value - Math.floor(value);
 }
 
 function createRockFacetMesh(ridge: RidgeSpec): {

@@ -167,7 +167,8 @@ describe('stadium geometry builder', () => {
     expect(build.mountainBowl?.snowCapCount).toBeGreaterThan(0);
     expect(build.mountainBowl?.scenicBounds.minZ).toBeGreaterThan(FIELD_DIMENSIONS.fieldLength / 2);
     expect(build.mountainBowl?.bounds.minZ).toBeLessThan(FIELD_DIMENSIONS.fieldLength / 2);
-    expect(build.mountainBowl?.triangleCount).toBeLessThan(310);
+    expect(build.mountainBowl?.triangleCount).toBeGreaterThan(15_000);
+    expect(build.mountainBowl?.triangleCount).toBeLessThan(25_000);
     expect(build.mountainBowl?.bounds.maxY).toBeGreaterThan(55);
     expect(build.metrics.triangles).toBeGreaterThan(build.mountainBowl?.triangleCount ?? 0);
 

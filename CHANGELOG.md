@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.90] - 2026-06-25
+
+### Changed
+
+- Sharpened `mountainBowl` ridge detail by replacing flat ridge sheets with subdivided, faceted low-poly mountain surfaces using per-vertex shading.
+- Raised the mountain-only geometry budget to a measured `21,993` triangles while keeping scenic bounds behind the far bowl and total stadium geometry under the existing scene budget.
+
+### Added
+
+- Added mountain detail screenshots and debug snapshot under `artifacts/mountain-bowl-mountain-detail-1.22.90/`.
+
+### Tests
+
+- Verified `npx vitest run tests/stadium/stadiumGeometry.test.ts`, `npx playwright test tests/stadium-mountain-bowl.spec.ts`, and `npm run build`.
+
 ## [1.22.89] - 2026-06-25
 
 ### Changed
