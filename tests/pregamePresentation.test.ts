@@ -17,6 +17,10 @@ import type { GameAudioDirector } from '../src/audio/GameAudioDirector';
 import type { VoicePackAssetResolver } from '../src/audio/voicePacks/VoicePackAssetResolver';
 import type { VoicePackResolvedClip } from '../src/audio/voicePacks/VoicePackTypes';
 import {
+  createMatchModel,
+  snapshotMatchModel,
+} from '../src/match/MatchModel';
+import {
   PregamePresentationDirector,
 } from '../src/presentation/pregame/PregamePresentationDirector';
 import {
@@ -531,6 +535,59 @@ describe('pregame audio coordinator', () => {
 
     expect(coordinator.isLineComplete('welcome')).toBe(true);
     expect(coordinator.getSnapshot().failedLineIds).toEqual(['welcome']);
+  });
+
+  it('uses a neutral local pregame line when a team lacks generated local quarterback audio', () => {
+    const coordinator = new PregameAudioCoordinator(
+      new FakePregameMixer(),
+      createFakeTitleMusicController() as unknown as TitleMusicController,
+      createFakeGameAudioDirector() as unknown as GameAudioDirector,
+    );
+    const match = createMatchModel({
+      opponentTeamId: 'bay-city-current',
+      rules: { seed: 20260624 },
+      userTeamId: 'ironwood-owls',
+    });
+    const selections = coordinator.createSelections({
+      matchSnapshot: snapshotMatchModel(match),
+      weatherCondition: 'clear',
+    });
+
+    expect(selections.quarterback.available).toBe(true);
+    expect(selections.quarterback.assetId).toMatch(/^pregame_warmup_transition_0[12]$/);
+    expect(selections.quarterback.clip?.category).toBe('warmupTransition');
+  });
+
+  it('falls back to neutral local quarterback-slot audio when voice-pack resolution misses', async () => {
+    const mixer = new FakePregameMixer();
+    const resolver = {
+      resolveClip: async () => null,
+    } as unknown as VoicePackAssetResolver;
+    const coordinator = new PregameAudioCoordinator(
+      mixer,
+      createFakeTitleMusicController() as unknown as TitleMusicController,
+      createFakeGameAudioDirector() as unknown as GameAudioDirector,
+      { voicePackResolver: resolver },
+    );
+    const match = createMatchModel({
+      opponentTeamId: 'bay-city-current',
+      rules: { seed: 20260624 },
+      userTeamId: 'ironwood-owls',
+    });
+    const selections = coordinator.createSelections({
+      matchSnapshot: snapshotMatchModel(match),
+      weatherCondition: 'clear',
+    });
+
+    expect(selections.quarterback.clip?.category).toBe('quarterback');
+    expect(selections.quarterback.assetId).not.toMatch(/^pregame_warmup_transition_/);
+
+    coordinator.startLine('quarterback', selections.quarterback);
+    await coordinator.flushPendingAudioForTests();
+
+    expect(mixer.playedAssetIds).toHaveLength(1);
+    expect(mixer.playedAssetIds[0]).toMatch(/^pregame_warmup_transition_0[12]$/);
+    expect(coordinator.getSnapshot().failedLineIds).toEqual([]);
   });
 
   it('skip clears active and queued pregame lines', async () => {

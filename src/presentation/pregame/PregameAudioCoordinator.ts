@@ -6,12 +6,14 @@ import type {
 import type { AudioPlaybackCategory } from '../../audio/AudioAssetManifest';
 import type { GameAudioDirector } from '../../audio/GameAudioDirector';
 import {
+  LOCAL_PREGAME_COMMENTARY_ASSET_IDS,
   isLocalPregameCommentaryAssetId,
 } from '../../audio/PregameLocalAudioAssets';
 import {
   resolveMatchupLine,
   resolvePregameWelcome,
   resolveQuarterbackSpotlight,
+  resolveWarmupTransition,
   resolveWeatherLine,
   type PregameCommentarySelection,
   type PregameWeatherCondition,
@@ -113,6 +115,13 @@ export class PregameAudioCoordinator {
     const matchSeed = options.matchSnapshot?.deterministicSeed ?? 'pregame';
     const userTeamId = options.matchSnapshot?.userTeam.id ?? null;
     const opponentTeamId = options.matchSnapshot?.opponentTeam.id ?? null;
+    const quarterbackSelection = resolveQuarterbackSpotlight({
+      availableAssetIds: this.voicePackResolver ? undefined : LOCAL_PREGAME_COMMENTARY_ASSET_IDS,
+      matchSeed,
+      previousScriptId: options.previousScriptIds?.quarterback ?? null,
+      rosterPlayerId: options.quarterbackRosterPlayerId ?? null,
+      teamId: options.quarterbackTeamId ?? userTeamId,
+    });
 
     return {
       matchup: resolveMatchupLine({
@@ -121,12 +130,9 @@ export class PregameAudioCoordinator {
         matchSeed,
         previousScriptId: options.previousScriptIds?.matchup ?? null,
       }),
-      quarterback: resolveQuarterbackSpotlight({
-        matchSeed,
-        previousScriptId: options.previousScriptIds?.quarterback ?? null,
-        rosterPlayerId: options.quarterbackRosterPlayerId ?? null,
-        teamId: options.quarterbackTeamId ?? userTeamId,
-      }),
+      quarterback: this.voicePackResolver
+        ? quarterbackSelection
+        : this.resolveLocalQuarterbackSelectionFallback(quarterbackSelection, matchSeed),
       weather: resolveWeatherLine({
         condition: options.weatherCondition,
         matchSeed,
@@ -274,6 +280,11 @@ export class PregameAudioCoordinator {
     return this.playTrackedOneShot(playable.assetId)
       .then((handle) => {
         if (!handle) {
+          const fallback = this.resolvePlayableFallback(selection, playable.assetId);
+          if (fallback) {
+            return this.playResolvedLine(lineId, selection, fallback, generation);
+          }
+
           if (this.isCurrentPlaybackLine(lineId, generation)) {
             const activeAssetId = this.activeLine!.assetId;
             this.failedLineIds.add(lineId);
@@ -443,7 +454,7 @@ export class PregameAudioCoordinator {
     const resolved = await this.voicePackResolver.resolveClip(selection.clip.scriptId);
     if (!resolved) {
       if (!isLocalPregameCommentaryAssetId(selection.assetId)) {
-        return null;
+        return this.resolvePlayableFallback(selection);
       }
 
       return {
@@ -457,6 +468,49 @@ export class PregameAudioCoordinator {
       assetId: resolved.asset.assetId,
       caption: resolved.caption,
       durationSeconds: resolved.clip.durationSeconds || selection.clip.durationSeconds,
+    };
+  }
+
+  private resolveLocalQuarterbackSelectionFallback(
+    selection: PregameCommentarySelection,
+    matchSeed: number | string,
+  ): PregameCommentarySelection {
+    if (selection.available || selection.fallbackReason !== 'missingAssets') {
+      return selection;
+    }
+
+    return resolveWarmupTransition({
+      availableAssetIds: LOCAL_PREGAME_COMMENTARY_ASSET_IDS,
+      matchSeed,
+      previousScriptId: selection.scriptId,
+    });
+  }
+
+  private resolvePlayableFallback(
+    selection: PregameCommentarySelection,
+    excludedAssetId?: string,
+  ): { assetId: string; caption: string; durationSeconds: number } | null {
+    if (
+      selection.clip?.category !== 'quarterback' &&
+      selection.clip?.category !== 'quarterbackArchetype'
+    ) {
+      return null;
+    }
+
+    const fallback = resolveWarmupTransition({
+      availableAssetIds: LOCAL_PREGAME_COMMENTARY_ASSET_IDS,
+      matchSeed: `quarterback-audio-fallback:${selection.scriptId}`,
+      previousScriptId: selection.scriptId,
+    });
+
+    if (!fallback.assetId || !fallback.clip || fallback.assetId === excludedAssetId) {
+      return null;
+    }
+
+    return {
+      assetId: fallback.assetId,
+      caption: fallback.caption,
+      durationSeconds: fallback.clip.durationSeconds,
     };
   }
 

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.77] - 2026-06-24
+
+### Fixed
+
+- Added a local fallback path for pregame quarterback audio so teams without generated QB-specific audio no longer resolve to missing generic QB assets.
+- Added a runtime fallback for quarterback-slot voice-pack misses so the pregame sequence plays an existing neutral local Grant Mercer pregame line instead of suppressing the line.
+
+### Tests
+
+- Verified `npx vitest run tests/pregamePresentation.test.ts tests/pregameCommentaryCatalog.test.ts tests/audioRuntime.test.ts` and `npm run build`.
+
 ## [1.22.76] - 2026-06-24
 
 ### Changed
