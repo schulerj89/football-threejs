@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.89] - 2026-06-25
+
+### Changed
+
+- Allowed the `stadiumTheme` launch flag to keep the normal title and Play Now flow so `mountainBowl` can be validated through pre-game instead of bypassing the title shell.
+
+### Added
+
+- Added a mountain-bowl Play Now pre-game regression that verifies the theme remains active, pre-game warmup players render, and gameplay actors stay hidden during the presentation.
+- Added final mountain-bowl validation screenshots, debug snapshot, and two-agent acceptance artifacts under `artifacts/mountain-bowl-final-validation-1.22.89/`.
+
+### Tests
+
+- Verified `npx playwright test tests/stadium-mountain-bowl.spec.ts`, `npx vitest run tests/stadium/stadiumGeometry.test.ts`, and `npm run build`.
+
 ## [1.22.88] - 2026-06-25
 
 ### Changed

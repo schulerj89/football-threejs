@@ -229,6 +229,7 @@ function shouldShowTitleForSearchParams(searchParams: URLSearchParams): boolean 
       key === 'matchSeed' ||
       key === 'pregameWeather' ||
       key === 'seed' ||
+      key === 'stadiumTheme' ||
       key === 'weather');
 }
 

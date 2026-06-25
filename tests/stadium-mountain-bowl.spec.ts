@@ -30,11 +30,25 @@ interface StadiumSnapshot {
 }
 
 interface StageVisualMatrixSnapshot {
+  activePrimaryGroups?: string[];
+  appPhase?: string;
   coinToss: { visibleCount: number };
   gameplay: { visibleCount: number };
   kickoff: { visibleCount: number };
   normalOfficialsVisibleCount: number;
-  warmup: { visibleFullProfileCount: number };
+  warmup: {
+    enabled?: boolean;
+    helmetReady?: boolean;
+    quarterbackReady?: boolean;
+    visibleFullProfileCount: number;
+  };
+}
+
+interface PregamePresentationSnapshot {
+  currentShot: string | null;
+  phase: string;
+  skipState: string;
+  weatherCondition: string;
 }
 
 test('mountain bowl preview shows procedural mountains without on-field player actors', async ({ page }) => {
@@ -72,6 +86,55 @@ test('mountain bowl preview shows procedural mountains without on-field player a
   expect(stage.normalOfficialsVisibleCount).toBe(0);
 });
 
+test('mountain bowl launches through play now pregame with warmup players', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/?stadiumTheme=mountainBowl');
+  await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
+  await expect(page.locator('.title-screen')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.locator('.football-hub-screen')).toBeVisible();
+  await page.locator('.football-hub-playnow-matchup').getByRole('button', { name: 'Play Game' }).click();
+
+  await expect(page.locator('body[data-app-phase="pregamePresentation"]')).toBeAttached();
+  await expect(page.locator('.play-call-ui')).toBeHidden();
+
+  const stadium = await getStadiumSnapshot(page);
+  expect(stadium.enabled).toBe(true);
+  expect(stadium.themeId).toBe('mountainBowl');
+  expect(stadium.mountainBowl).toMatchObject({
+    retainingWallPanelCount: 7,
+    servicePathCount: 10,
+    terraceShelfCount: 5,
+  });
+
+  await expect.poll(() => getPregamePresentationSnapshot(page)).toMatchObject({
+    currentShot: 'stadiumCenterOrbit',
+    phase: 'running',
+    skipState: 'available',
+  });
+  await expect.poll(() => getStageVisualMatrixSnapshot(page), { timeout: 10_000 }).toMatchObject({
+    activePrimaryGroups: ['warmupPlayers'],
+    appPhase: 'pregamePresentation',
+    coinToss: {
+      visibleCount: 0,
+    },
+    gameplay: {
+      visibleCount: 0,
+    },
+    kickoff: {
+      visibleCount: 0,
+    },
+    normalOfficialsVisibleCount: 0,
+    warmup: {
+      enabled: true,
+      helmetReady: true,
+      quarterbackReady: true,
+      visibleFullProfileCount: 1,
+    },
+  });
+});
+
 async function getStadiumSnapshot(page: Page): Promise<StadiumSnapshot> {
   return page.evaluate(() => {
     const debugApi = (
@@ -101,5 +164,21 @@ async function getStageVisualMatrixSnapshot(page: Page): Promise<StageVisualMatr
       throw new Error('Missing football debug API');
     }
     return debugApi.getStageVisualMatrixSnapshot();
+  });
+}
+
+async function getPregamePresentationSnapshot(page: Page): Promise<PregamePresentationSnapshot> {
+  return page.evaluate(() => {
+    const debugApi = (
+      window as unknown as {
+        __footballDebug?: {
+          getPregamePresentationSnapshot: () => PregamePresentationSnapshot;
+        };
+      }
+    ).__footballDebug;
+    if (!debugApi) {
+      throw new Error('Missing football debug API');
+    }
+    return debugApi.getPregamePresentationSnapshot();
   });
 }
