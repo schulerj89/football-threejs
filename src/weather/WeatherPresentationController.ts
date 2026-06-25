@@ -29,9 +29,9 @@ export class WeatherPresentationController {
     this.applyLighting();
   }
 
-  update(camera: THREE.Camera): void {
+  update(camera: THREE.Camera, deltaSeconds = 0): void {
     const snapshot = this.model.getSnapshot();
-    this.renderer.update(camera, snapshot);
+    this.renderer.update(camera, snapshot, deltaSeconds);
     this.applyLighting();
   }
 
@@ -42,6 +42,8 @@ export class WeatherPresentationController {
       ...snapshot,
       lightingIntensity: this.options.keyLight.intensity,
       precipitationObjectCount: rendererSnapshot.precipitationObjectCount,
+      rainFallOffset: rendererSnapshot.rainFallOffset,
+      rainStreakCount: rendererSnapshot.rainStreakCount,
       skyEnabled: rendererSnapshot.skyEnabled,
       skyObjectCount: rendererSnapshot.skyObjectCount,
       sunDiscWorldPosition: rendererSnapshot.sunDiscWorldPosition,
@@ -96,6 +98,7 @@ export function syncWeatherDebugOverlay(
     `SUN_LIGHT ${formatVector(snapshot.sunLightPosition)}`,
     `SUN_VISIBLE ${snapshot.sunVisible ? 'yes' : 'no'}`,
     `RAIN ${snapshot.precipitation.toFixed(2)} objects ${snapshot.precipitationObjectCount}`,
+    `RAIN_STREAKS ${snapshot.rainStreakCount} fall ${snapshot.rainFallOffset.toFixed(2)}`,
     `WIND ${snapshot.windSpeedMph.toFixed(1)} mph @ ${snapshot.windDirectionRadians.toFixed(2)}`,
     `SKY ${snapshot.skyEnabled ? 'on' : 'off'}`,
     `LIGHT ${snapshot.lightingIntensity.toFixed(2)}`,

@@ -8,6 +8,8 @@ import type {
 
 export interface ClearWeatherRendererSnapshot {
   precipitationObjectCount: number;
+  rainFallOffset: number;
+  rainStreakCount: number;
   skyEnabled: boolean;
   skyObjectCount: number;
   sunDiscWorldPosition: WeatherVectorSnapshot;
@@ -30,6 +32,9 @@ export class ClearWeatherRenderer {
   private readonly rainGeometry: THREE.BufferGeometry | null = null;
   private readonly rainMaterial: THREE.LineBasicMaterial | null = null;
   private readonly rainLines: THREE.LineSegments | null = null;
+  private readonly rainStreaks: RainStreak[] = [];
+  private rainFallOffset = 0;
+  private rainWindOffset = 0;
   private sunDirection = new THREE.Vector3();
   private readonly sunWorldPosition = new THREE.Vector3();
 
@@ -106,7 +111,9 @@ export class ClearWeatherRenderer {
     }
 
     if ((profile.sky.rainStreakCount ?? 0) > 0) {
-      this.rainGeometry = createRainStreakGeometry(profile.sky.rainStreakCount ?? 0);
+      const rain = createRainStreakGeometry(profile.sky.rainStreakCount ?? 0);
+      this.rainGeometry = rain.geometry;
+      this.rainStreaks = rain.streaks;
       this.rainMaterial = new THREE.LineBasicMaterial({
         color: profile.sky.rainColor ?? 0xb7c6cf,
         depthWrite: false,
@@ -122,7 +129,7 @@ export class ClearWeatherRenderer {
     }
   }
 
-  update(camera: THREE.Camera, snapshot: WeatherSnapshot): void {
+  update(camera: THREE.Camera, snapshot: WeatherSnapshot, deltaSeconds = 0): void {
     this.group.position.copy(camera.position);
     this.sunDirection = toVector3(calculateSunWorldDirection(snapshot));
     const sunPosition = this.sunDirection
@@ -136,11 +143,14 @@ export class ClearWeatherRenderer {
       this.sunGlow.quaternion.copy(camera.quaternion);
       this.sunDisc.quaternion.copy(camera.quaternion);
     }
+    this.updateRain(snapshot, deltaSeconds);
   }
 
   getSnapshot(): ClearWeatherRendererSnapshot {
     return {
       precipitationObjectCount: this.rainLines ? 1 : 0,
+      rainFallOffset: this.rainFallOffset,
+      rainStreakCount: this.rainStreaks.length,
       skyEnabled: this.group.visible,
       skyObjectCount: this.group.children.length,
       sunDiscWorldPosition: toSnapshot(this.sunWorldPosition),
@@ -159,30 +169,99 @@ export class ClearWeatherRenderer {
     this.rainGeometry?.dispose();
     this.rainMaterial?.dispose();
   }
+
+  private updateRain(snapshot: WeatherSnapshot, deltaSeconds: number): void {
+    if (!this.rainGeometry || !this.rainLines || this.rainStreaks.length === 0) {
+      return;
+    }
+
+    const clampedDelta = Math.min(Math.max(deltaSeconds, 0), 0.1);
+    const windScalar = Math.max(snapshot.windSpeedMph, 0);
+    this.rainFallOffset = positiveModulo(
+      this.rainFallOffset + clampedDelta * RAIN_FALL_SPEED,
+      RAIN_WRAP_HEIGHT,
+    );
+    this.rainWindOffset = positiveModulo(
+      this.rainWindOffset + clampedDelta * windScalar * RAIN_WIND_SPEED_SCALE,
+      RAIN_SPREAD_X,
+    );
+
+    const windX = Math.sin(snapshot.windDirectionRadians);
+    const windZ = Math.cos(snapshot.windDirectionRadians);
+    const positions = this.rainGeometry.getAttribute('position') as THREE.BufferAttribute;
+    for (let index = 0; index < this.rainStreaks.length; index += 1) {
+      const streak = this.rainStreaks[index]!;
+      const windDrift = this.rainWindOffset * streak.windScale;
+      const topX = wrapCentered(streak.x + windX * windDrift, RAIN_SPREAD_X);
+      const topY = wrapRange(streak.y - this.rainFallOffset, RAIN_MIN_Y, RAIN_MAX_Y);
+      const topZ = wrapCentered(streak.z + windZ * windDrift, RAIN_SPREAD_Z);
+      const bottomIndex = index * 2 + 1;
+      const topIndex = index * 2;
+      positions.setXYZ(topIndex, topX, topY, topZ);
+      positions.setXYZ(
+        bottomIndex,
+        topX - streak.slant,
+        topY - streak.length,
+        topZ + streak.slant * 0.35,
+      );
+    }
+    positions.needsUpdate = true;
+  }
 }
 
-function createRainStreakGeometry(count: number): THREE.BufferGeometry {
+interface RainStreak {
+  length: number;
+  slant: number;
+  windScale: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
+const RAIN_SPREAD_X = 260;
+const RAIN_SPREAD_Z = 190;
+const RAIN_MIN_Y = -18;
+const RAIN_MAX_Y = 96;
+const RAIN_WRAP_HEIGHT = RAIN_MAX_Y - RAIN_MIN_Y;
+const RAIN_FALL_SPEED = 58;
+const RAIN_WIND_SPEED_SCALE = 0.42;
+
+function createRainStreakGeometry(count: number): {
+  geometry: THREE.BufferGeometry;
+  streaks: RainStreak[];
+} {
   const geometry = new THREE.BufferGeometry();
   const positions: number[] = [];
-  const spreadX = 260;
-  const spreadZ = 190;
-  const minY = -16;
-  const maxY = 96;
+  const streaks: RainStreak[] = [];
 
   for (let index = 0; index < count; index += 1) {
     const a = pseudoRandom(index, 17);
     const b = pseudoRandom(index, 43);
     const c = pseudoRandom(index, 89);
-    const x = (a - 0.5) * spreadX;
-    const y = minY + b * (maxY - minY);
-    const z = (c - 0.5) * spreadZ;
+    const x = (a - 0.5) * RAIN_SPREAD_X;
+    const y = RAIN_MIN_Y + b * RAIN_WRAP_HEIGHT;
+    const z = (c - 0.5) * RAIN_SPREAD_Z;
     const slant = 1.6 + pseudoRandom(index, 131) * 1.8;
     const length = 10 + pseudoRandom(index, 197) * 10;
+    const windScale = 0.72 + pseudoRandom(index, 251) * 0.56;
+    streaks.push({ length, slant, windScale, x, y, z });
     positions.push(x, y, z, x - slant, y - length, z + slant * 0.35);
   }
 
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  return geometry;
+  return { geometry, streaks };
+}
+
+function positiveModulo(value: number, length: number): number {
+  return ((value % length) + length) % length;
+}
+
+function wrapRange(value: number, min: number, max: number): number {
+  return min + positiveModulo(value - min, max - min);
+}
+
+function wrapCentered(value: number, spread: number): number {
+  return wrapRange(value, -spread / 2, spread / 2);
 }
 
 function pseudoRandom(index: number, salt: number): number {

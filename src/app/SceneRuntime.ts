@@ -93,8 +93,8 @@ export class SceneRuntime {
     };
   }
 
-  render(camera: THREE.Camera): void {
-    this.weatherController.update(camera);
+  render(camera: THREE.Camera, deltaSeconds = 0): void {
+    this.weatherController.update(camera, deltaSeconds);
     this.renderer.render(this.scene, camera);
   }
 

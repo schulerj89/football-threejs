@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.84] - 2026-06-25
+
+### Fixed
+
+- Animated rainy-weather streak geometry during gameplay with frame-rate-independent fall and wind drift instead of leaving static rain lines locked to the camera.
+- Added weather debug snapshot fields and browser coverage to verify rainy gameplay advances the rain fall offset.
+
+### Added
+
+- Added `artifacts/rain-gameplay-1.22.84/` screenshots validating visible rain during gameplay.
+
+### Tests
+
+- Verified `npx vitest run tests/weather/weatherPresentation.test.ts tests/weather/weatherModel.test.ts`, `npx playwright test tests/weather-rain.spec.ts`, and `npm run build`.
+
 ## [1.22.83] - 2026-06-25
 
 ### Added

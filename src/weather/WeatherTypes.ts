@@ -49,6 +49,8 @@ export interface WeatherProfile {
 export interface WeatherPresentationSnapshot extends WeatherSnapshot {
   lightingIntensity: number;
   precipitationObjectCount: number;
+  rainFallOffset: number;
+  rainStreakCount: number;
   skyEnabled: boolean;
   skyObjectCount: number;
   sunDiscWorldPosition: WeatherVectorSnapshot;

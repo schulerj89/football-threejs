@@ -354,7 +354,7 @@ export class FootballApplication {
           this.gameplay.getPreSnapCadenceSnapshot(),
           { canPunt: false },
         );
-      this.sceneRuntime.render(this.presentation.camera);
+      this.sceneRuntime.render(this.presentation.camera, delta);
       this.lifecycle.syncTitleLoadingState();
       this.lifecycle.syncChrome();
       return;
@@ -563,7 +563,7 @@ export class FootballApplication {
         );
       });
       this.performanceProfiler.measure('rendererRender', () => {
-        this.sceneRuntime.render(this.presentation.camera);
+        this.sceneRuntime.render(this.presentation.camera, delta);
       });
     } else {
       this.presentation.syncPlayCallUi(
@@ -572,7 +572,7 @@ export class FootballApplication {
         preSnapCadenceSnapshot,
         { canPunt: Boolean(finalMatchSnapshot?.canPunt) },
       );
-      this.sceneRuntime.render(this.presentation.camera);
+      this.sceneRuntime.render(this.presentation.camera, delta);
     }
     this.crowdCapacityBenchmark.update(delta);
     this.syncCrowdCapacityBenchmarkSuppression();

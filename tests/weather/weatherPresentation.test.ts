@@ -114,6 +114,12 @@ describe('clear weather presentation', () => {
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
 
     controller.update(camera);
+    const rainLines = controller.group.getObjectByName('rain-weather-streaks');
+    expect(rainLines).toBeInstanceOf(THREE.LineSegments);
+    const rainGeometry = (rainLines as THREE.LineSegments).geometry;
+    const positionAttribute = rainGeometry.getAttribute('position') as THREE.BufferAttribute;
+    const firstTopY = positionAttribute.getY(0);
+    const firstVersion = positionAttribute.version;
 
     expect(controller.getSnapshot()).toMatchObject({
       cloudiness: 1,
@@ -121,16 +127,23 @@ describe('clear weather presentation', () => {
       lightingIntensity: RAIN_WEATHER_PROFILE.lighting.keyLightIntensity,
       precipitation: 0.72,
       precipitationObjectCount: 1,
+      rainStreakCount: RAIN_WEATHER_PROFILE.sky.rainStreakCount,
       skyObjectCount: 2,
       sunVisible: false,
     });
     expect(controller.group.getObjectByName('clear-weather-sun-disc')).toBeUndefined();
-    expect(controller.group.getObjectByName('rain-weather-streaks')).toBeInstanceOf(THREE.LineSegments);
     expect(keyLight.color.getHex()).toBe(RAIN_WEATHER_PROFILE.lighting.keyLightColor);
     expect(hemisphereLight.color.getHex()).toBe(RAIN_WEATHER_PROFILE.lighting.hemisphereSkyColor);
     expect(luminance(RAIN_WEATHER_PROFILE.sky.horizonColor)).toBeLessThan(
       luminance(OVERCAST_WEATHER_PROFILE.sky.horizonColor),
     );
+
+    controller.update(camera, 1 / 30);
+    const animatedTopY = positionAttribute.getY(0);
+    const animatedSnapshot = controller.getSnapshot();
+    expect(animatedTopY).not.toBeCloseTo(firstTopY, 4);
+    expect(animatedSnapshot.rainFallOffset).toBeGreaterThan(0);
+    expect(positionAttribute.version).toBeGreaterThan(firstVersion);
 
     controller.dispose();
   });
