@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 interface MountainBowlSnapshot {
+  baseBermCount: number;
   bounds: {
     maxY: number;
     minZ: number;
@@ -9,9 +10,13 @@ interface MountainBowlSnapshot {
   peakCount: number;
   rockFacetCount: number;
   ridgeCount: number;
+  scenicBounds: {
+    minZ: number;
+  };
   snowCapCount: number;
   treeLineCount: number;
   triangleCount: number;
+  valleySkirtSegmentCount: number;
 }
 
 interface StadiumSnapshot {
@@ -38,15 +43,19 @@ test('mountain bowl preview shows procedural mountains without on-field player a
   expect(stadium.enabled).toBe(true);
   expect(stadium.themeId).toBe('mountainBowl');
   expect(stadium.mountainBowl).toMatchObject({
+    baseBermCount: 3,
     edgeFeathered: true,
     ridgeCount: 3,
     treeLineCount: 24,
+    valleySkirtSegmentCount: 4,
   });
   expect(stadium.mountainBowl?.peakCount).toBeGreaterThanOrEqual(30);
   expect(stadium.mountainBowl?.rockFacetCount).toBeGreaterThanOrEqual(15);
   expect(stadium.mountainBowl?.snowCapCount).toBeGreaterThan(0);
   expect(stadium.mountainBowl?.bounds.maxY).toBeGreaterThan(55);
-  expect(stadium.mountainBowl?.bounds.minZ).toBeGreaterThan(70);
+  expect(stadium.mountainBowl?.scenicBounds.minZ).toBeGreaterThan(70);
+  expect(stadium.mountainBowl?.bounds.minZ).toBeLessThan(70);
+  expect(stadium.mountainBowl?.triangleCount).toBeLessThan(250);
   expect(stadium.triangles).toBeGreaterThan(stadium.mountainBowl?.triangleCount ?? 0);
 
   const stage = await getStageVisualMatrixSnapshot(page);

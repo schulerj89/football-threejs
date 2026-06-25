@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.87] - 2026-06-25
+
+### Changed
+
+- Hardened the `mountainBowl` stadium scene with a valley skirt and uneven base berms to suppress exposed blue void strips and break up the straight mountain base band.
+- Split mountain-bowl debug bounds into whole-scene bounds and scenic-backdrop bounds so tests can allow skirt geometry around the bowl while still guarding that scenic ridges stay behind the far bowl.
+
+### Added
+
+- Added Layer 3 screenshots, debug snapshot, and two-agent review artifacts under `artifacts/mountain-bowl-layer-3-1.22.87/`.
+
+### Tests
+
+- Verified `npx vitest run tests/stadium/stadiumGeometry.test.ts`, `npx playwright test tests/stadium-mountain-bowl.spec.ts`, and `npm run build`.
+
 ## [1.22.86] - 2026-06-25
 
 ### Changed

@@ -141,6 +141,7 @@ export interface StadiumControllerSnapshot extends StadiumGeometryMetrics {
 }
 
 export interface MountainBowlBackdropSnapshot {
+  baseBermCount: number;
   bounds: {
     maxX: number;
     maxY: number;
@@ -151,10 +152,19 @@ export interface MountainBowlBackdropSnapshot {
   };
   edgeFeathered: boolean;
   rockFacetCount: number;
+  valleySkirtSegmentCount: number;
   layerCount: number;
   materialCount: number;
   peakCount: number;
   ridgeCount: number;
+  scenicBounds: {
+    maxX: number;
+    maxY: number;
+    maxZ: number;
+    minX: number;
+    minY: number;
+    minZ: number;
+  };
   ridgeNames: readonly string[];
   snowCapCount: number;
   treeLineCount: number;
