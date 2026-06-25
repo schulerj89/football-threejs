@@ -13,6 +13,7 @@ import type {
   StadiumControllerSnapshot,
   StadiumGeometryMetrics,
   StadiumSpec,
+  StadiumThemeId,
 } from './StadiumTypes';
 
 export type { StadiumControllerSnapshot } from './StadiumTypes';
@@ -22,6 +23,7 @@ export interface StadiumControllerOptions {
   imageMaterialsEnabled: boolean;
   renderer: THREE.WebGLRenderer;
   spec?: StadiumSpec;
+  themeId?: StadiumThemeId;
   upperTierEnabled: boolean;
 }
 
@@ -34,6 +36,7 @@ export class StadiumController {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly spec: StadiumSpec;
   private materialLibrary: StadiumMaterialLibrary | null = null;
+  private themeId: StadiumThemeId;
   private upperTierEnabled: boolean;
 
   constructor(options: StadiumControllerOptions) {
@@ -43,6 +46,7 @@ export class StadiumController {
     this.imageMaterialsEnabled = options.imageMaterialsEnabled;
     this.renderer = options.renderer;
     this.spec = options.spec ?? DEFAULT_STADIUM_SPEC;
+    this.themeId = options.themeId ?? 'classicBowl';
     this.upperTierEnabled = options.upperTierEnabled;
     this.rebuild();
   }
@@ -50,11 +54,14 @@ export class StadiumController {
   applySettings(options: {
     enabled: boolean;
     imageMaterialsEnabled: boolean;
+    themeId?: StadiumThemeId;
     upperTierEnabled: boolean;
   }): void {
+    const nextThemeId = options.themeId ?? 'classicBowl';
     if (
       this.enabled === options.enabled &&
       this.imageMaterialsEnabled === options.imageMaterialsEnabled &&
+      this.themeId === nextThemeId &&
       this.upperTierEnabled === options.upperTierEnabled
     ) {
       return;
@@ -62,6 +69,7 @@ export class StadiumController {
 
     this.enabled = options.enabled;
     this.imageMaterialsEnabled = options.imageMaterialsEnabled;
+    this.themeId = nextThemeId;
     this.upperTierEnabled = options.upperTierEnabled;
     this.rebuild();
   }
@@ -75,9 +83,11 @@ export class StadiumController {
       enabled: this.enabled,
       imageMaterialsEnabled: this.imageMaterialsEnabled,
       lowerTierRows,
+      mountainBowl: this.build?.mountainBowl ?? null,
       seatCount: createSeatLayout(this.spec, {
         upperTierEnabled: this.upperTierEnabled,
       }).seats.length,
+      themeId: this.themeId,
       textureCount: this.imageMaterialsEnabled ? textureSnapshot.textureCount : 0,
       upperTierEnabled: this.upperTierEnabled,
     };
@@ -101,6 +111,7 @@ export class StadiumController {
     this.build = buildStadiumGeometry({
       materials: this.materialLibrary,
       spec: this.spec,
+      themeId: this.themeId,
       upperTierEnabled: this.upperTierEnabled,
     });
     this.group.add(this.build.group);
@@ -111,6 +122,9 @@ export class StadiumController {
       this.group.remove(this.build.group);
       for (const geometry of new Set(this.build.geometries)) {
         geometry.dispose();
+      }
+      for (const material of new Set(this.build.materials)) {
+        material.dispose();
       }
       this.build = null;
     }
@@ -128,4 +142,8 @@ function createEmptyMetrics(): StadiumGeometryMetrics {
     textureCount: 0,
     triangles: 0,
   };
+}
+
+export function resolveStadiumThemeId(value: string | null | undefined): StadiumThemeId {
+  return value === 'mountainBowl' ? 'mountainBowl' : 'classicBowl';
 }

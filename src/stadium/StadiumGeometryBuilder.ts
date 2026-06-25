@@ -10,22 +10,28 @@ import {
 } from './StadiumPath';
 import { isInsideTunnel } from './SeatLayout';
 import type { StadiumMaterialLibrary } from './StadiumMaterialLibrary';
+import { createMountainBowlBackdrop } from './MountainBowlBackdrop';
 import type {
   StadiumGeometryMetrics,
+  MountainBowlBackdropSnapshot,
   StadiumSpec,
+  StadiumThemeId,
   StadiumTunnelSpec,
 } from './StadiumTypes';
 
 export interface BuildStadiumGeometryOptions {
   materials: StadiumMaterialLibrary;
   spec?: StadiumSpec;
+  themeId?: StadiumThemeId;
   upperTierEnabled?: boolean;
 }
 
 export interface StadiumGeometryBuildResult {
   geometries: THREE.BufferGeometry[];
   group: THREE.Group;
+  materials: THREE.Material[];
   metrics: StadiumGeometryMetrics;
+  mountainBowl: MountainBowlBackdropSnapshot | null;
 }
 
 const PATH_SAMPLE_SPACING = 3.4;
@@ -35,12 +41,14 @@ const STADIUM_GROUND_Y = -0.026;
 export function buildStadiumGeometry({
   materials,
   spec = DEFAULT_STADIUM_SPEC,
+  themeId = 'classicBowl',
   upperTierEnabled = true,
 }: BuildStadiumGeometryOptions): StadiumGeometryBuildResult {
   const group = new THREE.Group();
   group.name = 'stadium-root';
   group.userData.stadium = true;
   const geometries: THREE.BufferGeometry[] = [];
+  const ownedMaterials: THREE.Material[] = [];
 
   const lowerRows = createStadiumRows(spec, false);
   const lowerSeating = createSeatingBowlGeometry(spec, lowerRows);
@@ -111,11 +119,26 @@ export function buildStadiumGeometry({
     }
   });
 
-  const metrics = createStadiumGeometryMetrics(group, geometries, materials.allMaterials.length);
+  let mountainBowl: MountainBowlBackdropSnapshot | null = null;
+  if (themeId === 'mountainBowl') {
+    const backdrop = createMountainBowlBackdrop();
+    group.add(backdrop.group);
+    geometries.push(...backdrop.geometries);
+    ownedMaterials.push(...backdrop.materials);
+    mountainBowl = backdrop.snapshot;
+  }
+
+  const metrics = createStadiumGeometryMetrics(
+    group,
+    geometries,
+    materials.allMaterials.length + ownedMaterials.length,
+  );
   return {
     geometries,
     group,
+    materials: ownedMaterials,
     metrics,
+    mountainBowl,
   };
 }
 

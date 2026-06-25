@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.85] - 2026-06-25
+
+### Added
+
+- Added the first `mountainBowl` stadium theme layer with a procedural low-poly mountain backdrop, snow caps, and tree-line geometry behind the far bowl.
+- Added a `stadiumPreview=1&stadiumTheme=mountainBowl` empty-field preview path that preserves field branding while suppressing player actors and gameplay overlays for stadium validation.
+- Added screenshot, debug snapshot, and review artifacts under `artifacts/mountain-bowl-layer-1-1.22.85/`.
+
+### Tests
+
+- Verified `npx vitest run tests/stadium/stadiumGeometry.test.ts`, `npx playwright test tests/stadium-mountain-bowl.spec.ts`, and `npm run build`.
+
 ## [1.22.84] - 2026-06-25
 
 ### Fixed

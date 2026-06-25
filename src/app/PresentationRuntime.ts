@@ -89,6 +89,7 @@ import {
 } from '../performance/QualityProfile';
 import {
   StadiumController,
+  resolveStadiumThemeId,
   type StadiumControllerSnapshot,
 } from '../stadium/StadiumController';
 import {
@@ -375,6 +376,7 @@ export class PresentationRuntime {
         this.qualityProfile,
       ),
       renderer,
+      themeId: resolveStadiumThemeId(searchParams.get('stadiumTheme')),
       upperTierEnabled: shouldUseStadiumUpperTier(gameExperience, this.qualityProfile),
     });
     if (!this.crowdPreviewController) {
@@ -676,6 +678,23 @@ export class PresentationRuntime {
     this.routeArtRenderer.group.visible = false;
     this.selectedReceiverTargetIndicator.group.visible = false;
     this.controlledPlayerLabels.setApplicationPhase(appPhase);
+  }
+
+  renderStadiumPreviewFrame(): void {
+    this.gameplayHud.root.hidden = true;
+    this.ballVisual.visible = false;
+    this.broadcastCaptions.hidden = true;
+    this.routeArtRenderer.group.visible = false;
+    this.selectedReceiverTargetIndicator.group.visible = false;
+    this.sidelineTeamController.group.visible = false;
+    this.officialsController?.group && (this.officialsController.group.visible = false);
+    this.pregameWarmupController.group.visible = false;
+    this.controlledPlayerLabels.setApplicationPhase('title');
+    this.cameraController.updateStadiumPreview(
+      new THREE.Vector3(62, 46, -116),
+      new THREE.Vector3(0, 4.6, 26),
+      44,
+    );
   }
 
   updateGameplayFrame({
@@ -1722,6 +1741,7 @@ export class PresentationRuntime {
         this.gameExperience,
         this.qualityProfile,
       ),
+      themeId: resolveStadiumThemeId(this.searchParams.get('stadiumTheme')),
       upperTierEnabled: shouldUseStadiumUpperTier(this.gameExperience, this.qualityProfile),
     });
   }

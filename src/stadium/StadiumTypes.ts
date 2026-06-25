@@ -14,6 +14,8 @@ export type StadiumTextureRole =
   | 'fasciaBand'
   | 'scoreboardScreen';
 
+export type StadiumThemeId = 'classicBowl' | 'mountainBowl';
+
 export interface Vec2 {
   x: number;
   z: number;
@@ -133,5 +135,26 @@ export interface StadiumControllerSnapshot extends StadiumGeometryMetrics {
   enabled: boolean;
   imageMaterialsEnabled: boolean;
   lowerTierRows: number;
+  mountainBowl: MountainBowlBackdropSnapshot | null;
+  themeId: StadiumThemeId;
   upperTierEnabled: boolean;
+}
+
+export interface MountainBowlBackdropSnapshot {
+  bounds: {
+    maxX: number;
+    maxY: number;
+    maxZ: number;
+    minX: number;
+    minY: number;
+    minZ: number;
+  };
+  layerCount: number;
+  materialCount: number;
+  peakCount: number;
+  ridgeCount: number;
+  ridgeNames: readonly string[];
+  snowCapCount: number;
+  treeLineCount: number;
+  triangleCount: number;
 }

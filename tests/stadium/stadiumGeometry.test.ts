@@ -141,6 +141,30 @@ describe('stadium geometry builder', () => {
     controller.dispose();
   });
 
+  it('adds a bounded mountain backdrop for the mountain bowl stadium theme', () => {
+    const materials = createStadiumMaterialLibrary({ imageMaterialsEnabled: false });
+    const build = buildStadiumGeometry({
+      materials,
+      spec: DEFAULT_STADIUM_SPEC,
+      themeId: 'mountainBowl',
+      upperTierEnabled: true,
+    });
+
+    expect(build.group.getObjectByName('mountain-bowl-backdrop')).toBeInstanceOf(THREE.Group);
+    expect(build.mountainBowl).toMatchObject({
+      layerCount: 4,
+      ridgeCount: 3,
+      treeLineCount: 24,
+    });
+    expect(build.mountainBowl?.peakCount).toBeGreaterThanOrEqual(20);
+    expect(build.mountainBowl?.snowCapCount).toBeGreaterThan(0);
+    expect(build.mountainBowl?.bounds.minZ).toBeGreaterThan(FIELD_DIMENSIONS.fieldLength / 2);
+    expect(build.mountainBowl?.bounds.maxY).toBeGreaterThan(55);
+    expect(build.metrics.triangles).toBeGreaterThan(build.mountainBowl?.triangleCount ?? 0);
+
+    disposeBuild(build, materials);
+  });
+
   it('disposes owned stadium geometries and materials', () => {
     const controller = new StadiumController({
       enabled: true,
@@ -211,6 +235,9 @@ function disposeBuild(
 ): void {
   for (const geometry of new Set(build.geometries)) {
     geometry.dispose();
+  }
+  for (const material of new Set(build.materials)) {
+    material.dispose();
   }
   materials.dispose();
 }

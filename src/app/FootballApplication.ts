@@ -89,6 +89,7 @@ export class FootballApplication {
   private readonly leagueBoot: LeagueBootController;
   private readonly sceneResourceProfiler: SceneResourceProfiler;
   private readonly crowdCapacityBenchmark: CrowdCapacityBenchmark;
+  private readonly stadiumPreviewActive: boolean;
   private readonly loop: GameLoop;
   private readonly removeSceneResizeHandler: () => void;
   private gameExperience: ResolvedGameExperienceSettings;
@@ -100,6 +101,7 @@ export class FootballApplication {
 
   constructor({ mount, searchParams = new URLSearchParams(window.location.search) }: FootballApplicationOptions) {
     this.searchParams = searchParams;
+    this.stadiumPreviewActive = isStadiumPreviewActive(searchParams);
     this.gameExperience = resolveGameExperienceSettings({ searchParams });
     this.leagueBoot = new LeagueBootController();
     this.leagueBoot.subscribe(() => this.lifecycle?.syncTitleLoadingState());
@@ -227,7 +229,11 @@ export class FootballApplication {
       onRematch: () => this.rematch(),
       onReturnToTitle: () => this.returnToTitleScreen(),
     });
-    if (this.lifecycle.phase === 'gameplay' && this.isExhibitionMatchActive()) {
+    if (
+      !this.stadiumPreviewActive &&
+      this.lifecycle.phase === 'gameplay' &&
+      this.isExhibitionMatchActive()
+    ) {
       this.matchController.start(this.gameplay.gameplayModel);
     }
     this.developmentTools = new DevelopmentToolsRuntime({
@@ -357,6 +363,26 @@ export class FootballApplication {
       this.sceneRuntime.render(this.presentation.camera, delta);
       this.lifecycle.syncTitleLoadingState();
       this.lifecycle.syncChrome();
+      return;
+    }
+
+    if (this.stadiumPreviewActive) {
+      const gameplaySnapshot = this.gameplay.getActivePresentationSnapshot(false);
+      this.playerVisuals.setVisible(false);
+      this.sceneRuntime.setDriveLinesVisible(false);
+      this.lifecycle.syncTitleLoadingState();
+      this.lifecycle.syncChrome();
+      this.presentation.renderStadiumPreviewFrame();
+      this.syncStadiumPreviewUi();
+      this.presentation.syncPlayCallUi(
+        gameplaySnapshot,
+        false,
+        this.gameplay.getPreSnapCadenceSnapshot(),
+        { canPunt: false },
+      );
+      this.sceneRuntime.render(this.presentation.camera, delta);
+      this.diagnostics.latestRenderMetrics = this.diagnostics.createRenderMetricsSnapshot(delta);
+      this.markFirstFrameReady();
       return;
     }
 
@@ -973,6 +999,14 @@ export class FootballApplication {
     document.body.dataset.gameMode = this.gameExperience.settings.gameMode;
   }
 
+  private syncStadiumPreviewUi(): void {
+    this.matchScorebug.sync(null, null, false);
+    this.opponentDriveSummary.sync(null, false);
+    this.quarterTransitionPanel.sync(null, false);
+    this.presentation.updatePostgameFrame(null);
+    document.body.dataset.gameMode = this.gameExperience.settings.gameMode;
+  }
+
   private getActivePlayers() {
     return this.gameplay.getActivePlayers(!!this.presentation.crowdPreviewController);
   }
@@ -1361,6 +1395,11 @@ export class FootballApplication {
       document.body.dataset.sceneReady = 'true';
     }
   }
+}
+
+function isStadiumPreviewActive(searchParams: URLSearchParams): boolean {
+  return searchParams.get('stadiumPreview') === '1' ||
+    searchParams.get('stadiumPreview') === 'mountainBowl';
 }
 
 function resolveCrowdCapacityCandidates(searchParams: URLSearchParams): number[] | undefined {

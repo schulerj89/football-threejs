@@ -205,6 +205,33 @@ export class GameplayCameraController {
     }
   }
 
+  updateStadiumPreview(position: THREE.Vector3, lookTarget: THREE.Vector3, fieldOfView: number): void {
+    this.presentationOverrideActive = true;
+    this.rig.perspectiveCamera.fov = fieldOfView;
+    this.rig.perspectiveCamera.updateProjectionMatrix();
+    this.rig.perspectiveCamera.position.copy(position);
+    this.rig.perspectiveCamera.lookAt(lookTarget);
+    this.rig.usePresentationTargets(position, lookTarget);
+    this.cameraState = 'cinematicBroadcast';
+    this.lastGameplayFocus = null;
+    this.cinematicDebug = {
+      ...this.cinematicDebug,
+      activeShotName: null,
+      cameraPosition: { x: position.x, y: position.y, z: position.z },
+      desiredCameraPosition: { x: position.x, y: position.y, z: position.z },
+      desiredLookTarget: { x: lookTarget.x, y: lookTarget.y, z: lookTarget.z },
+      focusTarget: { x: position.x, y: position.y, z: position.z },
+      lookTarget: { x: lookTarget.x, y: lookTarget.y, z: lookTarget.z },
+      orbitCenter: null,
+      orbitRadius: null,
+      perFrameAngularChange: 0,
+      perFrameDisplacement: 0,
+      phase: 'preSnapEstablish',
+      restoreCamera: this.mode,
+      shotProgress: null,
+    };
+  }
+
   finishPregamePresentation(snapshot?: GameplaySnapshot): void {
     this.presentationOverrideActive = false;
     this.presentationDirector.reset();
