@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.81] - 2026-06-25
+
+### Changed
+
+- Updated `AGENTS.md` so contributor guidance presents 11v11 as the only exposed app surface and keeps legacy smaller-roster paths as internal regression coverage only.
+
+### Tests
+
+- Not run; documentation-only change.
+
 ## [1.22.80] - 2026-06-24
 
 ### Changed
