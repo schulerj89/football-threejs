@@ -2427,6 +2427,11 @@ body[data-game-mode="exhibition"] .score-counter {
   display: none;
 }
 
+.football-hub-playnow-matchup[hidden],
+.football-hub-game-settings[hidden] {
+  display: none;
+}
+
 .football-hub-matchup {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);

@@ -1,0 +1,36 @@
+{
+  "capturedAt": "2026-06-25T00:42:52.021Z",
+  "url": "http://127.0.0.1:5176/?matchSeed=20260624",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "files": [
+    "play-now-matchup-screen.png",
+    "play-now-game-settings-screen.png",
+    "play-now-game-settings-panel.png",
+    "settings-screen-no-game-tab.png"
+  ],
+  "playNowValues": {
+    "gameSettingsVisibleOnMatchup": false,
+    "quarterLengthOnMatchupVisible": false,
+    "difficultyOnMatchupVisible": false,
+    "weatherOnMatchupVisible": false,
+    "summary": "Metro Meteors MET vs Lakefront Lights LFL | Exhibition | 11v11 | 3:00 quarters | Pro difficulty | Clear / Sunny weather"
+  },
+  "gameSettingsValues": {
+    "quarterLength": "180",
+    "difficulty": "pro",
+    "weather": "clear",
+    "matchupVisible": false
+  },
+  "settingsValues": {
+    "navLabels": [
+      "PRESENTATION",
+      "AUDIO",
+      "ACCESSIBILITY"
+    ],
+    "quarterLengthCount": 0,
+    "difficultyCount": 0
+  }
+}

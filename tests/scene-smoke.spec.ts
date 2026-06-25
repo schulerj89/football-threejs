@@ -1248,13 +1248,12 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await page.locator('.football-hub-nav').getByRole('button', { name: 'Settings' }).click();
   const hubSettings = page.locator('.football-hub-settings-view');
   await expect(hubSettings.locator('.settings-navigation button')).toHaveText([
-    'Game',
     'Presentation',
     'Audio',
     'Accessibility',
   ]);
-  await expect(hubSettings.getByLabel('Quarter length')).toBeVisible();
-  await expect(hubSettings.getByLabel('Difficulty')).toBeVisible();
+  await expect(hubSettings.getByLabel('Quarter length')).toHaveCount(0);
+  await expect(hubSettings.getByLabel('Difficulty')).toHaveCount(0);
   await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Audio' }).click();
   await expect(hubSettings.getByText('Music volume')).toBeVisible();
   await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Presentation' }).click();
@@ -1279,6 +1278,13 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.football-hub-play-team-logo-stage')).toHaveCount(2);
   await expect(page.locator('.football-hub-play-team').first()).toContainText(/\w+ \w+/);
   await expect(page.locator('.football-hub-play-team').first()).toContainText(/[A-Z]{3}/);
+  await expect(page.locator('.football-hub-game-settings')).toBeHidden();
+  await expect(page.getByLabel('Play Now quarter length')).toBeHidden();
+  await expect(page.getByLabel('Play Now difficulty')).toBeHidden();
+  await expect(page.getByLabel('Play Now weather')).toBeHidden();
+  await expect(page.locator('.football-hub-screen').getByRole('button', { name: 'Game Settings' })).toBeVisible();
+  await page.locator('.football-hub-screen').getByRole('button', { name: 'Game Settings' }).click();
+  await expect(page.locator('.football-hub-playnow-matchup')).toBeHidden();
   await expect(page.locator('.football-hub-game-settings')).toBeVisible();
   await expect(page.locator('.football-hub-game-settings h3')).toHaveText('Game Settings');
   await expect(page.getByLabel('Play Now quarter length')).toHaveValue('180');
@@ -1287,6 +1293,9 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await page.getByLabel('Play Now weather').selectOption('rain');
   await expect(page.getByLabel('Play Now weather')).toHaveValue('rain');
   await expect(page.locator('.football-hub-match-summary')).toContainText('Rain weather');
+  await page.locator('.football-hub-game-settings').getByRole('button', { name: 'Back to Play Now' }).click();
+  await expect(page.locator('.football-hub-playnow-matchup')).toBeVisible();
+  await expect(page.locator('.football-hub-game-settings')).toBeHidden();
   const playNowLogoBox = await page.locator('.football-hub-play-team-logo').first().boundingBox();
   expect(playNowLogoBox?.width ?? 0).toBeGreaterThanOrEqual(170);
   expect(playNowLogoBox?.height ?? 0).toBeGreaterThanOrEqual(170);
@@ -1370,8 +1379,10 @@ test('shows the title screen, opens football hub, and starts pregame from Play N
   await expect(page.locator('.title-screen')).toBeVisible();
   await page.getByRole('button', { name: 'Start Game' }).click();
   await expect(page.locator('.football-hub-screen')).toBeVisible();
+  await expect(page.locator('.football-hub-playnow-matchup')).toBeVisible();
+  await page.locator('.football-hub-screen').getByRole('button', { name: 'Game Settings' }).click();
   await expect(page.getByLabel('Play Now weather')).toHaveValue('rain');
-  await page.locator('.football-hub-screen').getByRole('button', { name: 'Play Game' }).click();
+  await page.locator('.football-hub-game-settings').getByRole('button', { name: 'Play Game' }).click();
   await expect(page.locator('.match-setup-screen')).toHaveCount(0);
   await expect(page.locator('body[data-app-phase="pregamePresentation"]')).toBeAttached();
   await expect(page.locator('.gameplay-hud')).toBeHidden();
@@ -1869,9 +1880,13 @@ test('persists football hub settings across reloads', async ({ page }) => {
   await page.locator('.football-hub-nav').getByRole('button', { name: 'Settings' }).click();
   await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Presentation' }).click();
   await hubSettings.getByLabel('Presentation preset').selectOption('performance');
-  await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Game' }).click();
-  await hubSettings.getByLabel('Quarter length').selectOption('300');
-  await hubSettings.getByLabel('Difficulty').selectOption('rookie');
+  await expect(hubSettings.getByLabel('Quarter length')).toHaveCount(0);
+  await expect(hubSettings.getByLabel('Difficulty')).toHaveCount(0);
+  await page.locator('.football-hub-nav').getByRole('button', { name: 'Play Now' }).click();
+  await page.locator('.football-hub-screen').getByRole('button', { name: 'Game Settings' }).click();
+  await page.getByLabel('Play Now quarter length').selectOption('300');
+  await page.getByLabel('Play Now difficulty').selectOption('rookie');
+  await page.getByLabel('Play Now weather').selectOption('rain');
 
   await page.reload();
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
@@ -1883,11 +1898,15 @@ test('persists football hub settings across reloads', async ({ page }) => {
   await page.locator('.football-hub-nav').getByRole('button', { name: 'Settings' }).click();
   await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Presentation' }).click();
   await expect(hubSettings.getByLabel('Presentation preset')).toHaveValue('performance');
-  await hubSettings.locator('.settings-navigation').getByRole('button', { name: 'Game' }).click();
-  await expect(hubSettings.getByLabel('Quarter length')).toHaveValue('300');
-  await expect(hubSettings.getByLabel('Difficulty')).toHaveValue('rookie');
+  await expect(hubSettings.getByLabel('Quarter length')).toHaveCount(0);
+  await expect(hubSettings.getByLabel('Difficulty')).toHaveCount(0);
   await expect(hubSettings.getByLabel('Game mode')).toHaveCount(0);
   await expect(hubSettings.getByLabel('Regression playbook')).toHaveCount(0);
+  await page.locator('.football-hub-nav').getByRole('button', { name: 'Play Now' }).click();
+  await page.locator('.football-hub-screen').getByRole('button', { name: 'Game Settings' }).click();
+  await expect(page.getByLabel('Play Now quarter length')).toHaveValue('300');
+  await expect(page.getByLabel('Play Now difficulty')).toHaveValue('rookie');
+  await expect(page.getByLabel('Play Now weather')).toHaveValue('rain');
 });
 
 test('toggles runtime debug tools with F1', async ({ page }) => {

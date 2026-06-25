@@ -55,6 +55,7 @@ import type { WeatherCondition } from '../weather/WeatherTypes';
 
 type HubSection = 'playNow' | 'dynasty' | 'rosters' | 'settings';
 type DynastyPage = 'week' | 'standings' | 'awards' | 'program' | 'training' | 'schedule' | 'roster';
+type PlayNowPage = 'gameSettings' | 'matchup';
 type RosterTab = 'offense' | 'defense' | 'specialists';
 type RosterSort = 'number' | 'name' | 'overall' | 'position';
 
@@ -120,6 +121,7 @@ export class FootballHubScreen {
     opponent: document.createElement('select'),
     user: document.createElement('select'),
   };
+  private readonly playNowMatchupView = document.createElement('div');
   private readonly playNowUniformSelects = {
     opponent: document.createElement('select'),
     user: document.createElement('select'),
@@ -127,7 +129,10 @@ export class FootballHubScreen {
   private readonly playNowValidation = document.createElement('div');
   private readonly playNowCorrectionButton = document.createElement('button');
   private readonly playNowPlayButton = document.createElement('button');
+  private readonly playNowSettingsButton = document.createElement('button');
   private readonly playNowGameSettings = document.createElement('section');
+  private readonly playNowSettingsBackButton = document.createElement('button');
+  private readonly playNowSettingsPlayButton = document.createElement('button');
   private readonly playNowQuarterLengthSelect = document.createElement('select');
   private readonly playNowDifficultySelect = document.createElement('select');
   private readonly playNowWeatherSelect = document.createElement('select');
@@ -150,6 +155,7 @@ export class FootballHubScreen {
   private rosterTab: RosterTab = 'offense';
   private rosterSort: RosterSort = 'overall';
   private rosterPositionFilterValue = 'all';
+  private playNowPage: PlayNowPage = 'matchup';
   private selectedTeamId: string;
   private selectedRosterPlayerId: string | null = null;
   private settings: GameExperienceSettings;
@@ -210,6 +216,7 @@ export class FootballHubScreen {
     this.visible = visible;
     this.root.hidden = !visible;
     if (visible) {
+      this.playNowPage = 'matchup';
       this.sync();
       this.root.focus({ preventScroll: true });
     }
@@ -280,6 +287,7 @@ export class FootballHubScreen {
 
   private createPlayNowView(): void {
     this.playNowView.className = 'football-hub-view football-hub-playnow';
+    this.playNowMatchupView.className = 'football-hub-playnow-matchup';
     const matchup = document.createElement('div');
     matchup.className = 'football-hub-matchup';
     matchup.append(
@@ -302,24 +310,15 @@ export class FootballHubScreen {
     this.playNowPlayButton.type = 'button';
     this.playNowPlayButton.className = 'football-hub-primary';
     this.playNowPlayButton.textContent = 'Play Game';
-    this.playNowPlayButton.addEventListener('click', () => {
-      this.handleFirstGesture();
-      if (!validateMatchupSelection(this.matchupSelection).canConfirm) {
-        return;
-      }
-      this.options.onPlayGame({
-        ...this.settings,
-        teamProfiles: createTeamProfileSettingsFromMatchupSelection(
-          this.matchupSelection,
-          this.settings.teamProfiles,
-        ),
-      }, {
-        source: 'playNow',
-      });
-    });
-    actions.append(this.playNowCorrectionButton, this.playNowPlayButton);
+    this.playNowPlayButton.addEventListener('click', () => this.startPlayNowGame());
+    this.playNowSettingsButton.type = 'button';
+    this.playNowSettingsButton.className = 'football-hub-secondary';
+    this.playNowSettingsButton.textContent = 'Game Settings';
+    this.playNowSettingsButton.addEventListener('click', () => this.setPlayNowPage('gameSettings'));
+    actions.append(this.playNowCorrectionButton, this.playNowPlayButton, this.playNowSettingsButton);
     this.createPlayNowGameSettings();
-    this.playNowView.append(matchup, this.playNowSummary, this.playNowGameSettings, actions);
+    this.playNowMatchupView.append(matchup, this.playNowSummary, actions);
+    this.playNowView.append(this.playNowMatchupView, this.playNowGameSettings);
   }
 
   private createPlayNowGameSettings(): void {
@@ -328,7 +327,7 @@ export class FootballHubScreen {
     const title = document.createElement('h3');
     title.textContent = 'Game Settings';
     const subtitle = document.createElement('p');
-    subtitle.textContent = 'Set this matchup before Play Game.';
+    subtitle.textContent = 'Set this Play Now matchup before kickoff.';
     header.append(title, subtitle);
 
     const grid = document.createElement('div');
@@ -377,7 +376,18 @@ export class FootballHubScreen {
       createPlayNowSettingControl('Difficulty', this.playNowDifficultySelect),
       createPlayNowSettingControl('Weather', this.playNowWeatherSelect),
     );
-    this.playNowGameSettings.append(header, grid);
+    const actions = document.createElement('div');
+    actions.className = 'football-hub-actions';
+    this.playNowSettingsBackButton.type = 'button';
+    this.playNowSettingsBackButton.className = 'football-hub-secondary';
+    this.playNowSettingsBackButton.textContent = 'Back to Play Now';
+    this.playNowSettingsBackButton.addEventListener('click', () => this.setPlayNowPage('matchup'));
+    this.playNowSettingsPlayButton.type = 'button';
+    this.playNowSettingsPlayButton.className = 'football-hub-primary';
+    this.playNowSettingsPlayButton.textContent = 'Play Game';
+    this.playNowSettingsPlayButton.addEventListener('click', () => this.startPlayNowGame());
+    actions.append(this.playNowSettingsBackButton, this.playNowSettingsPlayButton);
+    this.playNowGameSettings.append(header, grid, actions);
   }
 
   private configurePlayNowSelect(
@@ -575,10 +585,18 @@ export class FootballHubScreen {
   }
 
   private setSection(section: HubSection): void {
+    if (section === 'playNow' && this.activeSection !== 'playNow') {
+      this.playNowPage = 'matchup';
+    }
     this.activeSection = section;
     if (section !== 'dynasty') {
       this.dynastyPage = 'week';
     }
+    this.sync();
+  }
+
+  private setPlayNowPage(page: PlayNowPage): void {
+    this.playNowPage = page;
     this.sync();
   }
 
@@ -605,6 +623,8 @@ export class FootballHubScreen {
     this.settingsView.hidden = this.activeSection !== 'settings';
     this.sectionTitle.textContent = sectionTitle(this.activeSection);
     this.sectionSubtitle.textContent = sectionSubtitle(this.activeSection);
+    this.playNowMatchupView.hidden = this.playNowPage !== 'matchup';
+    this.playNowGameSettings.hidden = this.playNowPage !== 'gameSettings';
 
     this.syncPlayNow(league);
     this.syncDynasty(league);
@@ -1371,7 +1391,24 @@ export class FootballHubScreen {
     }
     this.playNowCorrectionButton.hidden = !validation.uniformConflict;
     this.playNowPlayButton.disabled = !validation.canConfirm;
+    this.playNowSettingsPlayButton.disabled = !validation.canConfirm;
     this.playNowView.dataset.valid = String(validation.canConfirm);
+  }
+
+  private startPlayNowGame(): void {
+    this.handleFirstGesture();
+    if (!validateMatchupSelection(this.matchupSelection).canConfirm) {
+      return;
+    }
+    this.options.onPlayGame({
+      ...this.settings,
+      teamProfiles: createTeamProfileSettingsFromMatchupSelection(
+        this.matchupSelection,
+        this.settings.teamProfiles,
+      ),
+    }, {
+      source: 'playNow',
+    });
   }
 
   private updateMatchupSelection(selection: MatchupSelection): void {

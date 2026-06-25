@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.76] - 2026-06-24
+
+### Changed
+
+- Moved Play Now quarter length, difficulty, and weather into a separate Play Now `Game Settings` screen instead of showing them on the matchup screen.
+- Removed quarter length and difficulty from the global Football Hub Settings panel, leaving Presentation, Audio, and Accessibility there.
+
+### Added
+
+- Added `artifacts/play-now-settings-validation-1.22.76/` with screenshots for the Play Now matchup screen, separate Play Now Game Settings screen, and global Settings screen without the Game tab.
+
+### Tests
+
+- Verified `npx playwright test tests/scene-smoke.spec.ts -g "shows the title screen, opens football hub, and starts pregame from Play Now|persists football hub settings across reloads"` and `npm run build`.
+
 ## [1.22.75] - 2026-06-24
 
 ### Fixed

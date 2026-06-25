@@ -6,7 +6,6 @@ import {
 } from '../config/GameExperienceSettings';
 import { createAccessibilitySettingsSection } from './settings/AccessibilitySettingsSection';
 import { createAudioSettingsSection } from './settings/AudioSettingsSection';
-import { createGameSettingsSection } from './settings/GameSettingsSection';
 import { createPresentationSettingsSection } from './settings/PresentationSettingsSection';
 import { createRangeSetting } from './settings/RangeSetting';
 import { createSelectSetting } from './settings/SelectSetting';
@@ -35,7 +34,7 @@ export const SETTINGS_OPEN_FULL_EVENT = 'football-settings-open-full';
 export class SettingsPanel {
   readonly root = document.createElement('section');
 
-  private activeCategory: SettingsCategoryId = 'game';
+  private activeCategory: SettingsCategoryId = 'presentation';
   private context: SettingsPanelContext;
   private settings: GameExperienceSettings;
   private variant: SettingsPanelVariant;
@@ -194,7 +193,7 @@ export class SettingsPanel {
     if (this.activeCategory === 'accessibility') {
       return createAccessibilitySettingsSection(context);
     }
-    return createGameSettingsSection(context);
+    return createPresentationSettingsSection(context);
   }
 
   private createSectionContext(): SettingsSectionContext {

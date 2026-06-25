@@ -1,6 +1,6 @@
 import type { GameExperienceSettings } from '../../config/GameExperienceSettings';
 
-export type SettingsCategoryId = 'accessibility' | 'audio' | 'game' | 'presentation';
+export type SettingsCategoryId = 'accessibility' | 'audio' | 'presentation';
 export type SettingsPanelContext = 'activeMatch' | 'menu';
 export type SettingsPanelVariant = 'full' | 'pause';
 
@@ -19,12 +19,10 @@ export interface SettingsSectionContext {
 export const SETTINGS_CATEGORY_LABELS: Readonly<Record<SettingsCategoryId, string>> = {
   accessibility: 'Accessibility',
   audio: 'Audio',
-  game: 'Game',
   presentation: 'Presentation',
 } as const;
 
 export const SETTINGS_CATEGORY_ORDER: readonly SettingsCategoryId[] = [
-  'game',
   'presentation',
   'audio',
   'accessibility',
