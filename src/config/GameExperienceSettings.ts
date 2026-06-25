@@ -88,6 +88,7 @@ export interface GameExperienceSettings {
   menuPlaylistOrder: AudioSettings['menuPlaylistOrder'];
   musicEnabled: boolean;
   musicVolume: number;
+  mountainBowlEnabled: boolean;
   muted: boolean;
   officialsDebugLabels: boolean;
   officialsEnabled: boolean;
@@ -137,6 +138,7 @@ export interface GameExperienceQueryOverrides {
   menuPlaylistOrder?: AudioSettings['menuPlaylistOrder'];
   musicEnabled?: boolean;
   musicVolume?: number;
+  mountainBowlEnabled?: boolean;
   muted?: boolean;
   officialsDebugLabels?: boolean;
   officialsEnabled?: boolean;
@@ -229,6 +231,7 @@ export const BROADCAST_EXPERIENCE_SETTINGS: GameExperienceSettings = {
   menuPlaylistOrder: DEFAULT_AUDIO_SETTINGS.menuPlaylistOrder,
   musicEnabled: DEFAULT_AUDIO_SETTINGS.musicEnabled,
   musicVolume: DEFAULT_AUDIO_SETTINGS.musicVolume,
+  mountainBowlEnabled: false,
   muted: DEFAULT_AUDIO_SETTINGS.muted,
   officialsDebugLabels: false,
   officialsEnabled: false,
@@ -411,6 +414,7 @@ export function normalizeGameExperienceSettings(
       : presetDefaults.menuPlaylistOrder,
     musicEnabled: settings.musicEnabled ?? presetDefaults.musicEnabled,
     musicVolume: clampVolume(settings.musicVolume ?? presetDefaults.musicVolume),
+    mountainBowlEnabled: settings.mountainBowlEnabled ?? presetDefaults.mountainBowlEnabled,
     muted: settings.muted ?? presetDefaults.muted,
     officialsDebugLabels:
       settings.officialsDebugLabels ?? presetDefaults.officialsDebugLabels,
@@ -553,6 +557,9 @@ export function resolveGameExperienceQueryOverrides(
   applyBooleanOverride(overrides, 'debugToolsEnabled', searchParams, 'debugTools');
   applyBooleanOverride(overrides, 'muted', searchParams, 'muted');
   applyBooleanOverride(overrides, 'musicEnabled', searchParams, 'music');
+  if (searchParams.get('stadiumTheme') === 'mountainBowl') {
+    overrides.mountainBowlEnabled = true;
+  }
   applyBooleanOverride(overrides, 'officialsDebugLabels', searchParams, 'officialsDebug');
   applyBooleanOverride(
     overrides,
@@ -744,6 +751,7 @@ function applyBooleanOverride(
     | 'debugToolsEnabled'
     | 'muted'
     | 'musicEnabled'
+    | 'mountainBowlEnabled'
     | 'officialsDebugLabels'
     | 'officialsEnabled'
     | 'playerMotionEnabled'

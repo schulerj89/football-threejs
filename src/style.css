@@ -2705,6 +2705,23 @@ body[data-game-mode="exhibition"] .score-counter {
   font: inherit;
 }
 
+.football-hub-game-setting[data-kind="checkbox"] {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: rgba(16, 23, 22, 0.82);
+}
+
+.football-hub-game-setting[data-kind="checkbox"] input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #4f8dff;
+}
+
 .football-hub-dynasty {
   display: grid;
   gap: 14px;

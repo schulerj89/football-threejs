@@ -87,15 +87,19 @@ test('mountain bowl preview shows procedural mountains without on-field player a
   expect(stage.normalOfficialsVisibleCount).toBe(0);
 });
 
-test('mountain bowl launches through play now pregame with warmup players', async ({ page }) => {
+test('mountain bowl launches through play now game settings with warmup players', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?stadiumTheme=mountainBowl');
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/');
   await expect(page.locator('body[data-scene-ready="true"]')).toBeAttached();
   await expect(page.locator('.title-screen')).toBeVisible();
 
   await page.getByRole('button', { name: 'Start Game' }).click();
   await expect(page.locator('.football-hub-screen')).toBeVisible();
-  await page.locator('.football-hub-playnow-matchup').getByRole('button', { name: 'Play Game' }).click();
+  await page.locator('.football-hub-playnow-matchup').getByRole('button', { name: 'Game Settings' }).click();
+  await expect(page.locator('.football-hub-game-settings')).toBeVisible();
+  await page.getByLabel('Add mountains').check();
+  await page.locator('.football-hub-game-settings').getByRole('button', { name: 'Play Game' }).click();
 
   await expect(page.locator('body[data-app-phase="pregamePresentation"]')).toBeAttached();
   await expect(page.locator('.play-call-ui')).toBeHidden();

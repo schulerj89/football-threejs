@@ -1,0 +1,529 @@
+{
+  "gameExperienceSnapshot": {
+    "assetReadiness": {
+      "audioEnabled": true,
+      "crowdSpectatorCount": 15000,
+      "crowdVisualsAllocated": true,
+      "decodedAudioBytes": 917280,
+      "loadedAudioAssetIds": [
+        "announcer_a_pregame_welcome_02",
+        "crowd_idle_loop_01",
+        "football-js-drive-to-glory"
+      ],
+      "loadedCompressedAudioBytes": 84471,
+      "missingOptionalAudioAssetIds": [],
+      "streamedAudioAssetIds": [
+        "crowd_idle_loop_01",
+        "football-js-drive-to-glory"
+      ]
+    },
+    "developmentModes": {
+      "appearanceAudit": false,
+      "crowdPreview": false,
+      "formationPreview": false,
+      "passAudit": false,
+      "presentationAudit": false,
+      "routeAudit": false,
+      "shotPreview": false
+    },
+    "effectivePreset": "broadcast",
+    "finalSettings": {
+      "announcerEnabled": true,
+      "announcerVoice": "auto",
+      "announcerVolume": 0.85,
+      "audioEnabled": true,
+      "captionsEnabled": false,
+      "cinematics": "brief",
+      "coachesEnabled": true,
+      "controlledPlayerLabelEnabled": true,
+      "crowdAudioEnabled": true,
+      "crowdDensity": "medium",
+      "crowdFullness": "standard",
+      "crowdReactionsEnabled": true,
+      "crowdVolume": 0.45,
+      "crowdVisualsEnabled": true,
+      "debugToolsEnabled": false,
+      "gameplayCamera": "offense",
+      "gameMode": "exhibition",
+      "masterVolume": 0.85,
+      "matchDifficulty": "pro",
+      "menuPlaylistOrder": "sequential",
+      "musicEnabled": true,
+      "musicVolume": 0.72,
+      "mountainBowlEnabled": true,
+      "muted": false,
+      "officialsDebugLabels": false,
+      "officialsEnabled": false,
+      "playerMotionEnabled": true,
+      "playerVisualMode": "procedural",
+      "playbookId": "11v11",
+      "preset": "broadcast",
+      "quarterLengthSeconds": 180,
+      "qualityMode": "adaptive60",
+      "routeArtEnabled": true,
+      "selectedReceiverLabelEnabled": false,
+      "sidelineDensity": "medium",
+      "sidelinePlayersEnabled": true,
+      "stadiumEnabled": true,
+      "teamProfiles": {
+        "customProfiles": {},
+        "opponentTeamId": "lakefront-lights",
+        "opponentUniform": "away",
+        "userTeamId": "metro-meteors",
+        "userUniform": "home"
+      },
+      "tunnelTableauEnabled": true,
+      "weatherCondition": "clear"
+    },
+    "persistedSettings": {
+      "customSettings": null,
+      "preset": "broadcast",
+      "settings": {
+        "announcerEnabled": true,
+        "announcerVoice": "auto",
+        "announcerVolume": 0.85,
+        "audioEnabled": true,
+        "captionsEnabled": false,
+        "cinematics": "brief",
+        "coachesEnabled": true,
+        "controlledPlayerLabelEnabled": true,
+        "crowdAudioEnabled": true,
+        "crowdDensity": "medium",
+        "crowdFullness": "standard",
+        "crowdReactionsEnabled": true,
+        "crowdVolume": 0.45,
+        "crowdVisualsEnabled": true,
+        "debugToolsEnabled": false,
+        "gameplayCamera": "offense",
+        "gameMode": "exhibition",
+        "masterVolume": 0.85,
+        "matchDifficulty": "pro",
+        "menuPlaylistOrder": "sequential",
+        "musicEnabled": true,
+        "musicVolume": 0.72,
+        "mountainBowlEnabled": true,
+        "muted": false,
+        "officialsDebugLabels": false,
+        "officialsEnabled": false,
+        "playerMotionEnabled": true,
+        "playerVisualMode": "procedural",
+        "playbookId": "11v11",
+        "preset": "broadcast",
+        "quarterLengthSeconds": 180,
+        "qualityMode": "adaptive60",
+        "routeArtEnabled": true,
+        "selectedReceiverLabelEnabled": false,
+        "sidelineDensity": "medium",
+        "sidelinePlayersEnabled": true,
+        "stadiumEnabled": true,
+        "teamProfiles": {
+          "customProfiles": {},
+          "opponentTeamId": "lakefront-lights",
+          "opponentUniform": "away",
+          "userTeamId": "metro-meteors",
+          "userUniform": "home"
+        },
+        "tunnelTableauEnabled": true,
+        "weatherCondition": "clear"
+      },
+      "version": 17
+    },
+    "queryOverrides": {}
+  },
+  "pregamePresentationSnapshot": {
+    "activeCommentary": "welcome",
+    "activeSubject": "stadiumCenterOrbit",
+    "activeTeam": null,
+    "audio": {
+      "activeLine": {
+        "actualEndedAtSeconds": null,
+        "assetId": "announcer_a_pregame_welcome_02",
+        "catalogDurationSeconds": 5.28,
+        "caption": "This is Football JS, with Grant Mercer on the call. The offense is moments from the first snap.",
+        "completed": false,
+        "failed": false,
+        "lineId": "welcome",
+        "playbackState": "playing",
+        "remainingSeconds": 2.5192970521541938,
+        "safetyEndsAtSeconds": 16.270566893424036,
+        "started": true,
+        "startedAtSeconds": 7.990566893424036
+      },
+      "completedLineIds": [],
+      "crowdActiveLoopIds": [
+        "crowd_idle_loop_01"
+      ],
+      "crowdDuckingGain": 0.78,
+      "crowdGain": 0.35100000000000003,
+      "failedLineIds": [],
+      "history": [
+        {
+          "actualStartedAtSeconds": 7.990566893424036,
+          "assetId": "announcer_a_pregame_welcome_02",
+          "catalogDurationSeconds": 5.28,
+          "lineId": "welcome",
+          "reason": null,
+          "status": "played",
+          "timeSeconds": 7.990566893424036
+        },
+        {
+          "actualStartedAtSeconds": 5.630839002267574,
+          "assetId": "pregame_welcome_02",
+          "catalogDurationSeconds": 4.7,
+          "lineId": "welcome",
+          "reason": null,
+          "status": "started",
+          "timeSeconds": 5.630839002267574
+        }
+      ],
+      "musicGain": 0.34,
+      "musicLoopActive": true,
+      "musicState": "handoff",
+      "playbackState": "playing",
+      "queuedLine": null
+    },
+    "completed": false,
+    "crowdState": {
+      "activeLoops": [
+        "crowd_idle_loop_01"
+      ],
+      "duckingGain": 0.78,
+      "gain": 0.35100000000000003
+    },
+    "currentShot": "stadiumCenterOrbit",
+    "elapsedSeconds": 1.5000000000000002,
+    "holdReason": "minimumDuration,commentary:welcome,commentary:matchup,commentary:weather",
+    "lastStepTransitionSeconds": null,
+    "lowerThird": {
+      "abbreviation": null,
+      "accentColor": "#f2d94b",
+      "caption": null,
+      "detail": null,
+      "displayName": null,
+      "visible": false
+    },
+    "introOverlay": "matchup",
+    "keysToGame": [
+      {
+        "id": "user-passing",
+        "source": "userStrength",
+        "supportedCategory": "passing",
+        "supportedScore": 91,
+        "text": "Use J. CARTER's arm to challenge the secondary."
+      },
+      {
+        "id": "opponent-coverage",
+        "source": "opponentThreat",
+        "supportedCategory": "coverage",
+        "supportedScore": 90,
+        "text": "Stay patient against Lights's coverage."
+      },
+      {
+        "id": "matchup-rushing",
+        "source": "matchupPriority",
+        "supportedCategory": "rushing",
+        "supportedScore": 86,
+        "text": "Keep early downs manageable with steady runs."
+      }
+    ],
+    "musicState": {
+      "gain": 0.34,
+      "loopActive": true,
+      "state": "handoff"
+    },
+    "musicGain": 0.34,
+    "phase": "running",
+    "presentationCloneCount": 38,
+    "progress": 0.15789473684210528,
+    "quarterbackAppearance": {
+      "bodyReady": true,
+      "faceguardMaterialName": "football-helmet-faceguard-standard-f2f4f6",
+      "fallbackReason": null,
+      "headBounds": {
+        "center": {
+          "x": -39.55666666666667,
+          "y": 1.8199999999999998,
+          "z": -18.7
+        },
+        "max": {
+          "x": -39.39666667024295,
+          "y": 1.9799999964237212,
+          "z": -18.540000003576278
+        },
+        "min": {
+          "x": -39.71666666309039,
+          "y": 1.6600000035762785,
+          "z": -18.85999999642372
+        },
+        "size": {
+          "x": 0.3199999928474426,
+          "y": 0.3199999928474426,
+          "z": 0.3199999928474426
+        }
+      },
+      "helmetAssetId": "football-helmet-kit",
+      "helmetBounds": {
+        "center": {
+          "x": -39.617057680885004,
+          "y": 1.9398996728658675,
+          "z": -18.699436836242675
+        },
+        "max": {
+          "x": -39.254084335962936,
+          "y": 2.247113713026047,
+          "z": -18.36193033218384
+        },
+        "min": {
+          "x": -39.98003102580707,
+          "y": 1.6326856327056882,
+          "z": -19.036943340301512
+        },
+        "size": {
+          "x": 0.725946689844136,
+          "y": 0.6144280803203586,
+          "z": 0.6750130081176735
+        }
+      },
+      "helmetReady": true,
+      "playerAssetStatus": "idle",
+      "shellMaterialName": "football-helmet-shell-standard-2f66d8",
+      "subjectReady": true,
+      "subjectVisible": true,
+      "rosterPlayerId": "metro-meteors-qb-12"
+    },
+    "sequence": [
+      "stadiumCenterOrbit",
+      "quarterbackFrontSpotlight",
+      "transitionToCoinToss"
+    ],
+    "shotElapsedSeconds": 1.5000000000000002,
+    "sidelineCounts": {
+      "sideline": 20,
+      "tunnel": 11
+    },
+    "warmup": {
+      "enabled": true,
+      "opponentReady": true,
+      "playerCount": 30,
+      "propCount": 8,
+      "ready": true,
+      "userReady": true
+    },
+    "skipState": "available",
+    "spotlight": {
+      "active": false,
+      "cameraSubjectBounds": null,
+      "cloneStatus": "none",
+      "completionBlockers": [],
+      "gameplayPlayerId": null,
+      "lowerThirdVisible": false,
+      "rosterPlayerId": null,
+      "selectedCommentaryId": null,
+      "speechRemainingSeconds": null,
+      "subjectFallbackReason": null
+    },
+    "nextShot": "quarterbackFrontSpotlight",
+    "subjectReady": true,
+    "subjectBounds": {
+      "center": {
+        "x": 0,
+        "y": 1.6,
+        "z": 0
+      },
+      "max": {
+        "x": 26.666666666666668,
+        "z": 60
+      },
+      "min": {
+        "x": -26.666666666666668,
+        "z": -60
+      },
+      "size": {
+        "x": 53.333333333333336,
+        "z": 120
+      },
+      "source": "field"
+    },
+    "targetGameplayCamera": "offensePerspective",
+    "weatherCondition": "clear"
+  },
+  "stadiumSnapshot": {
+    "drawCalls": 77,
+    "geometryCount": 71,
+    "materialCount": 24,
+    "seatCount": 25056,
+    "textureCount": 4,
+    "triangles": 49193,
+    "enabled": true,
+    "imageMaterialsEnabled": true,
+    "lowerTierRows": 16,
+    "mountainBowl": {
+      "baseBermCount": 3,
+      "bounds": {
+        "maxX": 340,
+        "maxY": 67.31999969482422,
+        "maxZ": 271.2974548339844,
+        "minX": -340,
+        "minY": -17.048221588134766,
+        "minZ": -168
+      },
+      "edgeFeathered": true,
+      "layerCount": 4,
+      "materialCount": 17,
+      "peakCount": 33,
+      "rockFacetCount": 23,
+      "ridgeCount": 3,
+      "scenicBounds": {
+        "maxX": 239,
+        "maxY": 67.31999969482422,
+        "maxZ": 271.2974548339844,
+        "minX": -247,
+        "minY": -17.048221588134766,
+        "minZ": 155.5
+      },
+      "ridgeNames": [
+        "mountain-bowl-far-ridge",
+        "mountain-bowl-mid-ridge",
+        "mountain-bowl-foothill-ridge"
+      ],
+      "retainingWallPanelCount": 7,
+      "servicePathCount": 10,
+      "snowCapCount": 2,
+      "terraceShelfCount": 5,
+      "treeLineCount": 24,
+      "triangleCount": 21993,
+      "valleySkirtSegmentCount": 4
+    },
+    "themeId": "mountainBowl",
+    "upperTierEnabled": true
+  },
+  "stageSnapshot": {
+    "activePrimaryGroups": [
+      "warmupPlayers"
+    ],
+    "appPhase": "pregamePresentation",
+    "coinToss": {
+      "bareHeadCount": 0,
+      "coinVisible": false,
+      "helmetReadyCount": 0,
+      "profileMatchCount": 0,
+      "totalCount": 0,
+      "visibleCount": 0
+    },
+    "conflictingPrimaryGroups": [],
+    "fieldGoalFixture": {
+      "family": "fieldGoal",
+      "normalGameActive": false,
+      "participantCount": 12,
+      "profileMatchCount": 12
+    },
+    "gameplay": {
+      "bareHeadCount": 0,
+      "helmetCount": 0,
+      "profileMatchCount": 22,
+      "totalCount": 22,
+      "visibleCount": 0
+    },
+    "helmetAsset": {
+      "assetId": "football-helmet-kit",
+      "attachedPlayerIds": [
+        "lakefront-lights-c-61",
+        "lakefront-lights-cb-22",
+        "lakefront-lights-cb-27",
+        "lakefront-lights-cb-35",
+        "lakefront-lights-dl-60",
+        "lakefront-lights-dl-91",
+        "lakefront-lights-dl-93",
+        "lakefront-lights-dl-98",
+        "lakefront-lights-fs-33",
+        "lakefront-lights-ilb-45",
+        "lakefront-lights-k-5",
+        "lakefront-lights-lg-64",
+        "lakefront-lights-ls-49",
+        "lakefront-lights-lt-73",
+        "lakefront-lights-olb-42",
+        "lakefront-lights-olb-44",
+        "lakefront-lights-olb-53",
+        "lakefront-lights-p-9",
+        "lakefront-lights-qb-8",
+        "lakefront-lights-rb-28",
+        "lakefront-lights-rb-3",
+        "lakefront-lights-rg-70",
+        "lakefront-lights-rt-77",
+        "lakefront-lights-slot-16",
+        "lakefront-lights-ss-38",
+        "lakefront-lights-te-84",
+        "lakefront-lights-te-88",
+        "lakefront-lights-wr-10",
+        "lakefront-lights-wr-7",
+        "lakefront-lights-wr-81",
+        "lakefront-lights-wr-89",
+        "metro-meteors-c-55",
+        "metro-meteors-cb-34",
+        "metro-meteors-dl-60",
+        "metro-meteors-dl-90",
+        "metro-meteors-k-5",
+        "metro-meteors-lg-66",
+        "metro-meteors-ls-49",
+        "metro-meteors-lt-75",
+        "metro-meteors-olb-43",
+        "metro-meteors-p-9",
+        "metro-meteors-qb-12",
+        "metro-meteors-rb-2",
+        "metro-meteors-rb-24",
+        "metro-meteors-rg-72",
+        "metro-meteors-rt-78",
+        "metro-meteors-slot-18",
+        "metro-meteors-te-86",
+        "metro-meteors-te-87",
+        "metro-meteors-wr-11",
+        "metro-meteors-wr-7",
+        "metro-meteors-wr-83",
+        "metro-meteors-wr-89"
+      ],
+      "errorMessage": null,
+      "faceguardMeshNames": [
+        "faceguard_standard"
+      ],
+      "shellMeshNames": [
+        "helmet_shell"
+      ],
+      "status": "loaded"
+    },
+    "kickoff": {
+      "bareHeadCount": 0,
+      "helmetReadyCount": 0,
+      "profileMatchCount": 0,
+      "reticleVisible": false,
+      "totalCount": 0,
+      "visibleCount": 0
+    },
+    "matchPhase": "pregame",
+    "normalOfficialsVisibleCount": 0,
+    "previewCanvasCount": 0,
+    "profileId": "football-player-v1",
+    "resourceCounts": {
+      "coinObjects": 1,
+      "geometries": 127,
+      "helmetAttachedPlayerIds": 53,
+      "jerseyNumberAtlasCreated": true,
+      "jerseyNumberMeshes": 162,
+      "jerseyNumberMaterials": 2,
+      "materials": 77,
+      "reticleObjects": 3,
+      "textures": 11,
+      "webglContexts": 1
+    },
+    "scrimmage": {
+      "dynamicMarkersVisible": false
+    },
+    "warmup": {
+      "enabled": true,
+      "helmetReady": true,
+      "profileMatchCount": 1,
+      "quarterbackReady": true,
+      "totalFullProfileCount": 1,
+      "visibleFullProfileCount": 1
+    }
+  }
+}

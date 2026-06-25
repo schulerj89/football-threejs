@@ -92,6 +92,7 @@ import {
   resolveStadiumThemeId,
   type StadiumControllerSnapshot,
 } from '../stadium/StadiumController';
+import type { StadiumThemeId } from '../stadium/StadiumTypes';
 import {
   OfficialsPresentationController,
   type OfficialsPresentationSnapshot,
@@ -376,7 +377,7 @@ export class PresentationRuntime {
         this.qualityProfile,
       ),
       renderer,
-      themeId: resolveStadiumThemeId(searchParams.get('stadiumTheme')),
+      themeId: this.resolveStadiumThemeId(),
       upperTierEnabled: shouldUseStadiumUpperTier(gameExperience, this.qualityProfile),
     });
     if (!this.crowdPreviewController) {
@@ -1741,9 +1742,16 @@ export class PresentationRuntime {
         this.gameExperience,
         this.qualityProfile,
       ),
-      themeId: resolveStadiumThemeId(this.searchParams.get('stadiumTheme')),
+      themeId: this.resolveStadiumThemeId(),
       upperTierEnabled: shouldUseStadiumUpperTier(this.gameExperience, this.qualityProfile),
     });
+  }
+
+  private resolveStadiumThemeId(): StadiumThemeId {
+    return resolveStadiumThemeId(
+      this.searchParams.get('stadiumTheme') ??
+        (this.gameExperience.settings.mountainBowlEnabled ? 'mountainBowl' : null),
+    );
   }
 
   private resolveAutomaticPlaceKickTimingInput(

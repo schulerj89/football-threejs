@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.91] - 2026-06-25
+
+### Changed
+
+- Added a Play Now Game Settings `Add Mountains` checkbox beside quarter length, difficulty, and weather that launches games with the `mountainBowl` stadium theme.
+- Added `mountainBowlEnabled` to game experience settings while preserving the existing `stadiumTheme=mountainBowl` launch flag.
+
+### Added
+
+- Added checkbox proof screenshots and debug snapshot under `artifacts/mountain-setting-checkbox-1.22.91/`.
+
+### Tests
+
+- Verified `npx playwright test tests/stadium-mountain-bowl.spec.ts`, `npx vitest run tests/stadium/stadiumGeometry.test.ts`, and `npm run build`.
+
 ## [1.22.90] - 2026-06-25
 
 ### Changed

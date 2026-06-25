@@ -136,6 +136,7 @@ export class FootballHubScreen {
   private readonly playNowQuarterLengthSelect = document.createElement('select');
   private readonly playNowDifficultySelect = document.createElement('select');
   private readonly playNowWeatherSelect = document.createElement('select');
+  private readonly playNowMountainsCheckbox = document.createElement('input');
   private readonly userLogo: TeamLogoBadge;
   private readonly opponentLogo: TeamLogoBadge;
   private readonly teamOverviewLogo: TeamLogoBadge;
@@ -370,11 +371,17 @@ export class FootballHubScreen {
         weatherCondition: this.playNowWeatherSelect.value as WeatherCondition,
       }),
     );
+    this.playNowMountainsCheckbox.type = 'checkbox';
+    this.playNowMountainsCheckbox.setAttribute('aria-label', 'Add mountains');
+    this.playNowMountainsCheckbox.addEventListener('change', () => this.updatePlayNowGameSettings({
+      mountainBowlEnabled: this.playNowMountainsCheckbox.checked,
+    }));
 
     grid.append(
       createPlayNowSettingControl('Quarter Length', this.playNowQuarterLengthSelect),
       createPlayNowSettingControl('Difficulty', this.playNowDifficultySelect),
       createPlayNowSettingControl('Weather', this.playNowWeatherSelect),
+      createPlayNowSettingControl('Add Mountains', this.playNowMountainsCheckbox),
     );
     const actions = document.createElement('div');
     actions.className = 'football-hub-actions';
@@ -1326,6 +1333,7 @@ export class FootballHubScreen {
     );
     this.playNowDifficultySelect.value = this.settings.matchDifficulty;
     this.playNowWeatherSelect.value = this.settings.weatherCondition;
+    this.playNowMountainsCheckbox.checked = this.settings.mountainBowlEnabled;
   }
 
   private syncPlayTeamControls(
@@ -1430,7 +1438,7 @@ export class FootballHubScreen {
   }
 
   private updatePlayNowGameSettings(
-    patch: Partial<Pick<GameExperienceSettings, 'matchDifficulty' | 'quarterLengthSeconds' | 'weatherCondition'>>,
+    patch: Partial<Pick<GameExperienceSettings, 'matchDifficulty' | 'mountainBowlEnabled' | 'quarterLengthSeconds' | 'weatherCondition'>>,
   ): void {
     const nextSettings: GameExperienceSettings = {
       ...this.settings,
@@ -1862,12 +1870,15 @@ function createEmptyState(text: string): HTMLElement {
   return element;
 }
 
-function createPlayNowSettingControl(labelText: string, select: HTMLSelectElement): HTMLElement {
+function createPlayNowSettingControl(labelText: string, controlElement: HTMLInputElement | HTMLSelectElement): HTMLElement {
   const control = document.createElement('label');
   control.className = 'football-hub-game-setting';
+  if (controlElement instanceof HTMLInputElement && controlElement.type === 'checkbox') {
+    control.dataset.kind = 'checkbox';
+  }
   const label = document.createElement('span');
   label.textContent = labelText;
-  control.append(label, select);
+  control.append(label, controlElement);
   return control;
 }
 
@@ -1881,6 +1892,7 @@ function formatGameSummary(settings: GameExperienceSettings): string {
     `${Math.round(settings.quarterLengthSeconds / 60)}:00 quarters`,
     `${capitalize(settings.matchDifficulty)} difficulty`,
     `${formatWeatherCondition(settings.weatherCondition)} weather`,
+    settings.mountainBowlEnabled ? 'Mountains on' : 'Classic stadium',
   ].join(' | ');
 }
 
