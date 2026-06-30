@@ -99,6 +99,24 @@ describe('crowd preview', () => {
     controller.dispose();
   });
 
+  it('does not report draw calls for zero requested spectators', () => {
+    const controller = new CrowdPreviewController({
+      height: 720,
+      requestedCount: 0,
+      width: 1280,
+    });
+    const snapshot = controller.getSnapshot();
+
+    expect(snapshot.requestedSpectatorCount).toBe(0);
+    expect(snapshot.actualSpectatorCount).toBe(0);
+    expect(snapshot.nearInstanceCount).toBe(0);
+    expect(snapshot.farMosaicSeatCount).toBe(0);
+    expect(snapshot.crowdDrawCalls).toBe(0);
+    expect(snapshot.crowdTriangles).toBe(0);
+
+    controller.dispose();
+  });
+
   it('records benchmark reports using supplied frame deltas', () => {
     const renderer = {
       info: {

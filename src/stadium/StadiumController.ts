@@ -77,18 +77,21 @@ export class StadiumController {
   getSnapshot(): StadiumControllerSnapshot {
     const metrics = this.build?.metrics ?? createEmptyMetrics();
     const textureSnapshot = getStadiumTextureCacheSnapshot();
-    const lowerTierRows = this.spec.tiers[0]?.rowCount ?? 0;
+    const lowerTierRows = this.enabled ? this.spec.tiers[0]?.rowCount ?? 0 : 0;
+    const seatCount = this.enabled
+      ? createSeatLayout(this.spec, {
+          upperTierEnabled: this.upperTierEnabled,
+        }).seats.length
+      : 0;
     return {
       ...metrics,
       enabled: this.enabled,
       imageMaterialsEnabled: this.imageMaterialsEnabled,
       lowerTierRows,
       mountainBowl: this.build?.mountainBowl ?? null,
-      seatCount: createSeatLayout(this.spec, {
-        upperTierEnabled: this.upperTierEnabled,
-      }).seats.length,
+      seatCount,
       themeId: this.themeId,
-      textureCount: this.imageMaterialsEnabled ? textureSnapshot.textureCount : 0,
+      textureCount: this.enabled && this.imageMaterialsEnabled ? textureSnapshot.textureCount : 0,
       upperTierEnabled: this.upperTierEnabled,
     };
   }

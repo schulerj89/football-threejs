@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.97] - 2026-06-30
+
+### Fixed
+
+- Report disabled stadium snapshots with zero active lower rows, seats, and textures so debug/readback state matches the rendered stadium.
+
+### Tests
+
+- Verified `npx vitest run tests/stadium/stadiumGeometry.test.ts`.
+
+## [1.22.96] - 2026-06-30
+
+### Fixed
+
+- Forced crowd presentation to resync near-spectator instance matrices after a hidden page becomes active again, preventing expired reaction poses from persisting on resume.
+
+### Tests
+
+- Verified `npx vitest run tests/crowdPresentation.test.ts`.
+
+## [1.22.95] - 2026-06-30
+
+### Fixed
+
+- Tightened crowd draw-call and triangle accounting so zero-spectator and hidden crowd objects do not count as renderable work in preview/presentation snapshots.
+
+### Tests
+
+- Verified `npx vitest run tests/crowdPreview.test.ts`.
+
 ## [1.22.94] - 2026-06-30
 
 ### Fixed

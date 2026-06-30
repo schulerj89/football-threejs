@@ -146,7 +146,12 @@ export class CrowdPresentationController {
   }
 
   setPageActive(active: boolean): void {
+    const wasActive = this.reactionSequencer.isPageActive;
     this.reactionSequencer.setPageActive(active);
+    if (active && !wasActive) {
+      this.lastRenderedState = null;
+      this.matrixUpdateAccumulatorSeconds = 1 / CROWD_PRESENTATION_CONFIG.reactionUpdateHz;
+    }
   }
 
   setAccentColors(accentColors: readonly string[]): void {
@@ -186,7 +191,6 @@ export class CrowdPresentationController {
     const state = this.reactionSequencer.resolveDisplayState(snapshot.playState);
 
     if (!this.reactionSequencer.isPageActive) {
-      this.lastRenderedState = state;
       return;
     }
 

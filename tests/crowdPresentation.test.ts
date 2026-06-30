@@ -144,6 +144,30 @@ describe('crowd presentation controller', () => {
     controller.dispose();
   });
 
+  it('syncs crowd transforms back to idle after reactions expire while hidden', () => {
+    const controller = createController();
+
+    controller.update(makeSnapshot('dead'), [makeEvent('touchdown', 4, 'touchdown')], 0.1);
+    const renderedReactionCount = controller.getSnapshot().reactionUpdateCount;
+    expect(controller.getSnapshot().reactionState).toBe('touchdown');
+
+    controller.setPageActive(false);
+    for (let frame = 0; frame < 40; frame += 1) {
+      controller.update(makeSnapshot('dead'), [], 0.1);
+    }
+    const hiddenUpdateCount = controller.getSnapshot().reactionUpdateCount;
+    expect(hiddenUpdateCount).toBe(renderedReactionCount);
+
+    controller.setPageActive(true);
+    controller.update(makeSnapshot('dead'), [], 0.1);
+
+    const resumedSnapshot = controller.getSnapshot();
+    expect(resumedSnapshot.reactionState).toBe('idle');
+    expect(resumedSnapshot.reactionUpdateCount).toBeGreaterThan(hiddenUpdateCount);
+
+    controller.dispose();
+  });
+
   it('updates anticipation transforms at a bounded low frequency', () => {
     const controller = createController();
 

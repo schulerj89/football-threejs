@@ -135,7 +135,10 @@ describe('stadium geometry builder', () => {
       drawCalls: 0,
       enabled: false,
       geometryCount: 0,
+      lowerTierRows: 0,
+      seatCount: 0,
       triangles: 0,
+      textureCount: 0,
     });
 
     controller.dispose();

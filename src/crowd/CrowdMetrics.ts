@@ -118,7 +118,7 @@ export function countCrowdDrawCalls(group: THREE.Group): number {
   let drawCalls = 0;
 
   group.traverse((object) => {
-    if ((object instanceof THREE.Mesh || object instanceof THREE.Points) && object.visible) {
+    if (isRenderableCrowdObject(object)) {
       drawCalls += 1;
     }
   });
@@ -130,7 +130,7 @@ export function countCrowdTriangles(group: THREE.Group): number {
   let triangles = 0;
 
   group.traverse((object) => {
-    if (!(object instanceof THREE.Mesh)) {
+    if (!(object instanceof THREE.Mesh) || !isRenderableCrowdObject(object)) {
       return;
     }
 
@@ -140,6 +140,34 @@ export function countCrowdTriangles(group: THREE.Group): number {
   });
 
   return triangles;
+}
+
+function isRenderableCrowdObject(object: THREE.Object3D): object is THREE.Mesh | THREE.Points {
+  if (!(object instanceof THREE.Mesh || object instanceof THREE.Points)) {
+    return false;
+  }
+
+  if (!isWorldVisible(object)) {
+    return false;
+  }
+
+  if (object instanceof THREE.InstancedMesh && object.count <= 0) {
+    return false;
+  }
+
+  const position = object.geometry.getAttribute('position');
+  return Boolean(position && position.count > 0);
+}
+
+function isWorldVisible(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    if (!current.visible) {
+      return false;
+    }
+    current = current.parent;
+  }
+  return true;
 }
 
 function getGeometryTriangleCount(geometry: THREE.BufferGeometry): number {
