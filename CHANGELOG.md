@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.94] - 2026-06-30
+
+### Fixed
+
+- Scoped play-card SVG route and run arrow marker IDs per rendered diagram so duplicate play-card instances cannot resolve arrowheads through stale document-level marker IDs.
+
+### Tests
+
+- Verified `npx vitest run tests/playCallDiagram.test.ts`.
+
+## [1.22.93] - 2026-06-30
+
+### Fixed
+
+- Reset the route-art rebuild key whenever renderer visuals are cleared so re-enabled play art rebuilds the same selected play instead of skipping drawing work after a clear.
+
+### Tests
+
+- Verified `npx vitest run tests/routeArtRenderer.test.ts`.
+
+## [1.22.92] - 2026-06-30
+
+### Fixed
+
+- Cleared route-art visuals and debug snapshot data when play art is disabled or a reused renderer receives a non-pass play, preventing stale offensive routes or coverage zones from remaining in readback state.
+
+### Tests
+
+- Verified `npx vitest run tests/routeArtRenderer.test.ts`.
+
 ## [1.22.91] - 2026-06-25
 
 ### Changed

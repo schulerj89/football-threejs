@@ -17,6 +17,7 @@ import {
 } from '../src/playbook';
 import {
   createPlayCardAccessibilityLabel,
+  createPlayCardSvgMarkerIds,
   resolvePlayCallTrayLayout,
 } from '../src/playCallUi';
 import { resolveEligibleReceiverRoutes } from '../src/receiverRoutes';
@@ -387,6 +388,21 @@ describe('play call diagrams', () => {
       .toBe('3 Verts Out 11, pass play, shortcut 7');
     expect(createPlayCardAccessibilityLabel(getPlay('inside-zone-11'), 1))
       .toBe('Inside Zone 11, run play, shortcut 1');
+  });
+
+  it('scopes play-card SVG arrow marker IDs per rendered diagram', () => {
+    const first = createPlayCardSvgMarkerIds('spread-quick-11', 'render-1');
+    const second = createPlayCardSvgMarkerIds('spread-quick-11', 'render-2');
+    const sanitized = createPlayCardSvgMarkerIds('bad play/id', 'scope one');
+
+    expect(first).toEqual({
+      routeMarkerId: 'play-card-spread-quick-11-render-1-route-arrow',
+      runMarkerId: 'play-card-spread-quick-11-render-1-run-arrow',
+      scopeId: 'render-1',
+    });
+    expect(second.routeMarkerId).not.toBe(first.routeMarkerId);
+    expect(second.runMarkerId).not.toBe(first.runMarkerId);
+    expect(sanitized.routeMarkerId).toBe('play-card-bad-play-id-scope-one-route-arrow');
   });
 
   it('normalizes football coordinates into SVG coordinates with the defense above the line', () => {

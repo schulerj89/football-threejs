@@ -17,6 +17,7 @@ import {
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 const PUNT_CARD_ACTION = 'punt';
+let playCardSvgScopeCounter = 0;
 
 export class PlayCallUi {
   readonly root: HTMLDivElement;
@@ -343,6 +344,27 @@ export function createPlayCardAccessibilityLabel(
   return `${play.displayName}, ${play.kind === 'pass' ? 'pass' : 'run'} play, shortcut ${shortcutNumber}`;
 }
 
+export interface PlayCardSvgMarkerIds {
+  routeMarkerId: string;
+  runMarkerId: string;
+  scopeId: string;
+}
+
+export function createPlayCardSvgMarkerIds(
+  playId: string,
+  scopeId = `diagram-${++playCardSvgScopeCounter}`,
+): PlayCardSvgMarkerIds {
+  const safePlayId = createSafeSvgIdPart(playId);
+  const safeScopeId = createSafeSvgIdPart(scopeId);
+  const prefix = `play-card-${safePlayId}-${safeScopeId}`;
+
+  return {
+    routeMarkerId: `${prefix}-route-arrow`,
+    runMarkerId: `${prefix}-run-arrow`,
+    scopeId: safeScopeId,
+  };
+}
+
 function createPuntCard(selectionLocked: boolean): HTMLButtonElement {
   const card = document.createElement('button');
   card.className = 'play-card play-card-punt';
@@ -373,8 +395,10 @@ function createDiagramSvg(
   svg.setAttribute('viewBox', `0 0 ${PLAY_CALL_DIAGRAM_SIZE.width} ${PLAY_CALL_DIAGRAM_SIZE.height}`);
   svg.setAttribute('aria-hidden', 'true');
 
-  const routeMarkerId = `${model.playId}-route-arrow`;
-  const runMarkerId = `${model.playId}-run-arrow`;
+  const markerIds = createPlayCardSvgMarkerIds(model.playId);
+  const routeMarkerId = markerIds.routeMarkerId;
+  const runMarkerId = markerIds.runMarkerId;
+  svg.dataset.markerScope = markerIds.scopeId;
   svg.appendChild(createArrowDefs(routeMarkerId, runMarkerId));
   svg.appendChild(createFieldBackground());
   svg.appendChild(createLine(
@@ -726,4 +750,13 @@ function createPreSnapDisplayKey(gameplay: GameplaySnapshot): string {
     gameplay.drive.lineOfScrimmage.z.toFixed(3),
     gameplay.drive.firstDownMarker.z.toFixed(3),
   ].join('|');
+}
+
+function createSafeSvgIdPart(value: string): string {
+  const safePart = value
+    .trim()
+    .replace(/[^A-Za-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return safePart || 'item';
 }

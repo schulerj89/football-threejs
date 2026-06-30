@@ -131,6 +131,59 @@ describe('route art renderer', () => {
     renderer.dispose();
   });
 
+  it('clears route visuals and snapshot data when disabled after rendering', () => {
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
+    selectPlay(gameplay, 'quick-pass');
+    const renderer = new RouteArtRenderer();
+
+    renderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    expect(renderer.getSnapshot().routeCount).toBe(1);
+    expect(renderer.group.children.length).toBeGreaterThan(0);
+
+    renderer.setEnabled(false);
+    expect(renderer.getSnapshot()).toMatchObject({
+      coverageZones: [],
+      enabled: false,
+      rebuildKey: '',
+      routeCount: 0,
+      routes: [],
+      visible: false,
+    });
+    expect(renderer.group.children).toHaveLength(0);
+
+    renderer.setEnabled(true);
+    renderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    expect(renderer.getSnapshot()).toMatchObject({
+      enabled: true,
+      routeCount: 1,
+      visible: true,
+    });
+    expect(renderer.getSnapshot().rebuildKey).not.toBe('');
+
+    renderer.dispose();
+  });
+
+  it('clears stale pass route art when a reused renderer receives a run play', () => {
+    const gameplay = createGameplayModel({ playbookId: '5v5' });
+    selectPlay(gameplay, 'quick-pass');
+    const renderer = new RouteArtRenderer();
+
+    renderer.update(snapshotGameplayModel(gameplay), gameplay.selectedPlay);
+    expect(renderer.getSnapshot().routeCount).toBe(1);
+
+    renderer.update(snapshotGameplayModel(gameplay), getPlay('inside-run'));
+
+    expect(renderer.getSnapshot()).toMatchObject({
+      coverageZones: [],
+      routeCount: 0,
+      routes: [],
+      visible: false,
+    });
+    expect(renderer.group.children).toHaveLength(0);
+
+    renderer.dispose();
+  });
+
   it('mirrors route art across left and right hash lanes', () => {
     const play = getPlay('slant-flat');
     const leftSnapshot = createSnapshotForLane(play, 'leftHash');

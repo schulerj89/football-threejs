@@ -231,7 +231,9 @@ export class RouteArtRenderer {
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     if (!this.enabled && !this.options.auditEnabled) {
-      this.group.visible = false;
+      this.resetVisualState();
+    } else {
+      this.snapshot = this.createSnapshot(this.group.visible);
     }
   }
 
@@ -252,7 +254,7 @@ export class RouteArtRenderer {
     this.group.visible = shouldShowRoutes || shouldShowCoverage;
 
     if (!enabled || play.kind !== 'pass') {
-      this.snapshot = this.createSnapshot(false);
+      this.resetVisualState();
       return;
     }
 
@@ -645,6 +647,16 @@ export class RouteArtRenderer {
     return this.options.playArtMode ?? 'offense';
   }
 
+  private resetVisualState(): void {
+    this.group.visible = false;
+    if (this.routeVisuals.size > 0 || this.coverageZoneVisuals.length > 0) {
+      this.clearRouteVisuals();
+    } else {
+      this.lastRebuildKey = '';
+    }
+    this.snapshot = this.createSnapshot(false);
+  }
+
   private clearRouteVisuals(): void {
     for (const visual of this.routeVisuals.values()) {
       visual.path.geometry.dispose();
@@ -661,6 +673,7 @@ export class RouteArtRenderer {
     this.coverageZoneVisuals.length = 0;
     this.routeVisuals.clear();
     this.group.clear();
+    this.lastRebuildKey = '';
   }
 }
 
