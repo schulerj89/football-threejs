@@ -39,7 +39,7 @@ PERF_STRICT=1 npm run test:perf
 Budgets are based on the measured optimized reference build plus a small margin:
 
 - Draw calls: `500`.
-- Triangles: `250000`.
+- Triangles: `500000` (restoring the original 7,027-triangle helmet to every player raises the measured all-scenario peak while preserving the existing player count and presentation).
 - Geometries: `200`.
 - Materials: `90`.
 - Textures: `80`.

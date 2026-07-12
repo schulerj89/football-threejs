@@ -62,6 +62,7 @@ describe('reference performance benchmark helpers', () => {
     expect(PERFORMANCE_STRUCTURAL_BUDGETS).toMatchObject({
       maxDrawCalls: 500,
       maxTextures: 80,
+      maxTriangles: 500_000,
       playerCount: 22,
     });
   });

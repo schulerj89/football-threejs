@@ -49,7 +49,7 @@ export const REFERENCE_STRUCTURAL_BUDGETS = {
   maxShadowCasters: 0,
   maxStadiumDrawCalls: 20,
   maxTextures: 80,
-  maxTriangles: 250_000,
+  maxTriangles: 500_000,
   maxVisiblePlayerMeshes: 390,
   playerCount: 22,
 } as const;

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.23.2] - 2026-07-11
+
+### Fixed
+
+- Removed the generated distant helmet proxy and restored the unchanged original `football-helmet-kit.glb` for every production player at every camera distance.
+- Removed the proxy GLB, manifest, Blender source, generator, vertex-color merge path, and LOD-specific material code so the broken substitute cannot be selected again.
+- Raised only the structural triangle ceiling from 250,000 to 500,000 to accommodate the original 7,027-triangle helmet across the complete player population; draw-call, texture, geometry, material, mesh, crowd, and player-count caps remain unchanged.
+
+### Tests
+
+- Verified the original helmet's committed SHA-256, exact 7,027-triangle shell/faceguard contract, focused helmet/runtime tests, production harness and 22-player browser rendering, 934-test unit suite, build, and the full 56-run 11v11 performance matrix; the global structural peak was 482 calls, 65 textures, 488,695 triangles, and 93 geometries.
+- Stabilized the harness pixel-readback assertion by polling through cold WebGL startup; two consecutive production-preview runs passed.
+
 ## [1.23.1] - 2026-07-11
 
 ### Changed

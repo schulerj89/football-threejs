@@ -42,24 +42,25 @@ test('voxel player harness loads the production rig and helmet', async ({ page }
   });
   await page.getByLabel('Show helmet').check();
 
-  const nonBlankPixelCount = await page.locator('canvas').evaluate((canvas) => {
-    const target = canvas as HTMLCanvasElement;
-    const gl = target.getContext('webgl2', { preserveDrawingBuffer: true }) ??
-      target.getContext('webgl', { preserveDrawingBuffer: true });
-    if (!gl) {
-      return 0;
-    }
-    const width = gl.drawingBufferWidth;
-    const height = gl.drawingBufferHeight;
-    const data = new Uint8Array(width * height * 4);
-    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
-    let count = 0;
-    for (let index = 0; index < data.length; index += 4) {
-      if (data[index] !== 7 || data[index + 1] !== 17 || data[index + 2] !== 14) {
-        count += 1;
+  await expect.poll(async () => {
+    return await page.locator('canvas').evaluate((canvas) => {
+      const target = canvas as HTMLCanvasElement;
+      const gl = target.getContext('webgl2', { preserveDrawingBuffer: true }) ??
+        target.getContext('webgl', { preserveDrawingBuffer: true });
+      if (!gl) {
+        return 0;
       }
-    }
-    return count;
-  });
-  expect(nonBlankPixelCount).toBeGreaterThan(100);
+      const width = gl.drawingBufferWidth;
+      const height = gl.drawingBufferHeight;
+      const data = new Uint8Array(width * height * 4);
+      gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
+      let count = 0;
+      for (let index = 0; index < data.length; index += 4) {
+        if (data[index] !== 7 || data[index + 1] !== 17 || data[index + 2] !== 14) {
+          count += 1;
+        }
+      }
+      return count;
+    });
+  }).toBeGreaterThan(100);
 });

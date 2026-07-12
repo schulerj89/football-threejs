@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { sanitizeMeshyTaskPayload } from '../../tools/meshy/downloadHelmetCandidate';
@@ -8,10 +9,6 @@ import {
 import { createMeshyRequest, generateHelmetCandidates } from '../../tools/meshy/generateHelmetCandidate';
 import { auditGlbAsset } from '../../tools/meshy/helmetAssetReport';
 import { validatePreparedHelmet } from '../../tools/meshy/validatePreparedHelmet';
-import {
-  HELMET_ASSET_CONFIG,
-  HELMET_DETAIL_LOD_DISTANCE,
-} from '../../src/presentation/helmet/HelmetAssetLibrary';
 import {
   HELMET_COMBINED_RUNTIME_PATH,
   HELMET_FACEGUARD_RUNTIME_PATH,
@@ -116,27 +113,23 @@ describe('helmet Meshy pipeline', () => {
     expect(manifest.sourceCandidate).toMatch(/^candidate-[ab]$/);
   });
 
-  it('keeps a Blender-authored gameplay LOD within the 11v11 helmet budget', () => {
-    const lod = auditGlbAsset(`public${HELMET_ASSET_CONFIG.lodAssetUrl}`);
+  it('keeps the original modular helmet as the only production helmet asset', () => {
+    const helmetPath = 'public/models/helmet/football-helmet-kit.glb';
+    const helmet = auditGlbAsset(helmetPath);
     const manifest = readJsonFile<{
-      lodDistanceMeters: number;
-      runtimeDrawCallsPerInstance: number;
-      runtimeMergeStrategy: string;
-      triangleCount: number;
-      trianglesByMesh: Record<string, number>;
-    }>('public/models/helmet/helmet-lod-manifest.json');
+      contentHashes: Record<string, string>;
+      totalTriangles: number;
+    }>(HELMET_MANIFEST_RUNTIME_PATH);
+    const helmetHash = createHash('sha256').update(readFileSync(helmetPath)).digest('hex');
 
-    expect(lod.nodeNames).toEqual(expect.arrayContaining(['helmet_shell', 'faceguard_standard']));
-    expect(lod.materialNames).toEqual(expect.arrayContaining(['mat_helmet_shell', 'mat_faceguard']));
-    expect(lod.triangleCount).toBe(manifest.triangleCount);
-    expect(lod.triangleCount).toBeLessThanOrEqual(400);
-    expect(manifest.lodDistanceMeters).toBe(HELMET_DETAIL_LOD_DISTANCE);
-    expect(manifest.runtimeDrawCallsPerInstance).toBe(1);
-    expect(manifest.runtimeMergeStrategy).toBe('single-mesh-vertex-colors');
-    expect(manifest.trianglesByMesh).toEqual({
-      faceguard_standard: 96,
-      helmet_shell: 53,
-    });
+    expect(helmet.meshNames).toEqual(expect.arrayContaining(['helmet_shell', 'faceguard_standard']));
+    expect(helmet.materialNames).toEqual(expect.arrayContaining(['mat_helmet_shell', 'mat_faceguard']));
+    expect(helmet.triangleCount).toBe(7_027);
+    expect(helmet.triangleCount).toBe(manifest.totalTriangles);
+    expect(helmetHash).toBe(manifest.contentHashes.combined);
+    expect(helmetHash).toBe('c4c8ccb1fa2369b26cd10514793276863a39bbd40f8026f7881af37d5a1f28bf');
+    expect(existsSync('public/models/helmet/football-helmet-kit-lod.glb')).toBe(false);
+    expect(existsSync('public/models/helmet/helmet-lod-manifest.json')).toBe(false);
   });
 
   it('keeps Meshy and OpenAI generation secrets out of browser source', () => {
