@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { createPlayerModel } from '../src/playerModel';
 import {
@@ -33,6 +34,34 @@ describe('pre-snap quarterback head swivel', () => {
     syncPreSnapQuarterbackHeadYaw(visuals, null);
 
     expect(quarterback.getObjectByName(PLAYER_HEAD_ANCHOR_NAME)?.rotation.y).toBeCloseTo(0);
+  });
+
+  it('turns the rigged head bone so the skinned head and helmet anchor stay together', () => {
+    const quarterback = new THREE.Group();
+    const head = new THREE.Bone();
+    head.name = 'Head';
+    head.rotation.y = 0.08;
+    const helmetSocket = new THREE.Bone();
+    helmetSocket.name = 'socket_helmet';
+    const headAnchor = new THREE.Group();
+    headAnchor.name = PLAYER_HEAD_ANCHOR_NAME;
+    helmetSocket.add(headAnchor);
+    head.add(helmetSocket);
+    quarterback.add(head);
+    const visuals = new Map([['offense-qb', quarterback]]);
+
+    syncPreSnapQuarterbackHeadYaw(
+      visuals,
+      createCadenceSnapshot({ headYawRadians: -0.42 }),
+    );
+
+    expect(head.rotation.y).toBeCloseTo(-0.34);
+    expect(headAnchor.rotation.y).toBeCloseTo(0);
+
+    syncPreSnapQuarterbackHeadYaw(visuals, null);
+
+    expect(head.rotation.y).toBeCloseTo(0.08);
+    expect(headAnchor.rotation.y).toBeCloseTo(0);
   });
 });
 

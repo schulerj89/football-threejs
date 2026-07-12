@@ -50,6 +50,7 @@ export const HELMET_VISUAL_CONFIG = {
       z: PLAYER_BODY_DIMENSIONS.helmetScale,
     },
   },
+  lodAssetUrl: HELMET_ASSET_CONFIG.lodAssetUrl,
   shellMeshNames: HELMET_ASSET_CONFIG.shellMeshNames,
   teamColors: HELMET_ASSET_CONFIG.teamColors,
 } as const;

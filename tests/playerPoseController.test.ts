@@ -183,6 +183,62 @@ describe('player pose controller', () => {
     expect(Math.abs(pivot.rotation.x)).toBeLessThan(0.02);
   });
 
+  it('applies ready and locomotion poses directly to imported rig bones', () => {
+    const player = createPlayer({ team: 'offense' });
+    const rig = createRiggedPlayerVisual();
+    const controller = new PlayerPoseController();
+
+    controller.update(
+      createGameplaySnapshot([player], 'preSnap'),
+      new Map([[player.id, rig.root]]),
+      1 / 60,
+    );
+
+    expect(Math.abs(rig.bones.hips.rotation.x - rig.rest.hips.x)).toBeGreaterThan(0.0001);
+    expect(Math.abs(rig.bones.spine.rotation.x - rig.rest.spine.x)).toBeGreaterThan(0.0001);
+    expect(Math.abs(rig.bones.spine01.rotation.x - rig.rest.spine01.x)).toBeGreaterThan(0.0001);
+    expect(Math.abs(rig.bones.spine02.rotation.x - rig.rest.spine02.x)).toBeGreaterThan(0.0001);
+    expect(rig.bones.leftArm.rotation.x).not.toBeCloseTo(rig.rest.leftArm.x);
+    expect(rig.bones.rightArm.rotation.x).not.toBeCloseTo(rig.rest.rightArm.x);
+
+    const movingPlayer = {
+      ...player,
+      currentState: 'userControlled' as const,
+      velocity: { x: 0, z: 7 },
+    };
+    controller.update(
+      createGameplaySnapshot([movingPlayer], 'live'),
+      new Map([[player.id, rig.root]]),
+      1 / 60,
+    );
+
+    expect(rig.bones.leftUpLeg.rotation.x).not.toBeCloseTo(rig.rest.leftUpLeg.x);
+    expect(rig.bones.rightUpLeg.rotation.x).not.toBeCloseTo(rig.rest.rightUpLeg.x);
+    expect(rig.bones.leftFoot.rotation.x).not.toBeCloseTo(rig.rest.leftFoot.x);
+    expect(rig.bones.rightFoot.rotation.x).not.toBeCloseTo(rig.rest.rightFoot.x);
+    expectSyntheticRunPivotsToBeMissing(rig.root);
+    expect(rig.skinnedMesh.parent).toBe(rig.bodyRoot);
+  });
+
+  it('returns imported run bones to their authored rest rotations without synthetic pivots', () => {
+    const rig = createRiggedPlayerVisual();
+
+    updateRunAnimation(rig.root, 0.1, 7);
+    expect(rig.bones.leftArm.rotation.x).not.toBeCloseTo(rig.rest.leftArm.x);
+    expect(rig.bones.rightUpLeg.rotation.x).not.toBeCloseTo(rig.rest.rightUpLeg.x);
+
+    for (let index = 0; index < 30; index += 1) {
+      updateRunAnimation(rig.root, 1 / 60, 0);
+    }
+
+    expect(rig.bones.leftArm.rotation.x).toBeCloseTo(rig.rest.leftArm.x, 2);
+    expect(rig.bones.rightArm.rotation.x).toBeCloseTo(rig.rest.rightArm.x, 2);
+    expect(rig.bones.leftUpLeg.rotation.x).toBeCloseTo(rig.rest.leftUpLeg.x, 2);
+    expect(rig.bones.rightUpLeg.rotation.x).toBeCloseTo(rig.rest.rightUpLeg.x, 2);
+    expectSyntheticRunPivotsToBeMissing(rig.root);
+    expect(rig.skinnedMesh.parent).toBe(rig.bodyRoot);
+  });
+
   it('pitches the kicking hip backward before swinging forward through contact', () => {
     const visual = createPlaceholderPlayerVisual(createPlayer());
 
@@ -198,6 +254,23 @@ describe('player pose controller', () => {
     expect(backswing).toBeLessThan(-0.1);
     expect(followThrough).toBeGreaterThan(0.3);
     expect(Math.abs(leftLegPivot.rotation.x)).toBeLessThan(Math.abs(followThrough));
+  });
+
+  it('applies kick motion to imported bones without reparenting the skinned body', () => {
+    const rig = createRiggedPlayerVisual();
+
+    updateKickAnimation(rig.root, 0.25);
+    const backswing = rig.bones.rightUpLeg.rotation.x - rig.rest.rightUpLeg.x;
+
+    updateKickAnimation(rig.root, 0.9);
+    const followThrough = rig.bones.rightUpLeg.rotation.x - rig.rest.rightUpLeg.x;
+
+    expect(backswing).toBeLessThan(-0.1);
+    expect(followThrough).toBeGreaterThan(0.3);
+    expect(rig.bones.leftArm.rotation.x).not.toBeCloseTo(rig.rest.leftArm.x);
+    expect(rig.bones.rightArm.rotation.x).not.toBeCloseTo(rig.rest.rightArm.x);
+    expectSyntheticRunPivotsToBeMissing(rig.root);
+    expect(rig.skinnedMesh.parent).toBe(rig.bodyRoot);
   });
 
   it('creates missing limb pivots without moving existing limb meshes', () => {
@@ -272,4 +345,96 @@ function getPivot(visual: THREE.Object3D, name: string): THREE.Object3D {
   }
 
   return pivot;
+}
+
+interface RiggedPlayerVisualFixture {
+  bodyRoot: THREE.Group;
+  bones: {
+    hips: THREE.Bone;
+    leftArm: THREE.Bone;
+    leftFoot: THREE.Bone;
+    leftUpLeg: THREE.Bone;
+    rightArm: THREE.Bone;
+    rightFoot: THREE.Bone;
+    rightUpLeg: THREE.Bone;
+    spine: THREE.Bone;
+    spine01: THREE.Bone;
+    spine02: THREE.Bone;
+  };
+  rest: Record<keyof RiggedPlayerVisualFixture['bones'], THREE.Euler>;
+  root: THREE.Group;
+  skinnedMesh: THREE.SkinnedMesh;
+}
+
+function createRiggedPlayerVisual(): RiggedPlayerVisualFixture {
+  const root = new THREE.Group();
+  root.userData.playerBodyStyle = 'meshyRigged';
+  root.userData.riggedPlayerVisual = true;
+  const bodyRoot = new THREE.Group();
+  bodyRoot.name = 'bodyRoot';
+  root.add(bodyRoot);
+
+  const armature = new THREE.Group();
+  armature.name = 'Armature';
+  const hips = createBone('Hips', { x: 0.07, z: -0.02 });
+  const spine = createBone('Spine', { x: -0.03 });
+  const spine01 = createBone('Spine01', { x: 0.02 });
+  const spine02 = createBone('Spine02', { x: -0.01 });
+  const leftArm = createBone('LeftArm', { x: 0.18, z: 0.04 });
+  const rightArm = createBone('RightArm', { x: -0.16, z: -0.05 });
+  const leftUpLeg = createBone('LeftUpLeg', { x: 0.09, z: 0.02 });
+  const rightUpLeg = createBone('RightUpLeg', { x: -0.08, z: -0.03 });
+  const leftFoot = createBone('LeftFoot', { x: 0.05 });
+  const rightFoot = createBone('RightFoot', { x: -0.04 });
+
+  armature.add(hips);
+  hips.add(spine, leftUpLeg, rightUpLeg);
+  spine.add(spine01);
+  spine01.add(spine02);
+  spine02.add(leftArm, rightArm);
+  leftUpLeg.add(leftFoot);
+  rightUpLeg.add(rightFoot);
+  bodyRoot.add(armature);
+
+  const skinnedMesh = new THREE.SkinnedMesh(
+    new THREE.BoxGeometry(0.7, 1.8, 0.35),
+    new THREE.MeshBasicMaterial(),
+  );
+  skinnedMesh.name = 'player_body_skinned';
+  bodyRoot.add(skinnedMesh);
+
+  const bones = {
+    hips,
+    leftArm,
+    leftFoot,
+    leftUpLeg,
+    rightArm,
+    rightFoot,
+    rightUpLeg,
+    spine,
+    spine01,
+    spine02,
+  };
+  const rest = Object.fromEntries(
+    Object.entries(bones).map(([name, bone]) => [name, bone.rotation.clone()]),
+  ) as RiggedPlayerVisualFixture['rest'];
+
+  return { bodyRoot, bones, rest, root, skinnedMesh };
+}
+
+function createBone(
+  name: string,
+  rotation: { x?: number; y?: number; z?: number } = {},
+): THREE.Bone {
+  const bone = new THREE.Bone();
+  bone.name = name;
+  bone.rotation.set(rotation.x ?? 0, rotation.y ?? 0, rotation.z ?? 0);
+  return bone;
+}
+
+function expectSyntheticRunPivotsToBeMissing(root: THREE.Object3D): void {
+  expect(root.getObjectByName('leftArmPivot')).toBeUndefined();
+  expect(root.getObjectByName('rightArmPivot')).toBeUndefined();
+  expect(root.getObjectByName('leftLegPivot')).toBeUndefined();
+  expect(root.getObjectByName('rightLegPivot')).toBeUndefined();
 }

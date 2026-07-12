@@ -7,8 +7,15 @@ import {
   syncHelmetTeamMaterials,
 } from '../src/helmetVisual';
 import {
+  HELMET_DETAIL_LOD_DISTANCE,
+  HELMET_DETAIL_LOD_NAME,
+  HELMET_GAMEPLAY_PROXY_NAME,
   applyHelmetUniformMaterials,
+  createHelmetDetailLod,
+  createHelmetGameplayProxy,
   createHelmetRuntimeMaterialKey,
+  findHelmetPartMeshes as findHelmetAssetPartMeshes,
+  resetHelmetGameplayProxyCacheForTests,
 } from '../src/presentation/helmet/HelmetAssetLibrary';
 import {
   getHelmetMaterialCacheSnapshot,
@@ -31,8 +38,93 @@ import { resolveTeamPresentationTheme } from '../src/teams/TeamThemeApplier';
 describe('helmet visual integration', () => {
   it('uses the generated modular helmet kit as the shared helmet asset', () => {
     expect(HELMET_VISUAL_CONFIG.assetUrl).toBe('/models/helmet/football-helmet-kit.glb');
+    expect(HELMET_VISUAL_CONFIG.lodAssetUrl).toBe('/models/helmet/football-helmet-kit-lod.glb');
     expect(HELMET_VISUAL_CONFIG.shellMeshNames).toContain('helmet_shell');
     expect(HELMET_VISUAL_CONFIG.faceguardMeshNames).toContain('faceguard_standard');
+  });
+
+  it('keeps the source helmet for close-ups and uses the gameplay helmet at field distance', () => {
+    const fullDetail = new THREE.Group();
+    const gameplayDetail = new THREE.Group();
+    const lod = createHelmetDetailLod(fullDetail, gameplayDetail);
+
+    expect(lod.name).toBe(HELMET_DETAIL_LOD_NAME);
+    expect(lod.autoUpdate).toBe(true);
+    expect(lod.levels.map((level) => level.distance)).toEqual([0, HELMET_DETAIL_LOD_DISTANCE]);
+    expect(lod.getObjectForDistance(5.8)).toBe(fullDetail);
+    expect(lod.getObjectForDistance(30)).toBe(gameplayDetail);
+    expect(fullDetail.userData.helmetDetail).toBe('full');
+    expect(gameplayDetail.userData.helmetDetail).toBe('gameplay');
+    expect(fullDetail.rotation.x).toBeCloseTo(Math.PI / 2);
+    expect(gameplayDetail.rotation.x).toBeCloseTo(Math.PI / 2);
+  });
+
+  it('merges the distant helmet into one vertex-colored draw while preserving team colors', () => {
+    resetHelmetGameplayProxyCacheForTests();
+    const gameplayDetail = new THREE.Group();
+    const shell = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ name: 'mat_helmet_shell' }),
+    );
+    const faceguard = new THREE.Mesh(
+      new THREE.BoxGeometry(0.8, 0.2, 0.1),
+      new THREE.MeshStandardMaterial({ name: 'mat_faceguard' }),
+    );
+    shell.name = 'helmet_shell';
+    faceguard.name = 'faceguard_standard';
+    faceguard.position.set(0, -0.6, -0.2);
+    gameplayDetail.add(shell, faceguard);
+
+    const proxyRoot = createHelmetGameplayProxy(gameplayDetail);
+    const firstClone = proxyRoot.clone(true);
+    const secondClone = proxyRoot.clone(true);
+    const firstParts = findHelmetAssetPartMeshes(firstClone);
+    const secondParts = findHelmetAssetPartMeshes(secondClone);
+    const offenseUniform = {
+      faceguard: '#f4f5f6',
+      helmetShell: '#123456',
+      jersey: '#ffffff',
+      number: '#123456',
+      pants: '#ffffff',
+      shoe: '#111111',
+      shoulder: '#ffffff',
+      socks: '#123456',
+      stripe: '#ffffff',
+    };
+
+    applyHelmetUniformMaterials(firstParts, offenseUniform, 'offense');
+    applyHelmetUniformMaterials(secondParts, offenseUniform, 'offense');
+
+    expect(firstParts.shellMeshes).toEqual([]);
+    expect(firstParts.faceguardMeshes).toEqual([]);
+    expect(firstParts.gameplayMeshes).toHaveLength(1);
+    const firstProxy = firstParts.gameplayMeshes?.[0];
+    const secondProxy = secondParts.gameplayMeshes?.[0];
+    expect(firstProxy?.name).toBe(HELMET_GAMEPLAY_PROXY_NAME);
+    expect(Array.isArray(firstProxy?.material)).toBe(false);
+    expect((firstProxy?.material as THREE.MeshStandardMaterial).vertexColors).toBe(true);
+    expect(firstProxy?.geometry.groups).toHaveLength(0);
+    expect(firstProxy?.geometry).toBe(secondProxy?.geometry);
+    expect(firstProxy?.geometry.getAttribute('position').count).toBe(72);
+
+    const colors = firstProxy?.geometry.getAttribute('color');
+    expect(colors).toBeInstanceOf(THREE.BufferAttribute);
+    const uniqueColors = new Set<string>();
+    if (colors) {
+      for (let index = 0; index < colors.count; index += 1) {
+        uniqueColors.add(`${colors.getX(index).toFixed(5)}:${colors.getY(index).toFixed(5)}:${colors.getZ(index).toFixed(5)}`);
+      }
+    }
+    expect(uniqueColors).toHaveLength(2);
+
+    const defenseUniform = {
+      ...offenseUniform,
+      faceguard: '#101820',
+      helmetShell: '#b83737',
+    };
+    applyHelmetUniformMaterials(secondParts, defenseUniform, 'defense');
+    expect(secondProxy?.geometry).not.toBe(firstProxy?.geometry);
+    expect(firstProxy?.geometry.groups).toHaveLength(0);
   });
 
   it('keeps a dedicated head anchor on the procedural player body', () => {

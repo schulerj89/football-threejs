@@ -8,6 +8,7 @@ export default defineConfig({
         playerAnimationHarness: new URL('./player-animation-harness.html', import.meta.url).pathname,
         playerBaseHarness: new URL('./player-base-harness.html', import.meta.url).pathname,
         playerLab: new URL('./player-lab.html', import.meta.url).pathname,
+        voxelPlayerHarness: new URL('./voxel-player-harness.html', import.meta.url).pathname,
       },
     },
   },

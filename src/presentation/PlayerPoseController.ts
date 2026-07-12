@@ -2,7 +2,11 @@ import * as THREE from 'three';
 import type { GameplaySnapshot, PlayState } from '../playState';
 import type { PlayerSnapshot } from '../playerModel';
 import { PLAYER_BODY_ROOT_NAME } from '../playerVisual';
-import { updateRunAnimation } from './RunAnimation';
+import {
+  applyRiggedPlayerPose,
+  getRiggedPlayerAnimationBones,
+  updateRunAnimation,
+} from './RunAnimation';
 
 export type PlayerPoseIntent = 'locomotion' | 'neutral' | 'readyDefense' | 'readyOffense';
 
@@ -212,8 +216,11 @@ export class PlayerPoseController {
       );
 
       if (visual) {
+        const usesRiggedBones = getRiggedPlayerAnimationBones(visual) !== null;
         const useStiffRunAnimation =
-          this.enabled && (intent === 'locomotion' || visual.userData.runAnimationInitialized);
+          this.enabled &&
+          (intent === 'locomotion' ||
+            (!usesRiggedBones && visual.userData.runAnimationInitialized));
         applyPoseToPlayerVisual(visual, state.appliedPose, {
           applyLimbPivots: !useStiffRunAnimation,
         });
@@ -467,8 +474,16 @@ function applyPoseToPlayerVisual(
   pose: PlayerPoseValues,
   options: { applyLimbPivots?: boolean } = {},
 ): void {
-  const parts = getPlayerVisualParts(playerVisual);
   const applyLimbPivots = options.applyLimbPivots ?? true;
+  if (applyRiggedPlayerPose(playerVisual, pose, { applyLimbs: applyLimbPivots })) {
+    const bodyRoot = playerVisual.getObjectByName(PLAYER_BODY_ROOT_NAME);
+    if (bodyRoot) {
+      bodyRoot.position.set(0, 0, 0);
+    }
+    return;
+  }
+
+  const parts = getPlayerVisualParts(playerVisual);
 
   if (applyLimbPivots) {
     setRotation(parts.leftArmPivot, pose.leftArmRotationX, 0, pose.leftArmRotationZ);

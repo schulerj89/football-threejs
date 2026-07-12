@@ -15,5 +15,24 @@ export function syncPreSnapQuarterbackHeadYaw(
     return;
   }
 
-  headAnchor.rotation.y = preSnapCadence?.headYawRadians ?? 0;
+  const headYaw = preSnapCadence?.headYawRadians ?? 0;
+  const riggedHead = quarterback?.getObjectByName('Head');
+  if (riggedHead instanceof THREE.Bone) {
+    const restYaw = resolveRiggedHeadRestYaw(riggedHead);
+    riggedHead.rotation.y = restYaw + headYaw;
+    // The helmet anchor is already a descendant of the Head bone through
+    // socket_helmet, so leaving this local rotation neutral keeps the skinned
+    // head and the original helmet moving as one unit.
+    headAnchor.rotation.y = 0;
+    return;
+  }
+
+  headAnchor.rotation.y = headYaw;
+}
+
+function resolveRiggedHeadRestYaw(head: THREE.Bone): number {
+  if (typeof head.userData.preSnapRestYaw !== 'number') {
+    head.userData.preSnapRestYaw = head.rotation.y;
+  }
+  return head.userData.preSnapRestYaw as number;
 }

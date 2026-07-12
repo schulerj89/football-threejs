@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.23.0] - 2026-07-11
+
+### Added
+
+- Added a Blender 5.1-authored, rigid-weighted voxel football player with a rounded helmet-safe head, 34 bones, ten attachment sockets, four shared material regions, 784 body triangles, and a 110 KB runtime GLB.
+- Added the editable `.blend` sources, deterministic Blender generators, asset manifests, Blender renders, and neutral/ready/run/skeleton browser captures under `art-source/blender/voxel-player`, `tools/blender`, `public/models`, and `artifacts/voxel-player-1.23.0`.
+- Added `/voxel-player-harness.html`, which exercises the production player factory, real helmet, team materials, camera views, skeleton display, helmet visibility, pose controls, and renderer diagnostics.
+- Added a clean 149-triangle Blender-authored helmet LOD beyond eight meters while retaining the original 7,027-triangle helmet for the harness and close presentation shots.
+
+### Changed
+
+- Made the rigged voxel player the default visual mode while preserving `?playerVisual=procedural` as the comparison and load-failure fallback.
+- Added rest-relative imported-bone animation for ready, running, and kicking poses without reparenting skinned meshes or changing gameplay authority.
+- Kept pre-snap head swivels on the imported `Head` bone so the skinned head and helmet move together, and made the original helmet the full-distance fallback if the optional LOD cannot load.
+- Shared the four compatible body regions onto one cloned skeleton per player, preserving independent player animation while reducing bone-texture allocation from four to one.
+- Generated and inspected the model through Blender's first-party Blender Lab MCP v1.0.0 on Blender 5.1.2.
+
+### Tests
+
+- Verified both Blender MCP scene/export results, binary GLB contracts, targeted player/helmet/pose unit tests, the voxel harness Playwright smoke test, the production build, visible in-app browser screenshots, and 11v11 structural samples at 80,244–92,904 triangles against the 250,000-triangle cap.
+
 ## [1.22.97] - 2026-06-30
 
 ### Fixed

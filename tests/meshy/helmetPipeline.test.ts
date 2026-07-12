@@ -9,6 +9,10 @@ import { createMeshyRequest, generateHelmetCandidates } from '../../tools/meshy/
 import { auditGlbAsset } from '../../tools/meshy/helmetAssetReport';
 import { validatePreparedHelmet } from '../../tools/meshy/validatePreparedHelmet';
 import {
+  HELMET_ASSET_CONFIG,
+  HELMET_DETAIL_LOD_DISTANCE,
+} from '../../src/presentation/helmet/HelmetAssetLibrary';
+import {
   HELMET_COMBINED_RUNTIME_PATH,
   HELMET_FACEGUARD_RUNTIME_PATH,
   HELMET_MANIFEST_RUNTIME_PATH,
@@ -110,6 +114,29 @@ describe('helmet Meshy pipeline', () => {
     expect(combined.triangleCount).toBeLessThanOrEqual(8500);
     expect(combined.triangleCount).toBe(manifest.totalTriangles);
     expect(manifest.sourceCandidate).toMatch(/^candidate-[ab]$/);
+  });
+
+  it('keeps a Blender-authored gameplay LOD within the 11v11 helmet budget', () => {
+    const lod = auditGlbAsset(`public${HELMET_ASSET_CONFIG.lodAssetUrl}`);
+    const manifest = readJsonFile<{
+      lodDistanceMeters: number;
+      runtimeDrawCallsPerInstance: number;
+      runtimeMergeStrategy: string;
+      triangleCount: number;
+      trianglesByMesh: Record<string, number>;
+    }>('public/models/helmet/helmet-lod-manifest.json');
+
+    expect(lod.nodeNames).toEqual(expect.arrayContaining(['helmet_shell', 'faceguard_standard']));
+    expect(lod.materialNames).toEqual(expect.arrayContaining(['mat_helmet_shell', 'mat_faceguard']));
+    expect(lod.triangleCount).toBe(manifest.triangleCount);
+    expect(lod.triangleCount).toBeLessThanOrEqual(400);
+    expect(manifest.lodDistanceMeters).toBe(HELMET_DETAIL_LOD_DISTANCE);
+    expect(manifest.runtimeDrawCallsPerInstance).toBe(1);
+    expect(manifest.runtimeMergeStrategy).toBe('single-mesh-vertex-colors');
+    expect(manifest.trianglesByMesh).toEqual({
+      faceguard_standard: 96,
+      helmet_shell: 53,
+    });
   });
 
   it('keeps Meshy and OpenAI generation secrets out of browser source', () => {

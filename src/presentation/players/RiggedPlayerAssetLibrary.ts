@@ -94,6 +94,7 @@ export function cloneRiggedPlayerTemplate(name = 'rigged-player-body'): THREE.Ob
   }
 
   const clone = cloneSkeleton(template.scene);
+  shareCompatibleSkeletons(clone);
   clone.name = name;
   clone.userData.riggedPlayerClone = true;
   return clone;
@@ -200,6 +201,47 @@ function collectSkinnedMeshes(root: THREE.Object3D): THREE.SkinnedMesh[] {
     }
   });
   return meshes;
+}
+
+function shareCompatibleSkeletons(root: THREE.Object3D): void {
+  const canonicalSkeletons: THREE.Skeleton[] = [];
+
+  root.traverse((object) => {
+    if (!(object instanceof THREE.SkinnedMesh)) {
+      return;
+    }
+
+    const canonicalSkeleton = canonicalSkeletons.find((candidate) => (
+      haveIdenticalSkinningData(candidate, object.skeleton)
+    ));
+    if (canonicalSkeleton) {
+      // SkeletonUtils clones one Skeleton per SkinnedMesh even when each mesh
+      // references the same cloned armature. Reusing the compatible Skeleton
+      // keeps each mesh's bind matrices intact while collapsing its bone texture
+      // and once-per-frame skeleton update to one per player.
+      object.skeleton = canonicalSkeleton;
+      return;
+    }
+
+    canonicalSkeletons.push(object.skeleton);
+  });
+}
+
+function haveIdenticalSkinningData(
+  first: THREE.Skeleton,
+  second: THREE.Skeleton,
+): boolean {
+  if (
+    first.bones.length !== second.bones.length
+    || first.boneInverses.length !== second.boneInverses.length
+  ) {
+    return false;
+  }
+
+  return first.bones.every((bone, index) => (
+    bone === second.bones[index]
+    && first.boneInverses[index].equals(second.boneInverses[index])
+  ));
 }
 
 function collectBoneNames(root: THREE.Object3D): string[] {

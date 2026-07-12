@@ -57,6 +57,7 @@ npm run benchmark:reference
 - `?weather=clear`, `?weather=overcast`, or `?weather=rain`.
 - `?routeArt=0` to hide offensive route art.
 - `?coverageArt=1` or `?defenseArt=1` for defensive debug art.
+- `?playerVisual=procedural` to compare the procedural fallback with the default rigged voxel player.
 - `?debug=1`, `?audioDebug=1`, `?cameraDebug=1`, `?routeAudit=1`, or `?passAudit=1` for focused diagnostics.
 
 ## Project Map
@@ -77,6 +78,9 @@ npm run benchmark:reference
 
 Generated media is stored under `public/`. Browser runtime code uses local assets only.
 
+- The default player body is the 784-triangle, rigid-weighted voxel GLB at `public/models/player/player-base-rigged.glb`; inspect its production helmet fit and neutral/ready/run poses at `/voxel-player-harness.html`.
+- The original helmet stays active for close shots, while a 149-triangle Blender-authored LOD takes over beyond eight meters for 11v11 rendering.
+- The editable Blender sources and deterministic generators live under `art-source/blender/voxel-player` and `tools/blender/create_voxel_player.py` / `tools/blender/create_helmet_lod.py`.
 - Audio generation scripts default to dry-run. Paid ElevenLabs calls require direct execution with `--execute`.
 - Branding and image-generation scripts default to dry-run. Paid image generation also requires `--execute`.
 - Do not expose `ELEVENLABS_API_KEY`, `OPENAI_API_KEY`, or any secret through browser code or `VITE_` environment variables.

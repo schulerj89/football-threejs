@@ -37,6 +37,7 @@ export const HELMET_MATERIAL_PROFILES: Record<
 
 const standardMaterialCache = new Map<string, THREE.MeshStandardMaterial>();
 const unlitMaterialCache = new Map<string, THREE.MeshBasicMaterial>();
+let gameplayVertexColorMaterial: THREE.MeshStandardMaterial | null = null;
 
 export function getHelmetRuntimeMaterial(
   request: HelmetMaterialRequest,
@@ -106,6 +107,39 @@ export function getHelmetUnlitExactMaterial(
   return material;
 }
 
+/**
+ * Shared one-pass material for the distant helmet proxy. Shell and faceguard
+ * colors live in the proxy geometry's vertex-color attribute so the complete
+ * silhouette renders with one material and one draw call per helmet.
+ */
+export function getHelmetGameplayVertexColorMaterial(): THREE.MeshStandardMaterial {
+  if (gameplayVertexColorMaterial) {
+    return gameplayVertexColorMaterial;
+  }
+
+  gameplayVertexColorMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0x000000,
+    metalness: HELMET_MATERIAL_PROFILES.shell.metalness,
+    opacity: 1,
+    roughness: HELMET_MATERIAL_PROFILES.shell.roughness,
+    side: THREE.FrontSide,
+    transparent: false,
+    vertexColors: true,
+  });
+  gameplayVertexColorMaterial.name = 'football-helmet-gameplay-vertex-colors';
+  gameplayVertexColorMaterial.map = null;
+  gameplayVertexColorMaterial.emissiveMap = null;
+  gameplayVertexColorMaterial.normalMap = null;
+  gameplayVertexColorMaterial.roughnessMap = null;
+  gameplayVertexColorMaterial.metalnessMap = null;
+  gameplayVertexColorMaterial.alphaMap = null;
+  gameplayVertexColorMaterial.aoMap = null;
+  gameplayVertexColorMaterial.lightMap = null;
+  gameplayVertexColorMaterial.needsUpdate = true;
+  return gameplayVertexColorMaterial;
+}
+
 export function createHelmetMaterialCacheKey(
   component: HelmetRuntimeMaterialComponent,
   color: number | string,
@@ -136,6 +170,7 @@ export function getHelmetMaterialCacheSnapshot(): HelmetMaterialCacheEntry[] {
 export function resetHelmetMaterialLibraryForTests(): void {
   standardMaterialCache.clear();
   unlitMaterialCache.clear();
+  gameplayVertexColorMaterial = null;
 }
 
 export function normalizeMaterialHex(color: number | string): string {

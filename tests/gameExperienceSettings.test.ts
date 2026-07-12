@@ -36,7 +36,7 @@ describe('game experience settings', () => {
     expect(resolved.settings.tunnelTableauEnabled).toBe(true);
     expect(resolved.settings.stadiumEnabled).toBe(true);
     expect(resolved.settings.officialsEnabled).toBe(false);
-    expect(resolved.settings.playerVisualMode).toBe('procedural');
+    expect(resolved.settings.playerVisualMode).toBe('meshyRigged');
     expect(toGameplayCameraMode(resolved.settings.gameplayCamera)).toBe('offensePerspective');
   });
 
@@ -165,6 +165,18 @@ describe('game experience settings', () => {
       tunnelTableauEnabled: false,
     });
     expect(storage.getItem(GAME_EXPERIENCE_SETTINGS_STORAGE_KEY)).toBe(storedBefore);
+  });
+
+  it('keeps the procedural player available as an explicit comparison override', () => {
+    const resolved = resolveGameExperienceSettings({
+      searchParams: new URLSearchParams('playerVisual=procedural'),
+      storage: createMemoryStorage(),
+    });
+
+    expect(resolved.settings.playerVisualMode).toBe('procedural');
+    expect(resolved.queryOverrides).toEqual({
+      playerVisualMode: 'procedural',
+    });
   });
 
   it('keeps 11v11 as the normal broadcast playbook without requiring a query override', () => {

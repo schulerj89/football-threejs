@@ -1,0 +1,97 @@
+{
+  "animationCount": 0,
+  "assetId": "football-js-player-base",
+  "assetVersion": 1,
+  "boneNames": [
+    "Head",
+    "Hips",
+    "LeftArm",
+    "LeftFoot",
+    "LeftForeArm",
+    "LeftHand",
+    "LeftLeg",
+    "LeftShoulder",
+    "LeftToeBase",
+    "LeftUpLeg",
+    "RightArm",
+    "RightFoot",
+    "RightForeArm",
+    "RightHand",
+    "RightLeg",
+    "RightShoulder",
+    "RightToeBase",
+    "RightUpLeg",
+    "Spine",
+    "Spine01",
+    "Spine02",
+    "head_end",
+    "headfront",
+    "neck",
+    "socket_ball_carry",
+    "socket_ball_throw",
+    "socket_foot_l",
+    "socket_foot_r",
+    "socket_hair",
+    "socket_hand_l",
+    "socket_hand_r",
+    "socket_head_accessory",
+    "socket_helmet",
+    "socket_shoulder_pads"
+  ],
+  "bounds": {
+    "minBlenderXYZ": {
+      "x": -0.6850000023841858,
+      "y": -0.2850000262260437,
+      "z": -1.82189978659153e-08
+    },
+    "maxBlenderXYZ": {
+      "x": 0.6850000023841858,
+      "y": 0.2199999988079071,
+      "z": 1.850000023841858
+    },
+    "sizeBlenderXYZ": {
+      "x": 1.3700000047683716,
+      "y": 0.5049999952316284,
+      "z": 1.850000023841858
+    }
+  },
+  "contentHashes": {
+    "player-base-rigged.glb": "0ab8cf195c9f2149982c428fae5e298a2828cf1a0ba7bd75326e1100d8229d1f"
+  },
+  "createdWith": {
+    "blender": "5.1.2",
+    "mcp": "Blender Lab MCP v1.0.0",
+    "mcpSourceCommit": "03004fd0216bfe5e0a3d9ac9b47d5efadc3d78c4"
+  },
+  "drawCallTarget": 4,
+  "heightMeters": 1.85,
+  "materialRegionNames": [
+    "mat_player_skin",
+    "mat_player_jersey",
+    "mat_player_pants_socks",
+    "mat_player_shoes"
+  ],
+  "orientation": {
+    "forward": "+Z",
+    "up": "+Y"
+  },
+  "roundedHead": {
+    "centerY": 1.695,
+    "diameterMeters": 0.31,
+    "helmetSocketY": 1.84
+  },
+  "socketNames": [
+    "socket_ball_carry",
+    "socket_ball_throw",
+    "socket_foot_l",
+    "socket_foot_r",
+    "socket_hair",
+    "socket_hand_l",
+    "socket_hand_r",
+    "socket_head_accessory",
+    "socket_helmet",
+    "socket_shoulder_pads"
+  ],
+  "style": "rigid-weighted voxel football player",
+  "triangleCount": 784
+}
