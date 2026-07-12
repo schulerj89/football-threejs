@@ -534,6 +534,7 @@ export function syncSidelineDebugOverlay(
     }[];
     coachesEnabled: boolean;
     lastReactionEventId: string | null;
+    playerVisualModeCounts?: Readonly<Record<'meshyRigged' | 'procedural', number>>;
     reactionState: string;
     sidelinePlayerCount: number;
     sidelinePlayersEnabled: boolean;
@@ -555,6 +556,7 @@ export function syncSidelineDebugOverlay(
     `enabled ${snapshot.enabled ? 'yes' : 'no'} density ${snapshot.density} reserves ${snapshot.sidelinePlayersEnabled ? 'on' : 'off'} coaches ${snapshot.coachesEnabled ? 'on' : 'off'}`,
     `sideline ${snapshot.sidelinePlayerCount} coaches ${snapshot.coachCount} tunnel ${snapshot.tunnelPlayerCount} tableau ${snapshot.tunnelTableauEnabled ? 'on' : 'off'}`,
     `fullPlayers ${snapshot.fullFootballPlayerVisualCount ?? 0} sidelineRoster ${snapshot.sidelineRosterPlayerIds?.length ?? 0} tunnelRoster ${snapshot.tunnelRosterPlayerIds?.length ?? 0}`,
+    `playerModes rigged ${snapshot.playerVisualModeCounts?.meshyRigged ?? 0} procedural ${snapshot.playerVisualModeCounts?.procedural ?? 0}`,
     `reaction ${snapshot.reactionState} event ${snapshot.lastReactionEventId ?? 'none'}`,
     ...snapshot.coachStates.map((coach) => `${coach.id} ${coach.teamSide} ${coach.state}`),
     `calls ${snapshot.drawCalls} tris ${snapshot.triangleCount}`,

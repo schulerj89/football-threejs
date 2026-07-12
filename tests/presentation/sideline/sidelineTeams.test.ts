@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { FIELD_BOUNDS } from '../../../src/fieldSpec';
 import {
   createSidelineLayout,
@@ -13,6 +13,10 @@ import {
   createSidelineFootballPlayerVisualResources,
 } from '../../../src/presentation/teams/SidelineVisualFactory';
 import { FOOTBALL_PLAYER_VISUAL_PROFILE_ID } from '../../../src/presentation/players/FootballPlayerVisualFactory';
+import {
+  resetRiggedPlayerAssetLibraryForTest,
+  setRiggedPlayerTemplateForTest,
+} from '../../../src/presentation/players/RiggedPlayerAssetLibrary';
 import {
   resolveTunnelAnchor,
 } from '../../../src/presentation/teams/TunnelTableauLayout';
@@ -103,6 +107,10 @@ describe('sideline team layout', () => {
 });
 
 describe('sideline team visuals', () => {
+  afterEach(() => {
+    resetRiggedPlayerAssetLibraryForTest();
+  });
+
   it('renders sideline subjects as full football-player assets without coach silhouettes', () => {
     const theme = resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS);
     const layout = createSidelineLayout({
@@ -169,6 +177,36 @@ describe('sideline team visuals', () => {
 
     expect(controller.group.children).toHaveLength(0);
     expect(controller.getSnapshot().sidelinePlayerCount).toBe(0);
+    controller.dispose();
+  });
+
+  it('rebuilds cold-start fallbacks after the rigged player asset finishes loading', () => {
+    resetRiggedPlayerAssetLibraryForTest();
+    const controller = new SidelineTeamController({
+      coachesEnabled: false,
+      density: 'low',
+      enabled: true,
+      footballPlayerVisual: { helmet: 'disabled' },
+      playerVisualMode: 'meshyRigged',
+      rosterBinding: createGameplayRosterBinding('11v11', DEFAULT_TEAM_PROFILE_SETTINGS),
+      sidelinePlayersEnabled: true,
+      teamTheme: resolveTeamPresentationTheme(DEFAULT_TEAM_PROFILE_SETTINGS),
+      tunnelTableauEnabled: true,
+    });
+    const expectedCount = controller.getSnapshot().fullFootballPlayerVisualCount;
+
+    expect(countPlayerVisualModes(controller.group)).toEqual({
+      meshyRigged: 0,
+      procedural: expectedCount,
+    });
+
+    setRiggedPlayerTemplateForTest(createRiggedPlayerTemplate());
+    controller.refreshPlayerVisuals();
+
+    expect(countPlayerVisualModes(controller.group)).toEqual({
+      meshyRigged: expectedCount,
+      procedural: 0,
+    });
     controller.dispose();
   });
 
@@ -291,4 +329,28 @@ function countNamedObjects(root: THREE.Object3D, pattern: RegExp): number {
     }
   });
   return count;
+}
+
+function countPlayerVisualModes(root: THREE.Object3D): Record<'meshyRigged' | 'procedural', number> {
+  const counts = { meshyRigged: 0, procedural: 0 };
+  root.traverse((object) => {
+    if (object.userData.fullFootballPlayerVisual !== true) {
+      return;
+    }
+    const mode: unknown = object.userData.playerVisualMode;
+    if (mode === 'meshyRigged' || mode === 'procedural') {
+      counts[mode] += 1;
+    }
+  });
+  return counts;
+}
+
+function createRiggedPlayerTemplate(): THREE.Group {
+  const template = new THREE.Group();
+  const material = new THREE.MeshBasicMaterial();
+  material.name = 'mat_player_jersey';
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.8, 0.4), material);
+  mesh.name = 'rigged-player-test-body';
+  template.add(mesh);
+  return template;
 }

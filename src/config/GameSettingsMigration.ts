@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_SCHEMA_VERSION = 17;
+export const GAME_SETTINGS_SCHEMA_VERSION = 18;
 
 export interface VersionedGameSettingsEnvelope {
   customSettings?: unknown;
@@ -55,7 +55,7 @@ function migrateOfficialSettings(value: unknown): unknown {
       debugToolsEnabled: false,
       officialsDebugLabels: false,
       officialsEnabled: false,
-      playerVisualMode: value.playerVisualMode === 'meshyRigged' ? 'meshyRigged' : 'procedural',
+      playerVisualMode: 'meshyRigged',
       quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
       selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
       sidelineDensity: value.sidelineDensity ?? 'medium',
@@ -80,7 +80,7 @@ function migrateOfficialSettings(value: unknown): unknown {
       debugToolsEnabled: false,
       officialsDebugLabels: false,
       officialsEnabled: false,
-      playerVisualMode: value.playerVisualMode === 'meshyRigged' ? 'meshyRigged' : 'procedural',
+      playerVisualMode: 'meshyRigged',
       quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
       selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
       sidelineDensity: value.sidelineDensity ?? 'low',
@@ -104,7 +104,7 @@ function migrateOfficialSettings(value: unknown): unknown {
     debugToolsEnabled: false,
     officialsDebugLabels: false,
     officialsEnabled: false,
-    playerVisualMode: value.playerVisualMode === 'meshyRigged' ? 'meshyRigged' : 'procedural',
+    playerVisualMode: 'meshyRigged',
     quarterLengthSeconds: value.quarterLengthSeconds ?? 180,
     selectedReceiverLabelEnabled: value.selectedReceiverLabelEnabled ?? false,
     sidelineDensity: value.sidelineDensity ?? 'medium',

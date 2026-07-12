@@ -130,6 +130,7 @@ export interface SidelineTeamControllerSnapshot extends SidelineVisualMetrics {
   enabled: boolean;
   lastReactionEventId: string | null;
   noGameplayAuthority: boolean;
+  playerVisualModeCounts: Readonly<Record<'meshyRigged' | 'procedural', number>>;
   reactionState: SidelineReactionState;
   semanticTargets: {
     opponentCoach: SidelineVec3 | null;

@@ -38,17 +38,17 @@ PERF_STRICT=1 npm run test:perf
 
 Budgets are based on the measured optimized reference build plus a small margin:
 
-- Draw calls: `450`.
+- Draw calls: `500`.
 - Triangles: `250000`.
-- Geometries: `180`.
+- Geometries: `200`.
 - Materials: `90`.
-- Textures: `32`.
+- Textures: `80`.
 - Visible player meshes: `390`.
 - Shadow casters: `0`.
 - Crowd draw calls: `8`.
-- Stadium draw-call estimate: `4`.
+- Stadium draw-call estimate: `20`.
 - Active gameplay players: `22`.
-- Crowd visible seats: `5000`, with a bounded `500`-spectator reacting near tier and static far-bowl mosaic.
+- Crowd visible seats: `25000`, with a bounded `2500`-spectator near tier and `22500`-seat static far-bowl mosaic.
 
 Do not raise these budgets without rerunning the fixed reference profile and recording the measured reason.
 

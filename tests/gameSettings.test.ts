@@ -113,7 +113,7 @@ describe('game settings facade', () => {
     });
   });
 
-  it('migrates previous-schema debug settings to off while preserving normal settings', () => {
+  it('migrates previous-schema settings to current presentation defaults', () => {
     const storage = createMemoryStorage();
     storage.setItem(GAME_SETTINGS_COMPAT_STORAGE_KEY, JSON.stringify({
       preset: 'custom',
@@ -126,6 +126,7 @@ describe('game settings facade', () => {
         masterVolume: 0.37,
         officialsDebugLabels: true,
         officialsEnabled: true,
+        playerVisualMode: 'procedural',
         preset: 'custom',
         stadiumEnabled: false,
       },
@@ -147,6 +148,7 @@ describe('game settings facade', () => {
       masterVolume: 0.37,
       officialsDebugLabels: false,
       officialsEnabled: false,
+      playerVisualMode: 'meshyRigged',
       preset: 'custom',
       stadiumEnabled: false,
       weatherCondition: 'clear',

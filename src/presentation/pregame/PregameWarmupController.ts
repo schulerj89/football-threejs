@@ -132,6 +132,15 @@ export class PregameWarmupController {
     };
   }
 
+  refreshPlayerVisuals(): void {
+    if (!this.enabled || !this.active || !this.resources) {
+      return;
+    }
+
+    this.disposeResources();
+    this.rebuildIfNeeded();
+  }
+
   getSubjectBoundsForGroup(groupId: string): PregameWarmupSubjectBounds | null {
     const group = this.layout?.groups.find((candidate) => candidate.id === groupId);
     return group ? groupToSubjectBounds(group) : null;

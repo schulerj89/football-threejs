@@ -348,9 +348,29 @@ export class PresentationRuntime {
     );
     this.holdCinematicPreSnapEstablish = searchParams.has('presentationAudit');
     this.shotPreview = resolvePresentationShotPreview(searchParams.get('shotPreview'));
-    void preloadFootballPlayerVisualAssets(gameExperience.settings.playerVisualMode).catch((error: unknown) => {
-      warn?.(`Player visual asset preload failed: ${error instanceof Error ? error.message : String(error)}`);
-    });
+    const requestedPlayerVisualMode = gameExperience.settings.playerVisualMode;
+    void preloadFootballPlayerVisualAssets(requestedPlayerVisualMode)
+      .then(() => {
+        if (
+          requestedPlayerVisualMode !== 'meshyRigged' ||
+          this.gameExperience.settings.playerVisualMode !== requestedPlayerVisualMode
+        ) {
+          return;
+        }
+        this.sidelineTeamController.refreshPlayerVisuals();
+        this.pregameWarmupController.refreshPlayerVisuals();
+        const loadedVisualSettings = {
+          playerVisualMode: requestedPlayerVisualMode,
+          rosterBinding: this.rosterBinding,
+          teamTheme: this.teamTheme,
+        };
+        this.coinTossController.applySettings(loadedVisualSettings);
+        this.kickoffPresentationDirector.applySettings(loadedVisualSettings);
+        this.placeKickPresentationDirector.applySettings(loadedVisualSettings);
+      })
+      .catch((error: unknown) => {
+        warn?.(`Player visual asset preload failed: ${error instanceof Error ? error.message : String(error)}`);
+      });
 
     this.crowdPreviewCameraView = resolveCrowdPreviewCameraView(searchParams.get('crowdCamera'));
     const crowdPreviewEnabled = resolveCrowdPreviewEnabled(searchParams);

@@ -674,6 +674,7 @@ function createContext(): PregamePresentationContext {
       materialCount: 0,
       meshCount: 0,
       noGameplayAuthority: true,
+      playerVisualModeCounts: { meshyRigged: 0, procedural: 0 },
       reactionState: 'idle',
       semanticTargets: {
         opponentCoach: null,

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.23.1] - 2026-07-11
+
+### Changed
+
+- Migrated existing saved settings to the rigged voxel player so all 22 active gameplay players use the new model by default; `?playerVisual=procedural` remains the explicit comparison override.
+- Raised the measured 11v11 structural limits from 450 to 500 draw calls and from 32 to 80 textures for the complete field, sideline, tunnel, and scenario matrix, while leaving triangle, geometry, material, visible-mesh, crowd, stadium, and shadow limits unchanged.
+- Rebuilt sideline, active warmup, coin-toss, kickoff, and place-kick visuals after the shared rig finishes loading so cold starts no longer leave presentation players on the procedural fallback.
+- Corrected the performance-governor documentation to match the active 25,000-seat broadcast reference profile and current structural budgets.
+
+### Tests
+
+- Re-ran the production 11v11 smoke profile and all-eight-scenario structural matrix; all-rigged samples peaked at 424 calls, 65 textures, 120,907 triangles, and 92 geometries against caps of 500, 80, 250,000, and 200.
+- Re-ran focused settings/reference-budget/player-rollout tests, the full unit suite, and the production build.
+
 ## [1.23.0] - 2026-07-11
 
 ### Added

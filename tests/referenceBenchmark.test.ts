@@ -59,6 +59,11 @@ describe('reference performance benchmark helpers', () => {
 
   it('keeps reference structural budgets aligned with the runtime performance profile', () => {
     expect(REFERENCE_STRUCTURAL_BUDGETS).toEqual(PERFORMANCE_STRUCTURAL_BUDGETS);
+    expect(PERFORMANCE_STRUCTURAL_BUDGETS).toMatchObject({
+      maxDrawCalls: 500,
+      maxTextures: 80,
+      playerCount: 22,
+    });
   });
 });
 

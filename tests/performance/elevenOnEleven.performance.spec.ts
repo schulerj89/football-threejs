@@ -18,6 +18,10 @@ interface PerformanceDebugApi {
   getPerformanceProfileReport: (
     environment?: Partial<PerformanceReportEnvironment>,
   ) => PerformanceReport;
+  getSidelineTeamSnapshot: () => {
+    fullFootballPlayerVisualCount: number;
+    playerVisualModeCounts: Readonly<Record<'meshyRigged' | 'procedural', number>>;
+  };
   setPerformanceScenario: (scenario: PerformanceScenarioName) => unknown;
 }
 
@@ -183,6 +187,18 @@ test('profiles deterministic 11v11 production scenarios', async ({ browser }, te
     },
   });
   await preparePerformancePage(fullPage, FULL_BROADCAST_QUERY);
+  await expect.poll(async () => {
+    return await fullPage.evaluate(() => {
+      const debugApi = (window as unknown as { __footballDebug?: PerformanceDebugApi }).__footballDebug;
+      const snapshot = debugApi?.getSidelineTeamSnapshot();
+      return Boolean(
+        snapshot &&
+        snapshot.fullFootballPlayerVisualCount > 0 &&
+        snapshot.playerVisualModeCounts.meshyRigged === snapshot.fullFootballPlayerVisualCount &&
+        snapshot.playerVisualModeCounts.procedural === 0
+      );
+    });
+  }).toBe(true);
   const environment = await createEnvironmentSnapshot(fullPage);
 
   for (const scenario of fullBroadcastScenarios) {

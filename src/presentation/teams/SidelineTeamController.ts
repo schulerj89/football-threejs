@@ -152,6 +152,15 @@ export class SidelineTeamController {
     };
   }
 
+  refreshPlayerVisuals(): void {
+    if (!this.enabled) {
+      return;
+    }
+
+    this.disposeResources();
+    this.rebuildIfNeeded();
+  }
+
   getSnapshot(): SidelineTeamControllerSnapshot {
     const metrics = this.resources?.metrics ?? EMPTY_METRICS;
     const coachPlacements = this.createCoachPlacements();
@@ -168,6 +177,7 @@ export class SidelineTeamController {
       enabled: this.enabled,
       lastReactionEventId: this.lastReactionEventId,
       noGameplayAuthority: true,
+      playerVisualModeCounts: countPlayerVisualModes(this.resources?.group ?? null),
       reactionState: this.reactionState,
       semanticTargets: {
         opponentCoach: cloneVec3(coachPlacements.find((coach) => coach.teamSide === 'opponent')?.position),
@@ -251,6 +261,7 @@ export class SidelineTeamController {
       this.areCoachVisualsEnabled() ? 'coaches' : 'no-coaches',
       this.density,
       this.tunnelTableauEnabled ? 'tunnel' : 'no-tunnel',
+      this.playerVisualMode ?? 'procedural',
       this.teamTheme.teamKey,
       lineupKey,
     ].join('::');
@@ -455,6 +466,22 @@ function countFullFootballPlayerVisuals(root: THREE.Object3D | null): number {
     }
   });
   return count;
+}
+
+function countPlayerVisualModes(
+  root: THREE.Object3D | null,
+): Record<'meshyRigged' | 'procedural', number> {
+  const counts = { meshyRigged: 0, procedural: 0 };
+  root?.traverse((object) => {
+    if (object.userData.fullFootballPlayerVisual !== true) {
+      return;
+    }
+    const mode: unknown = object.userData.playerVisualMode;
+    if (mode === 'meshyRigged' || mode === 'procedural') {
+      counts[mode] += 1;
+    }
+  });
+  return counts;
 }
 
 function resolveReactionStateFromEvent(
